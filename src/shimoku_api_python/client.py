@@ -1,7 +1,7 @@
 """Used as base Mailchimp: https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py"""
 
 
-from typing import List
+from typing import List, Dict
 
 import datetime
 import requests
@@ -122,6 +122,92 @@ class ApiClient(object):
                 raise ApiClientError(text=data, status_code=res.status_code)
         else:
             return res
+
+    def set_http_info(self, **kwargs):  # noqa: E501
+        """
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+        >>> thread = api.remove_with_http_info(campaign_id, async_req=True)
+        >>> result = thread.get()
+        :param async_req bool
+        :param str campaign_id: The unique id for the campaign. (required)
+        :return: None
+                 If the method is called asynchronously,
+                 returns the request thread.
+        """
+        params = locals()
+        for key, val in params['kwargs']:
+            if key not in all_params:
+                raise TypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method remove" % key
+                )
+            params[key] = val
+        del params['kwargs']
+
+        collection_formats = {}
+
+        query_params = []
+
+        header_params = {}
+
+        form_params = []
+        local_var_files = {}
+
+        body_params = None
+        # HTTP header `Accept`
+        header_params['Accept'] = self.select_header_accept(
+            ['application/json', 'application/problem+json'])  # noqa: E501
+
+        # HTTP header `Content-Type`
+        header_params['Content-Type'] = self.select_header_content_type(  # noqa: E501
+            ['application/json'])  # noqa: E501
+
+        # Authentication setting
+        auth_settings = ['basicAuth']  # noqa: E501
+
+        return (
+            query_params, header_params,
+            body_params, form_params, local_var_files,
+            auth_settings, params, collection_formats,
+        )
+
+    def query_element(
+        self, method: str, element_name: str, element_id: str, **kwargs
+    ) -> Dict:
+        """Retrieve an element if the endpoint exists
+
+        :param method: examples are 'GET', 'POST', etc
+        """
+        (
+            query_params, header_params,
+            body_params, form_params, local_var_files,
+            auth_settings, params, collection_formats,
+        ) = self.set_http_info(**kwargs)
+
+        path_params = {}
+        if element_name in params:
+            path_params[element_name] = params[element_name]  # noqa: E501
+
+        element_data: Dict = (
+            self.call_api(
+                f'{element_name}/{element_id}', method,
+                path_params,
+                query_params,
+                header_params,
+                body=body_params,
+                post_params=form_params,
+                files=local_var_files,
+                response_type=None,  # noqa: E501
+                auth_settings=auth_settings,
+                async_req=params.get('async_req'),
+                _return_http_data_only=params.get('_return_http_data_only'),
+                _preload_content=params.get('_preload_content', True),
+                _request_timeout=params.get('_request_timeout'),
+                collection_formats=collection_formats
+            )
+        )
+        return element_data
 
     def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None

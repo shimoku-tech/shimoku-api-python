@@ -24,4 +24,15 @@ def test_request():
     print(result)
 
 
-test_request()
+def test_query_element():
+    result = s.api_client.query_element(
+        method='GET',
+        element_name=f'{business_id}/app',
+        element_id=app_id,
+    )
+    assert result.status_code == 200
+    print(result)
+
+
+# test_request()
+test_query_element()

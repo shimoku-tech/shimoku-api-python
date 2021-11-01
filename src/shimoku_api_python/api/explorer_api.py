@@ -10,95 +10,13 @@ class ExplorerApi(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    # TODO this will be used by all, then post it in aux.py or something alike
-    def set_http_info(self, **kwargs):  # noqa: E501
-        """
-        This method makes a synchronous HTTP request by default. To make an
-        asynchronous HTTP request, please pass async_req=True
-        >>> thread = api.remove_with_http_info(campaign_id, async_req=True)
-        >>> result = thread.get()
-        :param async_req bool
-        :param str campaign_id: The unique id for the campaign. (required)
-        :return: None
-                 If the method is called asynchronously,
-                 returns the request thread.
-        """
-        params = locals()
-        for key, val in params['kwargs']:
-            if key not in all_params:
-                raise TypeError(
-                    "Got an unexpected keyword argument '%s'"
-                    " to method remove" % key
-                )
-            params[key] = val
-        del params['kwargs']
-
-        collection_formats = {}
-
-        query_params = []
-
-        header_params = {}
-
-        form_params = []
-        local_var_files = {}
-
-        body_params = None
-        # HTTP header `Accept`
-        header_params['Accept'] = self.api_client.select_header_accept(
-            ['application/json', 'application/problem+json'])  # noqa: E501
-
-        # HTTP header `Content-Type`
-        header_params['Content-Type'] = self.api_client.select_header_content_type(  # noqa: E501
-            ['application/json'])  # noqa: E501
-
-        # Authentication setting
-        auth_settings = ['basicAuth']  # noqa: E501
-
-        return (
-            query_params, header_params,
-            body_params, form_params, local_var_files,
-            auth_settings, params, collection_formats,
-        )
-
-    def _get_element(self, element_name: str, element_id: str, **kwargs) -> Dict:
-        """Retrieve an element if the endpoint exists"""
-        (
-            query_params, header_params,
-            body_params, form_params, local_var_files,
-            auth_settings, params, collection_formats,
-        ) = self.set_http_info(**kwargs)
-
-        path_params = {}
-        if element_name in params:
-            path_params[element_name] = params[element_name]  # noqa: E501
-
-        element_data: Dict = (
-            self.api_client.call_api(
-                f'{element_name}/{element_id}', 'GET',  # TODO el GET lo puedo hacer variable tambien!!
-                path_params,
-                query_params,
-                header_params,
-                body=body_params,
-                post_params=form_params,
-                files=local_var_files,
-                response_type=None,  # noqa: E501
-                auth_settings=auth_settings,
-                async_req=params.get('async_req'),
-                _return_http_data_only=params.get('_return_http_data_only'),
-                _preload_content=params.get('_preload_content', True),
-                _request_timeout=params.get('_request_timeout'),
-                collection_formats=collection_formats
-            )
-        )
-        return element_data
-
     def get_business(self, business_id: str, **kwargs) -> Dict:
         """Retrieve an specific user_id
 
         :param business_id: user UUID
         """
         business_data: Dict = (
-            self._get_element(
+            self.api_client.query_element(
                 element_name='business',
                 element_id=business_id,
                 **kwargs
@@ -112,7 +30,7 @@ class ExplorerApi(object):
         :param app_id: app UUID
         """
         app_data: Dict = (
-            self._get_element(
+            self.api_client.query_element(
                 element_name='app',
                 element_id=app_id,
                 **kwargs
@@ -120,7 +38,6 @@ class ExplorerApi(object):
         )
         return app_data
 
-# TODO Guillermo esto nunca tendra el chartData
     def get_report(
             self, report_id: Optional[str] = None,
             external_id: Optional[str] = None,
@@ -133,10 +50,9 @@ class ExplorerApi(object):
         :param external_id: external report UUID
         :param app_id: Shinmoku app UUID (only required if the external_id is provided)
         """
-# TODO Guillermo I better gonna need this end-point
         if report_id:
             report_data: Dict = (
-                self._get_element(
+                self.api_client.query_element(
                     element_name='report',
                     element_id=report_id,
                     **kwargs
@@ -157,7 +73,7 @@ class ExplorerApi(object):
                 report_data_: Dict = self.get_report(report_id=report_id)
                 if report_data_['etl_code_id'] == external_id:
                     report_data: Dict = (
-                        self._get_element(
+                        self.api_client.query_element(
                             element_name='report',
                             element_id=report_id,
                             **kwargs
@@ -364,7 +280,6 @@ class ExplorerApi(object):
         business_id: str = self.get_business_id_by_app(app_id=app_id, **kwargs)
         return business_id
 
-# TODO Guillermo I gonna need an enpoint for this
     def get_path_app(self, path_name: str, **kwargs) -> str:
         """Bottom-up method
         Having a report_id return the app it belongs to

@@ -31,7 +31,7 @@ class DataManagingApi(object):
         # TODO Guillermo I better gonna need this end-point
         if report_id:
             report_data: Dict = (
-                self._get_element(
+                self.api_client.query_element(
                     element_name='report_id',
                     element_id=report_id,
                     **kwargs
@@ -52,7 +52,7 @@ class DataManagingApi(object):
                 report_data_: Dict = self.get_report(report_id=report_id)
                 if report_data_['etl_code_id'] == external_id:
                     report_data: Dict = (
-                        self._get_element(
+                        self.api_client.query_element(
                             element_name='report_id',
                             element_id=report_id,
                             **kwargs

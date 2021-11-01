@@ -79,3 +79,11 @@ class CatalogExplorerApi(MultiCascadeExplorerAPI):
             'app_id': app_id,
             'report_id': report_id,
         }
+
+    # TODO
+    def create_path_demo(self, app_id: str):
+        raise NotImplementedError
+
+    # TODO
+    def create_report_demo(self, report_id: str):
+        raise NotImplementedError

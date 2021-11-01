@@ -23,6 +23,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         else:
             return False
 
+    def get_target_report_any_data(self, report_id: str) -> List[str]:
+        """Retrieve a subset of the chartData"""
+        raise NotImplementedError
+
     def get_report_last_update(self, report_id: str) -> dt.datetime:
         """"""
         report: Dict = self.get_report(report_id)
@@ -35,6 +39,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         report: Dict = self.get_report(report_id)
         # TODO check it returns Dict
         return report['dataFields']
+
+    def get_report_fields(self, report_id: str):
+        """"""
+        raise NotImplementedError
 
     # TODO some data resistence here to avoid it to get broken
     def update_report_fields(

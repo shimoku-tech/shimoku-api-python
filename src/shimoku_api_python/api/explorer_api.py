@@ -96,14 +96,19 @@ class GetExplorerAPI(object):
         app_id: Optional[str] = None,
     ) -> List[Dict]:
         """"""
-        report: Dict = (
-            self.get_report(
-                report_id=report_id,
-                external_id=external_id,
-                app_id=app_id,
+        report = self.get_report(report_id)
+
+        if report['reportType']:
+            report: Dict = (
+                self.get_report(
+                    report_id=report_id,
+                    external_id=external_id,
+                    app_id=app_id,
+                )
             )
-        )
-        return report['chartData']
+            return report['chartData']
+        else:  # Table case
+            raise NotImplementedError
 
 
 class CreateExplorerAPI(object):
@@ -380,6 +385,13 @@ class CascadeExplorerAPI(GetExplorerAPI):
             path_reports: List[str] = self.get_path_all_reports(path_name=path_name)
             report_ids = report_ids + path_reports
         return report_ids
+
+    def get_report_all_report_entries(self, report_id: str) -> List[str]:
+        """Given a report retrieve all reportEntries
+
+        :param report_id: app UUID
+        """
+        raise NotImplementedError
 
     # TODO paginate
     def get_app_path_all_reports(self, app_id: str, path_name: str) -> List[str]:
@@ -665,9 +677,15 @@ class AppExplorerApi:
     get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
     get_app_all_reports_by_filter = MultiCascadeExplorerAPI.get_app_all_reports_by_filter
     get_app_all_reports_metadata = MultiCascadeExplorerAPI.get_app_all_reports_metadata
-    get_app_path_all_reports = MultiCascadeExplorerAPI.get_app_path_all_reports
 
     delete_app = DeleteExplorerApi.delete_app
+
+
+class PathExplorerApi:
+
+    get_report = GetExplorerAPI.get_report
+    update_report = UpdateExplorerAPI.update_report
+    get_app_path_all_reports = MultiCascadeExplorerAPI.get_app_path_all_reports
 
 
 class ReportExplorerApi:
@@ -698,3 +716,23 @@ class ExplorerApi(
 
     def __init__(self, api_client):
         super().__init__(api_client)
+
+    # TODO WiP
+    def has_app_report_data(self, app_id: str) -> bool:
+        """"""
+        reports: List[str] = self.get_target_app_all_reports(app_id)
+        for report_id in reports:
+            result: bool = self.has_report_report_entries(report_id)
+            if result:
+                return True
+        return False
+
+    # TODO WiP
+    def has_path_data(self, app_id: str, path_name: str) -> bool:
+        """"""
+        reports: List[str] = self.get_app_all_reports(app_id)
+        for report_id in reports:
+            result: bool = self.has_report_report_entries(report_id)
+            if result:
+                return True
+        return False

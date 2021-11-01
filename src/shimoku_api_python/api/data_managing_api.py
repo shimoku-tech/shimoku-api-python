@@ -4,137 +4,23 @@ from typing import List, Dict, Optional, Union
 
 from pandas import DataFrame
 
+from .explorer_api import ReportExplorerApi
+
 
 # TODO to add data resistance will be required to check df integrity, etc
+# TODO allow dataframe but also List[Dict] of json as input
 
 
-class DataManagingApi(object):
+class DataManagingApi(ReportExplorerApi):
     """
     """
 
     def __init__(self, api_client):
         self.api_client = api_client
 
-    def get_target_report_any_data(self, report_id: str) -> List[str]:
-        """"""
-        table_name: str = f'ReportEntry-{self.table_name_suffix}'
-        filter_expression = 'reportId = :reportId'
-        filter_values = {':reportId': {'S': report_id}}
-        scan_filter = {
-            'filter_expression': filter_expression,
-            'filter_values': filter_values,
-        }
-
-        report_entry: List[str] = (
-            self.get_any_item(
-                table_name=table_name,
-                filters=scan_filter,
-            )
-        )
-        return report_entry
-
-# TODO
-    def has_path_data(self, app_id: str, path_name: str) -> bool:
-        """"""
-        reports: List[str] = self.get_target_app_all_reports(app_id)
-        for report_id in reports:
-            result: bool = self.has_report_report_entries(report_id)
-            if result:
-                return True
-        return False
-
-    def has_report_data(self, report_id) -> bool:
-        """"""
-        data = self.get_target_report_any_report_entry(report_id)
-        if data:
-            return True
-        return False
-
-# TODO allow report_data it to be also a json!! '[{...}, {...}]'
-    def add_report_data(
-        self, report_data: pd.DataFrame, report_id: str,
-    ) -> None:
-        """Having a dataframe of Report
-        add all of them to Report.ChartData
-
-        It is an aggregation, meaning we preserve all previous
-        Report.ChartData and just concatenate the new ones
-        """
-        table_name: str = f'Report-{self.table_name_suffix}'
-
-        report: Dict = self.get_target_report(report_id)
-        chart_data: Dict = report['chartData']
-        new_data: Dict = report_df.to_dict(orient='records')
-        chart_data.update(new_data)
-
-        # filter_expression = 'id = :report_id'
-        # filter_values = {':report_id': {'S': report_id}}
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-
-        update_expression: str = f'chartData = :chartData'
-        attribute_vals: Dict = {
-            ':chartData': chart_data,
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
-        )
-
-# TODO
-# TODO allow it to be also a json!! '[{...}, {...}]'
-    def append_data(self):
-        pass
-
-    # TODO allow report_data to be also a json!! '[{...}, {...}]'
-    def update_report_chart_data(
-        self, report_data: pd.DataFrame, report_id: str,
-    ) -> None:
-        """Update report.chartData
-
-        report_df is actually a string
-        """
-        table_name: str = f'Report-{self.table_name_suffix}'
-        # filter_expression = 'id = :report_id'
-        # filter_values = {':report_id': {'S': report_id}}
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-
-        update_expression: str = f'chartData = :chartData'
-        attribute_vals: Dict = {
-            ':chartData': report_df.to_dict(orient='records'),
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
-        )
-
-    def post_report_data(
-        self, df: pd.DataFrame,
-        report_id: str, owner_id: str,
-    ):
-        """Having a dataframe of Report Entries
-        post all of them (row by row) to Dynamo
-
-        First we need to create in the dataframe the abstract columns
-        Second we store as a dict the initial dataframe
-        Third we store in another dict the sub-dataframe of abstract columns and metadata
-        Finally we merge both in a single list of dicts that post massively to Dynamo
-
-        IMPORTANT
-        --------------------
-        Note it can also be used to add new report entries if used directly
-        """
-        table_name: str = f'ReportEntry-{self.table_name_suffix}'
-
+    def convert_dataframe_to_report_entry(
+        self, report_id: str, df: DataFrame
+    ) -> List[Dict]:
         # Save the initial columns that are
         # all the fields that will get into `data`
         # column in `reportEntry` table
@@ -144,17 +30,6 @@ class DataManagingApi(object):
             if col != 'description'
         ]
 
-        # Note now is in UTC
-        now = dt.datetime.utcnow().isoformat()
-        df['owner'] = owner_id
-        df['reportId'] = report_id
-        df['createdAt'] = now
-        df['updatedAt'] = now
-        df['__typename'] = 'ReportEntry'
-        # Set hashes for id
-        df['id'] = [str(uuid.uuid4()) for _ in range(len(df.index))]
-
-        # Retrieve reportEntry abstract str and numeric fields
         fields: Dict = self.get_report_fields(report_id=report_id)
         # Some QA
         # Validate that all the filter column names
@@ -193,11 +68,83 @@ class DataManagingApi(object):
             for data_entry, other_entry in zip(data_entries, other_entries)
         ]
 
-        # query_conditions = Key('reportId').eq(report_id)
-        # post all entries to Dynamo
-        self.put_many_items(
-            table_name=table_name, items=entries,
-        )
+        return entries
 
+    # TODO allow report_data it to be also a json!! '[{...}, {...}]'
+    # TODO pending data resistance
+    def append_report_data(
+        self, report_id: str, report_data: DataFrame,
+    ) -> None:
+        """Having a dataframe of Report
+
+        It is an aggregation, meaning we preserve all previous
+        data and just concatenate the new ones
+        """
+        report: Dict = self.get_report(report_id)
+
+        new_data: Dict = report_data.to_dict(orient='records')
+
+        if report['reportType']:
+            chart_data: Dict = report['chartData']
+            chart_data.update(new_data)
+
+            report_data_ = {'chartData': chart_data}
+            self.update_report(
+                report_id=report_id,
+                report_data=report_data_,
+            )
+        else:  # Then it is a table
+            item: Dict = {
+                'owner_id': report['ownerId'],
+                'reportId': report_id,
+                '__typename': 'ReportEntry',
+            }
+
+            data: List[Dict] = (
+                self.convert_dataframe_to_report_entry(
+                    report_id=report_id, df=report_data,
+                )
+            )
+
+            # TODO we can store batches and go faster than one by one
+            for datum in data:
+                item.update(datum)
+                self.post_report_entry(item)
+
+    # TODO allow report_data to be also a json!! '[{...}, {...}]'
+    def update_report_data(
+        self, report_id: str, report_data: DataFrame,
+    ) -> None:
+        """Remove old add new"""
+        report: Dict = self.get_report(report_id)
+        chart_data: Dict = report_data.to_dict(orient='records')
+
+        if report['reportType']:
+            report_data_ = {'chartData': chart_data}
+            self.update_report(
+                report_id=report_id,
+                report_data=report_data_,
+            )
+        else:  # Then it is a table
+            self.delete_report_data(report_id)
+
+            item: Dict = {
+                'owner_id': report['ownerId'],
+                'reportId': report_id,
+                '__typename': 'ReportEntry',
+            }
+
+            data: List[Dict] = (
+                self.convert_dataframe_to_report_entry(
+                    report_id=report_id, df=report_data,
+                )
+            )
+
+            # TODO we can store batches and go faster than one by one
+            for datum in data:
+                item.update(datum)
+                self.post_report_entry(item)
+
+    # TODO
     def add_fixture_data(self):
         raise NotImplementedError

@@ -2,15 +2,15 @@
 from abc import ABC
 from typing import List, Dict
 
-from shimoku_api_python.api.explorer_api import ExplorerApi
+from shimoku_api_python.api.explorer_api import AppExplorerApi
 
 
-class AppMetadataApi(ExplorerApi, ABC):
+class AppMetadataApi(AppExplorerApi, ABC):
     """
     """
 
     def __init__(self, api_client):
-        super().__init__(api_client)
+        self.api_client = api_client
 
     def get_target_grid_row_position_reports(
         self, app_id: str, path_name: str, row_position: int,
@@ -90,7 +90,7 @@ class AppMetadataApi(ExplorerApi, ABC):
             app_data=app_data,
         )
 
-    def hide_app_title(self, app_id: str, hide_title: bool = True) -> None:
+    def change_hide_title(self, app_id: str, hide_title: bool = True) -> None:
         """Hide / show app title
 
         See https://trello.com/c/8e11jso4/ for further info
@@ -182,5 +182,5 @@ class AppMetadataApi(ExplorerApi, ABC):
         )
 
     # TODO this updates the grid of every report in a path for it to work well
-    def rellocate_reports(self, app_id: str, path: str):
+    def fix_path_reports_grid(self, app_id: str, path: str):
         raise NotImplementedError

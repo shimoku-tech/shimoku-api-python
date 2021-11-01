@@ -52,6 +52,7 @@ class GetExplorerAPI(object):
         if report_id:
             report_data: Dict = (
                 self.api_client.query_element(
+                    method='GET',
                     element_name='report',
                     element_id=report_id,
                     **kwargs
@@ -641,16 +642,30 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         )
 
 
+class BusinessExplorerApi:
+    """"""
+    get_business = GetExplorerAPI.get_business
+    create_business = CreateExplorerAPI.create_business
+    update_business = UpdateExplorerAPI.update_business
+
+    get_business_apps = ReverseCascadeExplorerAPI.get_business_apps
+    get_business_all_apps_with_filter = ReverseCascadeExplorerAPI.get_business_all_apps_with_filter
+
+    delete_business = DeleteExplorerApi.delete_business
+
+
 class AppExplorerApi:
 
     get_app = GetExplorerAPI.get_app
     create_app = CreateExplorerAPI.create_app
     update_app = UpdateExplorerAPI.update_app
 
-# TODO WiP
     get_app_all_reports = ReverseCascadeExplorerAPI.get_app_all_reports
     get_app_all_paths = ReverseCascadeExplorerAPI.get_app_all_paths
     get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
+    get_app_all_reports_by_filter = MultiCascadeExplorerAPI.get_app_all_reports_by_filter
+    get_app_all_reports_metadata = MultiCascadeExplorerAPI.get_app_all_reports_metadata
+    get_app_path_all_reports = MultiCascadeExplorerAPI.get_app_path_all_reports
 
     delete_app = DeleteExplorerApi.delete_app
 

@@ -1,7 +1,11 @@
 """"""
 
+from abc import ABC
 
-class BusinessMetadataApi(object):
+from shimoku_api_python.api.explorer_api import BusinessExplorerApi
+
+
+class BusinessMetadataApi(BusinessExplorerApi, ABC):
     """
     """
 

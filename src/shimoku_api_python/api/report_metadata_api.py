@@ -3,15 +3,15 @@
 from abc import ABC
 from typing import Dict
 
-from shimoku_api_python.api.explorer_api import ExplorerApi
+from shimoku_api_python.api.explorer_api import ReportExplorerApi
 
 
-class ReportMetadataApi(ExplorerApi, ABC):
+class ReportMetadataApi(ReportExplorerApi, ABC):
     """
     """
 
     def __init__(self, api_client):
-        super().__init__(api_client)
+        self.api_client = api_client
 
     def get_report_data_fields(self, report_id: str) -> Dict:
         """

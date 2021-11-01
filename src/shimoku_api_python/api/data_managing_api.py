@@ -99,7 +99,7 @@ class DataManagingApi(object):
     def append_data(self):
         pass
 
-# TODO allow report_data to be also a json!! '[{...}, {...}]'
+    # TODO allow report_data to be also a json!! '[{...}, {...}]'
     def update_report_chart_data(
         self, report_data: pd.DataFrame, report_id: str,
     ) -> None:

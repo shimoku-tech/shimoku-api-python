@@ -641,6 +641,38 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         )
 
 
+class AppExplorerApi:
+
+    get_app = GetExplorerAPI.get_app
+    create_app = CreateExplorerAPI.create_app
+    update_app = UpdateExplorerAPI.update_app
+
+# TODO WiP
+    get_app_all_reports = ReverseCascadeExplorerAPI.get_app_all_reports
+    get_app_all_paths = ReverseCascadeExplorerAPI.get_app_all_paths
+    get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
+
+    delete_app = DeleteExplorerApi.delete_app
+
+
+class ReportExplorerApi:
+
+    get_report = GetExplorerAPI.get_report
+    get_report_data = GetExplorerAPI.get_report_data
+
+    create_report = CreateExplorerAPI.create_report
+
+    update_report = UpdateExplorerAPI.update_report
+
+    get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
+    get_all_reports_in_same_path = ReverseCascadeExplorerAPI.get_all_reports_in_same_path
+    get_app_id_by_report = ReverseCascadeExplorerAPI.get_app_id_by_report
+
+    get_business_id_by_report = MultiCascadeExplorerAPI.get_business_id_by_report
+
+    delete_report = DeleteExplorerApi.delete_report
+
+
 class ExplorerApi(
     CreateExplorerAPI,
     UpdateExplorerAPI,

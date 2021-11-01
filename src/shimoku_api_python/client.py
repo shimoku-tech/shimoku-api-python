@@ -15,18 +15,15 @@ class ApiClientError(Exception):
 
 
 class ApiClient(object):
-    PRIMITIVE_TYPES = (float, bool, bytes)
+    PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     def __init__(self, config={}):
-        self.host = "https://api.shimoku.com"
-        self.default_headers = {
-            'Content-Type': 'application/json',
-            'User-Agent': 'Swagger-Codegen/0.0/python'
-        }
-        self.set_config(config)
+        # TODO use this one when published
+        # self.host = "https://api.shimoku.com"
+        import os
+        self.host = os.getenv('API_HOST')
 
-        # Default vars
-
+        # DEFAULTS
         # Api key
         self.api_key: str = ''
         self.is_basic_auth: bool = False
@@ -37,6 +34,14 @@ class ApiClient(object):
         self.server: str = 'invalid-server'
         self.timeout: int = 120
 
+        self.default_headers = {
+            'Content-Type': 'application/json',
+            'User-Agent': 'Swagger-Codegen/0.0/python'
+        }
+        self.set_config(config)
+
+        # Default vars
+
     def set_config(self, config={}):
         """Set all config values"""
         # Basic Auth
@@ -46,6 +51,9 @@ class ApiClient(object):
         # OAuth
         self.access_token: str = config['access_token'] if 'access_token' in config.keys() else ''
         self.is_oauth: bool = self.access_token != ''
+
+        if not self.is_oauth and not self.is_basic_auth:
+            raise ValueError('You must provide either an API Key or Access Token')
 
         # If using Basic auth and no server is provided,
         # attempt to extract it from the api_key directly.
@@ -122,7 +130,10 @@ class ApiClient(object):
             auth = ('user', self.api_key)
 
         if self.is_oauth:
-            headers.update({'Authorization': 'Bearer ' + self.access_token})
+            if headers:
+                headers.update({'Authorization': 'Bearer ' + self.access_token})
+            else:
+                headers = {'Authorization': 'Bearer ' + self.access_token}
 
         if method == "GET":
             return requests.get(
@@ -200,12 +211,12 @@ class ApiClient(object):
             # model definition for request.
             obj_dict = {
                 obj.attribute_map[attr]: getattr(obj, attr)
-                for attr, _ in obj.swagger_types
+                for attr, _ in obj.items()
                 if getattr(obj, attr) is not None
             }
 
         return {key: self.sanitize_for_serialization(val)
-                for key, val in obj_dict}
+                for key, val in obj_dict.items()}
 
     @staticmethod
     def parameters_to_tuples(params, collection_formats):
@@ -217,7 +228,7 @@ class ApiClient(object):
         new_params = []
         if collection_formats is None:
             collection_formats = {}
-        for k, v in params if isinstance(params, dict) else params:  # noqa: E501
+        for k, v in params.items() if isinstance(params, dict) else params:  # noqa: E501
             if k in collection_formats:
                 collection_format = collection_formats[k]
                 if collection_format == 'multi':

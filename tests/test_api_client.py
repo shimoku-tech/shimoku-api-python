@@ -1,0 +1,27 @@
+""""""
+from os import getenv
+
+import shimoku_api_python as shimoku
+
+api_key: str = getenv('API_TOKEN')
+business_id: str = getenv('BUSINESS_ID')
+app_id: str = getenv('APP_ID')
+base_url: str = getenv('BASE_URL')
+
+config = {
+    'access_token': api_key
+}
+
+s = shimoku.Client(config)
+
+
+def test_request():
+    result = s.api_client.request(
+        method='GET',
+        url=f'{base_url}{business_id}/app/{app_id}/',
+    )
+    assert result.status_code == 200
+    print(result)
+
+
+test_request()

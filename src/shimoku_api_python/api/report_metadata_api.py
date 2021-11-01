@@ -42,28 +42,6 @@ class ReportMetadataApi(object):
             result = literal_eval(report_dict['dataFields'])
         return result
 
-    def hide_app_title(self, app_id: str, hide_title: bool = True) -> None:
-        """Hide / show app title
-
-        See https://trello.com/c/8e11jso4/ for further info
-        """
-        table_name: str = f'App-{self.table_name_suffix}'
-        constraints: Dict = {
-            'id': {'S': app_id},
-        }
-        update_expression: str = f'hideTitle = :hideTitle'
-        attribute_vals: Dict[str, bool] = {
-            ':hideTitle': hide_title,
-        }
-
-        self.update_item(
-            table_name=table_name,
-            constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
-        )
-
     # TODO este probablemente se tenga que romper en muchos
     def update_report_fields(
             self, fields: str, report_id: str,

@@ -15,6 +15,7 @@ config = {
 s = shimoku.Client(config)
 
 
+# TODO pending https://trello.com/c/18GLgLoQ
 def test_get_business():
     result = s.explorer.get_business(business_id)
     assert result.status_code == 200
@@ -33,6 +34,42 @@ def test_get_report(report_id):
     print(result)
 
 
-test_get_business()
-test_get_app()
-test_get_report(report_id='')
+# TODO pending https://trello.com/c/REZNlpeG/
+def test_get_business_id_by_app():
+    result = s.explorer.get_business_id_by_app(app_id)
+    print(result)
+
+
+# TODO pending https://trello.com/c/CNhYPEDe/
+def test_create_business():
+    result = s.explorer.create_business(
+        owner_id=,
+        name='business-test',
+    )
+    assert result.status_code == 200
+    print(result)
+
+
+# TODO pending https://trello.com/c/CNhYPEDe/
+def test_create_app():
+    result = s.explorer.create_app(business_id)
+    assert result.status_code == 200
+    print(result)
+
+
+# TODO pending https://trello.com/c/CNhYPEDe/
+def test_create_report():
+    result = s.explorer.create_report()
+    assert result.status_code == 200
+    print(result)
+
+
+# test_get_business()
+# test_get_app()
+# test_get_report(report_id='')
+test_get_business_id_by_app()
+
+# test_create_business()
+# test_create_app()
+# test_create_report()
+

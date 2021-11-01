@@ -15,57 +15,6 @@ class DataManagingApi(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    # TODO Guillermo esta no esta implementada en la API
-    def get_report_data(
-            self, report_id: Optional[str] = None,
-            external_id: Optional[str] = None,
-            app_id: Optional[str] = None,
-            **kwargs,
-    ) -> List[Dict]:
-        """Retrieve an specific report data
-
-        :param report_id: Shimoku report UUID
-        :param external_id: external report UUID
-        :param app_id: Shinmoku app UUID (only required if the external_id is provided)
-        """
-        # TODO Guillermo I better gonna need this end-point
-        if report_id:
-            report_data: Dict = (
-                self.api_client.query_element(
-                    element_name='report_id',
-                    element_id=report_id,
-                    **kwargs
-                )
-            )
-        elif external_id:
-            if not app_id:
-                raise ValueError(
-                    'If you retrieve by external_id '
-                    'you must provide an app_id'
-                )
-
-            report_ids_in_app: List[str] = (
-                self.get_app_all_reports(app_id)
-            )
-
-            for report_id in report_ids_in_app:
-                report_data_: Dict = self.get_report(report_id=report_id)
-                if report_data_['etl_code_id'] == external_id:
-                    report_data: Dict = (
-                        self.api_client.query_element(
-                            element_name='report_id',
-                            element_id=report_id,
-                            **kwargs
-                        )
-                    )
-                    return report_data
-            else:
-                return {}
-        else:
-            raise ValueError('Either report_id or external_id must be provided')
-
-        return report_data
-
     def get_target_report_any_data(self, report_id: str) -> List[str]:
         """"""
         table_name: str = f'ReportEntry-{self.table_name_suffix}'

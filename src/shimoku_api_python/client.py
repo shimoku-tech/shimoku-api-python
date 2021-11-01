@@ -1,7 +1,7 @@
 """Used as base Mailchimp: https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py"""
 
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import datetime
 import requests
@@ -136,13 +136,9 @@ class ApiClient(object):
                  returns the request thread.
         """
         params = locals()
-        for key, val in params['kwargs']:
-            if key not in all_params:
-                raise TypeError(
-                    "Got an unexpected keyword argument '%s'"
-                    " to method remove" % key
-                )
+        for key, val in params['kwargs'].items():
             params[key] = val
+        body_params = params['kwargs'].get('data')
         del params['kwargs']
 
         collection_formats = {}
@@ -154,7 +150,6 @@ class ApiClient(object):
         form_params = []
         local_var_files = {}
 
-        body_params = None
         # HTTP header `Accept`
         header_params['Accept'] = self.select_header_accept(
             ['application/json', 'application/problem+json'])  # noqa: E501
@@ -173,11 +168,14 @@ class ApiClient(object):
         )
 
     def query_element(
-        self, method: str, element_name: str, element_id: str, **kwargs
+        self, method: str, element_name: str,
+        element_id: Optional[str] = '', **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
         :param method: examples are 'GET', 'POST', etc
+        :param element_name:
+        :param element_id: optional
         """
         (
             query_params, header_params,
@@ -189,9 +187,14 @@ class ApiClient(object):
         if element_name in params:
             path_params[element_name] = params[element_name]  # noqa: E501
 
+        if method in ['GET', 'DELETE']:
+            endpoint: str = f'{element_name}/{element_id}'
+        elif method in ['POST']:
+            endpoint: str = f'{element_name}'
+
         element_data: Dict = (
             self.call_api(
-                f'{element_name}/{element_id}', method,
+                endpoint, method,
                 path_params,
                 query_params,
                 header_params,

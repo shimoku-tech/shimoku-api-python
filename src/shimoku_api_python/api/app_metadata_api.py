@@ -24,7 +24,9 @@ class AppMetadataApi(ExplorerApi, ABC):
         """
         target_report_ids: List[str] = list()
         report_ids: List[str] = (
-            self.get_path_all_reports(app_id=app_id, path_name=path_name)
+            self.get_app_path_all_reports(
+                app_id=app_id, path_name=path_name,
+            )
         )
 
         for report_id in report_ids:
@@ -77,6 +79,46 @@ class AppMetadataApi(ExplorerApi, ABC):
 
         return target_report_ids
 
+    def change_app_name(
+        self, app_id: str, new_app_name: str,
+    ) -> None:
+        """Update path name
+        """
+        app_data = {'name': new_app_name}
+        self.update_app(
+            app_id=app_id,
+            app_data=app_data,
+        )
+
+    def hide_app_title(self, app_id: str, hide_title: bool = True) -> None:
+        """Hide / show app title
+
+        See https://trello.com/c/8e11jso4/ for further info
+        """
+        app_data = {'hideTitle': hide_title}
+        self.update_app(
+            app_id=app_id,
+            app_data=app_data,
+        )
+
+    def change_path_name(
+            self, app_id: str, old_path_name: str, new_path_name: str,
+    ) -> None:
+        """Update path name
+        """
+        report_ids: List[str] = (
+            self.get_app_path_all_reports(app_id=app_id, path_name=old_path_name)
+        )
+
+        for report_id in report_ids:
+            report: Dict = self.get_report(report_id)
+            if report.get('path') == old_path_name:
+                report_data = {'path': new_path_name}
+                self.update_report(
+                    report_id=report['id'],
+                    report_data=report_data
+                )
+
     # TODO sigue siendo una gran duda para mi como gestionaremos los AppType!!
     def get_app_apptype(self, app_id: str) -> Dict:
         """Given an app retrieve its `AppType`
@@ -84,38 +126,12 @@ class AppMetadataApi(ExplorerApi, ABC):
         """
         raise NotImplemented
 
-# TODO voy por aqui
-    def change_path_name(
-        self, app_id: str, old_path_name: str, new_path_name: str,
-    ) -> None:
-        """Update path name
-        """
-        report_ids: List[str] = (
-            self.get_path_all_reports(app_id=app_id, path_name=old_path_name)
-        )
-
-        for report_id in report_ids:
-            report: Dict = self.get_report(report_id)
-            if report.get('path') == old_path_name:
-                # TODO update aqui
-                raise NotImplementedError
-
-# TODO
+    # TODO this can be done?
     def change_path_position(
-        self, app_id: str, old_path_name: str, new_path_name: str,
+            self, app_id: str, old_path_name: str, new_path_name: str,
     ) -> None:
         """Update path name
         """
-        raise NotImplementedError
-
-# TODO
-    def change_app_name(
-        self, app_id: str, new_app_name: str,
-    ) -> None:
-        """Update path name
-        """
-        app: Dict = self.get_app(app_id)
-        app['name'] == new_app_name
         raise NotImplementedError
 
     def change_report_grid_position(
@@ -138,12 +154,13 @@ class AppMetadataApi(ExplorerApi, ABC):
                 raise NotImplementedError
 
             report_ids: List[str] = (
-                self.get_path_all_reports(
+                self.get_app_path_all_reports(
                     app_id=app_id, path_name=path_name,
                 )
             )
 
-            for report in reports:
+            for report_id in report_ids:
+                report = self.get_report(report_id)
                 if int(report['grid'][0]) < grid:
                     continue
                 else:
@@ -153,24 +170,16 @@ class AppMetadataApi(ExplorerApi, ABC):
                     new_grid_position: str = (
                         f"{new_grid_row},{report['grid'].split(',')[1]}"
                     )
-                    self.update_report_grid_position(
-                        app_id=app_id, path=path, report_id=report['id'],
-                        grid=new_grid_position, reorganize_grid=False
+                    report_data: Dict = {'grid': new_grid_position}
+                    self.update_report(
+                        report_id=report_id,
+                        report_data=report_data,
                     )
 
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-        update_expression: str = f'grid = :grid'
-        attribute_vals: Dict[str, str] = {
-            ':grid': grid,
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
+        report_data: Dict = {'grid': grid}
+        self.update_report(
+            report_id=report_id,
+            report_data=report_data,
         )
 
 # TODO this updates the grid of every report in a path for it to work well

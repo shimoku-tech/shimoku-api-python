@@ -1,15 +1,17 @@
 """"""
 
+from abc import ABC
 from typing import Dict
 
+from shimoku_api_python.api.explorer_api import ExplorerApi
 
-class ReportMetadataApi(object):
+
+class ReportMetadataApi(ExplorerApi, ABC):
     """
     """
 
-# TODO
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
     def get_report_data_fields(self, report_id: str) -> Dict:
         """
@@ -111,4 +113,3 @@ class ReportMetadataApi(object):
 # TODO
     def update_report_external_id(self, report_id: str, new_external_id: str):
         pass
-

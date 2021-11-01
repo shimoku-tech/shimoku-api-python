@@ -5,14 +5,17 @@ from typing import List, Dict, Optional
 from pandas import DataFrame
 
 
-class PluginsApi(object):
+# TODO https://trello.com/c/4cMvn5OU/
+
+
+class NotificationsApi(object):
     """
     """
 
     def __init__(self, api_client):
         self.api_client = api_client
 
-# TODO allow report_data it to be also a json!! '[{...}, {...}]'
+    # TODO allow report_data it to be also a json!! '[{...}, {...}]'
     def post_notifications(
         self, report_df: pd.DataFrame, owner_id: str,
         remove_previous: bool, is_single_owner: bool,
@@ -70,3 +73,9 @@ class PluginsApi(object):
         self.put_many_items(
             table_name=table_name, items=entries,
         )
+
+    def get_active_notifications(self):
+        raise NotImplementedError
+
+    def get_notification_by_date(self):
+        raise NotImplementedError

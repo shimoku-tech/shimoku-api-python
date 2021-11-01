@@ -13,7 +13,7 @@ class AppMetadataApi(ExplorerApi, ABC):
         super().__init__(api_client)
 
     def get_target_grid_row_position_reports(
-            self, app_id: str, path_name: str, row_position: int,
+        self, app_id: str, path_name: str, row_position: int,
     ) -> List[str]:
         """Given a grid row retrieve all report ids
         that belongs to that row position
@@ -40,7 +40,7 @@ class AppMetadataApi(ExplorerApi, ABC):
         return target_report_ids
 
     def get_target_grid_position_reports(
-            self, app_id: str, path_name: str, grid_position: str,
+        self, app_id: str, path_name: str, grid_position: str,
     ) -> List[str]:
         """Given a grid retrieve all report ids
         that belongs to that grid position
@@ -102,7 +102,7 @@ class AppMetadataApi(ExplorerApi, ABC):
         )
 
     def change_path_name(
-            self, app_id: str, old_path_name: str, new_path_name: str,
+        self, app_id: str, old_path_name: str, new_path_name: str,
     ) -> None:
         """Update path name
         """
@@ -128,7 +128,7 @@ class AppMetadataApi(ExplorerApi, ABC):
 
     # TODO this can be done?
     def change_path_position(
-            self, app_id: str, old_path_name: str, new_path_name: str,
+        self, app_id: str, old_path_name: str, new_path_name: str,
     ) -> None:
         """Update path name
         """
@@ -170,10 +170,9 @@ class AppMetadataApi(ExplorerApi, ABC):
                     new_grid_position: str = (
                         f"{new_grid_row},{report['grid'].split(',')[1]}"
                     )
-                    report_data: Dict = {'grid': new_grid_position}
-                    self.update_report(
-                        report_id=report_id,
-                        report_data=report_data,
+                    self.change_report_grid_position(
+                        app_id=app_id, report_id=report_id,
+                        grid=new_grid_position, reorganize_grid=False,
                     )
 
         report_data: Dict = {'grid': grid}
@@ -182,6 +181,6 @@ class AppMetadataApi(ExplorerApi, ABC):
             report_data=report_data,
         )
 
-# TODO this updates the grid of every report in a path for it to work well
+    # TODO this updates the grid of every report in a path for it to work well
     def rellocate_reports(self, app_id: str, path: str):
-        pass
+        raise NotImplementedError

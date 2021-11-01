@@ -88,6 +88,7 @@ class GetExplorerAPI(object):
 
     # TODO pending
     #  https://trello.com/c/ndJs1WzW
+    # TODO make it for both Table and non-table and paginate
     def get_report_data(
         self, report_id: Optional[str] = None,
         external_id: Optional[str] = None,
@@ -346,6 +347,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
+    # TODO paginate
     def get_business_apps(self, business_id: str) -> List[str]:
         """Given a business retrieve all app ids
 
@@ -355,6 +357,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     # TODO pending
     #  https://trello.com/c/lLvXz5UB
+    # TODO paginate
     def get_app_all_paths(self, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
@@ -364,6 +367,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     # TODO pending
     #  https://trello.com/c/lLvXz5UB
+    # TODO paginate
     def get_app_all_reports(self, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
@@ -376,6 +380,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             report_ids = report_ids + path_reports
         return report_ids
 
+    # TODO paginate
     def get_app_path_all_reports(self, app_id: str, path_name: str) -> List[str]:
         """Given a Path that belongs to an AppId retrieve all reportId
 
@@ -383,6 +388,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         """
         raise NotImplementedError
 
+    # TODO paginate
     def get_app_all_reports_metadata(self, app_id: str) -> List[Dict]:
         """Given an App Id retrieve all reports data from all reports
         that belongs to such App Id.
@@ -393,6 +399,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             for report_id in report_ids
         ]
 
+    # TODO paginate
     def get_path_all_reports_metadata(self, app_id: str, path: str) -> List[Dict]:
         """Given an App return all Reports data that belong to a target path"""
         results: List[str] = list()
@@ -407,6 +414,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
+    # TODO paginate
     def get_business_all_apps_with_filter(
             self, business_id: str, app_filter: Dict
     ) -> List[Dict]:
@@ -429,6 +437,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     # TODO pending
     #  https://trello.com/c/lLvXz5UB
+    # TODO paginate
     def get_app_all_reports_by_filter(
             self, app_id: str,
             report_filter: Dict
@@ -499,6 +508,7 @@ class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
     def __init__(self, api_client):
         super().__init__(api_client)
 
+    # TODO paginate
     def get_business_paths(self, business_id: str) -> List[str]:
         """Given a business retrieve all path names
 
@@ -511,6 +521,7 @@ class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
             paths = paths + app_paths
         return paths
 
+    # TODO paginate
     def get_business_reports(self, business_id: str) -> List[str]:
         """Given a business retrieve all report ids
 
@@ -523,6 +534,7 @@ class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
             report_ids = report_ids + app_report_ids
         return report_ids
 
+    # TODO paginate
     def get_business_id_by_report(self, report_id: str, **kwargs) -> str:
         """Bottom-up method
         Having a report_id return the app it belongs to

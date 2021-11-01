@@ -33,15 +33,6 @@ class DataManagingApi(object):
         )
         return report_entry
 
-    def has_app_report_data(self, app_id: str) -> bool:
-        """"""
-        reports: List[str] = self.get_target_app_all_reports(app_id)
-        for report_id in reports:
-            result: bool = self.has_report_report_entries(report_id)
-            if result:
-                return True
-        return False
-
 # TODO
     def has_path_data(self, app_id: str, path_name: str) -> bool:
         """"""

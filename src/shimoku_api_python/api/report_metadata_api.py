@@ -1,7 +1,9 @@
 """"""
 
 from abc import ABC
-from typing import Dict
+from typing import List, Dict
+
+import datetime as dt
 
 from shimoku_api_python.api.explorer_api import ReportExplorerApi
 
@@ -13,103 +15,60 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    def has_report_data(self, report_id: str) -> bool:
+        """"""
+        data: List[str] = self.get_report_data(report_id=report_id)
+        if data:
+            return True
+        else:
+            return False
+
+    def get_report_last_update(self, report_id: str) -> dt.datetime:
+        """"""
+        report: Dict = self.get_report(report_id)
+        # TODO check it returns dt.date
+        return report['updatedAt']
+
     def get_report_data_fields(self, report_id: str) -> Dict:
         """
-        Get report.dataFields
-
-        Example of report field:
-        --------------
-
-        {
-            "Churn class":
-             {
-                "field": "stringField1",
-                "filterBy": [
-                    "Very probable", "Probable",
-                    "Improbable", "Very Improbable",
-                ]
-            },
-            "Churn probability" : {
-                "field" : "intField1",
-                "filterBy": None,
-                }
-            },
-            ...
-        }
         """
-        report_dict: Dict = self.get_target_report(report_id=report_id)
-        try:
-            result = json_util.loads(report_dict['dataFields'])
-        except JSONDecodeError:
-            result = literal_eval(report_dict['dataFields'])
-        return result
+        report: Dict = self.get_report(report_id)
+        # TODO check it returns Dict
+        return report['dataFields']
 
-    # TODO este probablemente se tenga que romper en muchos
+    # TODO some data resistence here to avoid it to get broken
     def update_report_fields(
-            self, fields: str, report_id: str,
+        self, report_id: str, data_fields: str,
     ) -> None:
-        """Update report.dataFields
-        """
-        table_name: str = f'Report-{self.table_name_suffix}'
-        # filter_expression = 'id = :report_id'
-        # filter_values = {':report_id': {'S': report_id}}
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-        update_expression: str = f'dataFields = :dataFields'
-        attribute_vals: Dict[str, str] = {
-            ':dataFields': fields,
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
+        """"""
+        report_data = {'dataFields': data_fields}
+        self.update_report(
+            report_id=report_id,
+            report_data=report_data,
         )
 
-    def change_report_description(
-        self, description: str, report_id: str,
+    def update_report_description(
+        self, report_id: str, description: str,
     ) -> None:
-        """Update report.Description field
-        """
-        table_name: str = f'Report-{self.table_name_suffix}'
-        # filter_expression = 'id = :report_id'
-        # filter_values = {':report_id': {'S': report_id}}
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-        update_expression: str = f'description = :description'
-        attribute_vals: Dict[str, str] = {
-            ':description': description,
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
+        """"""
+        report_data = {'description': description}
+        self.update_report(
+            report_id=report_id,
+            report_data=report_data,
         )
 
     def update_report_chart_type(self, report_id: str, report_type: str) -> None:
         """Update report.reportType
         """
-        table_name: str = f'Report-{self.table_name_suffix}'
-        constraints: Dict = {
-            'id': {'S': report_id},
-        }
-        update_expression: str = f'reportType = :reportType'
-        attribute_vals: Dict[str, str] = {
-            ':reportType': report_type,
-        }
-
-        self.update_item(
-            table_name=table_name, constraints=constraints,
-            update_expression=update_expression,
-            attribute_vals=attribute_vals,
-            action="set",
+        report_data = {'reportType': report_type}
+        self.update_report(
+            report_id=report_id,
+            report_data=report_data,
         )
 
-# TODO
     def update_report_external_id(self, report_id: str, new_external_id: str):
-        pass
+        report_data = {'externalId': new_external_id}
+        self.update_report(
+            report_id=report_id,
+            report_data=report_data,
+        )

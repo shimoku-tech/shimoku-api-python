@@ -1,6 +1,9 @@
 """"""
+
 from abc import ABC
 from typing import List, Dict
+
+import datetime as dt
 
 from shimoku_api_python.api.explorer_api import AppExplorerApi
 
@@ -11,6 +14,29 @@ class AppMetadataApi(AppExplorerApi, ABC):
 
     def __init__(self, api_client):
         self.api_client = api_client
+
+    def has_app_report(self, app_id: str) -> bool:
+        """"""
+        reports: List[str] = self.get_app_all_reports(app_id)
+        if reports:
+            return True
+        else:
+            return False
+
+    def has_app_report_data(self, app_id: str) -> bool:
+        """"""
+        reports: List[str] = self.get_target_app_all_reports(app_id)
+        for report_id in reports:
+            result: bool = self.has_report_report_entries(report_id)
+            if result:
+                return True
+        return False
+
+    def get_report_last_update(self, app_id: str) -> dt.datetime:
+        """"""
+        app: Dict = self.get_app(app_id)
+        # TODO check it returns dt.date
+        return app_id['updatedAt']
 
     def get_target_grid_row_position_reports(
         self, app_id: str, path_name: str, row_position: int,
@@ -184,3 +210,4 @@ class AppMetadataApi(AppExplorerApi, ABC):
     # TODO this updates the grid of every report in a path for it to work well
     def fix_path_reports_grid(self, app_id: str, path: str):
         raise NotImplementedError
+

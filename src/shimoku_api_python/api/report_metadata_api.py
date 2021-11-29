@@ -1,7 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict
+from typing import List, Dict, Union
 
 import datetime as dt
 
@@ -43,6 +43,47 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     def get_report_fields(self, report_id: str):
         """"""
         raise NotImplementedError
+
+    def get_report_last_update(self, app_id: str) -> dt.datetime:
+        """"""
+        app: Dict = self.get_app(app_id)
+        # TODO check it returns dt.date
+        return app_id['updatedAt']
+
+    def get_report_by_name(
+        self, business_id: str, app_id: str, report_name: str,
+    ) -> Union[Dict, List[Dict]]:
+        """Given a business retrieve all app metadata
+
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param report_name:
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}'
+        report_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Union[Dict, List[Dict]] = {}
+        for report_id in report_ids:
+            report: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+            if report.get('name') == report_name:
+                if result:
+                    if len(result) == 1:
+                        result: List[Dict] = [result] + [report]
+                    else:
+                        result: List[Dict] = result + [report]
+                else:
+                    result: Dict = report
+        return result
 
     # TODO some data resistence here to avoid it to get broken
     def update_report_fields(

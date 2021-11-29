@@ -1,9 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict
-
-import datetime as dt
+from typing import List, Dict, Union
 
 from shimoku_api_python.api.explorer_api import AppExplorerApi
 
@@ -23,11 +21,66 @@ class AppMetadataApi(AppExplorerApi, ABC):
         else:
             return False
 
-    def get_report_last_update(self, app_id: str) -> dt.datetime:
-        """"""
-        app: Dict = self.get_app(app_id)
-        # TODO check it returns dt.date
-        return app_id['updatedAt']
+    def get_app_by_type(
+        self, business_id: str, app_type: str,
+    ) -> Union[Dict, List[Dict]]:
+        """Given a business retrieve all app metadata
+
+        :param business_id: business UUID
+        :param app_type:
+        """
+        endpoint: str = f'business/{business_id}/apps'
+        app_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Union[Dict, List[Dict]] = {}
+        for app_id in app_ids:
+            app: Dict = self.get_app(business_id=business_id, app_id=app_id)
+            if app['appType'] == app_type:
+                if result:
+                    if len(result) == 1:
+                        result: List[Dict] = [result] + [app]
+                    else:
+                        result: List[Dict] = result + [app]
+                else:
+                    result: Dict = app
+        return result
+
+# TODO es name o title?
+    def get_app_by_name(
+        self, business_id: str, app_name: str
+    ) -> Union[Dict, List[Dict]]:
+        """Given a business retrieve all app metadata
+
+        :param business_id: business UUID
+        :param app_name:
+        """
+        endpoint: str = f'business/{business_id}/apps'
+        app_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Union[Dict, List[Dict]] = {}
+        for app_id in app_ids:
+            app: Dict = self.get_app(business_id=business_id, app_id=app_id)
+            if app['name'] == app_name:
+                if result:
+                    if len(result) == 1:
+                        result: List[Dict] = [result] + [app]
+                    else:
+                        result: List[Dict] = result + [app]
+                else:
+                    result: Dict = app
+        return result
 
     def change_app_name(
         self, app_id: str, new_app_name: str,
@@ -50,10 +103,3 @@ class AppMetadataApi(AppExplorerApi, ABC):
             app_id=app_id,
             app_data=app_data,
         )
-
-    # TODO sigue siendo una gran duda para mi como gestionaremos los AppType!!
-    def get_app_apptype(self, app_id: str) -> Dict:
-        """Given an app retrieve its `AppType`
-        :param app_id: app UUID
-        """
-        raise NotImplemented

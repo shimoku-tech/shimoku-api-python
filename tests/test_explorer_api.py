@@ -22,14 +22,18 @@ def test_get_business():
     print(result)
 
 
-def test_get_app():
-    result = s.explorer.get_app(app_id)
+def test_get_app_id():
+    result = s.explorer.get_app(
+        business_id=business_id, app_id=app_id
+    )
     assert result.status_code == 200
     print(result)
 
 
 def test_get_report(report_id):
-    result = s.explorer.get_report(report_id)
+    result = s.explorer.get_report(
+        business_id=business_id, app_id=app_id, report_id=report_id,
+    )
     assert result.status_code == 200
     print(result)
 

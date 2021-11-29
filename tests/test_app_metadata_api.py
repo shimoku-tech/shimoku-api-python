@@ -21,4 +21,13 @@ def test_get_app():
     print(result)
 
 
-test_get_app()
+def test_get_app_reports():
+    result = s.app.get_app_reports(
+        business_id=business_id,
+        app_id=app_id,
+    )
+    print(result)
+
+
+# test_get_app()
+test_get_app_reports()

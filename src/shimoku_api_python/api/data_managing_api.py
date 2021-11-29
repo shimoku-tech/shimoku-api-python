@@ -18,6 +18,9 @@ class DataManagingApi(ReportExplorerApi):
     def __init__(self, api_client):
         self.api_client = api_client
 
+
+# TODO permitir external_report_id como input
+
     def convert_dataframe_to_report_entry(
         self, report_id: str, df: DataFrame
     ) -> List[Dict]:

@@ -168,14 +168,12 @@ class ApiClient(object):
         )
 
     def query_element(
-        self, method: str, element_name: str,
-        element_id: Optional[str] = '', **kwargs
+        self, method: str, endpoint: str, **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
         :param method: examples are 'GET', 'POST', etc
-        :param element_name:
-        :param element_id: optional
+        :param endpoint: example: 'business/{businessId}/app/{appId}
         """
         (
             query_params, header_params,
@@ -184,13 +182,8 @@ class ApiClient(object):
         ) = self.set_http_info(**kwargs)
 
         path_params = {}
-        if element_name in params:
-            path_params[element_name] = params[element_name]  # noqa: E501
-
-        if method in ['GET', 'DELETE']:
-            endpoint: str = f'{element_name}/{element_id}'
-        elif method in ['POST']:
-            endpoint: str = f'{element_name}'
+        if endpoint in params:
+            path_params[endpoint] = params[endpoint]  # noqa: E501
 
         element_data: Dict = (
             self.call_api(

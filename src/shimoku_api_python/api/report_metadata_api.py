@@ -80,3 +80,5 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             report_id=report_id,
             report_data=report_data,
         )
+
+# TODO get_report_by_external_id(self, external_id: str) -> str

@@ -14,47 +14,49 @@ class GetExplorerAPI(object):
 
         :param business_id: user UUID
         """
+        endpoint: str = f'business/{business_id}'
         business_data: Dict = (
             self.api_client.query_element(
-                element_name='business',
-                element_id=business_id,
-                **kwargs
+                method='GET', endpoint=endpoint, **kwargs
             )
         )
         return business_data
 
-    def get_app(self, app_id: str, **kwargs) -> Dict:
+    def get_app(self, business_id: str, app_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
+        :param business_id: business UUID
         :param app_id: app UUID
         """
+        endpoint: str = f'business/{business_id}/app/{app_id}'
         app_data: Dict = (
             self.api_client.query_element(
-                element_name='app',
-                element_id=app_id,
-                **kwargs
+                method='GET', endpoint=endpoint, **kwargs
             )
         )
         return app_data
 
     def get_report(
-        self, report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
+        self,
+        business_id: Optional[str] = None,
         app_id: Optional[str] = None,
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
         **kwargs,
     ) -> Dict:
         """Retrieve an specific report data
 
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
         :param report_id: Shimoku report UUID
         :param external_id: external report UUID
-        :param app_id: Shinmoku app UUID (only required if the external_id is provided)
         """
         if report_id:
+            endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
             report_data: Dict = (
                 self.api_client.query_element(
                     method='GET',
-                    element_name='report',
-                    element_id=report_id,
+                    endpoint=endpoint,
                     **kwargs
                 )
             )
@@ -72,11 +74,14 @@ class GetExplorerAPI(object):
             for report_id in report_ids_in_app:
                 report_data_: Dict = self.get_report(report_id=report_id)
                 if report_data_['etl_code_id'] == external_id:
+                    endpoint: str = (
+                        f'business/{business_id}/'
+                        f'app/{app_id}/'
+                        f'report/{report_id}'
+                    )
                     report_data: Dict = (
                         self.api_client.query_element(
-                            element_name='report',
-                            element_id=report_id,
-                            **kwargs
+                            method='GET', endpoint=endpoint, **kwargs
                         )
                     )
                     return report_data
@@ -91,9 +96,10 @@ class GetExplorerAPI(object):
     #  https://trello.com/c/ndJs1WzW
     # TODO make it for both Table and non-table and paginate
     def get_report_data(
-        self, report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
+        self, business_id: str,
         app_id: Optional[str] = None,
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> List[Dict]:
         """"""
         report = self.get_report(report_id)
@@ -101,9 +107,10 @@ class GetExplorerAPI(object):
         if report['reportType']:
             report: Dict = (
                 self.get_report(
+                    business_id=business_id,
+                    app_id=app_id,
                     report_id=report_id,
                     external_id=external_id,
-                    app_id=app_id,
                 )
             )
             return report['chartData']
@@ -179,7 +186,8 @@ class CreateExplorerAPI(object):
 
     # TODO pending to be tried
     def create_report(
-        self, app_id: str, owner_id: str,
+        self, business_id: str,
+        app_id: str, owner_id: str,
         title: str, grid: str,
         order: Optional[int] = 0,
         smart_filters: str = '',
@@ -192,6 +200,7 @@ class CreateExplorerAPI(object):
     ) -> str:
         """Create new Report associated to an AppId
 
+        :param business_id:
         :param app_id:
         :param owner_id:
         :param fields: Example
@@ -315,27 +324,30 @@ class UpdateExplorerAPI(object):
     # TODO pending https://trello.com/c/18GLgLoQ
     def update_business(self, business_id: str, business_data: Dict):
         """"""
+        endpoint: str = f'business/{business_id}'
         return self.api_client.query_element(
-            method='PATCH', element_name='business',
-            element_id=business_id, **business_data
+            method='PATCH', endpoint=endpoint, **business_data,
         )
 
-    def update_app(self, app_id: str, app_data: Dict):
+    def update_app(self, business_id: str, app_id: str, app_data: Dict):
         """
+        :param business_id:
         :param app_id:
         :param app_data: contain the elements to update key
             is the col name and value the value to overwrite
         """
+        endpoint: str = f'business/{business_id}/app/{app_id}'
         return self.api_client.query_element(
-            method='PATCH', element_name='app',
-            element_id=app_id, **app_data
+            method='PATCH', endpoint=endpoint, **app_data,
         )
 
-    def update_report(self, report_id, report_data) -> str:
+    def update_report(
+        self, business_id: str, app_id: str, report_id: str, report_data,
+    ) -> str:
         """"""
+        endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
         return self.api_client.query_element(
-            method='PATCH', element_name='report',
-            element_id=report_id, **report_data
+            method='PATCH', endpoint=endpoint, **report_data,
         )
 
 
@@ -350,41 +362,84 @@ class CascadeExplorerAPI(GetExplorerAPI):
     def get_account_businesses(self):
         raise NotImplementedError
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
     # TODO paginate
-    def get_business_apps(self, business_id: str) -> List[str]:
+    def get_business_app_ids(self, business_id: str) -> List[str]:
         """Given a business retrieve all app ids
 
         :param business_id: business UUID
         """
-        raise NotImplementedError
+        endpoint: str = f'business/{business_id}/apps'
+        app_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+        return app_ids
 
-    # TODO pending
-    #  https://trello.com/c/lLvXz5UB
+    def get_business_apps(self, business_id: str) -> List[Dict]:
+        """Given a business retrieve all app metadata
+
+        :param business_id: business UUID
+        """
+        endpoint: str = f'business/{business_id}/apps'
+        app_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+        return [
+            self.get_app(business_id=business_id, app_id=app_id)
+            for app_id in app_ids
+        ]
+
     # TODO paginate
-    def get_app_all_paths(self, app_id: str) -> List[str]:
-        """Given an app retrieve all report_id
+    def get_app_path_names(self, business_id: str, app_id: str) -> List[str]:
+        """Given a Path that belongs to an AppId retrieve all reportId
 
+        :param business_id: business UUID
         :param app_id: app UUID
         """
-        raise NotImplementedError
+        report_ids: List[str] = self.get_app_reports(
+            business_id=business_id, app_id=app_id,
+        )
 
-    # TODO pending
-    #  https://trello.com/c/lLvXz5UB
+        paths: List[str] = []
+        for report_id in report_ids:
+            report_metadata: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+            path: Optional[str] = report_metadata.get('path')
+            if path:
+                paths = paths + [path]
+        return paths
+
     # TODO paginate
-    def get_app_all_reports(self, app_id: str) -> List[str]:
+    def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
+        :param business_id: business UUID
         :param app_id: app UUID
         """
-        paths: List[str] = self.get_app_all_paths(app_id=app_id)
-        report_ids: List[str] = []
-        for path_name in paths:
-            path_reports: List[str] = self.get_path_all_reports(path_name=path_name)
-            report_ids = report_ids + path_reports
+        endpoint: str = f'business/{business_id}/app/{app_id}/reports'
+        report_ids: Dict = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
         return report_ids
+
+    # TODO paginate
+    def get_app_reports(self, business_id: str, app_id: str) -> List[Dict]:
+        """Given an App Id retrieve all reports data from all reports
+        that belongs to such App Id.
+        """
+        report_ids = self.get_app_reports(business_id=business_id, app_id=app_id)
+        return [
+            self.get_report(report_id=report_id)
+            for report_id in report_ids
+        ]
 
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
         """Given a report retrieve all reportEntries
@@ -394,41 +449,51 @@ class CascadeExplorerAPI(GetExplorerAPI):
         raise NotImplementedError
 
     # TODO paginate
-    def get_app_path_all_reports(self, app_id: str, path_name: str) -> List[str]:
-        """Given a Path that belongs to an AppId retrieve all reportId
+    def get_path_report_ids(
+        self, business_id: str, app_id: str, path_name: str,
+    ) -> List[str]:
+        """Given an App return all Reports ids that belong to a target path"""
+        report_ids: List[str] = self.get_app_report_ids(
+            business_id=business_id, app_id=app_id,
+        )
 
-        :param app_id: app UUID
-        """
-        raise NotImplementedError
-
-    # TODO paginate
-    def get_app_all_reports_metadata(self, app_id: str) -> List[Dict]:
-        """Given an App Id retrieve all reports data from all reports
-        that belongs to such App Id.
-        """
-        report_ids = self.get_app_all_reports(app_id=app_id)
-        return [
-            self.get_report(report_id=report_id)
-            for report_id in report_ids
-        ]
-
-    # TODO paginate
-    def get_path_all_reports_metadata(self, app_id: str, path: str) -> List[Dict]:
-        """Given an App return all Reports data that belong to a target path"""
-        results: List[str] = list()
-        report_ids: List[str] = self.get_app_all_reports(app_id)
+        path_report_ids: List[str] = []
         for report_id in report_ids:
-            report: Dict = self.get_report(report_id)
-            if report.get('path') == path:
-                results.append(report)
+            report_metadata: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+            path: Optional[str] = report_metadata.get('path')
+            if path == path_name:
+                path_report_ids = path_report_ids + [report_id]
+        return report_ids
 
-        return results
+    def get_path_reports(
+        self, business_id: str, app_id: str, path_name: str,
+    ) -> List[Dict]:
+        """Given an App return all Reports data that belong to a target path"""
+        report_ids: List[str] = self.get_app_report_ids(
+            business_id=business_id, app_id=app_id,
+        )
+
+        path_reports: List[Dict] = []
+        for report_id in report_ids:
+            report_metadata: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+            path: Optional[str] = report_metadata.get('path')
+            if path == path_name:
+                path_reports = path_reports + [report_metadata]
+        return path_reports
 
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
     # TODO paginate
-    def get_business_all_apps_with_filter(
+    def get_business_apps_with_filter(
             self, business_id: str, app_filter: Dict
     ) -> List[Dict]:
         """
@@ -451,9 +516,9 @@ class CascadeExplorerAPI(GetExplorerAPI):
     # TODO pending
     #  https://trello.com/c/lLvXz5UB
     # TODO paginate
-    def get_app_all_reports_by_filter(
-            self, app_id: str,
-            report_filter: Dict
+    def get_app_reports_by_filter(
+        self, app_id: str,
+        report_filter: Dict
     ) -> List[Dict]:
         """Having an AppId first retrieve all reportId that belongs
         to the target AppId. Second filter and take the reportId
@@ -503,17 +568,25 @@ class ReverseCascadeExplorerAPI(CascadeExplorerAPI):
         )
         return report_data['appId']
 
-    def get_all_reports_in_same_app(self, report_id: str) -> List[str]:
+    def get_reports_in_same_app(self, report_id: str) -> List[str]:
         """Return all reports that are in the same app that the target report"""
         report_data: Dict = self.get_report(report_id=report_id)
         app_id: str = report_data['appId']
         return self.get_app_all_reports(app_id)
 
-    def get_all_reports_in_same_path(self, report_id: str) -> List[str]:
+    def get_reports_in_same_path(
+        self, business_id, app_id: str, report_id: str,
+    ) -> List[str]:
         """Return all reports that are in the same path that the target report"""
-        report_data: Dict = self.get_report(report_id=report_id)
+        report_data: Dict = self.get_report(
+            business_id=business_id, app_id=app_id, report_id=report_id,
+        )
         path_name: str = report_data['path']
-        return self.get_path_all_reports(path_name)
+        return self.get_path_reports(
+            business_id=business_id,
+            app_id=app_id,
+            path_name=path_name,
+        )
 
 
 class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
@@ -530,7 +603,7 @@ class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
         app_ids: List[str] = self.get_business_apps(business_id=business_id)
         paths: List[str] = []
         for app_id in app_ids:
-            app_paths: List[str] = self.get_app_all_paths(app_id=app_id)
+            app_paths: List[str] = self.get_app_paths(app_id=app_id)
             paths = paths + app_paths
         return paths
 
@@ -543,7 +616,7 @@ class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
         app_ids: List[str] = self.get_business_apps(business_id=business_id)
         report_ids: List[str] = []
         for app_id in app_ids:
-            app_report_ids: List[str] = self.get_app_all_reports(app_id=app_id)
+            app_report_ids: List[str] = self.get_app_reports(app_id=app_id)
             report_ids = report_ids + app_report_ids
         return report_ids
 
@@ -567,50 +640,41 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
-    def delete_business(self, business_id: str, remove_apps: bool = True):
-        """Delete an App"""
-        if remove_apps:
-            app_ids: List[str] = self.get_business_all_apps(business_id)
-            for app_id in app_ids:
-                self.delete_app(
-                    app_id=app_id,
-                    remove_reports=True,
-                )
-
+    def delete_business(self, business_id: str):
+        """Delete a Business.
+        All apps, reports and data associated with that business is removed by the API
+        """
+        endpoint: str = f'business/{business_id}'
         self.api_client.query_element(
-            method='DELETE',
-            element_name='business',
-            element_id=business_id,
+            method='DELETE', endpoint=endpoint,
+        )
+
+# TODO remove reports must not be configurable, it must do it always
+# TODO joder claro puedo hacer un cascade de business
+#  y así con el app_id por parte del cliente es suficiente!!!
+    # TODO pending
+    #  https://trello.com/c/18GLgLoQ
+    #  https://trello.com/c/lLvXz5UB
+    def delete_app(self, business_id: str, app_id: str):
+        """Delete an App
+        All reports and data associated with that app is removed by the API
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}'
+        self.api_client.query_element(
+            method='DELETE', endpoint=endpoint
         )
 
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
-    def delete_app(self, app_id: str, remove_reports: bool = True):
-        """Delete an App"""
-        if remove_reports:
-            report_ids: List[str] = self.get_app_all_reports(app_id)
-            for report_id in report_ids:
-                self.delete_report(
-                    report_id=report_id,
-                    relocating=False,
-                    delete_data=True,
-                )
-
-        self.api_client.query_element(
-            method='DELETE',
-            element_name='app',
-            element_id=app_id,
-        )
-
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
-    def delete_path(self, app_id: str, path: str):
-        """Delete all Reports in a path"""
+    def delete_path(self, business_id: str, app_id: str, path_name: str):
+        """Delete all Reports in a path
+        All data associated with that report is removed by the API"""
         report_ids: List[str] = (
-            self.get_target_path_all_reports(
-                app_id=app_id, path=path,
+            self.get_path_reports(
+                business_id=business_id,
+                app_id=app_id,
+                path_name=path_name,
             )
         )
         for report_id in report_ids:
@@ -621,8 +685,8 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
     #  https://trello.com/c/lLvXz5UB
     # TODO WiP
     def delete_report(
-            self, report_id: str, relocating: bool = True,
-            delete_data: bool = True,
+        self, business_id: str, app_id: str, report_id: str,
+        relocating: bool = True, delete_data: bool = True,
     ) -> None:
         """Delete a Report, relocating reports underneath to avoid errors
         """
@@ -661,7 +725,8 @@ class BusinessExplorerApi:
     update_business = UpdateExplorerAPI.update_business
 
     get_business_apps = ReverseCascadeExplorerAPI.get_business_apps
-    get_business_all_apps_with_filter = ReverseCascadeExplorerAPI.get_business_all_apps_with_filter
+    get_business_app_ids = ReverseCascadeExplorerAPI.get_business_app_ids
+    get_business_all_apps_with_filter = ReverseCascadeExplorerAPI.get_business_apps_with_filter
 
     delete_business = DeleteExplorerApi.delete_business
 
@@ -672,11 +737,12 @@ class AppExplorerApi:
     create_app = CreateExplorerAPI.create_app
     update_app = UpdateExplorerAPI.update_app
 
-    get_app_all_reports = ReverseCascadeExplorerAPI.get_app_all_reports
-    get_app_all_paths = ReverseCascadeExplorerAPI.get_app_all_paths
-    get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
-    get_app_all_reports_by_filter = MultiCascadeExplorerAPI.get_app_all_reports_by_filter
-    get_app_all_reports_metadata = MultiCascadeExplorerAPI.get_app_all_reports_metadata
+    get_app_reports = ReverseCascadeExplorerAPI.get_app_reports
+    get_app_report_ids = ReverseCascadeExplorerAPI.get_app_report_ids
+    get_app_path_names = ReverseCascadeExplorerAPI.get_app_path_names
+# TODO this one should go to ReportExplorerAPI not here
+    # get_reports_in_same_app = ReverseCascadeExplorerAPI.get_reports_in_same_app
+    get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
 
     delete_app = DeleteExplorerApi.delete_app
 
@@ -685,7 +751,8 @@ class PathExplorerApi:
 
     get_report = GetExplorerAPI.get_report
     update_report = UpdateExplorerAPI.update_report
-    get_app_path_all_reports = MultiCascadeExplorerAPI.get_app_path_all_reports
+    get_path_reports = MultiCascadeExplorerAPI.get_path_reports
+    get_path_report_ids = MultiCascadeExplorerAPI.get_path_report_ids
 
 
 class ReportExplorerApi:
@@ -697,8 +764,8 @@ class ReportExplorerApi:
 
     update_report = UpdateExplorerAPI.update_report
 
-    get_all_reports_in_same_app = ReverseCascadeExplorerAPI.get_all_reports_in_same_app
-    get_all_reports_in_same_path = ReverseCascadeExplorerAPI.get_all_reports_in_same_path
+    get_reports_in_same_app = ReverseCascadeExplorerAPI.get_reports_in_same_app
+    get_reports_in_same_path = ReverseCascadeExplorerAPI.get_reports_in_same_path
     get_app_id_by_report = ReverseCascadeExplorerAPI.get_app_id_by_report
 
     get_business_id_by_report = MultiCascadeExplorerAPI.get_business_id_by_report
@@ -718,20 +785,24 @@ class ExplorerApi(
         super().__init__(api_client)
 
     # TODO WiP
-    def has_app_report_data(self, app_id: str) -> bool:
+    def has_app_report_data(self, business_id: str, app_id: str) -> bool:
         """"""
-        reports: List[str] = self.get_target_app_all_reports(app_id)
-        for report_id in reports:
+        report_ids: List[str] = self.get_app_report_ids(
+            business_id=business_id, app_id=app_id
+        )
+        for report_id in report_ids:
             result: bool = self.has_report_report_entries(report_id)
             if result:
                 return True
         return False
 
     # TODO WiP
-    def has_path_data(self, app_id: str, path_name: str) -> bool:
+    def has_path_data(self, business_id: str, app_id: str, path_name: str) -> bool:
         """"""
-        reports: List[str] = self.get_app_all_reports(app_id)
-        for report_id in reports:
+        report_ids: List[str] = self.get_app_report_ids(
+            business_id=business_id, app_id=app_id
+        )
+        for report_id in report_ids:
             result: bool = self.has_report_report_entries(report_id)
             if result:
                 return True

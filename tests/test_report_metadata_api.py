@@ -134,4 +134,3 @@ def test_get_report_by_name():
 test_get_report()
 test_update_report()
 test_create_and_delete_report()
-test_get_report_reports()

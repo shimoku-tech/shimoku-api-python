@@ -146,7 +146,6 @@ class CreateExplorerAPI(object):
         self, business_id: str,
         owner_id: Optional[str] = None,
         app_type_id: str = 'test',
-        trial_days: int = 30,
         hide_title: bool = True,
         **kwargs,
     ):
@@ -158,7 +157,6 @@ class CreateExplorerAPI(object):
             'appBusinessId': business_id,
             'owner': owner_id,
             'appTypeId': app_type_id,
-            'trialDays': trial_days,
             '__typename': 'App',
         }
 
@@ -435,12 +433,13 @@ class CascadeExplorerAPI(GetExplorerAPI):
         """Given an App Id retrieve all reports data from all reports
         that belongs to such App Id.
         """
-        report_ids = self.get_app_reports(business_id=business_id, app_id=app_id)
+        report_ids = self.get_app_report_ids(business_id=business_id, app_id=app_id)
         return [
             self.get_report(report_id=report_id)
             for report_id in report_ids
         ]
 
+# TODO pending
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
         """Given a report retrieve all reportEntries
 
@@ -656,14 +655,15 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
     # TODO pending
     #  https://trello.com/c/18GLgLoQ
     #  https://trello.com/c/lLvXz5UB
-    def delete_app(self, business_id: str, app_id: str):
+    def delete_app(self, business_id: str, app_id: str) -> Dict:
         """Delete an App
         All reports and data associated with that app is removed by the API
         """
         endpoint: str = f'business/{business_id}/app/{app_id}'
-        self.api_client.query_element(
+        result: Dict = self.api_client.query_element(
             method='DELETE', endpoint=endpoint
         )
+        return result
 
     # TODO pending
     #  https://trello.com/c/18GLgLoQ

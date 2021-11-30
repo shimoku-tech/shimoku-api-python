@@ -590,57 +590,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return reports
 
 
-# TODO unused by the moment
-class ReverseCascadeExplorerAPI(CascadeExplorerAPI):
-
-    def __init__(self, api_client):
-        super().__init__(api_client)
-
-    def get_business_id_by_app(self, app_id: str, **kwargs) -> str:
-        """Retrieve an specific app_id metadata
-
-        :param app_id: app UUID
-        """
-        app_data: Dict = self.get_app(app_id=app_id, **kwargs)
-        return app_data['businessId']
-
-    def get_app_id_by_path(self, path_name: str, **kwargs) -> str:
-        """Bottom-up method
-        Having a path return the app it belongs to
-        """
-        raise NotImplemented
-
-    def get_app_id_by_report(self, report_id: str, **kwargs) -> str:
-        """Bottom-up method
-        Having a report_id return the app it belongs to
-        """
-        report_data: Dict = self.get_report(
-            report_id=report_id, **kwargs,
-        )
-        return report_data['appId']
-
-    def get_reports_in_same_app(self, report_id: str) -> List[str]:
-        """Return all reports that are in the same app that the target report"""
-        report_data: Dict = self.get_report(report_id=report_id)
-        app_id: str = report_data['appId']
-        return self.get_app_all_reports(app_id)
-
-    def get_reports_in_same_path(
-        self, business_id, app_id: str, report_id: str,
-    ) -> List[str]:
-        """Return all reports that are in the same path that the target report"""
-        report_data: Dict = self.get_report(
-            business_id=business_id, app_id=app_id, report_id=report_id,
-        )
-        path_name: str = report_data['path']
-        return self.get_path_reports(
-            business_id=business_id,
-            app_id=app_id,
-            path_name=path_name,
-        )
-
-
-class MultiCascadeExplorerAPI(ReverseCascadeExplorerAPI):
+class MultiCascadeExplorerAPI(CascadeExplorerAPI):
 
     def __init__(self, api_client):
         super().__init__(api_client)

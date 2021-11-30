@@ -135,9 +135,9 @@ def test_get_app_path_names():
 
 
 # test_get_app()
-# TODO falla:
-# test_update_app()
-# TODO pending decidir una AppType:
+# TODO pending:
+test_update_app()
+# TODO pending:
 test_create_and_delete_app()
 # test_get_app_reports()
 # test_get_app_report_ids()

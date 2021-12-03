@@ -4,26 +4,89 @@ from typing import List, Dict, Optional, Union
 
 from pandas import DataFrame
 
-from .explorer_api import ReportExplorerApi
+from .report_metadata_api import ReportMetadataApi
 
 
 # TODO to add data resistance will be required to check df integrity, etc
 # TODO allow dataframe but also List[Dict] of json as input
 
 
-class DataManagingApi(ReportExplorerApi):
+class DataExplorerApi:
+    get_report = ReportMetadataApi.get_report
+    update_report = ReportMetadataApi.update_report
+
+    get_report_by_external_id = ReportMetadataApi.get_report_by_external_id
+
+
+class DataManagingApi(DataExplorerApi):
     """
     """
 
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @staticmethod
+    def _is_report_data_empty(
+        report_data: Union[List[Dict], str, DataFrame],
+    ) -> bool:
+        if isinstance(report_data, DataFrame):
+            if report_data.empty:
+                return True
+            else:
+                return False
+        elif isinstance(report_data, list):
+            if report_data:
+                return False
+            else:
+                return True
+        elif isinstance(report_data, str):
+            report_data_: List[Dict] = json.loads(report_data)
+            if report_data_:
+                return False
+            else:
+                return True
+        else:
+            raise ValueError(
+                f'Data must be a Dictionary, JSON or pandas DataFrame '
+                f'Provided: {type(report_data)}'
+            )
 
-# TODO permitir external_report_id como input
+    @staticmethod
+    def _transform_report_data_to_chart_data(
+        report_data: Union[List[Dict], str, DataFrame],
+    ) -> List[Dict]:
+        if isinstance(report_data, DataFrame):
+            chart_data: List[Dict] = report_data.to_dict(orient='records')
+        elif isinstance(report_data, list):
+            assert isinstance(report_data[0], dict)
+            chart_data: List[Dict] = report_data
+        elif isinstance(report_data, str):
+            chart_data: List[Dict] = json.loads(report_data)
+        else:
+            raise ValueError(
+                f'Data must be a Dictionary, JSON or pandas DataFrame '
+                f'Provided: {type(report_data)}'
+            )
+        return chart_data
 
     def convert_dataframe_to_report_entry(
-        self, business_id: str, app_id: str, report_id: str, df: DataFrame
+        self, business_id: str, app_id: str, df: DataFrame,
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> List[Dict]:
+        if report_id:
+            pass
+        elif external_id:
+            report_id: str = (
+                self.get_report_by_external_id(
+                    business_id=business_id,
+                    app_id=app_id,
+                    external_id=external_id,
+                )
+            )
+        else:
+            raise ValueError('Either report_id or external_id must be provided')
+
         # Save the initial columns that are
         # all the fields that will get into `data`
         # column in `reportEntry` table
@@ -76,20 +139,46 @@ class DataManagingApi(ReportExplorerApi):
     # TODO allow report_data it to be also a json!! '[{...}, {...}]'
     # TODO pending data resistance
     def append_report_data(
-        self, business_id: str, app_id: str, report_id: str, report_data: DataFrame,
+        self, business_id: str, app_id: str,
+        report_data: Union[List[Dict], str, DataFrame],
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> None:
         """Having a dataframe of Report
 
         It is an aggregation, meaning we preserve all previous
         data and just concatenate the new ones
         """
-        report: Dict = self.get_report(report_id)
+        if self._is_report_data_empty(report_data):
+            return
 
-        new_data: Dict = report_data.to_dict(orient='records')
+        if report_id:
+            report: Dict = (
+                self.get_report(
+                    business_id=business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
+            )
+        elif external_id:
+            report: Dict = (
+                self.get_report_by_external_id(
+                    business_id=business_id,
+                    app_id=app_id,
+                    external_id=external_id,
+                )
+            )
+            report_id: str = report['id']
+        else:
+            raise ValueError('Either report_id or external_id must be provided')
 
-        if report['reportType']:
+        if report.get('reportType'):
+            chart_data_new: List[Dict] = (
+                self._transform_report_data_to_chart_data(report_data)
+            )
+
             chart_data: Dict = report['chartData']
-            chart_data.update(new_data)
+            chart_data.update(chart_data_new)
 
             report_data_ = {'chartData': chart_data}
             self.update_report(
@@ -97,11 +186,7 @@ class DataManagingApi(ReportExplorerApi):
                 report_data=report_data_,
             )
         else:  # Then it is a table
-            item: Dict = {
-                'owner_id': report['ownerId'],
-                'reportId': report_id,
-                '__typename': 'ReportEntry',
-            }
+            item: Dict = {'reportId': report_id}
 
             data: List[Dict] = (
                 self.convert_dataframe_to_report_entry(
@@ -115,25 +200,40 @@ class DataManagingApi(ReportExplorerApi):
                 self.post_report_entry(item)
 
     def update_report_data(
-        self, business_id: str, app_id: str, report_id: str,
+        self, business_id: str, app_id: str,
         report_data: Union[Dict, str, DataFrame],
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
     ) -> None:
         """Remove old add new"""
-        report: Dict = self.get_report(report_id)
+        if self._is_report_data_empty(report_data):
+            return
 
-        if isinstance(report_data, DataFrame):
-            chart_data: Dict = report_data.to_dict(orient='records')
-        elif isinstance(report_data, Dict):
-            chart_data: Dict = report_data
-        elif isinstance(report_data, str):
-            chart_data: Dict = json.loads(report_data)
-        else:
-            raise ValueError(
-                f'Data must be a Dictionary, JSON or pandas DataFrame '
-                f'Provided: {type(report_data)}'
+        if report_id:
+            report: Dict = (
+                self.get_report(
+                    business_id=business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
             )
+        elif external_id:
+            report: Dict = (
+                self.get_report_by_external_id(
+                    business_id=business_id,
+                    app_id=app_id,
+                    external_id=external_id,
+                )
+            )
+            report_id: str = report['id']
+        else:
+            raise ValueError('Either report_id or external_id must be provided')
 
         if report.get('reportType'):
+            chart_data: List[Dict] = (
+                self._transform_report_data_to_chart_data(report_data)
+            )
+
             report_data_ = {'chartData': chart_data}
             self.update_report(
                 business_id=business_id,
@@ -142,8 +242,12 @@ class DataManagingApi(ReportExplorerApi):
                 report_data=report_data_,
             )
         else:  # Then it is a table
-            # TODO method
-            self.delete_report_data(report_id)
+            # TODO method pending to be created
+            self.delete_report_data(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
 
             item: Dict = {'reportId': report_id}
 

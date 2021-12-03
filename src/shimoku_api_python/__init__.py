@@ -13,8 +13,8 @@ from shimoku_api_python.configuration import Configuration
 
 
 class Client(object):
-    def __init__(self, config={}):
-        self.api_client = ApiClient(config)
+    def __init__(self, config={}, universe_id: str):
+        self.api_client = ApiClient(config=config, universe_id=universe_id)
 
         self.ping = PingApi(self.api_client)
         self.explorer = ExplorerApi(self.api_client)

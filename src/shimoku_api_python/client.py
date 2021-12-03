@@ -17,11 +17,12 @@ class ApiClientError(Exception):
 class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
-    def __init__(self, config={}):
+    def __init__(self, universe_id: str, config={}):
         # TODO use this one when published
         # self.host = "https://api.shimoku.com"
         import os
-        self.host = os.getenv('API_HOST')
+        host_suffix: str = os.getenv('API_HOST')
+        self.host: str = f'{host_suffix}/{universe_id}/'
 
         # DEFAULTS
         # Api key

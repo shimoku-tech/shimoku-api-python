@@ -152,7 +152,7 @@ class CreateExplorerAPI(object):
         }
 
         return self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'data': item},
+            method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
     def create_app_type(
@@ -171,7 +171,7 @@ class CreateExplorerAPI(object):
         }
 
         return self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'data': item},
+            method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
     # TODO pending https://trello.com/c/CNhYPEDe/
@@ -209,7 +209,7 @@ class CreateExplorerAPI(object):
         item.update(kwargs)
 
         return self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'data': item},
+            method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
     # TODO
@@ -345,7 +345,7 @@ class CreateExplorerAPI(object):
             item['reportType'] = report_type
 
         return self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'data': item},
+            method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
 
@@ -359,14 +359,14 @@ class UpdateExplorerAPI(object):
         """"""
         endpoint: str = f'business/{business_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **business_data,
+            method='PATCH', endpoint=endpoint, **{'body_params': business_data},
         )
 
     def update_app_type(self, app_type_id: str, app_type_data: Dict):
         """"""
         endpoint: str = f'apptype/{app_type_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **app_type_data,
+            method='PATCH', endpoint=endpoint, **{'body_params': app_type_data},
         )
 
     def update_app(self, business_id: str, app_id: str, app_data: Dict):
@@ -387,7 +387,7 @@ class UpdateExplorerAPI(object):
         """"""
         endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **report_data,
+            method='PATCH', endpoint=endpoint, **{'body_params': report_data},
         )
 
 

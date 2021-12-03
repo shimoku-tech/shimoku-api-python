@@ -84,14 +84,14 @@ def test_update_app():
 
 def test_create_and_delete_app():
     test_app_type_id: str = getenv('APP_TYPE_TEST')
-    app_id: str = (
+    app: Dict = (
         s.app.create_app(
             business_id=business_id,
             app_type_id=test_app_type_id,
         )
     )
 
-    assert len(app_id) > 0
+    assert len(app) > 0
 
     app: Dict = s.app.get_app(
         business_id=business_id,

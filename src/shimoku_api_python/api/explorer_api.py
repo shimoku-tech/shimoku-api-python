@@ -136,10 +136,9 @@ class CreateExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    # TODO pending https://trello.com/c/18GLgLoQ
     def create_business(
         self, owner_id: str, name: str,
-    ):
+    ) -> Dict:
         """"""
         endpoint: str = 'business'
 
@@ -155,33 +154,23 @@ class CreateExplorerAPI(object):
             method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
-    def create_app_type(
-        self, owner_id: str, name: str,
-    ):
+    def create_app_type(self, name: str) -> Dict:
         """"""
-# TODO
         endpoint: str = 'apptype'
 
-        item: Dict = {  # This are the mandatory fields
-            'owner': owner_id,
-            'name': name,
-            'type': 'PERSONAL',
-            '__typename': 'Business',
-            'businessUniverseId': '',  # TODO,
-        }
+        item: Dict = {'name': name}
 
         return self.api_client.query_element(
             method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
-    # TODO pending https://trello.com/c/CNhYPEDe/
     def create_app(
         self, business_id: str,
         owner_id: Optional[str] = None,
         app_type_id: str = 'test',
         hide_title: bool = True,
         **kwargs,
-    ):
+    ) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}/app'
 
@@ -229,7 +218,7 @@ class CreateExplorerAPI(object):
         data: Optional[List] = None,
         code_id: Optional[str] = None, etl_code_version: Optional[str] = None,
         **kwargs,
-    ) -> str:
+    ) -> Dict:
         """Create new Report associated to an AppId
 
         :param business_id:

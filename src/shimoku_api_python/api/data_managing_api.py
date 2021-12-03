@@ -136,7 +136,6 @@ class DataManagingApi(DataExplorerApi):
 
         return entries
 
-    # TODO allow report_data it to be also a json!! '[{...}, {...}]'
     # TODO pending data resistance
     def append_report_data(
         self, business_id: str, app_id: str,

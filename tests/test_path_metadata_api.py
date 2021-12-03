@@ -25,4 +25,27 @@ def test_get_app_path_all_reports():
     print(result)
 
 
+def test_change_path_name():
+    s.path.change_path_name(
+        business_id
+    )
+
+
+def test_get_path_reports():
+    s.path.get_path_reports()
+
+
+def test_change_report_grid_position():
+    s.path.change_report_grid_position()
+
+
+def test_change_path_position():
+    s.path.change_path_position()
+
+
+# TODO pending to be tried
 test_get_app_path_all_reports()
+test_change_path_name()
+test_get_path_reports()
+test_change_report_grid_position()
+test_change_path_position()

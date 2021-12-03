@@ -1,7 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from shimoku_api_python.api.explorer_api import PathExplorerApi
 
@@ -14,11 +14,13 @@ class PathMetadataApi(PathExplorerApi, ABC):
         self.api_client = api_client
 
     def get_target_grid_row_position_reports(
-        self, app_id: str, path_name: str, row_position: int,
+        self, business_id: str, app_id: str, path_name: str,
+        row_position: int,
     ) -> List[str]:
         """Given a grid row retrieve all report ids
         that belongs to that row position
 
+        :param business_id:
         :param app_id: app UUID
         :param path_name: path name
         :param row_position: grid row position. Example: "3, 1" --> 3
@@ -26,7 +28,9 @@ class PathMetadataApi(PathExplorerApi, ABC):
         target_report_ids: List[str] = list()
         report_ids: List[str] = (
             self.get_app_path_all_reports(
-                app_id=app_id, path_name=path_name,
+                business_id=business_id,
+                app_id=app_id,
+                path_name=path_name,
             )
         )
 
@@ -41,11 +45,13 @@ class PathMetadataApi(PathExplorerApi, ABC):
         return target_report_ids
 
     def get_target_grid_position_reports(
-        self, app_id: str, path_name: str, grid_position: str,
+        self, business_id: str, app_id: str, path_name: str,
+        grid_position: str,
     ) -> List[str]:
         """Given a grid retrieve all report ids
         that belongs to that grid position
 
+        :param business_id:
         :param app_id: app UUID
         :param path_name: path name
         :param grid_position: grid row position. Example: "3, 1"
@@ -63,7 +69,9 @@ class PathMetadataApi(PathExplorerApi, ABC):
 
         report_ids: List[str] = (
             self.get_target_grid_row_position_reports(
-                app_id=app_id, path_name=path_name,
+                business_id=business_id,
+                app_id=app_id,
+                path_name=path_name,
                 row_position=row_position,
             )
         )
@@ -81,16 +89,20 @@ class PathMetadataApi(PathExplorerApi, ABC):
         return target_report_ids
 
     def change_path_name(
-        self, app_id: str, old_path_name: str, new_path_name: str,
+        self, business_id: str, app_id: str,
+        old_path_name: str, new_path_name: str,
     ) -> None:
         """Update path name
         """
-        report_ids: List[str] = (
-            self.get_app_path_all_reports(app_id=app_id, path_name=old_path_name)
+        reports: List[Dict] = (
+            self.get_app_path_all_reports(
+                business_id=business_id,
+                app_id=app_id,
+                path_name=old_path_name,
+            )
         )
 
-        for report_id in report_ids:
-            report: Dict = self.get_report(report_id)
+        for report in reports:
             if report.get('path') == old_path_name:
                 report_data = {'path': new_path_name}
                 self.update_report(
@@ -100,15 +112,18 @@ class PathMetadataApi(PathExplorerApi, ABC):
 
     # TODO this can be done?
     def change_path_position(
-        self, app_id: str, old_path_name: str, new_path_name: str,
+        self, business_id: str, app_id: str,
+        old_path_name: str, new_path_name: str,
     ) -> None:
         """Update path name
         """
         raise NotImplementedError
 
     def change_report_grid_position(
-        self, app_id: str, report_id: str,
-        grid: str, reorganize_grid: bool = False
+        self, business_id: str, app_id: str, grid: str,
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+        reorganize_grid: bool = False
     ) -> None:
         """Update report.grid
 
@@ -118,6 +133,18 @@ class PathMetadataApi(PathExplorerApi, ABC):
         Otherwise it will move all the stack of reports downside to create room
         for this new position of this report
         """
+        if report_id:
+            pass
+        if external_id:
+            report: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                external_id=external_id
+            )
+            report_id: str = report['id']
+        else:
+            raise ValueError('Either report_id or extenral_id must be provided')
+
         if reorganize_grid:
             report = self.get_report(report_id)
             path_name: str = report.get('path')
@@ -127,7 +154,9 @@ class PathMetadataApi(PathExplorerApi, ABC):
 
             report_ids: List[str] = (
                 self.get_app_path_all_reports(
-                    app_id=app_id, path_name=path_name,
+                    business_id=business_id,
+                    app_id=app_id,
+                    path_name=path_name,
                 )
             )
 
@@ -143,7 +172,9 @@ class PathMetadataApi(PathExplorerApi, ABC):
                         f"{new_grid_row},{report['grid'].split(',')[1]}"
                     )
                     self.change_report_grid_position(
-                        app_id=app_id, report_id=report_id,
+                        business_id=business_id,
+                        app_id=app_id,
+                        report_id=report_id,
                         grid=new_grid_position, reorganize_grid=False,
                     )
 
@@ -154,6 +185,8 @@ class PathMetadataApi(PathExplorerApi, ABC):
         )
 
     # TODO this updates the grid of every report in a path for it to work well
-    def fix_path_reports_grid(self, app_id: str, path: str):
+    def fix_path_reports_grid(
+        self, business_id: str, app_id: str, path_name: str,
+    ):
         raise NotImplementedError
 

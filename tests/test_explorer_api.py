@@ -70,4 +70,3 @@ test_get_business_id_by_app()
 # test_create_business()
 # test_create_app()
 # test_create_report()
-

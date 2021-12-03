@@ -12,4 +12,5 @@ class PingApi(object):
 
     def ping(self) -> str:
         """Check if the API is alive"""
-        return self.api_client.query_element(element_name='ping')
+        raise NotImplementedError
+        # return self.api_client.query_element(element_name='ping')

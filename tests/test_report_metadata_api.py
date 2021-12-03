@@ -139,19 +139,52 @@ def test_get_report_by_title():
 
 
 def test_get_report_by_path():
-    s.report.get_report_by_path()
+    path: str = ''  # TODO
+    report: Dict = (
+        s.report.get_report_by_path(
+            path=path,
+            **report_element,
+        )
+    )
+    assert report
+    assert report['path'] == path
 
 
 def test_get_report_by_external_id():
-    s.report.get_report_by_external_id()
+    external_id: str = ''  # TODO
+    report: Dict = (
+        s.report.get_report_by_external_id(
+            external_id=external_id,
+            **report_element,
+        )
+    )
+    assert report
+    assert report['codeETLId'] == external_id
 
 
 def test_get_report_by_chart_type():
-    s.report.get_report_by_chart_type()
+    chart_type: str = ''  # TODO
+    report: Dict = (
+        s.report.get_report_by_chart_type(
+            chart_type=chart_type,
+            **report_element,
+        )
+    )
+    assert report
+    assert report['chartType'] == chart_type
 
 
 def test_get_report_by_grid_position():
-    s.report.get_report_by_grid_position()
+    row: int = 1
+    column: int = 1
+    report: Dict = (
+        s.report.get_report_by_grid_position(
+            row=row, column=column,
+            **report_element,
+        )
+    )
+    assert report
+    assert report['grid'] == f'{row}, {column}'
 
 
 test_get_report()
@@ -164,7 +197,6 @@ test_get_report_data()
 test_get_reports_in_same_app()
 test_get_reports_in_same_path()
 
-# TODO WiP
 test_get_report_by_title()
 test_get_report_by_path()
 test_get_report_by_external_id()

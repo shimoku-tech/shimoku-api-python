@@ -1,5 +1,5 @@
 """"""
-
+import json
 from typing import List, Dict, Optional, Union
 
 from pandas import DataFrame
@@ -22,7 +22,7 @@ class DataManagingApi(ReportExplorerApi):
 # TODO permitir external_report_id como input
 
     def convert_dataframe_to_report_entry(
-        self, report_id: str, df: DataFrame
+        self, business_id: str, app_id: str, report_id: str, df: DataFrame
     ) -> List[Dict]:
         # Save the initial columns that are
         # all the fields that will get into `data`
@@ -76,7 +76,7 @@ class DataManagingApi(ReportExplorerApi):
     # TODO allow report_data it to be also a json!! '[{...}, {...}]'
     # TODO pending data resistance
     def append_report_data(
-        self, report_id: str, report_data: DataFrame,
+        self, business_id: str, app_id: str, report_id: str, report_data: DataFrame,
     ) -> None:
         """Having a dataframe of Report
 
@@ -114,28 +114,38 @@ class DataManagingApi(ReportExplorerApi):
                 item.update(datum)
                 self.post_report_entry(item)
 
-    # TODO allow report_data to be also a json!! '[{...}, {...}]'
     def update_report_data(
-        self, report_id: str, report_data: DataFrame,
+        self, business_id: str, app_id: str, report_id: str,
+        report_data: Union[Dict, str, DataFrame],
     ) -> None:
         """Remove old add new"""
         report: Dict = self.get_report(report_id)
-        chart_data: Dict = report_data.to_dict(orient='records')
 
-        if report['reportType']:
+        if isinstance(report_data, DataFrame):
+            chart_data: Dict = report_data.to_dict(orient='records')
+        elif isinstance(report_data, Dict):
+            chart_data: Dict = report_data
+        elif isinstance(report_data, str):
+            chart_data: Dict = json.loads(report_data)
+        else:
+            raise ValueError(
+                f'Data must be a Dictionary, JSON or pandas DataFrame '
+                f'Provided: {type(report_data)}'
+            )
+
+        if report.get('reportType'):
             report_data_ = {'chartData': chart_data}
             self.update_report(
+                business_id=business_id,
+                app_id=app_id,
                 report_id=report_id,
                 report_data=report_data_,
             )
         else:  # Then it is a table
+            # TODO method
             self.delete_report_data(report_id)
 
-            item: Dict = {
-                'owner_id': report['ownerId'],
-                'reportId': report_id,
-                '__typename': 'ReportEntry',
-            }
+            item: Dict = {'reportId': report_id}
 
             data: List[Dict] = (
                 self.convert_dataframe_to_report_entry(
@@ -147,7 +157,3 @@ class DataManagingApi(ReportExplorerApi):
             for datum in data:
                 item.update(datum)
                 self.post_report_entry(item)
-
-    # TODO
-    def add_fixture_data(self):
-        raise NotImplementedError

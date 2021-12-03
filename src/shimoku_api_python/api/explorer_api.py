@@ -136,19 +136,11 @@ class CreateExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    def create_business(
-        self, owner_id: str, name: str,
-    ) -> Dict:
+    def create_business(self, name: str) -> Dict:
         """"""
         endpoint: str = 'business'
 
-        item: Dict = {  # This are the mandatory fields
-            'owner': owner_id,
-            'name': name,
-            'type': 'PERSONAL',
-            '__typename': 'Business',
-            'businessUniverseId': '',  # TODO,
-        }
+        item: Dict = {'name': name}
 
         return self.api_client.query_element(
             method='PUT', endpoint=endpoint, **{'body_params': item},
@@ -344,21 +336,21 @@ class UpdateExplorerAPI(object):
         self.api_client = api_client
 
     # TODO pending https://trello.com/c/18GLgLoQ
-    def update_business(self, business_id: str, business_data: Dict):
+    def update_business(self, business_id: str, business_data: Dict) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}'
         return self.api_client.query_element(
             method='PATCH', endpoint=endpoint, **{'body_params': business_data},
         )
 
-    def update_app_type(self, app_type_id: str, app_type_data: Dict):
+    def update_app_type(self, app_type_id: str, app_type_data: Dict) -> Dict:
         """"""
         endpoint: str = f'apptype/{app_type_id}'
         return self.api_client.query_element(
             method='PATCH', endpoint=endpoint, **{'body_params': app_type_data},
         )
 
-    def update_app(self, business_id: str, app_id: str, app_data: Dict):
+    def update_app(self, business_id: str, app_id: str, app_data: Dict) -> Dict:
         """
         :param business_id:
         :param app_id:
@@ -372,7 +364,7 @@ class UpdateExplorerAPI(object):
 
     def update_report(
         self, business_id: str, app_id: str, report_id: str, report_data,
-    ) -> str:
+    ) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
         return self.api_client.query_element(

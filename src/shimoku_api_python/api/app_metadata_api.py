@@ -13,9 +13,14 @@ class AppMetadataApi(AppExplorerApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    def has_app_report(self, app_id: str) -> bool:
+    def has_app_report(self, business_id: str, app_id: str) -> bool:
         """"""
-        reports: List[str] = self.get_app_all_reports(app_id)
+        reports: List[str] = (
+            self.get_app_reports(
+                business_id=business_id,
+                app_id=app_id,
+            )
+        )
         if reports:
             return True
         else:
@@ -82,24 +87,33 @@ class AppMetadataApi(AppExplorerApi, ABC):
                     result: Dict = app
         return result
 
-    def change_app_name(
-        self, app_id: str, new_app_name: str,
-    ) -> None:
+    def rename_app(
+        self, business_id: str, app_id: str, new_app_name: str,
+    ) -> Dict:
         """Update path name
         """
         app_data = {'name': new_app_name}
         self.update_app(
+            business_id=business_id,
             app_id=app_id,
             app_data=app_data,
         )
 
-    def change_hide_title(self, app_id: str, hide_title: bool = True) -> None:
+    def hide_title(
+        self, business_id: str, app_id: str, hide_title: bool = True
+    ) -> Dict:
         """Hide / show app title
-
-        See https://trello.com/c/8e11jso4/ for further info
         """
         app_data = {'hideTitle': hide_title}
         self.update_app(
+            business_id=business_id,
             app_id=app_id,
             app_data=app_data,
+        )
+
+    def show_title(self, business_id: str, app_id: str) -> Dict:
+        return self.hide_title(
+            business_id=business_id,
+            app_id=app_id,
+            hide_title=False,
         )

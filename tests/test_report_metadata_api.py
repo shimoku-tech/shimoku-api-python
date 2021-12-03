@@ -12,6 +12,11 @@ universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 app_id: str = getenv('APP_ID')
 report_id: str = getenv('REPORT_ID')
+report_element: Dict[str, str] = dict(
+    business_id=business_id,
+    app_id=app_id,
+    report_id=report_id
+)
 
 
 config = {
@@ -25,11 +30,7 @@ s = shimoku.Client(
 
 
 def test_get_report():
-    report: Dict = s.report.get_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-    )
+    report: Dict = s.report.get_report(**report_element)
     assert report
 
 
@@ -37,11 +38,7 @@ def test_update_report():
     """Set the updatedAt field of an report to '2000-01-01'
     Then revert the updatedAt to its original value
     """
-    report: Dict = s.report.get_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-    )
+    report: Dict = s.report.get_report(**report_element)
     old_val: str = report['updatedAt']
 
     val: str = '2000-01-01'
@@ -49,19 +46,11 @@ def test_update_report():
         'updatedAt': val
     }
     s.report.update_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
         report_data=report_data,
+        **report_element,
     )
 
-    report_updated: Dict = (
-        s.report.get_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
+    report_updated: Dict = s.report.get_report(**report_element)
 
     assert report_updated['updatedAt'] == val
 
@@ -73,19 +62,11 @@ def test_update_report():
         'updatedAt': old_val
     }
     s.report.update_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=report_data
+        report_data=report_data,
+        **report_element,
     )
 
-    report_updated: Dict = (
-        s.report.get_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
+    report_updated: Dict = s.report.get_report(**report_element)
 
     assert report_updated['updatedAt'] == old_val
 
@@ -124,46 +105,44 @@ def test_create_and_delete_report():
 
 
 def test_get_report_data():
-    data: List[Dict] = (
-        s.report.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
+    data: List[Dict] = s.report.get_report_data(**report_element)
     assert data
     assert len(data[0]) > 0
 
 
 def test_get_reports_in_same_app():
-    reports: List[str] = (
-        s.report.get_reports_in_same_app(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
+    reports: List[str] = s.report.get_reports_in_same_app(**report_element)
+    assert reports
+    assert len(reports) > 1
 
 
 def test_get_reports_in_same_path():
-    reports: List[str] = (
-        s.report.get_reports_in_same_path(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
+    reports: List[str] = s.report.get_reports_in_same_path(**report_element)
+    assert reports
+    assert len(reports) > 1
 
 
 def test_get_report_by_name():
-    report: Dict = s.report.get_report_by_name(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
+    name: str = ''  # TODO
+    report: Dict = (
+        s.report.get_report_by_name(
+            report_name=name,
+            **report_element,
+        )
     )
+    assert report
+    assert report['name'] == name
+
+
+def test_get_report_last_update():
+    last_update: dt.datetime = s.report.get_report_last_update(**report_element)
 
 
 test_get_report()
-# test_update_report()
-# test_create_and_delete_report()
+# TODO all below pending to be tried
+test_update_report()
+test_create_and_delete_report()
+test_get_report_data()
 test_get_reports_in_same_app()
+test_get_reports_in_same_path()
+test_get_report_by_name()

@@ -1,7 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
 import datetime as dt
 
@@ -15,43 +15,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    def has_report_data(self, report_id: str) -> bool:
-        """"""
-        data: List[str] = self.get_report_data(report_id=report_id)
-        if data:
-            return True
-        else:
-            return False
-
-    def get_target_report_any_data(self, report_id: str) -> List[str]:
-        """Retrieve a subset of the chartData"""
-        raise NotImplementedError
-
-    def get_report_last_update(self, report_id: str) -> dt.datetime:
-        """"""
-        report: Dict = self.get_report(report_id)
-        # TODO check it returns dt.date
-        return report['updatedAt']
-
-    def get_report_data_fields(self, report_id: str) -> Dict:
-        """
-        """
-        report: Dict = self.get_report(report_id)
-        # TODO check it returns Dict
-        return report['dataFields']
-
-    def get_report_fields(self, report_id: str):
-        """"""
-        raise NotImplementedError
-
-    def get_report_last_update(self, app_id: str) -> dt.datetime:
-        """"""
-        app: Dict = self.get_app(app_id)
-        # TODO check it returns dt.date
-        return app_id['updatedAt']
-
-    def get_report_by_name(
-        self, business_id: str, app_id: str, report_name: str,
+    def _get_report_by_var(
+        self, business_id: str, app_id: str,
+        var_name: str, var_value: str,
+        path: Optional[str] = None,
     ) -> Union[Dict, List[Dict]]:
         """Given a business retrieve all app metadata
 
@@ -60,7 +27,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         :param report_name:
         """
         endpoint: str = f'business/{business_id}/app/{app_id}'
-        report_ids: Dict = (
+        reports: Dict = (
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
@@ -69,13 +36,11 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name
         result: Union[Dict, List[Dict]] = {}
-        for report_id in report_ids:
-            report: Dict = self.get_report(
-                business_id=business_id,
-                app_id=app_id,
-                report_id=report_id,
-            )
-            if report.get('name') == report_name:
+        for report in reports:
+            if path:
+                if report.get('path') != path:
+                    continue
+            if report.get(var_name) == var_value:
                 if result:
                     if len(result) == 1:
                         result: List[Dict] = [result] + [report]
@@ -85,41 +50,238 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
                     result: Dict = report
         return result
 
-    # TODO some data resistence here to avoid it to get broken
-    def update_report_fields(
-        self, report_id: str, data_fields: str,
-    ) -> None:
+    def has_report_data(
+        self, business_id: str, app_id: str, report_id: str
+    ) -> bool:
         """"""
-        report_data = {'dataFields': data_fields}
+        data: List[str] = self.get_report_data(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+        if data:
+            return True
+        else:
+            return False
+
+    def get_target_report_any_data(
+        self, business_id: str, app_id: str, report_id: str
+    ) -> List[str]:
+        """Retrieve a subset of the chartData"""
+        raise NotImplementedError
+
+    def get_report_last_update(
+        self, business_id: str, app_id: str, report_id: str,
+    ) -> dt.datetime:
+        """"""
+        report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+        # TODO check it returns dt.date
+        return report['updatedAt']
+
+    def get_report_data_fields(
+        self, business_id: str, app_id: str, report_id: str,
+    ) -> Dict:
+        """
+        """
+        report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+        return report['dataFields']
+
+    def get_report_by_path(
+        self, business_id: str, app_id: str,
+        path: str,
+    ) -> Union[Dict, List[Dict]]:
+        """
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param path:
+        """
+        return (
+            self._get_report_by_var(
+                business_id=business_id,
+                app_id=app_id,
+                var_name='path',
+                var_value=path,
+            )
+        )
+
+    def get_report_by_title(
+        self, business_id: str, app_id: str,
+        title: str, path: Optional[str] = None,
+    ) -> Union[Dict, List[Dict]]:
+        """
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param title:
+        :param path:
+        """
+        return (
+            self._get_report_by_var(
+                business_id=business_id,
+                app_id=app_id,
+                path=path,
+                var_name='title',
+                var_value=title,
+            )
+        )
+
+    def get_report_by_external_id(
+        self, business_id: str, app_id: str,
+        external_id: str, path: Optional[str] = None,
+    ) -> Union[Dict, List[Dict]]:
+        """
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param external_id:
+        :param path:
+        """
+        return (
+            self._get_report_by_var(
+                business_id=business_id,
+                app_id=app_id,
+                path=path,
+                var_name='codeETLId',
+                var_value=external_id,
+            )
+        )
+
+    def get_report_by_grid_position(
+        self, business_id: str, app_id: str,
+        row: int, column: int, path: Optional[str] = None,
+    ) -> Union[Dict, List[Dict]]:
+        """
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param row:
+        :param column:
+        :param path:
+        """
+        grid: str = f'{row}, {column}'
+        return (
+            self._get_report_by_var(
+                business_id=business_id,
+                app_id=app_id,
+                path=path,
+                var_name='grid',
+                var_value=grid,
+            )
+        )
+
+    def get_report_by_chart_type(
+        self, business_id: str, app_id: str,
+        chart_type: str, path: Optional[str] = None,
+    ) -> Union[Dict, List[Dict]]:
+        """Given a business retrieve all app metadata
+
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param chart_type:
+        :param path:
+        """
+        return (
+            self._get_report_by_var(
+                business_id=business_id,
+                app_id=app_id,
+                path=path,
+                var_name='reportType',
+                var_value=chart_type,
+            )
+        )
+
+    def update_report_title(
+        self, business_id: str, app_id: str, report_id: str,
+        title: str,
+    ) -> Dict:
+        """"""
+        report_data = {'title': title}
         self.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_data=report_data,
+        )
+
+    def update_report_external_id(
+        self, business_id: str, app_id: str, report_id: str,
+        new_external_id: str,
+    ) -> Dict:
+        report_data = {'externalId': new_external_id}
+        self.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_data=report_data,
+        )
+
+    def update_report_grid_position(
+        self, business_id: str, app_id: str, report_id: str,
+        row: int, column: int,
+    ) -> Dict:
+        """"""
+        report_data = {'grid': f'{row}, {column}'}
+        self.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_data=report_data,
+        )
+
+    def update_report_chart_type(
+        self, business_id: str, app_id: str, report_id: str,
+        report_type: str,
+    ) -> Dict:
+        """Update report.reportType
+        """
+        report_data = {'reportType': report_type}
+        self.update_report(
+            business_id=business_id,
+            app_id=app_id,
             report_id=report_id,
             report_data=report_data,
         )
 
     def update_report_description(
-        self, report_id: str, description: str,
-    ) -> None:
+        self, business_id: str, app_id: str, report_id: str,
+        description: str,
+    ) -> Dict:
         """"""
         report_data = {'description': description}
         self.update_report(
+            business_id=business_id,
+            app_id=app_id,
             report_id=report_id,
             report_data=report_data,
         )
 
-    def update_report_chart_type(self, report_id: str, report_type: str) -> None:
-        """Update report.reportType
-        """
-        report_data = {'reportType': report_type}
+    def update_report_smart_filter(
+        self, business_id: str, app_id: str, report_id: str,
+        smart_filter: Dict,
+    ) -> Dict:
+        """"""
+        report_data = {'smartFilter': smart_filter}
         self.update_report(
+            business_id=business_id,
+            app_id=app_id,
             report_id=report_id,
             report_data=report_data,
         )
 
-    def update_report_external_id(self, report_id: str, new_external_id: str):
-        report_data = {'externalId': new_external_id}
+    def update_report_smart_filter(
+        self, business_id: str, app_id: str, report_id: str,
+        data_fields: Dict,
+    ) -> Dict:
+        """"""
+        report_data = {'dataFields': data_fields}
         self.update_report(
+            business_id=business_id,
+            app_id=app_id,
             report_id=report_id,
             report_data=report_data,
         )
-
-# TODO get_report_by_external_id(self, external_id: str) -> str

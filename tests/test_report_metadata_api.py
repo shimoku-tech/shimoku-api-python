@@ -122,20 +122,36 @@ def test_get_reports_in_same_path():
     assert len(reports) > 1
 
 
-def test_get_report_by_name():
-    name: str = ''  # TODO
+def test_get_report_last_update():
+    last_update: dt.datetime = s.report.get_report_last_update(**report_element)
+
+
+def test_get_report_by_title():
+    title: str = ''  # TODO
     report: Dict = (
-        s.report.get_report_by_name(
-            report_name=name,
+        s.report.get_report_by_title(
+            title=title,
             **report_element,
         )
     )
     assert report
-    assert report['name'] == name
+    assert report['title'] == title
 
 
-def test_get_report_last_update():
-    last_update: dt.datetime = s.report.get_report_last_update(**report_element)
+def test_get_report_by_path():
+    s.report.get_report_by_path()
+
+
+def test_get_report_by_external_id():
+    s.report.get_report_by_external_id()
+
+
+def test_get_report_by_chart_type():
+    s.report.get_report_by_chart_type()
+
+
+def test_get_report_by_grid_position():
+    s.report.get_report_by_grid_position()
 
 
 test_get_report()
@@ -143,6 +159,14 @@ test_get_report()
 test_update_report()
 test_create_and_delete_report()
 test_get_report_data()
+
+# TODO pending
 test_get_reports_in_same_app()
 test_get_reports_in_same_path()
-test_get_report_by_name()
+
+# TODO WiP
+test_get_report_by_title()
+test_get_report_by_path()
+test_get_report_by_external_id()
+test_get_report_by_chart_type()
+test_get_report_by_grid_position()

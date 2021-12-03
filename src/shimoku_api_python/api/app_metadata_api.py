@@ -56,7 +56,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
                     result: Dict = app
         return result
 
-# TODO es name o title?
+    # TODO this applies to appType not to app
     def get_app_by_name(
         self, business_id: str, app_name: str
     ) -> Union[Dict, List[Dict]]:
@@ -93,10 +93,12 @@ class AppMetadataApi(AppExplorerApi, ABC):
         """Update path name
         """
         app_data = {'name': new_app_name}
-        self.update_app(
-            business_id=business_id,
-            app_id=app_id,
-            app_data=app_data,
+        return (
+            self.update_app(
+                business_id=business_id,
+                app_id=app_id,
+                app_data=app_data,
+            )
         )
 
     def hide_title(
@@ -105,10 +107,12 @@ class AppMetadataApi(AppExplorerApi, ABC):
         """Hide / show app title
         """
         app_data = {'hideTitle': hide_title}
-        self.update_app(
-            business_id=business_id,
-            app_id=app_id,
-            app_data=app_data,
+        return (
+            self.update_app(
+                business_id=business_id,
+                app_id=app_id,
+                app_data=app_data,
+            )
         )
 
     def show_title(self, business_id: str, app_id: str) -> Dict:

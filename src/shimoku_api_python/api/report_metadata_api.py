@@ -201,11 +201,13 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     ) -> Dict:
         """"""
         report_data = {'title': title}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )
 
     def update_report_external_id(
@@ -213,11 +215,13 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         new_external_id: str,
     ) -> Dict:
         report_data = {'externalId': new_external_id}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )
 
     def update_report_grid_position(
@@ -226,11 +230,13 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     ) -> Dict:
         """"""
         report_data = {'grid': f'{row}, {column}'}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )
 
     def update_report_chart_type(
@@ -240,11 +246,13 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         """Update report.reportType
         """
         report_data = {'reportType': report_type}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )
 
     def update_report_description(
@@ -253,11 +261,13 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     ) -> Dict:
         """"""
         report_data = {'description': description}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )
 
     def update_report_smart_filter(
@@ -266,22 +276,11 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     ) -> Dict:
         """"""
         report_data = {'smartFilter': smart_filter}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
-        )
-
-    def update_report_smart_filter(
-        self, business_id: str, app_id: str, report_id: str,
-        data_fields: Dict,
-    ) -> Dict:
-        """"""
-        report_data = {'dataFields': data_fields}
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=report_data,
+        return (
+            self.update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=report_data,
+            )
         )

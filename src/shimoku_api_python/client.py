@@ -163,7 +163,7 @@ class ApiClient(object):
 
         return (
             query_params, header_params,
-            body_params, form_params, local_var_files,
+            kwargs.get('body_params'), form_params, local_var_files,
             auth_settings, params, collection_formats,
         )
 

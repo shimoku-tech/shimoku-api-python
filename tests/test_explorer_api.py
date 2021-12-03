@@ -22,7 +22,7 @@ def test_get_business():
     print(result)
 
 
-def test_get_app_id():
+def test_get_app():
     result = s.explorer.get_app(
         business_id=business_id, app_id=app_id
     )
@@ -35,12 +35,6 @@ def test_get_report(report_id):
         business_id=business_id, app_id=app_id, report_id=report_id,
     )
     assert result.status_code == 200
-    print(result)
-
-
-# TODO pending https://trello.com/c/REZNlpeG/
-def test_get_business_id_by_app():
-    result = s.explorer.get_business_id_by_app(app_id)
     print(result)
 
 

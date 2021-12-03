@@ -378,7 +378,7 @@ class UpdateExplorerAPI(object):
         """
         endpoint: str = f'business/{business_id}/app/{app_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **app_data,
+            method='PATCH', endpoint=endpoint, **{'body_params': app_data},
         )
 
     def update_report(

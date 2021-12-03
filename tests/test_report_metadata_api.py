@@ -86,9 +86,37 @@ def test_update_report():
     assert report_updated['updatedAt'] == old_val
 
 
-# TODO
 def test_create_and_delete_report():
-    raise NotImplementedError
+    new_report_id: str = (
+        s.report.create_report(
+            business_id=business_id,
+            app_id=app_id,
+        )
+    )
+
+    report: Dict = s.report.get_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=new_report_id,
+    )
+
+    assert report['createdAt'] == dt.date.today()
+
+    result: Dict = s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=new_report_id,
+    )
+
+    assert result
+
+    result: Dict = s.report.get_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=new_report_id,
+    )
+
+    assert not result
 
 
 def test_get_report_data():
@@ -132,5 +160,6 @@ def test_get_report_by_name():
 
 
 test_get_report()
-test_update_report()
-test_create_and_delete_report()
+# test_update_report()
+# test_create_and_delete_report()
+test_get_reports_in_same_app()

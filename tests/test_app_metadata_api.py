@@ -31,17 +31,16 @@ def test_update_app():
     """Set the updatedAt field of an App to '2000-01-01'
     Then revert the updatedAt to its original value
     """
+    var: str = 'trialDays'
     app: Dict = s.app.get_app(
         business_id=business_id,
         app_id=app_id,
     )
-    old_val: str = app['createdAt']
+    old_val: str = app.get(var)
 
-    val: str = '2000-01-01'
-    app_data: Dict = {
-        'createdAt': val
-    }
-    s.app.update_app(
+    val: str = 10
+    app_data: Dict = {var: val}
+    x: Dict = s.app.update_app(
         business_id=business_id,
         app_id=app_id,
         app_data=app_data
@@ -54,16 +53,15 @@ def test_update_app():
         )
     )
 
-    assert app_updated['createdAt'] == val
+    assert x == app_updated
+    assert app_updated[var] == val
 
     #########
     # Revert the change
     #########
 
-    app_data: Dict = {
-        'createdAt': old_val
-    }
-    s.app.update_app(
+    app_data: Dict = {var: old_val}
+    new_x: Dict = s.app.update_app(
         business_id=business_id,
         app_id=app_id,
         app_data=app_data
@@ -76,7 +74,8 @@ def test_update_app():
         )
     )
 
-    assert app_updated['createdAt'] == old_val
+    assert new_x == app_updated
+    assert app_updated[var] == old_val
 
 
 def test_create_and_delete_app():
@@ -135,8 +134,7 @@ def test_get_app_path_names():
 
 
 # test_get_app()
-# TODO pending:
-test_update_app()
+# test_update_app()
 # TODO pending:
 test_create_and_delete_app()
 # test_get_app_reports()

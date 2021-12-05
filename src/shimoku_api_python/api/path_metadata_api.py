@@ -13,6 +13,38 @@ class PathMetadataApi(PathExplorerApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    def check_if_path_exists(
+        self, business_id: str, app_id: str, path_name: str
+    ) -> bool:
+        reports: List[Dict] = (
+            self.get_path_reports(
+                business_id=business_id,
+                app_id=app_id,
+                path_name=path_name,
+            )
+        )
+        if reports:
+            return True
+        else:
+            return False
+
+    def get_path_position(
+        self, business_id: str, app_id: str, path_name: str
+    ) -> Optional[int]:
+        reports: List[Dict] = (
+            self.get_path_reports(
+                business_id=business_id,
+                app_id=app_id,
+                path_name=path_name,
+            )
+        )
+        orders: List[int] = [report.get('order') for report in reports]
+
+        if orders:
+            return min(orders)
+        else:
+            return
+
     def get_target_grid_row_position_reports(
         self, business_id: str, app_id: str, path_name: str,
         row_position: int,
@@ -112,77 +144,11 @@ class PathMetadataApi(PathExplorerApi, ABC):
 
     # TODO this can be done?
     def change_path_position(
-        self, business_id: str, app_id: str,
-        old_path_name: str, new_path_name: str,
+        self, business_id: str, app_id: str, new_position: int,
     ) -> None:
         """Update path name
         """
         raise NotImplementedError
-
-    def change_report_grid_position(
-        self, business_id: str, app_id: str, grid: str,
-        report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
-        reorganize_grid: bool = False
-    ) -> None:
-        """Update report.grid
-
-        If reorganize_grid is False means that we will not
-        move the other reports downside if this report gets in a position
-        where other reports already exists or it has reports below.
-        Otherwise it will move all the stack of reports downside to create room
-        for this new position of this report
-        """
-        if report_id:
-            pass
-        if external_id:
-            report: Dict = self.get_report(
-                business_id=business_id,
-                app_id=app_id,
-                external_id=external_id
-            )
-            report_id: str = report['id']
-        else:
-            raise ValueError('Either report_id or extenral_id must be provided')
-
-        if reorganize_grid:
-            report = self.get_report(report_id)
-            path_name: str = report.get('path')
-
-            if not path_name:
-                raise NotImplementedError
-
-            report_ids: List[str] = (
-                self.get_app_path_all_reports(
-                    business_id=business_id,
-                    app_id=app_id,
-                    path_name=path_name,
-                )
-            )
-
-            for report_id in report_ids:
-                report = self.get_report(report_id)
-                if int(report['grid'][0]) < grid:
-                    continue
-                else:
-                    # IMPORTANT
-                    # This is recursive, watch out!
-                    new_grid_row: int = int(report['grid'][0]) + 1
-                    new_grid_position: str = (
-                        f"{new_grid_row},{report['grid'].split(',')[1]}"
-                    )
-                    self.change_report_grid_position(
-                        business_id=business_id,
-                        app_id=app_id,
-                        report_id=report_id,
-                        grid=new_grid_position, reorganize_grid=False,
-                    )
-
-        report_data: Dict = {'grid': grid}
-        self.update_report(
-            report_id=report_id,
-            report_data=report_data,
-        )
 
     # TODO this updates the grid of every report in a path for it to work well
     def fix_path_reports_grid(

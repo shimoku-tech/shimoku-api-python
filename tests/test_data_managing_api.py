@@ -187,11 +187,6 @@ def test_get_report_by_grid_position():
     assert report['grid'] == f'{row}, {column}'
 
 
-# TODO
-def test_change_report_grid_position():
-    s.report.change_report_grid_position()
-
-
 test_get_report()
 # TODO all below pending to be tried
 test_update_report()
@@ -207,4 +202,3 @@ test_get_report_by_path()
 test_get_report_by_external_id()
 test_get_report_by_chart_type()
 test_get_report_by_grid_position()
-test_change_report_grid_position()

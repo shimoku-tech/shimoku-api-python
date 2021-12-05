@@ -211,11 +211,11 @@ def test_has_app_report():
     assert has_reports
 
 
-# test_get_app()
+test_get_app()
 # test_get_fake_app()
 # test_update_app()
 # TODO pending:
-test_create_and_delete_app()
+# test_create_and_delete_app()
 # test_get_app_reports()
 # test_get_app_report_ids()
 # test_get_app_path_names()

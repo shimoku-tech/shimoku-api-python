@@ -377,11 +377,21 @@ class CascadeExplorerAPI(GetExplorerAPI):
     def __init__(self, api_client):
         super().__init__(api_client)
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
-    def get_account_businesses(self):
-        raise NotImplementedError
+    def get_universe_businesses(self) -> List[Dict]:
+        endpoint: str = f'businesses'
+        return (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+
+    def get_universe_app_types(self) -> List[Dict]:
+        endpoint: str = f'apptypes'
+        return (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
 
     def get_business_apps(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all app metadata
@@ -394,7 +404,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 endpoint=endpoint, method='GET',
             )
         )
-        apps = apps_raw.get('items')
+        apps: List[Dict] = apps_raw.get('items')
 
         if not apps:
             return []
@@ -714,6 +724,7 @@ class BusinessExplorerApi:
     create_business = CreateExplorerAPI.create_business
     update_business = UpdateExplorerAPI.update_business
 
+    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
     get_business_apps = CascadeExplorerAPI.get_business_apps
     get_business_app_ids = CascadeExplorerAPI.get_business_app_ids
     get_business_all_apps_with_filter = CascadeExplorerAPI.get_business_apps_with_filter
@@ -723,10 +734,15 @@ class BusinessExplorerApi:
 
 class AppTypeExplorerApi:
     """"""
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
     get_app_type = GetExplorerAPI.get_app_type
     create_app_type = CreateExplorerAPI.create_app_type
     update_app_type = UpdateExplorerAPI.update_app_type
 
+    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     get_app_type_apps = CascadeExplorerAPI.get_app_type_apps
 
     delete_app_type = DeleteExplorerApi.delete_app_type

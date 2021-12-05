@@ -22,6 +22,11 @@ s = shimoku.Client(
 )
 
 
+def test_get_universe_app_types():
+    app_types: List[Dict] = s.app_type.get_universe_app_types()
+    assert app_types
+
+
 def test_create_and_delete_app_type():
     name: str = 'test_app_type'
     app_type: Dict = s.app_type.create_app_type(name)
@@ -48,4 +53,5 @@ def test_create_and_delete_app_type():
     assert result
 
 
+test_get_universe_app_types()
 test_create_and_delete_app_type()

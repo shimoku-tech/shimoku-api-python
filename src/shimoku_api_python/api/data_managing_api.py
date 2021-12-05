@@ -77,13 +77,14 @@ class DataManagingApi(DataExplorerApi):
         if report_id:
             pass
         elif external_id:
-            report_id: str = (
+            report: Dict = (
                 self.get_report_by_external_id(
                     business_id=business_id,
                     app_id=app_id,
                     external_id=external_id,
                 )
             )
+            report_id: str = report['id']
         else:
             raise ValueError('Either report_id or external_id must be provided')
 

@@ -21,8 +21,8 @@ class ApiClient(object):
         # TODO use this one when published
         # self.host = "https://api.shimoku.com"
         import os
-        host_suffix: str = os.getenv('API_HOST')
-        self.host: str = f'{host_suffix}/{universe_id}/'
+        host_suffix: str = os.getenv('API_HOST')  # <API_URL>/external/v1/
+        self.host: str = f'{host_suffix}universe/{universe_id}/'
 
         # DEFAULTS
         # Api key

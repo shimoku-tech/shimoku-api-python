@@ -1,6 +1,6 @@
 """"""
 from os import getenv
-from typing import Dict
+from typing import Dict, List
 
 import datetime as dt
 
@@ -22,20 +22,25 @@ s = shimoku.Client(
 )
 
 
+def test_get_universe_businesses():
+    businesses: List[Dict] = s.business.get_universe_businesses()
+    assert businesses
+
+
 def test_get_business():
     result = s.business.get_business(business_id)
     print(result)
 
 
 def test_create_and_delete_business():
-    business: Dict = s.business.create_business()
-    business_id: str = business['id']
+    business: Dict = s.business.create_business(name='auto-test')
+    business_id_: str = business['id']
 
-    assert len(business_id) > 0
+    assert len(business_id_) > 0
 
     business_from_db: Dict = (
         s.business.get_business(
-            business_id=business_id,
+            business_id=business_id_,
         )
     )
 
@@ -45,7 +50,7 @@ def test_create_and_delete_business():
 
     result: Dict = (
         s.business.delete_business(
-            business_id=business_id,
+            business_id=business_id_,
         )
     )
 
@@ -110,7 +115,9 @@ def test_rename_business():
     assert business_name == business_restored['name']
 
 
+test_get_universe_businesses()
 test_get_business()
+# TODO no funca:
 test_create_and_delete_business()
 test_update_business()
 test_rename_business()

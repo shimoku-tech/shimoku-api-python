@@ -15,7 +15,7 @@ class CatalogExplorerApi(MultiCascadeExplorerAPI):
         """A single command to create a whole catalog
         """
         # TODO pending all the metadata to create a business
-        result = self.create_business(owner_id)
+        result = self.create_business()
         # TODO to validate this
         business_id: str = result.content['data']['businessId']
 

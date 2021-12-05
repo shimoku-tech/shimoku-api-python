@@ -120,7 +120,7 @@ class ApiClient(object):
             if res.ok:
                 return data
             else:
-                raise ApiClientError(text=data, status_code=res.status_code)
+                raise ApiClientError(data)
         else:
             return res
 

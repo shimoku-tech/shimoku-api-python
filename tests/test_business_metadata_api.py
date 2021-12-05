@@ -1,10 +1,12 @@
 """"""
 from os import getenv
 from typing import Dict, List
+import unittest
 
 import datetime as dt
 
 import shimoku_api_python as shimoku
+from shimoku_api_python.client import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -30,6 +32,19 @@ def test_get_universe_businesses():
 def test_get_business():
     result = s.business.get_business(business_id)
     print(result)
+
+
+def test_get_fake_business():
+    class MyTestCase(unittest.TestCase):
+        def test_fake_business(self):
+            with self.assertRaises(ApiClientError):
+                business_id_: str = 'this is a test'
+                s.business.get_business(
+                    business_id=business_id_,
+                )
+
+    t = MyTestCase()
+    t.test_fake_business()
 
 
 def test_create_and_delete_business():
@@ -117,6 +132,7 @@ def test_rename_business():
 
 test_get_universe_businesses()
 test_get_business()
+test_get_fake_business()
 # TODO no funca:
 test_create_and_delete_business()
 test_update_business()

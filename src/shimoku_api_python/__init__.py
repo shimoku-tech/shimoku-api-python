@@ -5,6 +5,7 @@ from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
 from shimoku_api_python.api.app_metadata_api import AppMetadataApi
 from shimoku_api_python.api.path_metadata_api import PathMetadataApi
 from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
+from shimoku_api_python.api.data_managing_api import DataManagingApi
 from shimoku_api_python.api.explorer_api import ExplorerApi, AppTypeExplorerApi
 from shimoku_api_python.api.ping_api import PingApi
 
@@ -24,6 +25,7 @@ class Client(object):
         self.app = AppMetadataApi(self.api_client)
         self.path = PathMetadataApi(self.api_client)
         self.report = ReportMetadataApi(self.api_client)
+        self.data = DataManagingApi(self.api_client)
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

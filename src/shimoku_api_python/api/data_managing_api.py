@@ -12,10 +12,10 @@ from .report_metadata_api import ReportMetadataApi
 
 
 class DataExplorerApi:
-    get_report = ReportMetadataApi.get_report
-    update_report = ReportMetadataApi.update_report
+    _get_report = ReportMetadataApi.get_report
+    _update_report = ReportMetadataApi.update_report
 
-    get_report_by_external_id = ReportMetadataApi.get_report_by_external_id
+    _get_report_by_external_id = ReportMetadataApi.get_report_by_external_id
 
 
 class DataManagingApi(DataExplorerApi):
@@ -69,7 +69,7 @@ class DataManagingApi(DataExplorerApi):
             )
         return chart_data
 
-    def convert_dataframe_to_report_entry(
+    def _convert_dataframe_to_report_entry(
         self, business_id: str, app_id: str, df: DataFrame,
         report_id: Optional[str] = None,
         external_id: Optional[str] = None,
@@ -136,6 +136,15 @@ class DataManagingApi(DataExplorerApi):
         ]
 
         return entries
+
+    def get_report_data(
+        self, business_id: str, app_id: str,
+        report_data: Union[List[Dict], str, DataFrame],
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """"""
+        raise NotImplementedError
 
     # TODO pending data resistance
     def append_report_data(

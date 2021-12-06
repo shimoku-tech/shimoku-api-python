@@ -648,18 +648,26 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         )
 
 
-class MultiDeleteApi(DeleteExplorerApi):
+class MultiDeleteApi:
     """Get Businesses, Apps, Paths and Reports in any possible combination
     """
+    _get_business = GetExplorerAPI.get_business
+    _get_app_type = GetExplorerAPI.get_app_type
+    _get_app = GetExplorerAPI.get_app
 
-    def __init__(self, api_client):
-        super().__init__(api_client)
+    _delete_business = DeleteExplorerApi.delete_business
+    _delete_app = DeleteExplorerApi.delete_app
+    _delete_app_type = DeleteExplorerApi.delete_app_type
+    _delete_report = DeleteExplorerApi.delete_report
+
+    def __init__(self):
+        return
 
     def _delete_business_and_app_type(
         self, business_id: str, app_type_id: str
     ):
         try:
-            self.delete_business(business_id)
+            self._delete_business(business_id)
         except Exception as e_bd:
             raise ValueError(
                 f'{e_bd} | Nor Business nor AppType were deleted | ' 
@@ -668,7 +676,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            _ = self.get_business(business_id)
+            _ = self._get_business(business_id)
         except ApiClientError:
             pass
         except Exception as e_gb:
@@ -678,7 +686,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            self.delete_app_type(app_type_id)
+            self._delete_app_type(app_type_id)
         except ApiClientError:
             return {}
         except Exception as e_atd:
@@ -688,7 +696,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            _ = self.get_app_type(app_type_id)
+            _ = self._get_app_type(app_type_id)
         except ApiClientError:
             return {}
         except Exception as e_atg:
@@ -701,7 +709,7 @@ class MultiDeleteApi(DeleteExplorerApi):
         self, business_id: str, app_id: str,
     ):
         try:
-            self.delete_business(business_id)
+            self._delete_business(business_id)
         except Exception as e_bd:
             raise ValueError(
                 f'{e_bd} | Nor Business nor App were deleted | ' 
@@ -710,7 +718,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            _ = self.get_business(business_id)
+            _ = self._get_business(business_id)
         except ApiClientError:
             pass
         except Exception as e_gb:
@@ -721,7 +729,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            self.delete_app(app_id)
+            self._delete_app(app_id)
         except ApiClientError:
             return {}
         except Exception as e_atd:
@@ -731,7 +739,7 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
         try:
-            _ = self.get_app(app_id)
+            _ = self._get_app(app_id)
         except ApiClientError:
             return {}
         except Exception as e_atg:
@@ -741,12 +749,16 @@ class MultiDeleteApi(DeleteExplorerApi):
             )
 
 
-class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
+class MultiCreateApi(MultiDeleteApi):
     """If some upper level elements are not created it does it
     """
+    _create_business = CreateExplorerAPI.create_business
+    _create_app_type = CreateExplorerAPI.create_app_type
+    _create_app = CreateExplorerAPI.create_app
+    _create_report = CreateExplorerAPI.create_report
 
-    def __init__(self, api_client):
-        super().__init__(api_client)
+    def __init__(self):
+        super().__init__()
 
     def create_business_and_app(
         self, app_type_id: str, business_name: str, app_metadata: Dict,
@@ -757,21 +769,21 @@ class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
         :param business_name:
         :param app_metadata:
         """
-        business: Dict = self.create_business(name=business_name)
+        business: Dict = self._create_business(name=business_name)
         business_id: str = business['id']
 
         try:
             app: Dict = (
-                self.create_app(
+                self._create_app(
                     business_id=business_id,
                     app_type_id=app_type_id,
                     app_metadata=app_metadata,
                 )
             )
         except Exception as e:
-            self.delete_business(business_id=business_id)
+            self._delete_business(business_id=business_id)
             try:
-                _ = self.get_business(business_id)
+                _ = self._get_business(business_id)
                 raise ValueError(
                     f'{e} | The app was not created but a new business did '
                     f'that probably should be deleted manually with id '
@@ -793,16 +805,16 @@ class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
         """
         If app_type_id is None we create it
         """
-        app_type: Dict = self.create_app_type(**app_type_data)
+        app_type: Dict = self._create_app_type(**app_type_data)
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
         app_metadata['business_id'] = business_id
         try:
-            app: Dict = self.create_app(**app_metadata)
+            app: Dict = self._create_app(**app_metadata)
         except Exception as e:
-            self.delete_business(business_id=business_id)
+            self._delete_business(business_id=business_id)
             try:
-                _ = self.get_business(business_id)
+                _ = self._get_business(business_id)
                 raise ValueError(
                     f'{e} | The app was not created but a new app_type did '
                     f'that probably should be deleted manually with id '
@@ -828,7 +840,7 @@ class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
         :param report_metadata: A dict with all the values required to create a report
         """
         app: Dict = (
-            self.create_app(
+            self._create_app(
                 business_id=business_id,
                 app_type_id=app_type_id,
                 app_metadata=app_metadata,
@@ -838,7 +850,7 @@ class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
 
         try:
             report: Dict = (
-                self.create_report(
+                self._create_report(
                     business_id=business_id,
                     app_id=app_id,
                     report_metadata=report_metadata,
@@ -856,27 +868,30 @@ class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
     ) -> Dict[str, Dict]:
         """
         """
-        app_type: Dict = self.create_app_type(**app_type_data)
+        app_type: Dict = self._create_app_type(**app_type_data)
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
 
+        business: Dict = {}
         try:
-            business: Dict = self.create_business(business_name)
+            business: Dict = self._create_business(business_name)
             business_id: str = business['id']
             app_metadata['business_id'] = business_id
         except Exception as e:
             try:
-                self._delete_business_and_app_type(
-                    business_id=business_id,
-                    app_type_id=app_type_id,
-                )
+                self._delete_app_type(app_type_id=app_type_id)
             except ApiClientError:
                 return {}
             except Exception as e:
-                raise ValueError(f'App was not created | {e}')
+                raise ValueError(
+                    f'Business was not created | '
+                    f'AppType was created with app_type_id = {app_type_id}'
+                    f'App was not created | '
+                )
 
+        app: Dict = {}
         try:
-            app: Dict = self.create_app(**app_metadata)
+            app: Dict = self._create_app(**app_metadata)
         except Exception as e:
             try:
                 self._delete_business_and_app_type(

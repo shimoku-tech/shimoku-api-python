@@ -17,7 +17,10 @@ from shimoku_api_python.configuration import Configuration
 
 class Client(object):
     def __init__(self, universe_id: str, config={}):
-        self.api_client = ApiClient(config=config, universe_id=universe_id)
+        self.api_client = ApiClient(
+            config=config,
+            universe_id=universe_id,
+        )
 
         self.ping = PingApi(self.api_client)
         self.explorer = ExplorerApi(self.api_client)
@@ -29,7 +32,7 @@ class Client(object):
         self.path = PathMetadataApi(self.api_client)
         self.report = ReportMetadataApi(self.api_client)
         self.data = DataManagingApi(self.api_client)
-        self.wildcards = MultiCreateApi(self.api_client)
+        self.wildcards = MultiCreateApi()
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

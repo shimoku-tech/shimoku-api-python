@@ -46,7 +46,7 @@ def test_update_report():
         'updatedAt': val
     }
     s.report.update_report(
-        report_data=report_data,
+        report_metadata=report_data,
         **report_element,
     )
 
@@ -62,7 +62,7 @@ def test_update_report():
         'updatedAt': old_val
     }
     s.report.update_report(
-        report_data=report_data,
+        report_metadata=report_data,
         **report_element,
     )
 
@@ -192,6 +192,36 @@ def test_change_report_grid_position():
     s.report.change_report_grid_position()
 
 
+def test_get_filter_report():
+    # s.report.get_filter_report()
+    raise NotImplementedError
+
+
+def test_get_filter_reports():
+    # s.report.get_filter_reports()
+    raise NotImplementedError
+
+
+def test_fetch_filter_report():
+    # s.report.fetch_filter_report()
+    raise NotImplementedError
+
+
+def test_add_report_to_filter():
+    # s.report.add_report_to_filter()
+    raise NotImplementedError
+
+
+def test_set_filter_to_reports():
+    # s.report.set_filter_to_reports()
+    raise NotImplementedError
+
+
+def test_remove_filter_for_report():
+    # s.report.remove_filter_for_report()
+    raise NotImplementedError
+
+
 test_get_report()
 # TODO all below pending to be tried
 test_update_report()
@@ -208,3 +238,10 @@ test_get_report_by_external_id()
 test_get_report_by_chart_type()
 test_get_report_by_grid_position()
 test_change_report_grid_position()
+
+test_get_filter_report()
+test_get_filter_reports()
+test_add_report_to_filter()
+test_remove_filter_for_report()
+test_set_filter_to_reports()
+test_fetch_filter_report()

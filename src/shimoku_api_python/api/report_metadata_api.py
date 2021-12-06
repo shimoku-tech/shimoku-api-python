@@ -349,3 +349,122 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             report_id=report_id,
             report_data=report_data,
         )
+
+    def fetch_filter_report(
+        self, business_id: str, app_id: str, report_id: str,
+    ) -> Dict:
+        """Having a report_id return all reports that filter that one"""
+        report: Dict = self.get_report(report_id)
+        reports: List[Dict] = self._get_app_reports(
+            business_id=business_id,
+            app_id=app_id,
+        )
+
+        # TODO voy por aqui, tengo que coger la config de report Filter para ver si
+        #  el report_id que tengo por objetivo esta ahi
+        filter_report_candidates: List[Dict] = [
+            # TODO falta aplicar una funcion aqui abajo:
+            report['dataFields']  # TODO is dataFields?
+            for report_ in reports
+            if report_['reportType'].lower() == 'filter'
+        ]
+
+        for filter_report_candidate in filter_report_candidates:
+            if report_id in filter_report_candidate:
+                return # TODO pensarlo mejor
+
+    def get_filter_report(
+        self, business_id: str, app_id: str,
+        report_id: Optional[str] = None,
+        report_filter_id: Optional[str] = None,
+    ) -> Dict:
+        if report_id:
+            return self.fetch_filter_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+        elif report_filter_id:
+            return self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+        else:
+            raise ValueError(
+                'Either report_id or report_filter_id must be provided'
+            )
+
+    def get_filter_reports(
+        self, business_id: str, app_id: str,
+        report_id: Optional[str] = None,
+        report_filter_id: Optional[str] = None,
+    ):
+        """Retrieve all report.Id that are contained in a report filter"""
+        filter_report: Dict = self.get_filter_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_filter_id=report_filter_id,
+        )
+        # TODO aqui me falta coger el dataFields y coger los reportId a los que enmascara
+        raise NotImplementedError
+
+    def add_report_to_filter(
+        self, business_id: str, app_id: str, new_report_filter: Dict,
+        report_id: Optional[str] = None,
+        report_filter_id: Optional[str] = None,
+    ):
+        """"""
+        filter_report: Dict = self.get_filter_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_filter_id=report_filter_id,
+        )
+        # TODO aqui me falta coger el dataFields y añadir
+        #  el reportId contenido en new_report_filter
+        raise NotImplementedError
+
+    def set_filter_to_reports(
+        self, business_id: str, app_id: str, report_ids: List[str],
+        filter_name: Dict,
+    ) -> Dict:
+        """"""
+        # TODO pending to finish filling filter_report_metadata
+        filter_report_metadata: Dict = {
+            'appType': 'FILTER',
+        }
+        return self.create_report(filter_report_metadata)
+
+    def remove_filter_for_report(
+        self, business_id: str, app_id: str, report_id: str,
+    ):
+        """"""
+        report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+        app_id: str = report['appId']
+        reports: List[Dict] = self._get_app_reports(
+            business_id=business_id,
+            app_id=app_id,
+        )
+
+        filter_report: Dict = (
+            self.fetch_filter_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+        )
+
+        if not filter_report:
+            return  # TODO think more about this return
+
+        self.delete_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=filter_report['id'],
+        )

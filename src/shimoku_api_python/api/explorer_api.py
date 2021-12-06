@@ -294,7 +294,8 @@ class UpdateExplorerAPI(object):
         )
 
     def update_report(
-        self, business_id: str, app_id: str, report_id: str, report_data,
+        self, business_id: str, app_id: str, report_id: str,
+        report_metadata: Dict,
     ) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
@@ -1065,8 +1066,13 @@ class AppExplorerApi:
 
 class PathExplorerApi:
 
-    get_report = GetExplorerAPI.get_report
-    update_report = UpdateExplorerAPI.update_report
+    _get_report = GetExplorerAPI.get_report
+
+    _update_report = UpdateExplorerAPI.update_report
+
+    _get_app_reports = CascadeExplorerAPI.get_app_reports
+    _get_app_path_names = CascadeExplorerAPI.get_app_path_names
+
     get_path_reports = MultiCascadeExplorerAPI.get_path_reports
     get_path_report_ids = MultiCascadeExplorerAPI.get_path_report_ids
 
@@ -1076,8 +1082,10 @@ class ReportExplorerApi:
     get_report = GetExplorerAPI.get_report
     get_report_data = GetExplorerAPI.get_report_data
 
+    _get_app_reports = CascadeExplorerAPI.get_app_reports
+
     create_report = CreateExplorerAPI.create_report
-    create_app_and_report = MultiEndpointApi.create_app_and_report
+    create_app_and_report = MultiCreateApi.create_app_and_report
 
     update_report = UpdateExplorerAPI.update_report
 

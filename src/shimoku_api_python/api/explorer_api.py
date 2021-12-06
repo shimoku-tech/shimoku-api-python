@@ -423,8 +423,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [app['id'] for app in apps]
 
-    # TODO not possible yet
-    def get_app_type_apps(self, app_type_id: str) -> List[Dict]:
+    def get_universe_apps_by_type(self, app_type_id: str) -> List[Dict]:
         """"""
         endpoint: str = f'apptype/{app_type_id}/apps'
         apps_raw: Dict = (
@@ -718,13 +717,19 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         )
 
 
+class UniverseExplorerApi:
+    """"""
+    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
+    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+    get_universe_apps_by_type = CascadeExplorerAPI.get_universe_apps_by_type
+
+
 class BusinessExplorerApi:
     """"""
     get_business = GetExplorerAPI.get_business
     create_business = CreateExplorerAPI.create_business
     update_business = UpdateExplorerAPI.update_business
 
-    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
     get_business_apps = CascadeExplorerAPI.get_business_apps
     get_business_app_ids = CascadeExplorerAPI.get_business_app_ids
     get_business_all_apps_with_filter = CascadeExplorerAPI.get_business_apps_with_filter
@@ -734,16 +739,9 @@ class BusinessExplorerApi:
 
 class AppTypeExplorerApi:
     """"""
-
-    def __init__(self, api_client):
-        self.api_client = api_client
-
     get_app_type = GetExplorerAPI.get_app_type
     create_app_type = CreateExplorerAPI.create_app_type
     update_app_type = UpdateExplorerAPI.update_app_type
-
-    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    get_app_type_apps = CascadeExplorerAPI.get_app_type_apps
 
     delete_app_type = DeleteExplorerApi.delete_app_type
 

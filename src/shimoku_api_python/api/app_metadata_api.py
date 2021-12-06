@@ -87,20 +87,6 @@ class AppMetadataApi(AppExplorerApi, ABC):
                     result: Dict = app
         return result
 
-    def rename_app(
-        self, business_id: str, app_id: str, new_app_name: str,
-    ) -> Dict:
-        """Update path name
-        """
-        app_data = {'name': new_app_name}
-        return (
-            self.update_app(
-                business_id=business_id,
-                app_id=app_id,
-                app_data=app_data,
-            )
-        )
-
     def hide_title(
         self, business_id: str, app_id: str, hide_title: bool = True
     ) -> Dict:

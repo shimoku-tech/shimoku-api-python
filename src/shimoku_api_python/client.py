@@ -1,17 +1,11 @@
 """Used as base Mailchimp: https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py"""
 
 
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 import datetime
 import requests
 import json
-
-
-class ApiClientError(Exception):
-    def __init__(self, text, status_code=None):
-        self.text = text
-        self.status_code = status_code
 
 
 class ApiClient(object):

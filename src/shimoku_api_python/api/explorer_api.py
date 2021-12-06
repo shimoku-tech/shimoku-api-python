@@ -2,6 +2,8 @@
 
 from typing import List, Dict, Optional
 
+from shimoku_api_python.exceptions import ApiClientError
+
 
 class GetExplorerAPI(object):
 
@@ -158,28 +160,25 @@ class CreateExplorerAPI(object):
 
     def create_app(
         self, business_id: str,
-        owner_id: Optional[str] = None,
-        app_type_id: str = 'test',
-        hide_title: bool = True,
-        **kwargs,
+        app_type_id: Optional[str],
+        app_metadata: Dict,
     ) -> Dict:
-        """"""
+        """
+        """
         endpoint: str = f'business/{business_id}/app'
 
-        if not owner_id:
-            owner_id = business_id
-
-        item: Dict = {  # This are the mandatory fields
+        item: Dict = {  # These are the mandatory fields
             'appBusinessId': business_id,
-            'owner': owner_id,
             'appTypeId': app_type_id,
-            '__typename': 'App',
         }
 
+        hide_title: bool = app_metadata.get('hideTitle')
         if hide_title:
-            item['hideTitle'] = hide_title
+            item['hideTitle'] = True
+        else:
+            item['hideTitle'] = False
 
-        # This are the optional fields (previous were the mandatory ones)
+        # These are the optional fields (previous were the mandatory ones)
         allowed_columns: List[str] = [
             'paymentType', 'trialDays',
             'appSubscriptionInUserId',
@@ -187,7 +186,7 @@ class CreateExplorerAPI(object):
         # Check all kwargs keys are in the allowed_columns list
         assert all([key in allowed_columns for key in kwargs.keys()])
         # Update items with kwargs
-        item.update(kwargs)
+        item.update(app_metadata)
 
         return self.api_client.query_element(
             method='PUT', endpoint=endpoint, **{'body_params': item},
@@ -199,134 +198,66 @@ class CreateExplorerAPI(object):
 
     # TODO pending to be tried
     def create_report(
-        self, business_id: str,
-        app_id: str, owner_id: str,
-        title: str, grid: str,
-        order: Optional[int] = 0,
-        smart_filters: str = '',
-        fields: str = '',
-        is_disabled: Optional[bool] = None,
-        report_type: Optional[str] = None,  # None is table
-        data: Optional[List] = None,
-        code_id: Optional[str] = None, etl_code_version: Optional[str] = None,
-        **kwargs,
+        self, business_id: str, app_id: str, report_metadata: Dict,
     ) -> Dict:
         """Create new Report associated to an AppId
 
         :param business_id:
         :param app_id:
-        :param owner_id:
-        :param fields: Example
-            {
-                "Churn class":
-                 {
-                    "field": "stringField1",
-                    "filterBy": [
-                        "Very probable", "Probable",
-                        "Improbable", "Very Improbable",
-                    ]
-                },
-                "Churn probability" : {
-                    "field" : "intField1",
-                    "filterBy": None,
-                    }
-                },
-                ...
-            }
-        :param smart_filters:
-            [
-                {
-                    "filters": {
-                        # segment
-                        abstractFilters.stringField1.value: [
-                            "Best customers",
-                            "Good customers"
-                        ],
-                        # purchase soon
-                        abstractFilters.stringField2.value: [
-                            "caution"
-                        ]
-                    },
-                    "question": "Prepare next shoppers offer"
-                },
-                {
-                    "filters": {
-                        # segment
-                        abstractFilters.stringField1.value: [
-                            "Best customers",
-                            "Good customers"
-                        ],
-                        # churn
-                        abstractFilters.stringField3.value: [
-                            "caution"
-                        ]
-                    },
-                    "question": "Customers to save from churn"
-                }
-            ],
-        :param is_disabled: whether the report is shown or not
-        :param order:
-        :param title:
-        :param code_id: It is the code identifier of the report BusinessETL.
-            Every ETL has an ID field that identifies it.
-        :param etl_code_version: It is the version of the BusinessETL.
-            When versions change we know we have to UPDATE (NEVER delete+create)
-            the Report
-        :param data: data to post
-        :param grid:
-        :param report_type: Whether it is an Indicator, BarChart or any other
-            non table report type.
+        :param report_metadata: A dict with all the values required to create a report
         """
-        endpoint: str = f'business/{business_id}/app/{app_id}/report'
-
-        # This are the mandatory fields
-        item: Dict = {
-            'appId': app_id,
-            'owner': owner_id,
-            'order': order,
-            'title': title,
-            'isDisabled': is_disabled,
-            '__typename': 'Report',
-        }
-
-        # This are the optional fields (previous were the mandatory ones)
+# TODO this must be done by the API rather than the SDK
+        # Data resistance to ensure all the fields in report_data are allowed
         allowed_columns: List[str] = [
-            'isDisabled', 'chartData',
-            'reportType', 'path',
+            'title', 'order', 'isDisabled',
+            'grid', 'path', 'reportType',
             'subscribe', 'chartDataAux',
-            'description', 'grid',
+            'dataFilters', 'smartFilters', 'description',
             'codeETLId', 'codeETLVersion',
         ]
+
         # Check all kwargs keys are in the allowed_columns list
-        assert all([key in allowed_columns for key in kwargs.keys()])
+        try:
+            assert all([key in allowed_columns for key in report_metadata.keys()])
+        except AssertionError:
+            raise ValueError('Some of the keys provided as kwargs are not allowed')
+
+        endpoint: str = f'business/{business_id}/app/{app_id}/report'
+
+        # These are the mandatory fields
+        title: int = report_metadata['title']
+        order: int = report_metadata['order']
+        is_disabled: bool = report_metadata['isDisabled']
+        grid: bool = report_metadata['grid']
+        path: str = report_metadata['path']
+
+        # These are the mandatory fields
+        item: Dict = {
+            'appId': app_id,
+            'title': title,
+            'path': path,
+            'order': order,
+            'grid': grid,
+            'isDisabled': is_disabled,
+        }
+
+        report_type: str = report_metadata.get('reportType')
+        report_metadata.pop('reportType')
+
         # Update items with kwargs
-        item.update(kwargs)
+        item.update(report_metadata)
 
-        if code_id:
-            item['codeETLId'] = code_id
-
-        if etl_code_version:
-            item['codeETLVersion'] = etl_code_version
-
-        if fields:
-            item['dataFields'] = fields
-
-        if grid:
-            item['grid'] = grid
-
-        if data:
-            item['chartData'] = data
-
-        if smart_filters:
-            item['smartFilters'] = smart_filters
-
-        if report_type is None:
-            pass
-        else:
-            item['reportType'] = report_type
+        # Optional values
+        if report_type:
+            if report_type != 'Table':  # Tables have reportType as None
+                item['reportType'] = report_type
+            elif report_metadata.get('smartFilters'):
+                # Smart filters only exists for Tables
+                item['smartFilters'] = report_metadata['smartFilters']
 
         return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
+            method='PUT', endpoint=endpoint,
+            **{'body_params': item},
         )
 
 
@@ -717,6 +648,363 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         )
 
 
+class MultiDeleteApi(DeleteExplorerApi):
+    """Get Businesses, Apps, Paths and Reports in any possible combination
+    """
+
+    def __init__(self, api_client):
+        super().__init__(api_client)
+
+    def _delete_business_and_app_type(
+        self, business_id: str, app_type_id: str
+    ):
+        try:
+            self.delete_business(business_id)
+        except Exception as e_bd:
+            raise ValueError(
+                f'{e_bd} | Nor Business nor AppType were deleted | ' 
+                f'business_id: {business_id} | '
+                f'app_type_id: {app_type_id}'
+            )
+
+        try:
+            _ = self.get_business(business_id)
+        except ApiClientError:
+            pass
+        except Exception as e_gb:
+            raise ValueError(
+                f'{e_gb} | Nor Business nor AppType were deleted | '
+                f'business_id: {business_id} | app_type_id: {app_type_id}'
+            )
+
+        try:
+            self.delete_app_type(app_type_id)
+        except ApiClientError:
+            return {}
+        except Exception as e_atd:
+            raise ValueError(
+                f'{e_atd} | AppType was not deleted | '
+                f'app_type_id: {app_type_id}'
+            )
+
+        try:
+            _ = self.get_app_type(app_type_id)
+        except ApiClientError:
+            return {}
+        except Exception as e_atg:
+            raise ValueError(
+                f'{e_atg} | AppType was not deleted | '
+                f'app_type_id: {app_type_id}'
+            )
+
+    def _delete_business_and_app(
+        self, business_id: str, app_id: str,
+    ):
+        try:
+            self.delete_business(business_id)
+        except Exception as e_bd:
+            raise ValueError(
+                f'{e_bd} | Nor Business nor App were deleted | ' 
+                f'business_id: {business_id} | '
+                f'app_id: {app_id}'
+            )
+
+        try:
+            _ = self.get_business(business_id)
+        except ApiClientError:
+            pass
+        except Exception as e_gb:
+            raise ValueError(
+                f'{e_gb} | Nor Business nor App were deleted | '
+                f'business_id: {business_id} | '
+                f'app_id: {app_id}'
+            )
+
+        try:
+            self.delete_app(app_id)
+        except ApiClientError:
+            return {}
+        except Exception as e_atd:
+            raise ValueError(
+                f'{e_atd} | App was not deleted | '
+                f'app_id: {app_id}'
+            )
+
+        try:
+            _ = self.get_app(app_id)
+        except ApiClientError:
+            return {}
+        except Exception as e_atg:
+            raise ValueError(
+                f'{e_atg} | App was not deleted | '
+                f'app_id: {app_id}'
+            )
+
+
+class MultiCreateApi(CreateExplorerAPI, MultiDeleteApi):
+    """If some upper level elements are not created it does it
+    """
+
+    def __init__(self, api_client):
+        super().__init__(api_client)
+
+    def create_business_and_app(
+        self, app_type_id: str, business_name: str, app_metadata: Dict,
+    ) -> Dict[str, Dict]:
+        """Create new Report associated to an AppId
+
+        :param app_type_id:
+        :param business_name:
+        :param app_metadata:
+        """
+        business: Dict = self.create_business(name=business_name)
+        business_id: str = business['id']
+
+        try:
+            app: Dict = (
+                self.create_app(
+                    business_id=business_id,
+                    app_type_id=app_type_id,
+                    app_metadata=app_metadata,
+                )
+            )
+        except Exception as e:
+            self.delete_business(business_id=business_id)
+            try:
+                _ = self.get_business(business_id)
+                raise ValueError(
+                    f'{e} | The app was not created but a new business did '
+                    f'that probably should be deleted manually with id '
+                    f'{business_id}'
+                )
+            except ApiClientError:
+                return {}
+
+        return {
+            'business': business,
+            'app': app,
+        }
+
+    def create_app_type_and_app(
+        self, business_id: str,
+        app_metadata: Dict,
+        app_type_data: Dict,
+    ) -> Dict[str, Dict]:
+        """
+        If app_type_id is None we create it
+        """
+        app_type: Dict = self.create_app_type(**app_type_data)
+        app_type_id: str = app_type['id']
+        app_metadata['app_type_id'] = app_type_id
+        app_metadata['business_id'] = business_id
+        try:
+            app: Dict = self.create_app(**app_metadata)
+        except Exception as e:
+            self.delete_business(business_id=business_id)
+            try:
+                _ = self.get_business(business_id)
+                raise ValueError(
+                    f'{e} | The app was not created but a new app_type did '
+                    f'that probably should be deleted manually with id '
+                    f'{app_type_id}'
+                )
+            except ApiClientError:
+                return {}
+
+        return {
+            'app_type': app_type,
+            'app': app
+        }
+
+    def create_app_and_report(
+        self, business_id: str, app_type_id: str,
+        app_metadata: Dict, report_metadata: Dict,
+    ) -> Dict:
+        """Create new Report associated to an AppId
+
+        :param business_id:
+        :param app_type_id:
+        :param app_metadata:
+        :param report_metadata: A dict with all the values required to create a report
+        """
+        app: Dict = (
+            self.create_app(
+                business_id=business_id,
+                app_type_id=app_type_id,
+                app_metadata=app_metadata,
+            )
+        )
+        app_id: str = app['id']
+
+        try:
+            report: Dict = (
+                self.create_report(
+                    business_id=business_id,
+                    app_id=app_id,
+                    report_metadata=report_metadata,
+                )
+            )
+        except Exception as e:
+            raise f'{e} | app_id created: {app_id} | Better delete it'
+
+        return report
+
+    def create_business_app_and_app_type(
+        self, business_name: str,
+        app_metadata: Dict,
+        app_type_data: Dict,
+    ) -> Dict[str, Dict]:
+        """
+        """
+        app_type: Dict = self.create_app_type(**app_type_data)
+        app_type_id: str = app_type['id']
+        app_metadata['app_type_id'] = app_type_id
+
+        try:
+            business: Dict = self.create_business(business_name)
+            business_id: str = business['id']
+            app_metadata['business_id'] = business_id
+        except Exception as e:
+            try:
+                self._delete_business_and_app_type(
+                    business_id=business_id,
+                    app_type_id=app_type_id,
+                )
+            except ApiClientError:
+                return {}
+            except Exception as e:
+                raise ValueError(f'App was not created | {e}')
+
+        try:
+            app: Dict = self.create_app(**app_metadata)
+        except Exception as e:
+            try:
+                self._delete_business_and_app_type(
+                    business_id=business_id,
+                    app_type_id=app_type_id,
+                )
+            except ApiClientError:
+                return {}
+            except Exception as e:
+                raise ValueError(f'App was not created | {e}')
+
+        return {
+            'business': business,
+            'app_type': app_type,
+            'app': app
+        }
+
+    def create_business_app_and_report(
+        self, app_type_id: str,
+        business_name: str,
+        app_metadata: Dict,
+        report_metadata: Dict,
+    ) -> Dict[str, Dict]:
+        """
+        """
+        business: Dict = self.create_business(business_name)
+        business_id: str = business['id']
+        app_metadata['business_id'] = business_id
+        app_metadata['app_type_id'] = app_type_id
+
+        try:
+            app: Dict = self.create_app(
+                business_id=business_id,
+                app_metadata=app_metadata,
+            )
+            app_id = app['id']
+        except Exception as e:
+            try:
+                self.delete_business(business_id)
+            except ApiClientError:
+                return {}
+            except Exception as e:
+                raise ValueError(
+                    f'{e} | Business with business_id {business_id} '
+                    f'created that probably wants to be removed | '
+                    f'App was not created | '
+                    f'Report was not created'
+                )
+
+        try:
+            report: Dict = self.create_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_metadata=report_metadata,
+            )
+        except Exception as e:
+            try:
+                self._delete_business_and_app(
+                    business_id=business_id,
+                    app_id=app_id,
+                )
+            except ApiClientError:
+                return {}
+            except Exception as e_dba:
+                raise ValueError(
+                    f'{e} | {e_dba} | Report was not created'
+                )
+            return {}
+
+        return {
+            'business': business,
+            'app': app,
+            'report': report,
+        }
+
+    def create_business_app_type_app_and_report(
+        self, business_name: str,
+        app_type_data: Dict,
+        app_metadata: Dict,
+        report_metadata: Dict,
+    ) -> Dict[str, Dict]:
+        """
+        """
+        d = self.create_business_app_and_app_type(
+            business_name=business_name,
+            app_type_data=app_type_data,
+            app_metadata=app_metadata,
+        )
+        business_id: str = d['business']['id']
+        app_id: str = d['app']['id']
+
+        try:
+            report: Dict = self.create_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_metadata=report_metadata,
+            )
+        except Exception as e:
+            try:
+                self._delete_business_and_app(
+                    business_id=business_id,
+                    app_id=app_id,
+                )
+            except ApiClientError:
+                return {}
+            except Exception as e_:
+                raise ValueError(
+                    f'{e} | {e_} | Report was not created'
+                )
+
+            try:
+                app_type_id: str = d['app_type']['id']
+                self.delete_app_type(app_type_id)
+            except Exception as e_:
+                raise ValueError(
+                    f'{e_} | Report was not created | '
+                    f'App type was created with app_type_id: {app_type_id}'
+                )
+            return {}
+
+        return {
+            'app_type': d['app_type'],
+            'business': d['business'],
+            'app': d['app'],
+            'report': report,
+        }
+
+
 class UniverseExplorerApi:
     """"""
     get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
@@ -774,6 +1062,7 @@ class ReportExplorerApi:
     get_report_data = GetExplorerAPI.get_report_data
 
     create_report = CreateExplorerAPI.create_report
+    create_app_and_report = MultiEndpointApi.create_app_and_report
 
     update_report = UpdateExplorerAPI.update_report
 

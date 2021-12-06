@@ -14,6 +14,6 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
 
     def rename_apps_types(self, app_type_id: str, new_name: str) -> Dict:
         return self.update_app_type(
-            business_id=app_type_id,
+            app_type_id=app_type_id,
             app_type_data={'name': new_name}  # TODO check 'name' is correct
         )

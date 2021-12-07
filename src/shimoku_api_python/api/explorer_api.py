@@ -274,11 +274,11 @@ class UpdateExplorerAPI(object):
             method='PATCH', endpoint=endpoint, **{'body_params': business_data},
         )
 
-    def update_app_type(self, app_type_id: str, app_type_data: Dict) -> Dict:
+    def update_app_type(self, app_type_id: str, app_type_metadata: Dict) -> Dict:
         """"""
         endpoint: str = f'apptype/{app_type_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': app_type_data},
+            method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
         )
 
     def update_app(self, business_id: str, app_id: str, app_data: Dict) -> Dict:

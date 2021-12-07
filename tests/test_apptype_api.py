@@ -65,7 +65,7 @@ def test_update_app_type():
     app_type_updated: Dict = (
         s.app_type.update_app_type(
             app_type_id=app_type_id,
-            app_type_data=data,
+            app_type_metadata=data,
         )
     )
     assert (
@@ -89,7 +89,7 @@ def test_update_app_type():
     app_type_restored: Dict = (
         s.app_type.update_app_type(
             app_type_id=app_type_id,
-            app_type_data=data,
+            app_type_metadata=data,
         )
     )
     assert app_type_restored == app_type

@@ -8,7 +8,8 @@ from shimoku_api_python.client import ApiClientError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
-app_type_id: str = getenv('BUSINESS_ID')
+business_id: str = getenv('BUSINESS_ID')
+app_type_id: str = getenv('APP_TYPE_ID')
 
 
 config = {
@@ -47,7 +48,7 @@ def test_get_universe_apps_by_type():
         )
     )
     assert apps
-    assert all([app['appTypeId'] is in app_types_ids for app in apps])
+    assert all([app['appTypeId'] in app_types_ids for app in apps])
 
 
 test_get_universe_businesses()

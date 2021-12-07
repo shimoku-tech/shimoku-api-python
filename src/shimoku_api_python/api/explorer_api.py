@@ -367,6 +367,14 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     def get_universe_apps_by_type(self, app_type_id: str) -> List[Dict]:
         """"""
+        app_types: List[Dict] = self.get_universe_app_types()
+        app_type_ids: List[str] = [app_type['id'] for app_type in app_types]
+        if app_type_id not in app_type_ids:
+            raise ValueError(
+                f'The provided app_type_id {app_type_id} does not exists | '
+                f'You can create it with shimoku.app_type.create_app_type()'
+            )
+
         endpoint: str = f'apptype/{app_type_id}/apps'
         apps_raw: Dict = (
             self.api_client.query_element(

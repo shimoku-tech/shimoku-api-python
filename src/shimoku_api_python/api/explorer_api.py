@@ -10,7 +10,6 @@ class GetExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    # TODO pending https://trello.com/c/18GLgLoQ
     def get_business(self, business_id: str, **kwargs) -> Dict:
         """Retrieve an specific user_id
 
@@ -171,7 +170,7 @@ class CreateExplorerAPI(object):
     def create_app(
         self, business_id: str,
         app_type_id: Optional[str],
-        app_metadata: Dict,
+        app_metadata: Optional[Dict] = None,
     ) -> Dict:
         """
         """
@@ -182,21 +181,22 @@ class CreateExplorerAPI(object):
             'appTypeId': app_type_id,
         }
 
-        hide_title: bool = app_metadata.get('hideTitle')
-        if hide_title:
-            item['hideTitle'] = True
-        else:
-            item['hideTitle'] = False
+        if app_metadata:
+            hide_title: bool = app_metadata.get('hideTitle')
+            if hide_title:
+                item['hideTitle'] = True
+            else:
+                item['hideTitle'] = False
 
-        # These are the optional fields (previous were the mandatory ones)
-        allowed_columns: List[str] = [
-            'paymentType', 'trialDays',
-            'appSubscriptionInUserId',
-        ]
-        # Check all kwargs keys are in the allowed_columns list
-        assert all([key in allowed_columns for key in kwargs.keys()])
-        # Update items with kwargs
-        item.update(app_metadata)
+            # These are the optional fields (previous were the mandatory ones)
+            allowed_columns: List[str] = [
+                'paymentType', 'trialDays',
+                'appSubscriptionInUserId',
+            ]
+            # Check all kwargs keys are in the allowed_columns list
+            assert all([key in allowed_columns for key in app_metadata.keys()])
+            # Update items with kwargs
+            item.update(app_metadata)
 
         return self.api_client.query_element(
             method='PUT', endpoint=endpoint, **{'body_params': item},

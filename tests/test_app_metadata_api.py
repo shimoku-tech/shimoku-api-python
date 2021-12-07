@@ -273,7 +273,7 @@ def test_has_app_report():
 
 
 test_get_app()
-# test_get_fake_app()
+test_get_fake_app()
 # test_update_app()
 # TODO pending:
 # test_create_and_delete_app()

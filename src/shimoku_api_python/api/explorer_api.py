@@ -1066,6 +1066,7 @@ class AppExplorerApi:
     create_app = CreateExplorerAPI.create_app
     update_app = UpdateExplorerAPI.update_app
 
+    _get_business_apps = CascadeExplorerAPI.get_business_apps
     get_app_reports = CascadeExplorerAPI.get_app_reports
     get_app_report_ids = CascadeExplorerAPI.get_app_report_ids
     get_app_path_names = CascadeExplorerAPI.get_app_path_names

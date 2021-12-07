@@ -151,8 +151,18 @@ class CreateExplorerAPI(object):
     def create_app_type(self, name: str) -> Dict:
         """"""
         endpoint: str = 'apptype'
+        # for instance:
+        # "name": "Test Borrar"
+        # "key": "TEST_BORRAR"
+        # "normalizedName": "test-borrar"
+        key: str = '_'.join(name.split(' ')).upper()
+        normalized_name: str = '-'.join(name.split(' ')).lower()
 
-        item: Dict = {'name': name}
+        item: Dict = {
+            'name': name,
+            'key': key,
+            'normalizedName': normalized_name,
+        }
 
         return self.api_client.query_element(
             method='PUT', endpoint=endpoint, **{'body_params': item},

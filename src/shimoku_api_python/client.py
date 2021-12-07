@@ -1,4 +1,7 @@
-"""Used as base Mailchimp: https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py"""
+"""
+Used as base Mailchimp:
+https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py
+"""
 
 
 from typing import List, Dict
@@ -6,6 +9,8 @@ from typing import List, Dict
 import datetime
 import requests
 import json
+
+from shimoku_api_python.exceptions import ApiClientError
 
 
 class ApiClient(object):
@@ -110,13 +115,10 @@ class ApiClient(object):
         except Exception:
             data = None
 
-        if data:
-            if res.ok:
-                return data
-            else:
-                raise ApiClientError(data)
+        if res.ok:
+            return data
         else:
-            return res
+            raise ApiClientError(data)
 
     def set_http_info(self, **kwargs):  # noqa: E501
         """

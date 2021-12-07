@@ -33,8 +33,6 @@ def test_get_app_type():
 
 
 def test_create_and_delete_app_type():
-    app_type = {}  # TODO
-
     app_type_new: Dict = s.app_type.create_app_type(name='test')
     app_type_id_: str = app_type_new['id']
 

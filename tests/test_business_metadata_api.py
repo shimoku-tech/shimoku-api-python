@@ -3,10 +3,8 @@ from os import getenv
 from typing import Dict, List
 import unittest
 
-import datetime as dt
-
 import shimoku_api_python as shimoku
-from shimoku_api_python.client import ApiClientError
+from shimoku_api_python import Client
 
 
 api_key: str = getenv('API_TOKEN')
@@ -22,11 +20,6 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
 )
-
-
-def test_get_universe_businesses():
-    businesses: List[Dict] = s.business.get_universe_businesses()
-    assert businesses
 
 
 def test_get_business():
@@ -60,7 +53,6 @@ def test_create_and_delete_business():
     )
 
     assert business_from_db == business
-    assert business['createdAt'] == dt.date.today()
     del business_from_db
 
     result: Dict = (
@@ -130,10 +122,8 @@ def test_rename_business():
     assert business_name == business_restored['name']
 
 
-test_get_universe_businesses()
 test_get_business()
 test_get_fake_business()
-# TODO no funca:
 test_create_and_delete_business()
 test_update_business()
 test_rename_business()

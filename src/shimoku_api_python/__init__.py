@@ -9,6 +9,7 @@ from shimoku_api_python.api.path_metadata_api import PathMetadataApi
 from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
 from shimoku_api_python.api.data_managing_api import DataManagingApi
 from shimoku_api_python.api.explorer_api import ExplorerApi, MultiCreateApi
+from shimoku_api_python.api.plot_api import PlotApi
 from shimoku_api_python.api.ping_api import PingApi
 
 from shimoku_api_python.client import ApiClient
@@ -32,6 +33,7 @@ class Client(object):
         self.path = PathMetadataApi(self._api_client)
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
+        self.plt = PlotApi(self._api_client)
         self.wildcards = MultiCreateApi()
 
     def set_config(self, config={}):

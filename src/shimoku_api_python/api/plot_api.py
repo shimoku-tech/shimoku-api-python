@@ -14,45 +14,215 @@ class PlotApi(ReportExplorerApi):
 
     def __init__(self, api_client):
         self.api_client = api_client
+        self.business_id: str
+        self.app_id: str
 
-    def bar(
+    def set_vars(
         self, business_id: str, app_id: str,
-        data: Union[str, DataFrame, List[Dict]],
-        x: str, y: str,
-        second_layer: Dict,
-        third_layer: Dict,
-        report_id: Optional[str] = None,
-        report_metadata: Optional[Dict] = None,
     ):
         """"""
-        if not report_id:
-            if not report_metadata:
-                raise ValueError('You have to provide either a report_id or its metadata')
-            report: Dict = self.create_report(
-                business_id=business_id,
-                app_id=app_id,
-                report_metadata=report_metadata,
-            )
-            report_id: str = report['id']
-        else:
-            report: Dict = self.get_report(
-                business_id=business_id,
-                app_id=app_id,
-                report_id=report_id,
-            )
+        self.business_id: str = business_id
+        self.app_id: str = app_id
 
-# TODO seguramente tengo que actualizar los dataFields
-#  tambien con x y y y algo de data resistance
-        self.update_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_metadata={'reportType': 'BARCHART'}
+    def bar(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        path: str, row: int, column: int,  # report creation
+        title: str, color: str,  # second layer
+        third_layer: Dict,
+    ):
+        """"""
+        reports = self.get_reports_in_app()
+
+        if reports:
+            order = min([report['order'] for report in reports if report['path'] == path])
+        else:
+            orders = max([report['order'] for report in reports])
+            order: int = orders + 1
+
+        report_metadata = {
+            'path': path,
+            'reportType': 'BARCHART',
+            'title': 'title',
+            'grid': f'{row}, {column}',
+            'order': order,
+        }
+
+        report: Dict = self.create_report(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_metadata=report_metadata,
         )
+        report_id: str = report['id']
 
         self.update_report_data(
-            business_id=business_id,
-            app_id=app_id,
+            business_id=self.business_id,
+            app_id=self.app_id,
             report_id=report_id,
             report_data=data,
         )
+
+        return report
+
+    def line(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        path: str, row: int, column: int,  # report creation
+        title: str, color: str,  # second layer
+        third_layer: Dict,
+    ):
+        """"""
+        reports = self.get_reports_in_app()
+
+        if reports:
+            order = min([report['order'] for report in reports if report['path'] == path])
+        else:
+            orders = max([report['order'] for report in reports])
+            order: int = orders + 1
+
+        report_metadata = {
+            'path': path,
+            'reportType': 'BARCHART',
+            'title': 'title',
+            'grid': f'{row}, {column}',
+            'order': order,
+        }
+
+        report: Dict = self.create_report(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_metadata=report_metadata,
+        )
+        report_id: str = report['id']
+
+        self.update_report_data(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_id=report_id,
+            report_data=data,
+        )
+
+        return report
+
+    def predictive_line(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        path: str, row: int, column: int,  # report creation
+        title: str, color: str,  # second layer
+        third_layer: Dict,
+    ):
+        """"""
+        reports = self.get_reports_in_app()
+
+        if reports:
+            order = min([report['order'] for report in reports if report['path'] == path])
+        else:
+            orders = max([report['order'] for report in reports])
+            order: int = orders + 1
+
+        report_metadata = {
+            'path': path,
+            'reportType': 'BARCHART',
+            'title': 'title',
+            'grid': f'{row}, {column}',
+            'order': order,
+        }
+
+        report: Dict = self.create_report(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_metadata=report_metadata,
+        )
+        report_id: str = report['id']
+
+        self.update_report_data(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_id=report_id,
+            report_data=data,
+        )
+
+        return report
+
+    def stockline(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        path: str, row: int, column: int,  # report creation
+        title: str, color: str,  # second layer
+        third_layer: Dict,
+    ):
+        """"""
+        reports = self.get_reports_in_app()
+
+        if reports:
+            order = min([report['order'] for report in reports if report['path'] == path])
+        else:
+            orders = max([report['order'] for report in reports])
+            order: int = orders + 1
+
+        report_metadata = {
+            'path': path,
+            'reportType': 'BARCHART',
+            'title': 'title',
+            'grid': f'{row}, {column}',
+            'order': order,
+        }
+
+        report: Dict = self.create_report(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_metadata=report_metadata,
+        )
+        report_id: str = report['id']
+
+        self.update_report_data(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_id=report_id,
+            report_data=data,
+        )
+
+        return report
+
+    def scatter(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        path: str, row: int, column: int,  # report creation
+        title: str, color: str,  # second layer
+        third_layer: Dict,
+    ):
+        """"""
+        reports = self.get_reports_in_app()
+
+        if reports:
+            order = min([report['order'] for report in reports if report['path'] == path])
+        else:
+            orders = max([report['order'] for report in reports])
+            order: int = orders + 1
+
+        report_metadata = {
+            'path': path,
+            'reportType': 'BARCHART',
+            'title': 'title',
+            'grid': f'{row}, {column}',
+            'order': order,
+        }
+
+        report: Dict = self.create_report(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_metadata=report_metadata,
+        )
+        report_id: str = report['id']
+
+        self.update_report_data(
+            business_id=self.business_id,
+            app_id=self.app_id,
+            report_id=report_id,
+            report_data=data,
+        )
+
+        return report
+
+    def set_filter():
+        raise NotImplementedError

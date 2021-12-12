@@ -137,6 +137,7 @@ class CreateExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
+# TODO first check that a business with the same name does not exists!!
     def create_business(self, name: str) -> Dict:
         """"""
         endpoint: str = 'business'
@@ -147,8 +148,16 @@ class CreateExplorerAPI(object):
             method='PUT', endpoint=endpoint, **{'body_params': item},
         )
 
+# TODO now is broken WiP
     def create_app_type(self, name: str) -> Dict:
         """"""
+        app_type: Dict = self.find_app_type_by_name_filter(name=name)
+        if not app_type:
+            # create the name from the normalized name: "product-suite" "Product suite"
+            name: str = ' '.join(app_type_normalized_name.split('-')).capitalize()
+        else:
+            raise ValueError(f'An AppType with the name {name} already exists')
+
         endpoint: str = 'apptype'
         # for instance:
         # "name": "Test Borrar"
@@ -334,6 +343,33 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 endpoint=endpoint, method='GET',
             )
         )
+
+    def find_app_type_by_name_filter(
+        self, name: Optional[str] = None,
+        normalized_name: Optional[str] = None,
+    ) -> Dict:
+        """"""
+        app_types: Dict = self.get_universe_app_types()
+
+        if name:
+            app_types: List[Dict] = [
+                app_type
+                for app_type in app_types
+                if app_type['name'] == name
+            ]
+        elif normalized_name:
+            app_types: List[Dict] = [
+                app_type
+                for app_type in app_types
+                if app_type['normalizedName'] == app_type_name
+            ]
+
+        if not app_types:
+            return {}
+
+        assert len(app_types) == 1
+        app_type: Dict = app_types[0]
+        return app_type
 
     def get_business_apps(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all app metadata

@@ -108,7 +108,85 @@ def test_scatter():
     )
 
 
+def test_bubble_chart():
+    # s.plt.bubble_chart()
+    raise NotImplementedError
+
+
+def test_candlestick():
+    # s.plt.candlestick()
+    raise NotImplementedError
+
+
+def test_funnel():
+    # s.plt.funnel()
+    raise NotImplementedError
+
+
+def test_heatmap():
+    # s.plt.heatmap()
+    raise NotImplementedError
+
+
+def test_gauge():
+    # s.plt.gauge()
+    raise NotImplementedError
+
+
+def test_sunburst():
+    # s.plt.sunburst()
+    raise NotImplementedError
+
+
+def test_tree():
+    # s.plt.tree()
+    raise NotImplementedError
+
+
+def test_treemap():
+    # s.plt.treemap()
+    raise NotImplementedError
+
+
+def test_indicator():
+    # s.plt.indicator()
+    raise NotImplementedError
+
+
+def test_alert_indicator():
+    # s.plt.alert_indicator()
+    raise NotImplementedError
+
+
+def test_line_with_confidence_area():
+    # s.plt.line_with_confidence_area()
+    raise NotImplementedError
+
+
+def test_predictive_line():
+    # s.plt.predictive_line()
+    raise NotImplementedError
+
+
+def test_radar():
+    # s.plt.radar()
+    raise NotImplementedError
+
+
 test_bar()
 test_line()
 test_scatter()
 test_stockline()
+test_bubble_chart()
+test_candlestick()
+test_funnel()
+test_heatmap()
+test_gauge()
+test_sunburst()
+test_tree()
+test_treemap()
+test_indicator()
+test_alert_indicator()
+test_line_with_confidence_area()
+test_predictive_line()
+test_radar()

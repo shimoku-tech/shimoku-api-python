@@ -636,7 +636,7 @@ class PlotApi(PlotAux):
             third_layer=third_layer,
         )
 
-    def Tree(
+    def tree(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
@@ -663,7 +663,7 @@ class PlotApi(PlotAux):
             third_layer=third_layer,
         )
 
-    def Treemap(
+    def treemap(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
@@ -690,7 +690,7 @@ class PlotApi(PlotAux):
             third_layer=third_layer,
         )
 
-    def Sunburst(
+    def sunburst(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[Dict],  # first layer
         menu_path: str, row: int, column: int,  # report creation

@@ -109,6 +109,6 @@ def test_scatter():
 
 
 test_bar()
-# test_line()
-# test_scatter()
-# test_stockline()
+test_line()
+test_scatter()
+test_stockline()

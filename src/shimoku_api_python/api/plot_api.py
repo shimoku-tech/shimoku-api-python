@@ -123,6 +123,35 @@ class PlotApi(PlotAux):
             report_data=data,
         )
 
+    def _create_trend_chart(
+        self, report_type: str,
+        data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[str],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        color: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # thid layer
+    ):
+        """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
+        """
+        self._validate_data(data, elements=[x] + y)
+        data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
+
+        report_metadata: Dict = {
+            'reportType': report_type,
+            'title': title,
+            'grid': f'{row}, {column}',
+            'dataFields': data_fields,
+        }
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )
+
     def _set_data_fields(
         self, x: str, y: str, x_axis_name: str, y_axis_name: str
     ) -> Dict:
@@ -187,20 +216,14 @@ class PlotApi(PlotAux):
         :param color:
         :param third_layer:
         """
-        self._validate_data(data, elements=[x] + y)
-        data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
-
-        report_metadata: Dict = {
-            'reportType': 'BARCHART',
-            'title': title,
-            'grid': f'{row}, {column}',
-            'dataFields': data_fields,
-        }
-        return self._create_chart(
-            data=data,
-            menu_path=menu_path,
-            report_metadata=report_metadata,
+        self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
             third_layer=third_layer,
+            report_type='BARCHART',
         )
 
     def line(
@@ -214,7 +237,15 @@ class PlotApi(PlotAux):
         third_layer: Optional[Dict] = None,  # thid layer
     ):
         """"""
-        raise NotImplementedError
+        self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='LINECHART',
+        )
 
     def predictive_line(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -240,7 +271,15 @@ class PlotApi(PlotAux):
         third_layer: Optional[Dict] = None,  # thid layer
     ):
         """"""
-        raise NotImplementedError
+        self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='STOCKLINECHART',
+        )
 
     def scatter(
         self, data: Union[str, DataFrame, List[Dict]],

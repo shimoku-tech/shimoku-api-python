@@ -34,7 +34,7 @@ class Client(object):
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.plt = PlotApi(self._api_client)
-        self.wildcards = MultiCreateApi()
+        self.creator = MultiCreateApi()
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

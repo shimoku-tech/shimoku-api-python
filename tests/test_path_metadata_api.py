@@ -233,7 +233,6 @@ def test_fix_path_grid():
     raise NotImplementedError
 
 
-# TODO pending to be tried
 test_check_if_path_exists()
 test_get_path_position()
 test_get_app_path_all_reports()

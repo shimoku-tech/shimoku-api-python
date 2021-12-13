@@ -133,8 +133,42 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters=filters,
     ):
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
+
+        Example
+        -------------------
+        input
+            data:
+                val_a, val_b,
+                  mon,     7,
+                  tue,     10,
+                  wed,     11,
+                  thu,     20,
+                  fri,     27,
+            x: 'val_a'
+            y: 'val_b'
+            menu_path: 'purchases/weekly'
+            row: 2
+            column: 1
+            title: 'Purchases by week'
+            color: None
+            third_layer: {}
+
+        :param data:
+        :param x:
+        :param y:
+        :param menu_path: it contain the `app_name/path` for instance "product-suite/results"
+            and it will use the AppType ProductSuite (if it does not it will create it)
+            then it will check if the App exists, if not create it and finally create
+            the report with the specific path "results"
+        :param row:
+        :param column:
+        :param title:
+        :param color:
+        :param third_layer:
+        :param filters: To create a filter for every specified column
         """
         self._validate_data(data, elements=[x] + y)
         data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
@@ -145,6 +179,10 @@ class PlotApi(PlotAux):
             'grid': f'{row}, {column}',
             'dataFields': data_fields,
         }
+
+        if filters:
+            raise NotImplementedError
+
         return self._create_chart(
             data=data,
             menu_path=menu_path,
@@ -181,40 +219,9 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
     ):
         """Create a barchart
-
-        Example
-        -------------------
-        input
-            data:
-                val_a, val_b,
-                  mon,     7,
-                  tue,     10,
-                  wed,     11,
-                  thu,     20,
-                  fri,     27,
-            x: 'val_a'
-            y: 'val_b'
-            menu_path: 'purchases/weekly'
-            row: 2
-            column: 1
-            title: 'Purchases by week'
-            color: None
-            third_layer: {}
-
-        :param data:
-        :param x:
-        :param y:
-        :param menu_path: it contain the `app_name/path` for instance "product-suite/results"
-            and it will use the AppType ProductSuite (if it does not it will create it)
-            then it will check if the App exists, if not create it and finally create
-            the report with the specific path "results"
-        :param row:
-        :param column:
-        :param title:
-        :param color:
-        :param third_layer:
         """
         self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
@@ -224,6 +231,7 @@ class PlotApi(PlotAux):
             y_axis_name=y_axis_name,
             third_layer=third_layer,
             report_type='BARCHART',
+            filters=filters,
         )
 
     def line(
@@ -235,6 +243,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
         self._create_trend_chart(
@@ -245,6 +254,7 @@ class PlotApi(PlotAux):
             y_axis_name=y_axis_name,
             third_layer=third_layer,
             report_type='LINECHART',
+            filters=filters,
         )
 
     def predictive_line(
@@ -256,6 +266,21 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """"""
+        raise NotImplementedError
+
+    def line_with_confidence_area(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[str],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        color: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
         raise NotImplementedError
@@ -269,6 +294,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
         self._create_trend_chart(
@@ -279,6 +305,7 @@ class PlotApi(PlotAux):
             y_axis_name=y_axis_name,
             third_layer=third_layer,
             report_type='STOCKLINECHART',
+            filters=filters,
         )
 
     def scatter(
@@ -290,9 +317,19 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
-        raise NotImplementedError
+        self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='SCATTER',
+            filters=filters,
+        )
 
     def bubble_chart(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -305,7 +342,16 @@ class PlotApi(PlotAux):
         third_layer: Optional[Dict] = None,  # thid layer
     ):
         """"""
-        raise NotImplementedError
+        self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='SCATTER',
+            filters=filters,
+        )
 
     def indicator(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -315,7 +361,23 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
     ):
         """"""
-        raise NotImplementedError
+        elements: List[str] = [
+            'title', 'description', 'value',
+        ]
+        self._validate_data(data, elements=elements)
+
+        report_metadata: Dict = {
+            'reportType': 'INDICATOR',
+            'title': title,
+            'grid': f'{row}, {column}',
+            'dataFields': data_fields,
+        }
+
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+        )
 
     def alert_indicator(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -326,23 +388,170 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
     ):
         """"""
-        raise NotImplementedError
+        elements: List[str] = [
+            'title', 'description', 'value', 'link'  # TODO validate this one
+        ]
+        self._validate_data(data, elements=elements)
 
-    def set_filter(self, reports: Dict[str, List[str]]):
-        """
-        Example
-        -----------------
-        input
-            reports = {
-                'Diario': ['a93bc', '0070d'],
-                'Semanal': ['b04cd', '1181e'],
-            }
-        :param reports:
-        """
-        raise NotImplementedError
+        report_metadata: Dict = {
+            'reportType': 'INDICATOR',
+            'title': title,
+            'grid': f'{row}, {column}',
+            'dataFields': data_fields,
+        }
 
-# TODO pensar alguna funcion que cree el multiple
-#  chart con filter como si fuera un unico chart
-#  del palo te paso un dataframe con una col con dos valores
-#  A, B que quiero que sean filtrables y segun el filtro
-#  muestre una o la otra
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+        )
+
+    def pie(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a Piechart
+        """
+        self._validate_data(data, elements=[x, y])
+
+        report_metadata: Dict = {
+            'reportType': 'PIECHART',
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+# TODO quedarme solo con la data de las columnas x, y!!!!!
+#  HACER LO MISMO PARA EL RESTO DE CHARTS
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )
+
+    def radar(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[str],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a RADAR
+        """
+        self._validate_data(data, elements=[x] + y)
+
+        report_metadata: Dict = {
+            'reportType': 'RADAR',
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        # TODO quedarme solo con la data de las columnas x, y!!!!!
+        #  HACER LO MISMO PARA EL RESTO DE CHARTS
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )
+
+    def Tree(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[Dict],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a Tree
+        """
+        # TODO validate tree data
+
+        report_metadata: Dict = {
+            'reportType': 'TREE',
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        # TODO quedarme solo con la data de las columnas x, y!!!!!
+        #  HACER LO MISMO PARA EL RESTO DE CHARTS
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )
+
+    def Treemap(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[Dict],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a Tree
+        """
+        # TODO validate treemap data
+
+        report_metadata: Dict = {
+            'reportType': 'TREE',
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        # TODO quedarme solo con la data de las columnas x, y!!!!!
+        #  HACER LO MISMO PARA EL RESTO DE CHARTS
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )
+
+    def Sunburst(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[Dict],  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a Tree
+        """
+        # TODO validate treemap data
+
+        report_metadata: Dict = {
+            'reportType': 'TREE',
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        # TODO quedarme solo con la data de las columnas x, y!!!!!
+        #  HACER LO MISMO PARA EL RESTO DE CHARTS
+        return self._create_chart(
+            data=data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            third_layer=third_layer,
+        )

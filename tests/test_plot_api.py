@@ -61,7 +61,7 @@ def test_line():
     r = s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path='test/line-test',
         row=1, column=1,
     )
 
@@ -78,7 +78,7 @@ def test_stockline():
     r = s.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path='test/stockline-test',
         row=1, column=1,
     )
 
@@ -95,7 +95,7 @@ def test_scatter():
     r = s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path='test/scatter-test',
         row=1, column=1,
     )
 
@@ -114,45 +114,474 @@ def test_bubble_chart():
 
 
 def test_candlestick():
-    # s.plt.candlestick()
-    raise NotImplementedError
+    data_: List[Dict] = [
+        {
+            "date": "2021/1/24",
+            "open": 78,
+            "close": 85,
+            "highest": 94,
+            "lowest": 6
+        },
+        {
+            "date": "2021/1/25",
+            "open": 17,
+            "close": 13,
+            "highest": 7,
+            "lowest": 18
+        },
+        {
+            "date": "2021/1/26",
+            "open": 18,
+            "close": 38,
+            "highest": 33,
+            "lowest": 39
+        },
+        {
+            "date": "2021/1/27",
+            "open": 9,
+            "close": 27,
+            "highest": 46,
+            "lowest": 93
+        },
+        {
+            "date": "2021/1/28",
+            "open": 59,
+            "close": 45,
+            "highest": 90,
+            "lowest": 75
+        },
+        {
+            "date": "2021/1/29",
+            "open": 45,
+            "close": 18,
+            "highest": 0,
+            "lowest": 68
+        },
+        {
+            "date": "2021/1/30",
+            "open": 48,
+            "close": 57,
+            "highest": 13,
+            "lowest": 6
+        },
+        {
+            "date": "2021/1/31",
+            "open": 79,
+            "close": 84,
+            "highest": 58,
+            "lowest": 14
+        }
+    ]
+    r = s.plt.candlestick(
+        data=data_, x='date',
+        menu_path='test/candlestick-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
 def test_funnel():
-    # s.plt.funnel()
-    raise NotImplementedError
+    data_ = [
+        {
+            "value": 60,
+            "name": "Third"
+        },
+        {
+            "value": 40,
+            "name": "Fourth"
+        },
+        {
+            "value": 20,
+            "name": "Fifth"
+        },
+        {
+            "value": 80,
+            "name": "Second"
+        },
+        {
+            "value": 100,
+            "name": "First"
+        }
+    ]
+    r = s.plt.funnel(
+        data=data_, name='name', value='value',
+        menu_path='test/funnel-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
 def test_heatmap():
-    # s.plt.heatmap()
-    raise NotImplementedError
+    data_ = [
+        {
+            "xAxis": "Lunes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "xAxis": "Lunes",
+            "yAxis": "6 p.m",
+            "value": 10
+        },
+        {
+            "xAxis": "Lunes",
+            "yAxis": "12 p.m",
+            "value": 9
+        },
+        {
+            "xAxis": "Lunes",
+            "yAxis": "6 a.m",
+            "value": 10
+        },
+        {
+            "xAxis": "Martes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "xAxis": "Martes",
+            "yAxis": "6 p.m",
+            "value": 9
+        },
+        {
+            "xAxis": "Martes",
+            "yAxis": "12 p.m",
+            "value": 8
+        },
+        {
+            "xAxis": "Martes",
+            "yAxis": "6 a.m",
+            "value": 0
+        },
+        {
+            "xAxis": "Miercoles",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "xAxis": "Miercoles",
+            "yAxis": "6 p.m",
+            "value": 7
+        },
+        {
+            "xAxis": "Miercoles",
+            "yAxis": "12 p.m",
+            "value": 0
+        },
+        {
+            "xAxis": "Miercoles",
+            "yAxis": "6 a.m",
+            "value": 2
+        },
+        {
+            "xAxis": "Jueves",
+            "yAxis": "12 a.m",
+            "value": 4
+        },
+        {
+            "xAxis": "Jueves",
+            "yAxis": "6 p.m",
+            "value": 0
+        },
+        {
+            "xAxis": "Jueves",
+            "yAxis": "12 p.m",
+            "value": 1
+        },
+        {
+            "xAxis": "Jueves",
+            "yAxis": "6 a.m",
+            "value": 6
+        }
+    ]
+    r = s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path='test/heatmap-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
 def test_gauge():
-    # s.plt.gauge()
-    raise NotImplementedError
+    data_ = [
+        {
+            "value": 60,
+            "name": "Third"
+        },
+        {
+            "value": 40,
+            "name": "Fourth"
+        },
+        {
+            "value": 20,
+            "name": "Fifth"
+        },
+        {
+            "value": 80,
+            "name": "Second"
+        },
+        {
+            "value": 100,
+            "name": "First"
+        }
+    ]
+    r = s.plt.gauge(
+        data=data_, name='name', value='value',
+        menu_path='test/gauge-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
+# TODO WiP
 def test_sunburst():
-    # s.plt.sunburst()
-    raise NotImplementedError
+    data_ = [
+        {
+            "name": "Root 1",
+            "children": [
+                {
+                 "name": "Children A",
+                 "value": 15,
+                 "children": [
+                  {
+                   "name": "Children A1",
+                   "value": 2
+                  },
+                  {
+                   "name": "Chidren AA1",
+                   "value": 5,
+                   "children": [
+                    {
+                     "name": "Children AAA1",
+                     "value": 2
+                    }
+                   ]
+                  },
+                  {
+                   "name": "Children A2",
+                   "value": 4
+                  }
+                 ]
+                },
+                {
+                 "name": "Children B",
+                 "value": 10,
+                 "children": [
+                  {
+                   "name": "Children B1",
+                   "value": 5
+                  },
+                  {
+                   "name": "Children B2",
+                   "value": 1
+                  }
+                 ]
+                }
+            ]
+        },
+        {
+            "name": "Root 2",
+            "children": [
+                {
+                 "name": "Children A1",
+                 "children": [
+                  {
+                   "name": "Chidren AA1",
+                   "value": 1
+                  },
+                  {
+                   "name": "Chidren AA2",
+                   "value": 2
+                  }
+                 ]
+                }
+            ]
+        }
+    ]
+    r = s.plt.sunburst(
+        data=data_, x='xAxis', y=,
+        menu_path='test/sunburst-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
 def test_tree():
-    # s.plt.tree()
-    raise NotImplementedError
+    data_ = [{
+        'name': 'root',
+        'value': 35,
+        'children': [
+            {
+                'name': 'Child A',
+                'value': 9,
+                'children': [
+                    {'name': 'Child A1', 'value': 23},
+                    {'name': 'Child A2', 'value': 72},
+                    {'name': 'Child A3', 'value': 93},
+                ],
+            },
+            {
+                'name': 'Child B',
+                'value': 56,
+                'children': [
+                    {'name': 'Child B1', 'value': 39},
+                    {'name': 'Child B2', 'value': 61},
+                    {'name': 'Child B3', 'value': 71},
+                ],
+            },
+            {
+                'name': 'Child C',
+                'value': 100,
+                'children': [
+                    {'name': 'Child C1', 'value': 19},
+                    {'name': 'Child C2', 'value': 66},
+                    {'name': 'Child C3', 'value': 47},
+                ],
+            },
+        ],
+    }]
+    r = s.plt.tree(
+        data=data_,
+        menu_path='test/tree-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
 def test_treemap():
-    # s.plt.treemap()
-    raise NotImplementedError
+    data_ = [{
+        'name': 'root',
+        'value': 35,
+        'children': [
+            {
+                'name': 'Child A',
+                'value': 9,
+                'children': [
+                    {'name': 'Child A1', 'value': 23},
+                    {'name': 'Child A2', 'value': 72},
+                    {'name': 'Child A3', 'value': 93},
+                ],
+            },
+            {
+                'name': 'Child B',
+                'value': 56,
+                'children': [
+                    {'name': 'Child B1', 'value': 39},
+                    {'name': 'Child B2', 'value': 61},
+                    {'name': 'Child B3', 'value': 71},
+                ],
+            },
+            {
+                'name': 'Child C',
+                'value': 100,
+                'children': [
+                    {'name': 'Child C1', 'value': 19},
+                    {'name': 'Child C2', 'value': 66},
+                    {'name': 'Child C3', 'value': 47},
+                ],
+            },
+        ],
+    }]
+    r = s.plt.treemap(
+        data=data_,
+        menu_path='test/treemap-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
+def test_radar():
+    data_ = [
+        {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
+        {'name': 'Milk Tea', 'value1': 17, 'value2': 10, 'value3': 63},
+        {'name': 'Cheese Cocoa', 'value1': 18, 'value2': 15, 'value3': 65},
+        {'name': 'Walnut Brownie', 'value1': 9, 'value2': 71, 'value3': 16},
+    ]
+    r = s.plt.radar(
+        data=data_, x='name', y=['value1', 'value2', 'value3'],
+        menu_path='test/radar-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
+
+
+# TODO WiP
 def test_indicator():
-    # s.plt.indicator()
-    raise NotImplementedError
+    r = s.plt.indicator(
+        data=data_,
+        menu_path='test/indicator-test',
+        row=1, column=1,
+        header='',
+        footer='',
+        color='',
+    )
+
+    assert r
+
+    s.report.delete_report(
+        business_id=business_id,
+        app_id=app_id,
+        report_id=r['id']
+    )
 
 
+# TODO
 def test_alert_indicator():
     # s.plt.alert_indicator()
     raise NotImplementedError
@@ -165,11 +594,6 @@ def test_line_with_confidence_area():
 
 def test_predictive_line():
     # s.plt.predictive_line()
-    raise NotImplementedError
-
-
-def test_radar():
-    # s.plt.radar()
     raise NotImplementedError
 
 

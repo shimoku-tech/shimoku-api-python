@@ -4,10 +4,10 @@ from typing import List, Dict, Optional, Union, Tuple
 
 from pandas import DataFrame
 
-from .data_managing_api import DataManagingApi
+from .data_managing_api import DataValidation
 from .explorer_api import (
     UniverseExplorerApi, BusinessExplorerApi, ReportExplorerApi,
-    CreateExplorerAPI, CascadeExplorerAPI
+    CreateExplorerAPI, CascadeExplorerAPI, MultiCreateApi
 )
 
 
@@ -15,11 +15,17 @@ class PlotAux():
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
+    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
     _get_business_apps = BusinessExplorerApi.get_business_apps
-    _validate_data = DataManagingApi.validate_data
+
+    _validate_data = DataValidation._validate_data
+    _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
+
+    _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
 
 
 class PlotApi(PlotAux):
@@ -69,7 +75,12 @@ class PlotApi(PlotAux):
             report_metadata.update(third_layer)
 
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app: Dict = self.create_app_from_app_type_normalized_name(app_type_name)
+        d: Dict[str, Dict] = self._create_app_type_and_app(
+            business_id=self.business_id,
+            app_type_metadata={'name': app_type_name},
+            app_metadata={},
+        )
+        app: Dict = d['app']
 
         reports = self._get_app_reports(
             business_id=self.business_id,
@@ -83,7 +94,16 @@ class PlotApi(PlotAux):
                 if report['path'] == path_name
             ])
         else:
-            orders = max([report['order'] for report in reports])
+            apps: List[Dict] = self._get_business_apps(self.business_id)
+
+            orders: int = 0
+            for app in apps:
+                reports_ = self._get_app_reports(
+                    business_id=self.business_id,
+                    app_id=app['id'],
+                )
+                order_temp = max([report['order'] for report in reports])
+                orders = max(orders, order_temp)
             order: int = orders + 1
 
         report_metadata.update({'path': path_name})

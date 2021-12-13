@@ -28,6 +28,7 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
 )
+s.plt.set_business(business_id=business_id)
 
 
 data = [
@@ -108,6 +109,6 @@ def test_scatter():
 
 
 test_bar()
-test_line()
-test_scatter()
-test_stockline()
+# test_line()
+# test_scatter()
+# test_stockline()

@@ -18,7 +18,70 @@ class DataExplorerApi:
     _get_report_by_external_id = ReportMetadataApi.get_report_by_external_id
 
 
-class DataManagingApi(DataExplorerApi):
+class DataValidation:
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    def _validate_data_is_pandarable(
+        self, data: Union[str, DataFrame, List[Dict]],
+    ) -> DataFrame:
+        """"""
+        if isinstance(data, DataFrame):
+            df_ = data.copy()
+        elif isinstance(data, list):
+            try:
+                df_ = DataFrame(data)
+            except Exception:
+                raise ValueError(
+                    'The data you passed is a list that must be '
+                    'able to be converted into a pandas dataframe'
+                )
+        elif isinstance(data, str):
+            try:
+                d: List[Dict] = json.loads(data)
+                df_ = DataFrame(data)
+            except Exception:
+                raise ValueError(
+                    'The data you passed is a json that must be '
+                    'able to be converted into a pandas dataframe'
+                )
+        else:
+            raise ValueError(
+                'Input data must be a pandas dataframe, '
+                'a json or a list of dictionaries'
+            )
+        return df_
+
+    def _validate_data(
+        self, data: Union[str, DataFrame, List[Dict]], elements: List[str],
+    ):
+        """"""
+        df_: DataFrame = self._validate_data_is_pandarable(data)
+
+        cols = df_.columns
+        try:
+            assert all([element in cols for element in elements])
+        except AssertionError:
+            raise ValueError(
+                'Some column names you are specifying '
+                'are not in the input dataframe'
+            )
+
+        try:
+            len_df_: int = len(df_)
+            assert all([
+                len_df_ == len(df_[~df_[element].isna()])
+                for element in elements
+            ])
+        except AssertionError:
+            raise ValueError(
+                f'Some of the variables {elements} have none values'
+            )
+
+
+
+class DataManagingApi(DataExplorerApi, DataValidation):
     """
     """
 
@@ -68,61 +131,6 @@ class DataManagingApi(DataExplorerApi):
                 f'Provided: {type(report_data)}'
             )
         return chart_data
-
-    def validate_data_is_pandarable(
-        self, data: Union[str, DataFrame, List[Dict]],
-    ) -> DataFrame:
-        """"""
-        if isinstance(data, DataFrame):
-            df_ = data.copy()
-        elif isinstance(data, list):
-            try:
-                df_ = pd.DataFrame(data)
-            except Exception:
-                raise ValueError(
-                    'The data you passed is a list that must be '
-                    'able to be converted into a pandas dataframe'
-                )
-        elif isinstance(data, str):
-            try:
-                d: List[Dict] = json.loads(data)
-                df_ = pd.DataFrame(data)
-            except Exception:
-                raise ValueError(
-                    'The data you passed is a json that must be '
-                    'able to be converted into a pandas dataframe'
-                )
-        else:
-            raise ValueError(
-                'Input data must be a pandas dataframe, '
-                'a json or a list of dictionaries'
-            )
-        return df_
-
-    def validate_data(
-        self, data: Union[str, DataFrame, List[Dict]], elements: List[str],
-    ):
-        """"""
-        df_: DataFrame = self.validate_data_is_pandarable(data)
-
-        cols = df_.columns
-        try:
-            assert all([element in cols for element in elements])
-        except AssertionError:
-            raise ValueError(
-                'Some column names you are specifying '
-                'are not in the input dataframe'
-            )
-
-        try:
-            assert all([
-                len(df_) == len(df_.drop_duplicates(subset=element))
-                for element in elements
-            ])
-        except AssertionError:
-            raise ValueError(
-                f'Some of the variables {elements} have none values'
-            )
 
     def _convert_dataframe_to_report_entry(
         self, business_id: str, app_id: str, df: DataFrame,
@@ -213,7 +221,7 @@ class DataManagingApi(DataExplorerApi):
         It is an aggregation, meaning we preserve all previous
         data and just concatenate the new ones
         """
-        _ = self.validate_data_is_pandarable(report_data)
+        _ = self._validate_data_is_pandarable(report_data)
 
         if self._is_report_data_empty(report_data):
             return
@@ -272,7 +280,7 @@ class DataManagingApi(DataExplorerApi):
         external_id: Optional[str] = None,
     ) -> None:
         """Remove old add new"""
-        _ = self.validate_data_is_pandarable(report_data)
+        _ = self._validate_data_is_pandarable(report_data)
 
         if self._is_report_data_empty(report_data):
             return

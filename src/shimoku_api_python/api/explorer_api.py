@@ -905,22 +905,22 @@ class MultiCreateApi(MultiDeleteApi):
 
     def create_app_type_and_app(
         self, business_id: str,
-        app_metadata: Dict,
-        app_type_data: Dict,
+        app_type_metadata: Dict,
+        app_metadata: Optional[Dict] = None,
     ) -> Dict[str, Dict]:
         """
         If app_type_id is None we create it
         """
-        app_type: Dict = self._create_app_type(**app_type_data)
+        app_type: Dict = self._create_app_type(**app_type_metadata)
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
         app_metadata['business_id'] = business_id
         try:
             app: Dict = self._create_app(**app_metadata)
         except Exception as e:
-            self._delete_business(business_id=business_id)
+            self._delete_app_type(app_type_id=app_type_id)
             try:
-                _ = self._get_business(business_id)
+                _ = self._get_app_type(app_type_id)
                 raise ValueError(
                     f'{e} | The app was not created but a new app_type did '
                     f'that probably should be deleted manually with id '
@@ -970,11 +970,11 @@ class MultiCreateApi(MultiDeleteApi):
     def create_business_app_and_app_type(
         self, business_name: str,
         app_metadata: Dict,
-        app_type_data: Dict,
+        app_type_metadata: Dict,
     ) -> Dict[str, Dict]:
         """
         """
-        app_type: Dict = self._create_app_type(**app_type_data)
+        app_type: Dict = self._create_app_type(**app_type_metadata)
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
 
@@ -1075,7 +1075,7 @@ class MultiCreateApi(MultiDeleteApi):
 
     def create_business_app_type_app_and_report(
         self, business_name: str,
-        app_type_data: Dict,
+        app_type_metadata: Dict,
         app_metadata: Dict,
         report_metadata: Dict,
     ) -> Dict[str, Dict]:
@@ -1083,7 +1083,7 @@ class MultiCreateApi(MultiDeleteApi):
         """
         d = self.create_business_app_and_app_type(
             business_name=business_name,
-            app_type_data=app_type_data,
+            app_type_metadata=app_type_metadata,
             app_metadata=app_metadata,
         )
         business_id: str = d['business']['id']

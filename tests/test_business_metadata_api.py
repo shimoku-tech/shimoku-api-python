@@ -1,6 +1,6 @@
 """"""
 from os import getenv
-from typing import Dict
+from typing import Dict, List
 import unittest
 
 import shimoku_api_python as shimoku
@@ -126,8 +126,14 @@ def test_rename_business():
     assert business_name == business_restored['name']
 
 
+def test_get_business_apps():
+    apps: List[Dict] = s.business.get_business_apps(business_id)
+    assert apps
+
+
 test_get_business()
 test_get_fake_business()
 test_create_and_delete_business()
 test_update_business()
 test_rename_business()
+test_get_business_apps()

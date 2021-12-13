@@ -22,7 +22,8 @@ class PlotAux():
     _create_app = CreateExplorerAPI.create_app
     _get_business_apps = BusinessExplorerApi.get_business_apps
 
-    _validate_data = DataValidation._validate_data
+    _validate_table_data = DataValidation._validate_table_data
+    _validate_tree_data = DataValidation._validate_tree_data
     _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
 
     _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
@@ -170,7 +171,7 @@ class PlotApi(PlotAux):
         :param third_layer:
         :param filters: To create a filter for every specified column
         """
-        self._validate_data(data, elements=[x] + y)
+        self._validate_table_data(data, elements=[x] + y)
         data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
 
         report_metadata: Dict = {
@@ -268,7 +269,165 @@ class PlotApi(PlotAux):
         third_layer: Optional[Dict] = None,  # thid layer
         filters: Optional[List[str]] = None,  # thid layer
     ):
-        """"""
+        """
+        option = {
+          title: {
+            text: 'Stacked Line'
+          },
+          tooltip: {
+            trigger: 'axis'
+          },
+          legend: {
+            data: ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          toolbox: {
+            feature: {
+              saveAsImage: {}
+            }
+          },
+          dataZoom: [
+            {
+              type: 'inside',
+            },
+            {
+              start: 0,
+              end: 10
+            }
+          ],
+          xAxis: {
+            type: 'category',
+            name: 'Weekday',
+            boundaryGap: false,
+            data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [
+            {
+              name: 'Email',
+              type: 'line',
+              stack: 'Total',
+              data: [120, 132, 101, 134, 90, 230, 210],
+              smooth: true,
+              markArea: {
+                    itemStyle: {
+                      color: 'rgba(255, 173, 177, 0.4)'
+                    },
+                    data: [
+                      [
+                        {
+                          name: 'Prediction',
+                          xAxis: 'Sat'
+                        },
+                        {
+                          xAxis: 'Sun'
+                        }
+                      ],
+                ],
+              },
+            },
+            {
+              name: 'Union Ads',
+              type: 'line',
+              stack: 'Total',
+              smooth: true,
+              data: [220, 182, 191, 234, 290, 330, 310],
+              markArea: {
+                    itemStyle: {
+                      color: 'rgba(255, 173, 177, 0.4)'
+                    },
+                    data: [
+                      [
+                        {
+                          name: 'Prediction',
+                          xAxis: 'Sat'
+                        },
+                        {
+                          xAxis: 'Sun'
+                        }
+                      ],
+                ],
+              },
+            },
+            {
+              name: 'Video Ads',
+              type: 'line',
+              stack: 'Total',
+              smooth: true,
+              data: [150, 232, 201, 154, 190, 330, 410],
+              markArea: {
+                    itemStyle: {
+                      color: 'rgba(255, 173, 177, 0.4)'
+                    },
+                    data: [
+                      [
+                        {
+                          name: 'Prediction',
+                          xAxis: 'Sat'
+                        },
+                        {
+                          xAxis: 'Sun'
+                        }
+                      ],
+                ],
+              },
+            },
+            {
+              name: 'Direct',
+              type: 'line',
+              stack: 'Total',
+              smooth: true,
+              data: [320, 332, 301, 334, 390, 330, 320],
+              markArea: {
+                    itemStyle: {
+                      color: 'rgba(255, 173, 177, 0.4)'
+                    },
+                    data: [
+                      [
+                        {
+                          name: 'Prediction',
+                          xAxis: 'Sat'
+                        },
+                        {
+                          xAxis: 'Sun'
+                        }
+                      ],
+                ],
+              },
+            },
+            {
+              name: 'Search Engine',
+              type: 'line',
+              stack: 'Total',
+              smooth: true,
+              data: [820, 932, 901, 934, 1290, 1330, 1320],
+              markArea: {
+                    itemStyle: {
+                      color: 'rgba(255, 173, 177, 0.4)'
+                    },
+                    data: [
+                      [
+                        {
+                          name: 'Prediction',
+                          xAxis: 'Sat'
+                        },
+                        {
+                          xAxis: 'Sun'
+                        }
+                      ],
+                ],
+              },
+            }
+          ]
+        };
+        """
         raise NotImplementedError
 
     def line_with_confidence_area(
@@ -320,8 +479,17 @@ class PlotApi(PlotAux):
         filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
+        try:
+            assert 2 <= len(y) <= 3
+        except Exception:
+            raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
+
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x] + y]  # keep only x and y
+        df.rename(columns={x: 'xAxis'}, inplace=True)
+
         self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, color=color,
             x_axis_name=x_axis_name,
@@ -364,7 +532,7 @@ class PlotApi(PlotAux):
         elements: List[str] = [
             'title', 'description', 'value',
         ]
-        self._validate_data(data, elements=elements)
+        self._validate_table_data(data, elements=elements)
 
         report_metadata: Dict = {
             'reportType': 'INDICATOR',
@@ -391,7 +559,7 @@ class PlotApi(PlotAux):
         elements: List[str] = [
             'title', 'description', 'value', 'link'  # TODO validate this one
         ]
-        self._validate_data(data, elements=elements)
+        self._validate_table_data(data, elements=elements)
 
         report_metadata: Dict = {
             'reportType': 'INDICATOR',
@@ -416,7 +584,10 @@ class PlotApi(PlotAux):
     ):
         """Create a Piechart
         """
-        self._validate_data(data, elements=[x, y])
+        self._validate_table_data(data, elements=[x, y])
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x, y]]  # keep only x and y
+        df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
         report_metadata: Dict = {
             'reportType': 'PIECHART',
@@ -427,10 +598,8 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
-# TODO quedarme solo con la data de las columnas x, y!!!!!
-#  HACER LO MISMO PARA EL RESTO DE CHARTS
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
             third_layer=third_layer,
@@ -446,7 +615,10 @@ class PlotApi(PlotAux):
     ):
         """Create a RADAR
         """
-        self._validate_data(data, elements=[x] + y)
+        self._validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x] + y]  # keep only x and y
+        df.rename(columns={x: 'name'}, inplace=True)
 
         report_metadata: Dict = {
             'reportType': 'RADAR',
@@ -457,18 +629,15 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
-        # TODO quedarme solo con la data de las columnas x, y!!!!!
-        #  HACER LO MISMO PARA EL RESTO DE CHARTS
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
             third_layer=third_layer,
         )
 
     def Tree(
-        self, data: Union[str, DataFrame, List[Dict]],
-        x: str, y: List[Dict],  # first layer
+        self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
         third_layer: Optional[Dict] = None,  # thid layer
@@ -476,7 +645,7 @@ class PlotApi(PlotAux):
     ):
         """Create a Tree
         """
-        # TODO validate tree data
+        self._validate_tree_data(data, vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'TREE',
@@ -487,8 +656,6 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
-        # TODO quedarme solo con la data de las columnas x, y!!!!!
-        #  HACER LO MISMO PARA EL RESTO DE CHARTS
         return self._create_chart(
             data=data,
             menu_path=menu_path,
@@ -497,8 +664,7 @@ class PlotApi(PlotAux):
         )
 
     def Treemap(
-        self, data: Union[str, DataFrame, List[Dict]],
-        x: str, y: List[Dict],  # first layer
+        self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
         third_layer: Optional[Dict] = None,  # thid layer
@@ -506,7 +672,7 @@ class PlotApi(PlotAux):
     ):
         """Create a Tree
         """
-        # TODO validate treemap data
+        self._validate_tree_data(data, vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'TREE',
@@ -517,8 +683,6 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
-        # TODO quedarme solo con la data de las columnas x, y!!!!!
-        #  HACER LO MISMO PARA EL RESTO DE CHARTS
         return self._create_chart(
             data=data,
             menu_path=menu_path,
@@ -536,10 +700,10 @@ class PlotApi(PlotAux):
     ):
         """Create a Tree
         """
-        # TODO validate treemap data
+        self._validate_tree_data(data, vals=['name', 'children'])
 
         report_metadata: Dict = {
-            'reportType': 'TREE',
+            'reportType': 'SUNBURST',
             'title': title,
             'grid': f'{row}, {column}',
         }
@@ -547,11 +711,188 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
-        # TODO quedarme solo con la data de las columnas x, y!!!!!
-        #  HACER LO MISMO PARA EL RESTO DE CHARTS
         return self._create_chart(
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
             third_layer=third_layer,
+        )
+
+    def candlestick(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # third layer
+    ):
+        """"""
+        y = ['open', 'close', 'highest', 'lowest']
+        return self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='CANDLESTICK',
+            filters=filters,
+        )
+
+    def heatmap(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str, value: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # third layer
+    ):
+        """"""
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x, y, value]]  # keep only x and y
+        df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
+        return self._create_trend_chart(
+            data=df, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='HEATMAP',
+            filters=filters,
+        )
+
+    def sankey(
+        self, data: Union[str, DataFrame, List[Dict]],
+        source: str, target: str, value: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # third layer
+    ):
+        """"""
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[soruce, target, value]]  # keep only x and y
+        df.rename(
+            columns={
+                source: 'source',
+                target: 'target',
+                value: 'value',
+            },
+            inplace=True,
+        )
+
+        return self._create_trend_chart(
+            data=df, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='SANKEY',
+            filters=filters,
+        )
+
+    def funnel(
+        self, data: Union[str, DataFrame, List[Dict]],
+        name: str, value: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # third layer
+    ):
+        """"""
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name, value]]  # keep only x and y
+        df.rename(
+            columns={
+                name: 'value',
+                value: 'value',
+            },
+            inplace=True,
+        )
+
+        return self._create_trend_chart(
+            data=df, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='FUNNEL',
+            filters=filters,
+        )
+
+    def gauge(
+        self, data: Union[str, DataFrame, List[Dict]],
+        name: str, value: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # third layer
+    ):
+        """"""
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name, value]]  # keep only x and y
+        df.rename(
+            columns={
+                name: 'value',
+                value: 'value',
+            },
+            inplace=True,
+        )
+
+        return self._create_trend_chart(
+            data=df, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='FUNNEL',
+            filters=filters,
+        )
+
+    def themeriver(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str, name: str,  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None, # second layer
+        color: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        third_layer: Optional[Dict] = None,  # thid layer
+        filters: Optional[List[str]] = None,  # thid layer
+    ):
+        """Create a barchart
+        """
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x, y, name]]  # keep only x and y
+        df.rename(
+            columns={
+                name: 'name',
+                y: 'value',
+            },
+            inplace=True,
+        )
+        y = [y, name]
+        self._create_trend_chart(
+            data=df, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, color=color,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            report_type='BARCHART',
+            filters=filters,
         )

@@ -53,7 +53,7 @@ class DataValidation:
             )
         return df_
 
-    def _validate_data(
+    def _validate_table_data(
         self, data: Union[str, DataFrame, List[Dict]], elements: List[str],
     ):
         """"""
@@ -79,6 +79,21 @@ class DataValidation:
                 f'Some of the variables {elements} have none values'
             )
 
+    def _validate_tree_data(
+        self, data: Union[str, List[Dict]], vals: List[str],
+    ):
+        """To validate Tree and Treemap data"""
+        if isinstance(data, list):
+            pass
+        elif isinstance(data, str):
+            data = json.loads(data)
+        else:
+            raise ValueError('data must be either a list or a json')
+
+        try:
+            assert sorted(data.keys()) == sorted(vals)
+        except AssertionError:
+            raise ValueError('data keys must be "name", "value" and "children"')
 
 
 class DataManagingApi(DataExplorerApi, DataValidation):

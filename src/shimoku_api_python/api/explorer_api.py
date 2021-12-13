@@ -132,197 +132,6 @@ class GetExplorerAPI(object):
             raise NotImplementedError
 
 
-class CreateExplorerAPI(object):
-
-    def __init__(self, api_client):
-        self.api_client = api_client
-
-# TODO first check that a business with the same name does not exists!!
-    def create_business(self, name: str) -> Dict:
-        """"""
-        endpoint: str = 'business'
-
-        item: Dict = {'name': name}
-
-        return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
-        )
-
-# TODO now is broken WiP
-    def create_app_type(self, name: str) -> Dict:
-        """"""
-        app_type: Dict = self.find_app_type_by_name_filter(name=name)
-        if not app_type:
-            # create the name from the normalized name: "product-suite" "Product suite"
-            name: str = ' '.join(app_type_normalized_name.split('-')).capitalize()
-        else:
-            raise ValueError(f'An AppType with the name {name} already exists')
-
-        endpoint: str = 'apptype'
-        # for instance:
-        # "name": "Test Borrar"
-        # "key": "TEST_BORRAR"
-        # "normalizedName": "test-borrar"
-        key: str = '_'.join(name.split(' ')).upper()
-        normalized_name: str = '-'.join(name.split(' ')).lower()
-
-        item: Dict = {
-            'name': name,
-            'key': key,
-            'normalizedName': normalized_name,
-        }
-
-        return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
-        )
-
-    def create_app(
-        self, business_id: str,
-        app_type_id: Optional[str],
-        app_metadata: Optional[Dict] = None,
-    ) -> Dict:
-        """
-        """
-        endpoint: str = f'business/{business_id}/app'
-
-        item: Dict = {  # These are the mandatory fields
-            'appBusinessId': business_id,
-            'appTypeId': app_type_id,
-        }
-
-        if app_metadata:
-            hide_title: bool = app_metadata.get('hideTitle')
-            if hide_title:
-                item['hideTitle'] = True
-            else:
-                item['hideTitle'] = False
-
-            # These are the optional fields (previous were the mandatory ones)
-            allowed_columns: List[str] = [
-                'paymentType', 'trialDays',
-                'appSubscriptionInUserId',
-            ]
-            # Check all kwargs keys are in the allowed_columns list
-            assert all([key in allowed_columns for key in app_metadata.keys()])
-            # Update items with kwargs
-            item.update(app_metadata)
-
-        return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
-        )
-
-    # TODO
-    def create_path(self):
-        pass
-
-    # TODO pending to be tried
-    def create_report(
-        self, business_id: str, app_id: str, report_metadata: Dict,
-    ) -> Dict:
-        """Create new Report associated to an AppId
-
-        :param business_id:
-        :param app_id:
-        :param report_metadata: A dict with all the values required to create a report
-        """
-# TODO this must be done by the API rather than the SDK
-        # Data resistance to ensure all the fields in report_data are allowed
-        allowed_columns: List[str] = [
-            'title', 'order', 'isDisabled',
-            'grid', 'path', 'reportType',
-            'subscribe', 'chartDataAux',
-            'dataFilters', 'smartFilters', 'description',
-            'codeETLId', 'codeETLVersion',
-        ]
-
-        # Check all kwargs keys are in the allowed_columns list
-        try:
-            assert all([key in allowed_columns for key in report_metadata.keys()])
-        except AssertionError:
-            raise ValueError('Some of the keys provided as kwargs are not allowed')
-
-        endpoint: str = f'business/{business_id}/app/{app_id}/report'
-
-        # These are the mandatory fields
-        title: int = report_metadata['title']
-        order: int = report_metadata['order']
-        is_disabled: bool = report_metadata['isDisabled']
-        grid: bool = report_metadata['grid']
-        path: str = report_metadata['path']
-
-        # These are the mandatory fields
-        item: Dict = {
-            'appId': app_id,
-            'title': title,
-            'path': path,
-            'order': order,
-            'grid': grid,
-            'isDisabled': is_disabled,
-        }
-
-        report_type: str = report_metadata.get('reportType')
-        report_metadata.pop('reportType')
-
-        # Update items with kwargs
-        item.update(report_metadata)
-
-        # Optional values
-        if report_type:
-            if report_type != 'Table':  # Tables have reportType as None
-                item['reportType'] = report_type
-            elif report_metadata.get('smartFilters'):
-                # Smart filters only exists for Tables
-                item['smartFilters'] = report_metadata['smartFilters']
-
-        return self.api_client.query_element(
-            method='PUT', endpoint=endpoint,
-            **{'body_params': item},
-        )
-
-
-class UpdateExplorerAPI(object):
-
-    def __init__(self, api_client):
-        self.api_client = api_client
-
-    # TODO pending https://trello.com/c/18GLgLoQ
-    def update_business(self, business_id: str, business_data: Dict) -> Dict:
-        """"""
-        endpoint: str = f'business/{business_id}'
-        return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': business_data},
-        )
-
-    def update_app_type(self, app_type_id: str, app_type_metadata: Dict) -> Dict:
-        """"""
-        endpoint: str = f'apptype/{app_type_id}'
-        return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
-        )
-
-    def update_app(self, business_id: str, app_id: str, app_data: Dict) -> Dict:
-        """
-        :param business_id:
-        :param app_id:
-        :param app_data: contain the elements to update key
-            is the col name and value the value to overwrite
-        """
-        endpoint: str = f'business/{business_id}/app/{app_id}'
-        return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': app_data},
-        )
-
-    def update_report(
-        self, business_id: str, app_id: str, report_id: str,
-        report_metadata: Dict,
-    ) -> Dict:
-        """"""
-        endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
-        return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': report_data},
-        )
-
-
 class CascadeExplorerAPI(GetExplorerAPI):
 
     def __init__(self, api_client):
@@ -335,6 +144,24 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 endpoint=endpoint, method='GET',
             )
         )
+
+    def find_business_by_name_filter(
+        self, name: Optional[str] = None,
+    ) -> Dict:
+        """"""
+        businesses: List[Dict] = self.get_universe_businesses()
+
+        businesses: List[Dict] = [
+            business
+            for business in businesses
+            if business['name'] == name
+        ]
+        if not businesses:
+            return {}
+
+        assert len(businesses) == 1
+        business: Dict = businesses[0]
+        return business
 
     def get_universe_app_types(self) -> List[Dict]:
         endpoint: str = f'apptypes'
@@ -349,7 +176,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         normalized_name: Optional[str] = None,
     ) -> Dict:
         """"""
-        app_types: Dict = self.get_universe_app_types()
+        app_types: List[Dict] = self.get_universe_app_types()
 
         if name:
             app_types: List[Dict] = [
@@ -564,6 +391,224 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 if report[filter_key] == filter_value:
                     reports.append(report)
             return reports
+
+
+class CreateExplorerAPI(CascadeExplorerAPI):
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    def create_business(self, name: str) -> Dict:
+        """"""
+        business: Dict = self.find_business_by_name_filter(name=name)
+        if business:
+            raise ValueError(f'A Business with the name {name} already exists')
+
+        endpoint: str = 'business'
+
+        item: Dict = {'name': name}
+
+        return self.api_client.query_element(
+            method='PUT', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_app_type(self, name: str) -> Dict:
+        """"""
+        app_type: Dict = self.find_app_type_by_name_filter(name=name)
+        if app_type:
+            raise ValueError(f'An AppType with the name {name} already exists')
+        else:
+            # create the name from the normalized name: "product-suite" "Product suite"
+            name: str = ' '.join(app_type_normalized_name.split('-')).capitalize()
+
+        endpoint: str = 'apptype'
+        # for instance:
+        # "name": "Test Borrar"
+        # "key": "TEST_BORRAR"
+        # "normalizedName": "test-borrar"
+        key: str = '_'.join(name.split(' ')).upper()
+        normalized_name: str = '-'.join(name.split(' ')).lower()
+
+        item: Dict = {
+            'name': name,
+            'key': key,
+            'normalizedName': normalized_name,
+        }
+
+        return self.api_client.query_element(
+            method='PUT', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_app(
+        self, business_id: str,
+        app_type_id: Optional[str],
+        app_metadata: Optional[Dict] = None,
+    ) -> Dict:
+        """
+        """
+        endpoint: str = f'business/{business_id}/app'
+
+        item: Dict = {  # These are the mandatory fields
+            'appBusinessId': business_id,
+            'appTypeId': app_type_id,
+        }
+
+        if app_metadata:
+            hide_title: bool = app_metadata.get('hideTitle')
+            if hide_title:
+                item['hideTitle'] = True
+            else:
+                item['hideTitle'] = False
+
+            # These are the optional fields (previous were the mandatory ones)
+            allowed_columns: List[str] = [
+                'paymentType', 'trialDays',
+                'appSubscriptionInUserId',
+            ]
+            # Check all kwargs keys are in the allowed_columns list
+            assert all([key in allowed_columns for key in app_metadata.keys()])
+            # Update items with kwargs
+            item.update(app_metadata)
+
+        return self.api_client.query_element(
+            method='PUT', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
+        """Create AppType and App if required and return the App component
+        """
+        try:
+            app_type: Dict = self._create_app_type(name=app_type_name)
+        except ValueError:  # It already exists then
+            app_type: Dict = (
+                self._find_app_type_by_name_filter(name=app_type_name)
+            )
+
+        app_type_id: str = app_type['id']
+        apps: Dict = self._get_business_apps(business_id=self.business_id)
+        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
+
+        if not apps:
+            app: Dict = (
+                self._create_app(
+                    business_id=self.business_id,
+                    app_type_id=app_type_id,
+                )
+            )
+        else:
+            app: Dict = target_apps[0]
+        return app
+
+    # TODO
+    def create_path(self):
+        pass
+
+    # TODO pending to be tried
+    def create_report(
+        self, business_id: str, app_id: str, report_metadata: Dict,
+    ) -> Dict:
+        """Create new Report associated to an AppId
+
+        :param business_id:
+        :param app_id:
+        :param report_metadata: A dict with all the values required to create a report
+        """
+# TODO this must be done by the API rather than the SDK
+        # Data resistance to ensure all the fields in report_data are allowed
+        allowed_columns: List[str] = [
+            'title', 'order', 'isDisabled',
+            'grid', 'path', 'reportType',
+            'subscribe', 'chartDataAux',
+            'dataFilters', 'smartFilters', 'description',
+            'codeETLId', 'codeETLVersion',
+        ]
+
+        # Check all kwargs keys are in the allowed_columns list
+        try:
+            assert all([key in allowed_columns for key in report_metadata.keys()])
+        except AssertionError:
+            raise ValueError('Some of the keys provided as kwargs are not allowed')
+
+        endpoint: str = f'business/{business_id}/app/{app_id}/report'
+
+        # These are the mandatory fields
+        title: int = report_metadata['title']
+        order: int = report_metadata['order']
+        is_disabled: bool = report_metadata['isDisabled']
+        grid: bool = report_metadata['grid']
+        path: str = report_metadata['path']
+
+        # These are the mandatory fields
+        item: Dict = {
+            'appId': app_id,
+            'title': title,
+            'path': path,
+            'order': order,
+            'grid': grid,
+            'isDisabled': is_disabled,
+        }
+
+        report_type: str = report_metadata.get('reportType')
+        report_metadata.pop('reportType')
+
+        # Update items with kwargs
+        item.update(report_metadata)
+
+        # Optional values
+        if report_type:
+            if report_type != 'Table':  # Tables have reportType as None
+                item['reportType'] = report_type
+            elif report_metadata.get('smartFilters'):
+                # Smart filters only exists for Tables
+                item['smartFilters'] = report_metadata['smartFilters']
+
+        return self.api_client.query_element(
+            method='PUT', endpoint=endpoint,
+            **{'body_params': item},
+        )
+
+
+class UpdateExplorerAPI(object):
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    # TODO pending https://trello.com/c/18GLgLoQ
+    def update_business(self, business_id: str, business_data: Dict) -> Dict:
+        """"""
+        endpoint: str = f'business/{business_id}'
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint, **{'body_params': business_data},
+        )
+
+    def update_app_type(self, app_type_id: str, app_type_metadata: Dict) -> Dict:
+        """"""
+        endpoint: str = f'apptype/{app_type_id}'
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
+        )
+
+    def update_app(self, business_id: str, app_id: str, app_data: Dict) -> Dict:
+        """
+        :param business_id:
+        :param app_id:
+        :param app_data: contain the elements to update key
+            is the col name and value the value to overwrite
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}'
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint, **{'body_params': app_data},
+        )
+
+    def update_report(
+        self, business_id: str, app_id: str, report_id: str,
+        report_metadata: Dict,
+    ) -> Dict:
+        """"""
+        endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint, **{'body_params': report_data},
+        )
 
 
 class MultiCascadeExplorerAPI(CascadeExplorerAPI):

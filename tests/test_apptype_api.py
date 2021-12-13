@@ -10,7 +10,7 @@ from shimoku_api_python.exceptions import ApiClientError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
-app_type_id: str = getenv('app_type_id')
+app_type_id: str = getenv('APP_TYPE_ID')
 
 
 config = {
@@ -32,8 +32,18 @@ def test_get_app_type():
     assert app_type
 
 
+def test_cannot_create_duplicated_app_type():
+    class MyTestCase(unittest.TestCase):
+        def check_app_type_not_exists(self):
+            with self.assertRaises(ValueError):
+                s.app_type.create_app_type(name='test')
+
+    t = MyTestCase()
+    t.check_app_type_not_exists()
+
+
 def test_create_and_delete_app_type():
-    app_type_new: Dict = s.app_type.create_app_type(name='test')
+    app_type_new: Dict = s.app_type.create_app_type(name='new-test')
     app_type_id_: str = app_type_new['id']
 
     app_type_: Dict = s.app_type.get_app_type(app_type_id=app_type_id_)
@@ -132,6 +142,7 @@ def test_rename_apps_types():
 
 
 test_get_app_type()
+test_cannot_create_duplicated_app_type()
 test_create_and_delete_app_type()
 test_update_app_type()
 test_rename_apps_types()

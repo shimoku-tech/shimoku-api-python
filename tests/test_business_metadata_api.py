@@ -1,10 +1,10 @@
 """"""
 from os import getenv
-from typing import Dict, List
+from typing import Dict
 import unittest
 
 import shimoku_api_python as shimoku
-from shimoku_api_python import Client
+from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -55,13 +55,17 @@ def test_create_and_delete_business():
     assert business_from_db == business
     del business_from_db
 
-    result: Dict = (
-        s.business.delete_business(
-            business_id=business_id_,
-        )
-    )
+    s.business.delete_business(business_id=business_id_)
 
-    assert result
+    class MyBusinessDeletedCase(unittest.TestCase):
+        def test_business_deleted(self):
+            with self.assertRaises(ApiClientError):
+                s.business.get_business(
+                    business_id=business_id_,
+                )
+
+    t = MyBusinessDeletedCase()
+    t.test_business_deleted()
 
 
 def test_update_business():

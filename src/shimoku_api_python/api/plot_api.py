@@ -1,12 +1,13 @@
 """"""
 import json
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Tuple
 
 from pandas import DataFrame
 
 from .data_managing_api import DataManagingApi
 from .explorer_api import (
-    UniverseExplorerApi, BusinessExplorerApi, ReportExplorerApi, CreateExplorerAPI
+    UniverseExplorerApi, BusinessExplorerApi, ReportExplorerApi,
+    CreateExplorerAPI, CascadeExplorerAPI
 )
 
 

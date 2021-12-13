@@ -215,7 +215,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return []
         return apps
 
-    # TODO paginate
     def get_business_app_ids(self, business_id: str) -> List[str]:
         """Given a business retrieve all app ids
 
@@ -228,29 +227,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [app['id'] for app in apps]
 
-    def get_universe_apps_by_type(self, app_type_id: str) -> List[Dict]:
-        """"""
-        app_types: List[Dict] = self.get_universe_app_types()
-        app_type_ids: List[str] = [app_type['id'] for app_type in app_types]
-        if app_type_id not in app_type_ids:
-            raise ValueError(
-                f'The provided app_type_id {app_type_id} does not exists | '
-                f'You can create it with shimoku.app_type.create_app_type()'
-            )
-
-        endpoint: str = f'apptype/{app_type_id}/apps'
-        apps_raw: Dict = (
-            self.api_client.query_element(
-                endpoint=endpoint, method='GET',
-            )
-        )
-        apps = apps_raw.get('items')
-
-        if not apps:
-            return []
-        return apps
-
-    # TODO paginate
     def get_app_path_names(self, business_id: str, app_id: str) -> List[str]:
         """Given a Path that belongs to an AppId retrieve all reportId
 
@@ -271,7 +247,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 paths = paths + [path]
         return paths
 
-    # TODO paginate
     def get_app_reports(self, business_id: str, app_id: str) -> List[Dict]:
         """Given an App Id retrieve all reports data from all reports
         that belongs to such App Id.
@@ -287,7 +262,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return []
         return reports
 
-    # TODO paginate
     def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
@@ -310,7 +284,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
         """
         raise NotImplementedError
 
-    # TODO paginate
     def get_path_report_ids(
         self, business_id: str, app_id: str, path_name: str,
     ) -> List[str]:
@@ -393,14 +366,16 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return reports
 
 
-class CreateExplorerAPI(CascadeExplorerAPI):
+class CreateExplorerAPI(object):
+    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
+    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
 
     def __init__(self, api_client):
         self.api_client = api_client
 
     def create_business(self, name: str) -> Dict:
         """"""
-        business: Dict = self.find_business_by_name_filter(name=name)
+        business: Dict = self._find_business_by_name_filter(name=name)
         if business:
             raise ValueError(f'A Business with the name {name} already exists')
 
@@ -414,12 +389,9 @@ class CreateExplorerAPI(CascadeExplorerAPI):
 
     def create_app_type(self, name: str) -> Dict:
         """"""
-        app_type: Dict = self.find_app_type_by_name_filter(name=name)
+        app_type: Dict = self._find_app_type_by_name_filter(name=name)
         if app_type:
             raise ValueError(f'An AppType with the name {name} already exists')
-        else:
-            # create the name from the normalized name: "product-suite" "Product suite"
-            name: str = ' '.join(app_type_normalized_name.split('-')).capitalize()
 
         endpoint: str = 'apptype'
         # for instance:
@@ -568,14 +540,24 @@ class CreateExplorerAPI(CascadeExplorerAPI):
         )
 
 
-class UpdateExplorerAPI(object):
+class UpdateExplorerAPI(CascadeExplorerAPI):
+    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
+    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
 
     def __init__(self, api_client):
         self.api_client = api_client
 
-    # TODO pending https://trello.com/c/18GLgLoQ
     def update_business(self, business_id: str, business_data: Dict) -> Dict:
         """"""
+        name = business_data.get('name')
+        if name:
+            business: Dict = self._find_business_by_name_filter(name=name)
+            if business:
+                raise ValueError(
+                    f'Cannot Update | '
+                    f'A Business with the name {name} already exists'
+                )
+
         endpoint: str = f'business/{business_id}'
         return self.api_client.query_element(
             method='PATCH', endpoint=endpoint, **{'body_params': business_data},
@@ -583,6 +565,15 @@ class UpdateExplorerAPI(object):
 
     def update_app_type(self, app_type_id: str, app_type_metadata: Dict) -> Dict:
         """"""
+        name = app_type_metadata.get('name')
+        if name:
+            _app_type: Dict = self._find_app_type_by_name_filter(name=name)
+            if _app_type:
+                raise ValueError(
+                    f'Cannot Update | '
+                    f'A AppType with the name {name} already exists'
+                )
+
         endpoint: str = f'apptype/{app_type_id}'
         return self.api_client.query_element(
             method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
@@ -1124,12 +1115,13 @@ class UniverseExplorerApi:
     """"""
     get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    get_universe_apps_by_type = CascadeExplorerAPI.get_universe_apps_by_type
 
 
 class BusinessExplorerApi:
     """"""
     get_business = GetExplorerAPI.get_business
+    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
+    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
     create_business = CreateExplorerAPI.create_business
     update_business = UpdateExplorerAPI.update_business
 
@@ -1143,6 +1135,8 @@ class BusinessExplorerApi:
 class AppTypeExplorerApi:
     """"""
     get_app_type = GetExplorerAPI.get_app_type
+    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
     create_app_type = CreateExplorerAPI.create_app_type
     update_app_type = UpdateExplorerAPI.update_app_type
 

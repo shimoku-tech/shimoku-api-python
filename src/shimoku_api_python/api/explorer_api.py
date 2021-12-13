@@ -116,7 +116,11 @@ class GetExplorerAPI(object):
         external_id: Optional[str] = None,
     ) -> List[Dict]:
         """"""
-        report = self.get_report(report_id)
+        report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
 
         if report['reportType']:
             report: Dict = (
@@ -127,7 +131,11 @@ class GetExplorerAPI(object):
                     external_id=external_id,
                 )
             )
-            return report['chartData']
+            report_data: List = report.get('chartData')
+            if report_data:
+                return report_data
+            else:
+                return list()
         else:  # Table case
             raise NotImplementedError
 
@@ -475,7 +483,6 @@ class CreateExplorerAPI(object):
     def create_path(self):
         pass
 
-    # TODO pending to be tried
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
     ) -> Dict:
@@ -485,28 +492,16 @@ class CreateExplorerAPI(object):
         :param app_id:
         :param report_metadata: A dict with all the values required to create a report
         """
-# TODO this must be done by the API rather than the SDK
-        # Data resistance to ensure all the fields in report_data are allowed
-        allowed_columns: List[str] = [
-            'title', 'order', 'isDisabled',
-            'grid', 'path', 'reportType',
-            'subscribe', 'chartDataAux',
-            'dataFilters', 'smartFilters', 'description',
-            'codeETLId', 'codeETLVersion',
-        ]
-
-        # Check all kwargs keys are in the allowed_columns list
-        try:
-            assert all([key in allowed_columns for key in report_metadata.keys()])
-        except AssertionError:
-            raise ValueError('Some of the keys provided as kwargs are not allowed')
-
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
         title: int = report_metadata['title']
         order: int = report_metadata['order']
-        is_disabled: bool = report_metadata['isDisabled']
+        is_disabled: bool = (
+            report_metadata.get('isDisabled')
+            if report_metadata.get('isDisabled')
+            else False
+        )
         grid: bool = report_metadata['grid']
         path: str = report_metadata['path']
 
@@ -534,11 +529,19 @@ class CreateExplorerAPI(object):
                 # Smart filters only exists for Tables
                 item['smartFilters'] = report_metadata['smartFilters']
 
-        return self.api_client.query_element(
-            method='PUT', endpoint=endpoint,
-            **{'body_params': item},
+        report: Dict = (
+            self.api_client.query_element(
+                method='PUT', endpoint=endpoint,
+                **{'body_params': item},
+            )
         )
 
+        keys = item.keys()
+        return {
+            k: v
+            for k, v in report.items()
+            if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
+        }
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -579,7 +582,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
         )
 
-    def update_app(self, business_id: str, app_id: str, app_data: Dict) -> Dict:
+    def update_app(self, business_id: str, app_id: str, app_metadata: Dict) -> Dict:
         """
         :param business_id:
         :param app_id:
@@ -588,7 +591,8 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
         """
         endpoint: str = f'business/{business_id}/app/{app_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': app_data},
+            method='PATCH', endpoint=endpoint,
+            **{'body_params': app_metadata},
         )
 
     def update_report(
@@ -598,7 +602,8 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
         """"""
         endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
         return self.api_client.query_element(
-            method='PATCH', endpoint=endpoint, **{'body_params': report_data},
+            method='PATCH', endpoint=endpoint,
+            **{'body_params': report_metadata},
         )
 
 
@@ -643,7 +648,7 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
         return business_id
 
 
-class DeleteExplorerApi(MultiCascadeExplorerAPI):
+class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
     """Get Businesses, Apps, Paths and Reports in any possible combination
     """
 
@@ -712,31 +717,41 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI):
         """Delete a Report, relocating reports underneath to avoid errors
         """
         reports: List[Dict] = (
-            self.get_target_app_all_reports_data(app_id=app_id)
+            self._get_app_reports(
+                business_id=business_id,
+                app_id=app_id
+            )
         )
-        target_report: Dict = self.get_target_report(report_id)
+        target_report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
         target_report_grid: str = target_report.get('grid')
 
         # TODO this looks like a different method
         if target_report_grid:
             target_report_row: int = int(target_report_grid.split(',')[0])
             for report in reports:
-                report_row: int = int(report.get('grid').split(',')[0])
-                if report_row > target_report_row:
-                    report_row -= 1
-                    report_column: int = int(report.get('grid').split(',')[1])
-                    grid: str = f'{report_row}, {report_column}'
-                    self.update_report_grid_position(
-                        app_id=app_id, report_id=report_id,
-                        grid=grid, reorganize_grid=False,
-                    )
+                report_grid: str = report.get('grid')
+                if report_grid:
+                    report_row: int = int(report_grid.split(',')[0])
+                    if report_row > target_report_row:
+                        report_row -= 1
+                        report_column: int = int(report.get('grid').split(',')[1])
+                        grid: str = f'{report_row}, {report_column}'
+                        self.update_report(
+                            business_id=business_id,
+                            app_id=app_id, report_id=report_id,
+                            report_metadata={'grid': grid},
+                        )
 
-        table_name: str = f'Report-{self.table_name_suffix}'
-        self.delete_item(
-            table_name=table_name,
-            item_id=report_id,
-            key_attribute='id',
+        endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
+        result: Dict = self.api_client.query_element(
+            method='DELETE', endpoint=endpoint
         )
+        return result
+
 
 
 class MultiDeleteApi:
@@ -1190,7 +1205,6 @@ class ReportExplorerApi:
 
 class ExplorerApi(
     CreateExplorerAPI,
-    UpdateExplorerAPI,
     DeleteExplorerApi,
 ):
     """Get Businesses, Apps, Paths and Reports in any possible combination

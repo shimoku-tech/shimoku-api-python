@@ -70,6 +70,34 @@ class PlotApi(PlotAux):
         third_layer: Optional[Dict] = None,
     ) -> Dict:
         """"""
+# TODO use chart_options!!!
+        if third_layer.get('chart_options'):
+            chart_options: Dict = third_layer.get('chart_options')
+        else:
+            chart_options: Dict = {
+                'title': 'Title LineChart',
+                'subtitle': 'Subtitle LineChart',
+                'legend': True,
+                'tooltip': True,
+                'axisPointer': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'restore': True,
+                    'dataView': True,
+                    'dataZoom': True,
+                    'magicType': False,
+                },
+                'xAxis': {
+                    'name': 'xAxisName',
+                    'type': 'category',
+                },
+                'yAxis': {
+                    'name': 'yAxisName',
+                    'type': 'value',
+                },
+                'dataZoom': True,
+            }
+
         if third_layer:
             report_metadata.update(third_layer)
 
@@ -258,13 +286,73 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        min_value_mark: Any, max_value_mark: Any,  # report creation
+        min_value_mark: Any, max_value_mark: Any,
+        color_mark: str = 'rgba(255, 173, 177, 0.4)',
         title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         filters: Optional[List[str]] = None,
     ):
         """
+        :param data:
+        :param x:
+        :param y:
+        :param menu_path:
+        :param row:
+        :param column:
+        :param min_value_mark:
+        :param max_value_mark:
+        :param color_mark: RGBA code
+        :param title:
+        :param x_axis_name:
+        :param y_axis_name:
+        :param filters:
+        """
+        third_layer = {
+            'series': [{
+                'smooth': True,
+                'markArea': {
+                    'itemStyle': {
+                        'color': color_mark
+                    },
+                    'data': [
+                        [
+                            {
+                                'name': 'Prediction',
+                                'xAxis': min_value_mark
+                            },
+                            {
+                                'xAxis': max_value_mark
+                            }
+                        ],
+                    ],
+                }
+            },],
+        }
+
+        return self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            echart_type='LINECHART',
+            filters=filters,
+        )
+
+    def line_with_confidence_area(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str,  #  above_band_name: str, below_band_name: str,
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        filters: Optional[List[str]] = None,
+    ):
+        """
+        https://echarts.apache.org/examples/en/editor.html?c=line-stack
+
         option = {
           title: {
             text: 'Stacked Line'
@@ -286,18 +374,8 @@ class PlotApi(PlotAux):
               saveAsImage: {}
             }
           },
-          dataZoom: [
-            {
-              type: 'inside',
-            },
-            {
-              start: 0,
-              end: 10
-            }
-          ],
           xAxis: {
             type: 'category',
-            name: 'Weekday',
             boundaryGap: false,
             data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
           },
@@ -309,145 +387,59 @@ class PlotApi(PlotAux):
               name: 'Email',
               type: 'line',
               stack: 'Total',
-              data: [120, 132, 101, 134, 90, 230, 210],
-              smooth: true,
-              markArea: {
-                    itemStyle: {
-                      color: 'rgba(255, 173, 177, 0.4)'
-                    },
-                    data: [
-                      [
-                        {
-                          name: 'Prediction',
-                          xAxis: 'Sat'
-                        },
-                        {
-                          xAxis: 'Sun'
-                        }
-                      ],
-                ],
-              },
+              data: [120, 132, 101, 134, 90, 230, 210]
             },
             {
               name: 'Union Ads',
               type: 'line',
               stack: 'Total',
-              smooth: true,
-              data: [220, 182, 191, 234, 290, 330, 310],
-              markArea: {
-                    itemStyle: {
-                      color: 'rgba(255, 173, 177, 0.4)'
-                    },
-                    data: [
-                      [
-                        {
-                          name: 'Prediction',
-                          xAxis: 'Sat'
-                        },
-                        {
-                          xAxis: 'Sun'
-                        }
-                      ],
-                ],
+              lineStyle: {
+                opacity: 0
               },
+              stack: 'confidence-band',
+              symbol: 'none',
+              data: [220, 182, 191, 234, 290, 330, 310]
             },
             {
               name: 'Video Ads',
               type: 'line',
               stack: 'Total',
-              smooth: true,
-              data: [150, 232, 201, 154, 190, 330, 410],
-              markArea: {
-                    itemStyle: {
-                      color: 'rgba(255, 173, 177, 0.4)'
-                    },
-                    data: [
-                      [
-                        {
-                          name: 'Prediction',
-                          xAxis: 'Sat'
-                        },
-                        {
-                          xAxis: 'Sun'
-                        }
-                      ],
-                ],
-              },
+              data: [150, 232, 201, 154, 190, 330, 410]
             },
             {
               name: 'Direct',
               type: 'line',
-              stack: 'Total',
-              smooth: true,
-              data: [320, 332, 301, 334, 390, 330, 320],
-              markArea: {
-                    itemStyle: {
-                      color: 'rgba(255, 173, 177, 0.4)'
-                    },
-                    data: [
-                      [
-                        {
-                          name: 'Prediction',
-                          xAxis: 'Sat'
-                        },
-                        {
-                          xAxis: 'Sun'
-                        }
-                      ],
-                ],
-              },
+              data: [320, 332, 301, 334, 390, 330, 320]
             },
             {
               name: 'Search Engine',
               type: 'line',
-              stack: 'Total',
-              smooth: true,
-              data: [820, 932, 901, 934, 1290, 1330, 1320],
-              markArea: {
-                    itemStyle: {
-                      color: 'rgba(255, 173, 177, 0.4)'
-                    },
-                    data: [
-                      [
-                        {
-                          name: 'Prediction',
-                          xAxis: 'Sat'
-                        },
-                        {
-                          xAxis: 'Sun'
-                        }
-                      ],
-                ],
+              lineStyle: {
+                opacity: 0
               },
+              areaStyle: {
+                color: '#ccc'
+              },
+              stack: 'confidence-band',
+              symbol: 'none',
+              data: [820, 932, 901, 934, 1290, 1330, 1320]
             }
           ]
         };
+
         """
         third_layer = {
-            'series': [
-                {
-                    'name': 'Email',
-                    'type': 'line',
-                    'stack': 'Total',
-                    'smooth': True,
-                    'markArea': {
-                        'itemStyle': {
-                            'color': 'rgba(255, 173, 177, 0.4)'
-                        },
-                        'data': [
-                            [
-                                {
-                                    'name': 'Prediction',
-                                    'xAxis': min_value_mark
-                                },
-                                {
-                                    'xAxis': max_value_mark
-                                }
-                            ],
-                        ],
-                    }
+            'series': [{
+                'smooth': True,
+                'lineStyle': {
+                    'opacity': 0
                 },
-            ],
+                'areaStyle': {
+                    'color': '#ccc'
+                },
+                'stack': 'confidence-band',
+                'symbol': 'none',
+            }, ],
         }
 
         return self._create_trend_chart(
@@ -461,19 +453,117 @@ class PlotApi(PlotAux):
             filters=filters,
         )
 
-    def line_with_confidence_area(
+    def scatter_with_confidence_area(
         self, data: Union[str, DataFrame, List[Dict]],
-        x: str, y: List[str],  # first layer
+        x: str, y: str,  #  above_band_name: str, below_band_name: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
-        """"""
-        raise NotImplementedError
+        """
+        https://echarts.apache.org/examples/en/editor.html?c=line-stack
+
+        option = {
+          title: {
+            text: 'Stacked Line'
+          },
+          tooltip: {
+            trigger: 'axis'
+          },
+          legend: {
+            data: ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          toolbox: {
+            feature: {
+              saveAsImage: {}
+            }
+          },
+          xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [
+            {
+              name: 'Email',
+              type: 'line',
+              stack: 'Total',
+              data: [120, 132, 101, 134, 90, 230, 210]
+            },
+            {
+              name: 'Union Ads',
+              type: 'line',
+              stack: 'Total',
+              lineStyle: {
+                opacity: 0
+              },
+              stack: 'confidence-band',
+              symbol: 'none',
+              data: [220, 182, 191, 234, 290, 330, 310]
+            },
+            {
+              name: 'Video Ads',
+              type: 'line',
+              stack: 'Total',
+              data: [150, 232, 201, 154, 190, 330, 410]
+            },
+            {
+              name: 'Direct',
+              type: 'line',
+              data: [320, 332, 301, 334, 390, 330, 320]
+            },
+            {
+              name: 'Search Engine',
+              type: 'line',
+              lineStyle: {
+                opacity: 0
+              },
+              areaStyle: {
+                color: '#ccc'
+              },
+              stack: 'confidence-band',
+              symbol: 'none',
+              data: [820, 932, 901, 934, 1290, 1330, 1320]
+            }
+          ]
+        };
+
+        """
+        third_layer = {
+            'series': [{
+                'smooth': True,
+                'lineStyle': {
+                    'opacity': 0
+                },
+                'areaStyle': {
+                    'color': '#ccc'
+                },
+                'stack': 'confidence-band',
+                'symbol': 'none',
+            }, ],
+        }
+
+        return self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            echart_type='SCATTER',
+            filters=filters,
+        )
 
     def stockline(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -824,6 +914,14 @@ class PlotApi(PlotAux):
             echart_type='HEATMAP',
             filters=filters,
         )
+
+    def cohort(self):
+        """"""
+        raise NotImplementedError
+
+    def predictive_cohort(self):
+        """"""
+        raise NotImplementedError
 
     def sankey(
         self, data: Union[str, DataFrame, List[Dict]],

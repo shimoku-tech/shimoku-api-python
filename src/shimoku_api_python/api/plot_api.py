@@ -125,16 +125,15 @@ class PlotApi(PlotAux):
         )
 
     def _create_trend_chart(
-        self, report_type: str,
+        self, echart_type: str,
         data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters=filters,
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -157,6 +156,7 @@ class PlotApi(PlotAux):
             color: None
             third_layer: {}
 
+        :param echart_type:
         :param data:
         :param x:
         :param y:
@@ -167,18 +167,18 @@ class PlotApi(PlotAux):
         :param row:
         :param column:
         :param title:
-        :param color:
         :param third_layer:
         :param filters: To create a filter for every specified column
         """
         self._validate_table_data(data, elements=[x] + y)
         data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
+        data_fields['type'] = echart_type
 
         report_metadata: Dict = {
-            'reportType': report_type,
+            'reportType': 'ECHARTS',
+            'dataFields': data_fields,
             'title': title,
             'grid': f'{row}, {column}',
-            'dataFields': data_fields,
         }
 
         if filters:
@@ -219,8 +219,8 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a barchart
         """
@@ -231,7 +231,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='BARCHART',
+            echart_type='BARCHART',
             filters=filters,
         )
 
@@ -254,7 +254,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='LINECHART',
+            echart_type='LINECHART',
             filters=filters,
         )
 
@@ -266,8 +266,8 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """
         option = {
@@ -434,12 +434,12 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
+        title: Optional[str] = None,  # second layer
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         raise NotImplementedError
@@ -448,12 +448,12 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
+        title: Optional[str] = None,  # second layer
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         self._create_trend_chart(
@@ -463,7 +463,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='STOCKLINECHART',
+            echart_type='STOCKLINECHART',
             filters=filters,
         )
 
@@ -475,8 +475,8 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         try:
@@ -495,7 +495,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='SCATTER',
+            echart_type='SCATTER',
             filters=filters,
         )
 
@@ -507,7 +507,8 @@ class PlotApi(PlotAux):
         color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,  # to create filters
     ):
         """"""
         self._create_trend_chart(
@@ -517,59 +518,75 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='SCATTER',
+            echart_type='SCATTER',
             filters=filters,
         )
 
     def indicator(
-        self, data: Union[str, DataFrame, List[Dict]],
+        self, data: Union[str, DataFrame, List[Dict]], value: str,
         menu_path: str, row: int, column: int,  # report creation
-        header: Optional[str] = None, # second layer
+        title: Optional[str] = None,
+        header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
     ):
         """"""
-        elements: List[str] = [
-            'title', 'description', 'value',
-        ]
+        elements: List[str] = [header, footer, value, color]
         self._validate_table_data(data, elements=elements)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[elements]  # keep only x and y
+        cols_to_rename: Dict[str, str] = {
+            header: 'title',
+            footer: 'description',
+            value: 'value',
+        }
+        df.rename(columns={cols_to_rename}, inplace=True)
 
         report_metadata: Dict = {
             'reportType': 'INDICATOR',
-            'title': title,
             'grid': f'{row}, {column}',
-            'dataFields': data_fields,
         }
 
+        if title:
+            report_metadata['title'] = title
+
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
         )
 
     def alert_indicator(
         self, data: Union[str, DataFrame, List[Dict]],
+        value: str, link_url: str,
         menu_path: str, row: int, column: int,  # report creation
-        link_url: str,  # Where it sends you if click
-        header: Optional[str] = None, # second layer
+        title: Optional[str] = None,
+        header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
     ):
         """"""
-        elements: List[str] = [
-            'title', 'description', 'value', 'link'  # TODO validate this one
-        ]
+        elements: List[str] = [header, footer, value, color, link_url]
         self._validate_table_data(data, elements=elements)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[elements]  # keep only x and y
+        cols_to_rename: Dict[str, str] = {
+            header: 'title',
+            footer: 'description',
+            value: 'value',
+        }
+        df.rename(columns={cols_to_rename}, inplace=True)
 
         report_metadata: Dict = {
             'reportType': 'INDICATOR',
-            'title': title,
             'grid': f'{row}, {column}',
-            'dataFields': data_fields,
         }
 
+        if title:
+            report_metadata['title'] = title
+
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
         )
@@ -578,9 +595,9 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: str,  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        title: Optional[str] = None,  # second layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a Piechart
         """
@@ -590,7 +607,8 @@ class PlotApi(PlotAux):
         df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
         report_metadata: Dict = {
-            'reportType': 'PIECHART',
+            'reportType': 'ECHARTS',
+            'dataFields': {'type': 'pie'},
             'title': title,
             'grid': f'{row}, {column}',
         }
@@ -609,9 +627,9 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        title: Optional[str] = None,  # second layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a RADAR
         """
@@ -621,7 +639,8 @@ class PlotApi(PlotAux):
         df.rename(columns={x: 'name'}, inplace=True)
 
         report_metadata: Dict = {
-            'reportType': 'RADAR',
+            'reportType': 'ECHARTS',
+            'dataFields': {'type': 'radar'},
             'title': title,
             'grid': f'{row}, {column}',
         }
@@ -639,16 +658,17 @@ class PlotApi(PlotAux):
     def tree(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        title: Optional[str] = None,  # second layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a Tree
         """
         self._validate_tree_data(data, vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
-            'reportType': 'TREE',
+            'reportType': 'ECHARTS',
+            'dataFields': {'type': 'tree'},
             'title': title,
             'grid': f'{row}, {column}',
         }
@@ -666,18 +686,19 @@ class PlotApi(PlotAux):
     def treemap(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        title: Optional[str] = None,  # second layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
-        """Create a Tree
+        """Create a Treemap
         """
         self._validate_tree_data(data, vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
-            'reportType': 'TREE',
             'title': title,
             'grid': f'{row}, {column}',
+            'reportType': 'ECHARTS',
+            'dataFields': {'type': 'treemap'},
         }
 
         if filters:
@@ -692,20 +713,30 @@ class PlotApi(PlotAux):
 
     def sunburst(
         self, data: Union[str, DataFrame, List[Dict]],
-        x: str, y: List[Dict],  # first layer
+        name: str, children: List[Dict],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        title: Optional[str] = None,  # second layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a Tree
         """
         self._validate_tree_data(data, vals=['name', 'children'])
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name, children]]  # keep only x and y
+        df.rename(
+            columns={
+                name: 'name',
+                children: 'children',
+            },
+            inplace=True,
+        )
 
         report_metadata: Dict = {
-            'reportType': 'SUNBURST',
+            'reportType': 'ECHARTS',
             'title': title,
             'grid': f'{row}, {column}',
+            'dataFields': {'type': 'sunburst'},
         }
 
         if filters:
@@ -726,7 +757,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
-        filters: Optional[List[str]] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -737,7 +768,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='CANDLESTICK',
+            echart_type='CANDLESTICK',
             filters=filters,
         )
 
@@ -749,7 +780,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
-        filters: Optional[List[str]] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -762,7 +793,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='HEATMAP',
+            echart_type='HEATMAP',
             filters=filters,
         )
 
@@ -774,7 +805,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
-        filters: Optional[List[str]] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -795,7 +826,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='SANKEY',
+            echart_type='SANKEY',
             filters=filters,
         )
 
@@ -807,7 +838,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
-        filters: Optional[List[str]] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -827,7 +858,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='FUNNEL',
+            echart_type='FUNNEL',
             filters=filters,
         )
 
@@ -839,7 +870,7 @@ class PlotApi(PlotAux):
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
-        filters: Optional[List[str]] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -859,7 +890,7 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='FUNNEL',
+            echart_type='FUNNEL',
             filters=filters,
         )
 
@@ -868,11 +899,10 @@ class PlotApi(PlotAux):
         x: str, y: str, name: str,  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
-        filters: Optional[List[str]] = None,  # thid layer
+        third_layer: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
     ):
         """Create a barchart
         """
@@ -889,10 +919,10 @@ class PlotApi(PlotAux):
         self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
-            report_type='BARCHART',
+            echart_type='THEMERIVER',
             filters=filters,
         )

@@ -1,17 +1,15 @@
 """"""
-import json
-from typing import List, Dict, Optional, Union, Tuple
+from typing import List, Dict, Optional, Union, Tuple, Any
 
 from pandas import DataFrame
 
 from .data_managing_api import DataValidation
 from .explorer_api import (
-    UniverseExplorerApi, BusinessExplorerApi, ReportExplorerApi,
-    CreateExplorerAPI, CascadeExplorerAPI, MultiCreateApi
+    BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI, MultiCreateApi
 )
 
 
-class PlotAux():
+class PlotAux:
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
@@ -215,8 +213,7 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
@@ -224,10 +221,10 @@ class PlotApi(PlotAux):
     ):
         """Create a barchart
         """
-        self._create_trend_chart(
+        return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
@@ -239,18 +236,17 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # thid layer
         filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
-        self._create_trend_chart(
+        return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
@@ -262,11 +258,10 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
+        min_value_mark: Any, max_value_mark: Any,  # report creation
+        title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """
@@ -428,7 +423,43 @@ class PlotApi(PlotAux):
           ]
         };
         """
-        raise NotImplementedError
+        third_layer = {
+            'series': [
+                {
+                    'name': 'Email',
+                    'type': 'line',
+                    'stack': 'Total',
+                    'smooth': True,
+                    'markArea': {
+                        'itemStyle': {
+                            'color': 'rgba(255, 173, 177, 0.4)'
+                        },
+                        'data': [
+                            [
+                                {
+                                    'name': 'Prediction',
+                                    'xAxis': min_value_mark
+                                },
+                                {
+                                    'xAxis': max_value_mark
+                                }
+                            ],
+                        ],
+                    }
+                },
+            ],
+        }
+
+        return self._create_trend_chart(
+            data=data, x=x, y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            third_layer=third_layer,
+            echart_type='LINECHART',
+            filters=filters,
+        )
 
     def line_with_confidence_area(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -449,17 +480,16 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        color: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
-        self._create_trend_chart(
+        return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
@@ -471,8 +501,7 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
@@ -488,10 +517,10 @@ class PlotApi(PlotAux):
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
-        self._create_trend_chart(
+        return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,
@@ -503,18 +532,17 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str], z: str, # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None, # second layer
-        color: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         third_layer: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,  # to create filters
     ):
         """"""
-        self._create_trend_chart(
+        return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             third_layer=third_layer,

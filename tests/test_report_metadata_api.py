@@ -1,4 +1,20 @@
-""""""
+"""
+To create a report
+
+r = {
+    'business_id': business_id,
+    'app_id': app_id,
+    'report_metadata': {
+        'title': 'test',
+        'order': 0,
+        'grid': '1, 1',
+        'path': 'test',
+        'reportType': 'LINECHART',
+    }
+}
+s.report.create_report(**r)
+
+"""
 from os import getenv
 from typing import Dict, List
 import unittest
@@ -139,35 +155,35 @@ def test_get_report_last_update():
 
 
 def test_get_report_by_title():
-    title: str = ''
-    report: Dict = (
-        s.report.get_report_by_title(
+    title: str = 'test'
+    reports: Dict = (
+        s.report.get_reports_by_title(
             business_id=business_id,
             app_id=app_id,
             title=title,
         )
     )
-    assert report
-    assert report['title'] == title
+    assert reports
+    assert all([r['title'] == title for r in reports])
 
 
 def test_get_report_by_path():
-    path: str = ''  # TODO
-    report: Dict = (
-        s.report.get_report_by_path(
+    path: str = 'test'
+    reports: Dict = (
+        s.report.get_reports_by_path(
             business_id=business_id,
             app_id=app_id,
             path=path,
         )
     )
-    assert report
-    assert report['path'] == path
+    assert reports
+    assert all([r['path'] == path for r in reports])
 
 
 def test_get_report_by_external_id():
     external_id: str = ''  # TODO
     report: Dict = (
-        s.report.get_report_by_external_id(
+        s.report.get_reports_by_external_id(
             business_id=business_id,
             app_id=app_id,
             external_id=external_id,
@@ -179,43 +195,35 @@ def test_get_report_by_external_id():
 
 def test_get_report_by_chart_type():
     report_type: str = 'LINECHART'
-    report: Dict = (
-        s.report.get_report_by_chart_type(
+    reports: List[Dict] = (
+        s.report.get_reports_by_chart_type(
             business_id=business_id,
             app_id=app_id,
-            chart_type=chart_type,
+            chart_type=report_type,
         )
     )
-    assert report
-    assert report['reportType'] == report_type
+    assert reports
+    assert all([r['reportType'] == report_type for r in reports])
 
 
 def test_get_report_by_grid_position():
     row: int = 1
     column: int = 1
-    report: Dict = (
-        s.report.get_report_by_grid_position(
+    grid = f'{row}, {column}'
+    reports: List[Dict] = (
+        s.report.get_reports_by_grid_position(
             business_id=business_id,
             app_id=app_id,
             row=row, column=column,
         )
     )
-    assert report
-    assert report['grid'] == f'{row}, {column}'
+    assert reports
+    assert all([r['grid'].strip() == grid for r in reports])
 
 
 # TODO
 def test_change_report_grid_position():
-    s.report.change_report_grid_position()
-
-
-def test_get_filter_report():
-    # s.report.get_filter_report()
-    raise NotImplementedError
-
-
-def test_get_filter_reports():
-    # s.report.get_filter_reports()
+    # s.report.change_report_grid_position()
     raise NotImplementedError
 
 
@@ -240,26 +248,21 @@ def test_remove_filter_for_report():
 
 
 test_get_report()
-# test_update_report()
-# test_create_and_delete_report()
+test_update_report()
+test_create_and_delete_report()
+test_get_reports_in_same_path()
 # TODO pending have data:
 #  test_get_report_data()
-# TODO pending have path (fix by Guillermo)
-#  test_get_reports_in_same_path()
 
 test_get_report_by_title()
-# TODO pending have path (fix by Guillermo)
-#  test_get_report_by_path()
-# test_get_report_by_external_id()
+test_get_report_by_path()
 test_get_report_by_chart_type()
-# TODO pending have grid (fix by Guillermo)
 test_get_report_by_grid_position()
-# TODO pending have grid (fix by Guillermo)
-test_change_report_grid_position()
 
 """
+test_change_report_grid_position()
+test_get_report_by_external_id()
 test_get_filter_report()
-test_get_filter_reports()
 test_add_report_to_filter()
 test_remove_filter_for_report()
 test_set_filter_to_reports()

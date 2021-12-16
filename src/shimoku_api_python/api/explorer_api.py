@@ -503,17 +503,19 @@ class CreateExplorerAPI(object):
             else False
         )
         grid: bool = report_metadata['grid']
-        path: str = report_metadata['path']
 
         # These are the mandatory fields
         item: Dict = {
             'appId': app_id,
             'title': title,
-            'path': path,
             'order': order,
             'grid': grid,
             'isDisabled': is_disabled,
         }
+
+        path: str = report_metadata.get('path')
+        if path:
+            item['path'] = path
 
         report_type: str = report_metadata.get('reportType')
         report_metadata.pop('reportType')
@@ -536,12 +538,12 @@ class CreateExplorerAPI(object):
             )
         )
 
-        keys = item.keys()
         return {
             k: v
             for k, v in report.items()
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter

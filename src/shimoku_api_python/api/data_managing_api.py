@@ -15,7 +15,7 @@ class DataExplorerApi:
     _get_report = ReportMetadataApi.get_report
     _update_report = ReportMetadataApi.update_report
 
-    _get_report_by_external_id = ReportMetadataApi.get_report_by_external_id
+    _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
 
 
 class DataValidation:

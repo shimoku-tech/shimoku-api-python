@@ -239,7 +239,7 @@ def test_remove_filter_for_report():
     raise NotImplementedError
 
 
-# test_get_report()
+test_get_report()
 # test_update_report()
 # test_create_and_delete_report()
 # TODO pending have data:

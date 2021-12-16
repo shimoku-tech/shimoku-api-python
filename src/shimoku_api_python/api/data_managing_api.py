@@ -96,6 +96,8 @@ class DataValidation:
             raise ValueError('data keys must be "name", "value" and "children"')
 
 
+# TODO importante!! Iterar (paginar) el READ / WRITE
+#  depende el tamaño de dataset que nos llegue de usuario
 class DataManagingApi(DataExplorerApi, DataValidation):
     """
     """

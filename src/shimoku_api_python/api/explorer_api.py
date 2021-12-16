@@ -429,7 +429,7 @@ class CreateExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app'
 
         item: Dict = {  # These are the mandatory fields
-            'appBusinessId': business_id,
+            # 'appBusinessId': business_id,  # Not necessary its taken from the URL
             'appTypeId': app_type_id,
         }
 

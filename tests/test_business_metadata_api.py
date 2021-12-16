@@ -52,7 +52,15 @@ def test_create_and_delete_business():
         )
     )
 
-    assert business_from_db == business
+    assert business_from_db == {
+        k: v
+        for k, v in business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     del business_from_db
 
     s.business.delete_business(business_id=business_id_)
@@ -83,7 +91,15 @@ def test_update_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert new_business == business_changed
+    assert business_changed == {
+        k: v
+        for k, v in new_business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     assert new_business_name == business_changed['name']
 
     # Restore previous name
@@ -112,7 +128,15 @@ def test_rename_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert new_business == business_changed
+    assert business_changed == {
+        k: v
+        for k, v in new_business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     assert new_business_name == business_changed['name']
 
     # Restore previous name

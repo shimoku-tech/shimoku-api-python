@@ -86,6 +86,21 @@ def test_update_app():
     assert app_updated[var] == old_val
 
 
+def test_create_app_without_apptype_fails():
+    class MyTestCase(unittest.TestCase):
+        def check_app_creation_fails(self):
+            with self.assertRaises(ApiClientError):
+                app: Dict = (
+                    s.app.create_app(
+                        business_id=business_id,
+                        app_type_id='fail',
+                    )
+                )
+
+    t = MyTestCase()
+    t.check_app_creation_fails()
+
+
 def test_create_and_delete_app():
     app: Dict = (
         s.app.create_app(
@@ -215,6 +230,7 @@ def test_has_app_report():
 test_get_app()
 test_get_fake_app()
 test_update_app()
+test_create_app_without_apptype_fails()
 test_create_and_delete_app()
 test_get_app_reports()
 test_get_app_report_ids()

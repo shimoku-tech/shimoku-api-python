@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Union
 import pandas as pd
 from pandas import DataFrame
 
+from .explorer_api import GetExplorerAPI
 from .report_metadata_api import ReportMetadataApi
 
 
@@ -14,6 +15,7 @@ from .report_metadata_api import ReportMetadataApi
 
 class DataExplorerApi:
     get_report = ReportMetadataApi.get_report
+    _get_report_with_data = GetExplorerAPI._get_report_with_data
     get_report_data = ReportMetadataApi.get_report_data
     _update_report = ReportMetadataApi.update_report
 
@@ -50,7 +52,7 @@ class DataValidation:
         elif isinstance(data, str):
             try:
                 d: List[Dict] = json.loads(data)
-                df_ = DataFrame(data)
+                df_ = DataFrame(d)
             except Exception:
                 raise ValueError(
                     'The data you passed is a json that must be '
@@ -249,7 +251,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
         if report_id:
             report: Dict = (
-                self.get_report(
+                self._get_report_with_data(
                     business_id=business_id,
                     app_id=app_id,
                     report_id=report_id
@@ -257,13 +259,12 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         elif external_id:
             report: Dict = (
-                self.get_report_by_external_id(
+                self._get_report_with_data(
                     business_id=business_id,
                     app_id=app_id,
                     external_id=external_id,
                 )
             )
-            report_id: str = report['id']
         else:
             raise ValueError('Either report_id or external_id must be provided')
 
@@ -274,11 +275,13 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
             chart_data: Dict = report.get('chartData')
             if chart_data:
-                chart_data.update(chart_data_new)
+                chart_data = chart_data + chart_data_new
             else:
                 chart_data = chart_data_new
 
-            report_data_ = {'chartData': chart_data}
+            report_data_ = {
+                'chartData': json.dumps(chart_data),
+            }
             self._update_report(
                 business_id=business_id,
                 app_id=app_id,
@@ -332,11 +335,19 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             raise ValueError('Either report_id or external_id must be provided')
 
         if report.get('reportType'):
-            chart_data: List[Dict] = (
+            chart_data_new: List[Dict] = (
                 self._transform_report_data_to_chart_data(report_data)
             )
 
-            report_data_ = {'chartData': chart_data}
+            chart_data: Dict = report.get('chartData')
+            if chart_data:
+                chart_data = chart_data + chart_data_new
+            else:
+                chart_data = chart_data_new
+
+            report_data_ = {
+                'chartData': json.dumps(chart_data),
+            }
             self._update_report(
                 business_id=business_id,
                 app_id=app_id,

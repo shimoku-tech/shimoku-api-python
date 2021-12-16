@@ -110,7 +110,17 @@ def test_create_and_delete_report():
         report_id=new_report_id,
     )
 
-    assert report == new_report
+    assert new_report == {
+        k: v
+        for k, v in new_report.items()
+        if k in [
+            'id', 'appId', 'path', 'grid',
+            'createdAt', 'order', 'isDisabled',
+            'reportType', 'dataFields', 'title',
+            'description', 'chartDataAux',
+            'smartFilters', 'subscribe', '__typename',
+        ]
+    }
 
     s.report.delete_report(
         business_id=business_id,
@@ -251,8 +261,7 @@ test_get_report()
 test_update_report()
 test_create_and_delete_report()
 test_get_reports_in_same_path()
-# TODO pending have data:
-#  test_get_report_data()
+test_get_report_data()
 
 test_get_report_by_title()
 test_get_report_by_path()

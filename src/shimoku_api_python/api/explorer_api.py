@@ -1,6 +1,7 @@
 """"""
 
 from typing import List, Dict, Optional
+import json
 
 from shimoku_api_python.exceptions import ApiClientError
 
@@ -50,7 +51,7 @@ class GetExplorerAPI(object):
         )
         return app_data
 
-    def get_report(
+    def _get_report_with_data(
         self,
         business_id: Optional[str] = None,
         app_id: Optional[str] = None,
@@ -104,6 +105,37 @@ class GetExplorerAPI(object):
         else:
             raise ValueError('Either report_id or external_id must be provided')
 
+        if report_data.get('chartData'):
+            report_data['chartData'] = json.loads(report_data['chartData'])
+        return report_data
+
+    def get_report(
+        self,
+        business_id: Optional[str] = None,
+        app_id: Optional[str] = None,
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+        **kwargs,
+    ) -> Dict:
+        """Retrieve an specific report data
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        :param report_id: Shimoku report UUID
+        :param external_id: external report UUID
+        """
+        report_data: Dict = (
+            self._get_report_with_data(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                external_id=external_id,
+            )
+        )
+        # we do not return the chartData in the get_report()
+        #  use _get_report_with_data() instead
+        if report_data.get('chartData'):
+            report_data.pop('chartData')
         return report_data
 
     def get_report_data(
@@ -121,7 +153,7 @@ class GetExplorerAPI(object):
 
         if report['reportType']:
             report: Dict = (
-                self.get_report(
+                self._get_report_with_data(
                     business_id=business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -761,7 +793,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         return result
 
 
-
 class MultiDeleteApi:
     """Get Businesses, Apps, Paths and Reports in any possible combination
     """
@@ -1198,6 +1229,7 @@ class ReportExplorerApi:
 
     get_report = GetExplorerAPI.get_report
     get_report_data = GetExplorerAPI.get_report_data
+    _get_report_with_data = GetExplorerAPI._get_report_with_data
 
     _get_app_reports = CascadeExplorerAPI.get_app_reports
 

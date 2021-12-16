@@ -2,6 +2,7 @@
 import json
 from typing import List, Dict, Optional, Union
 
+import pandas as pd
 from pandas import DataFrame
 
 from .report_metadata_api import ReportMetadataApi
@@ -12,7 +13,8 @@ from .report_metadata_api import ReportMetadataApi
 
 
 class DataExplorerApi:
-    _get_report = ReportMetadataApi.get_report
+    get_report = ReportMetadataApi.get_report
+    get_report_data = ReportMetadataApi.get_report_data
     _update_report = ReportMetadataApi.update_report
 
     _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
@@ -24,7 +26,7 @@ class DataValidation:
         self.api_client = api_client
 
     def _validate_data_is_pandarable(
-        self, data: Union[str, DataFrame, List[Dict]],
+        self, data: Union[str, DataFrame, List[Dict], Dict],
     ) -> DataFrame:
         """"""
         if isinstance(data, DataFrame):
@@ -35,6 +37,14 @@ class DataValidation:
             except Exception:
                 raise ValueError(
                     'The data you passed is a list that must be '
+                    'able to be converted into a pandas dataframe'
+                )
+        elif isinstance(data, dict):
+            try:
+                df_ = DataFrame(data)
+            except Exception:
+                raise ValueError(
+                    'The data you passed is a dict that must be '
                     'able to be converted into a pandas dataframe'
                 )
         elif isinstance(data, str):
@@ -54,7 +64,7 @@ class DataValidation:
         return df_
 
     def _validate_table_data(
-        self, data: Union[str, DataFrame, List[Dict]], elements: List[str],
+        self, data: Union[str, DataFrame, List[Dict], Dict], elements: List[str],
     ):
         """"""
         df_: DataFrame = self._validate_data_is_pandarable(data)
@@ -107,14 +117,14 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
     @staticmethod
     def _is_report_data_empty(
-        report_data: Union[List[Dict], str, DataFrame],
+        report_data: Union[List[Dict], str, DataFrame, Dict],
     ) -> bool:
         if isinstance(report_data, DataFrame):
             if report_data.empty:
                 return True
             else:
                 return False
-        elif isinstance(report_data, list):
+        elif isinstance(report_data, list) or isinstance(report_data, dict):
             if report_data:
                 return False
             else:
@@ -133,10 +143,13 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
     @staticmethod
     def _transform_report_data_to_chart_data(
-        report_data: Union[List[Dict], str, DataFrame],
+        report_data: Union[List[Dict], str, DataFrame, Dict],
     ) -> List[Dict]:
         if isinstance(report_data, DataFrame):
             chart_data: List[Dict] = report_data.to_dict(orient='records')
+        elif isinstance(report_data, dict):
+            df_: DataFrame = pd.DataFrame(report_data)
+            chart_data: List[Dict] = df_.to_dict(orient='records')
         elif isinstance(report_data, list):
             assert isinstance(report_data[0], dict)
             chart_data: List[Dict] = report_data
@@ -217,19 +230,10 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
         return entries
 
-    def get_report_data(
-        self, business_id: str, app_id: str,
-        report_data: Union[List[Dict], str, DataFrame],
-        report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
-    ) -> List[Dict]:
-        """"""
-        raise NotImplementedError
-
     # TODO pending data resistance
     def append_report_data(
         self, business_id: str, app_id: str,
-        report_data: Union[List[Dict], str, DataFrame],
+        report_data: Union[List[Dict], str, DataFrame, Dict],
         report_id: Optional[str] = None,
         external_id: Optional[str] = None,
     ) -> None:
@@ -268,13 +272,18 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 self._transform_report_data_to_chart_data(report_data)
             )
 
-            chart_data: Dict = report['chartData']
-            chart_data.update(chart_data_new)
+            chart_data: Dict = report.get('chartData')
+            if chart_data:
+                chart_data.update(chart_data_new)
+            else:
+                chart_data = chart_data_new
 
             report_data_ = {'chartData': chart_data}
-            self.update_report(
+            self._update_report(
+                business_id=business_id,
+                app_id=app_id,
                 report_id=report_id,
-                report_data=report_data_,
+                report_metadata=report_data_,
             )
         else:  # Then it is a table
             item: Dict = {'reportId': report_id}
@@ -328,11 +337,11 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
 
             report_data_ = {'chartData': chart_data}
-            self.update_report(
+            self._update_report(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
-                report_data=report_data_,
+                report_metadata=report_data_,
             )
         else:  # Then it is a table
             # TODO method pending to be created

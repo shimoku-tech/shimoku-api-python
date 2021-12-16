@@ -237,6 +237,10 @@ class PlotApi(PlotAux):
 
         return data_fields
 
+    # TODO
+    def table(self):
+        raise NotImplementedError
+
     def bar(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer

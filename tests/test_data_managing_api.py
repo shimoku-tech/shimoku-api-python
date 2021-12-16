@@ -34,11 +34,11 @@ s = shimoku.Client(
 
 # Fixtures
 data: Dict = {
-    'a': range(10),
+    'a': [x for x in range(10)],
     'b': [x ** 2 for x in range(10)],
 }
 df = pd.DataFrame(data)
-data_json: str = json.loads(data)
+data_json: str = json.dumps(data)
 
 
 def test_get_report_data():
@@ -156,6 +156,6 @@ def test_append_report_data():
     assert restored_data == original_data
 
 
-test_get_report_data()
-test_update_report_data()
+# test_get_report_data()
+# test_update_report_data()
 test_append_report_data()

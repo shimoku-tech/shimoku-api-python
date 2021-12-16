@@ -106,9 +106,6 @@ class GetExplorerAPI(object):
 
         return report_data
 
-    # TODO pending
-    #  https://trello.com/c/ndJs1WzW
-    # TODO make it for both Table and non-table and paginate
     def get_report_data(
         self, business_id: str,
         app_id: Optional[str] = None,
@@ -136,8 +133,17 @@ class GetExplorerAPI(object):
                 return report_data
             else:
                 return list()
-        else:  # Table case
-            raise NotImplementedError
+        else:
+            endpoint: str = (
+                f'business/{business_id}/'
+                f'app/{app_id}/'
+                f'report/{report_id}/reportEntries'
+            )
+            return ([
+                self.api_client.query_element(
+                    method='GET', endpoint=endpoint,
+                )
+            ])
 
 
 class CascadeExplorerAPI(GetExplorerAPI):

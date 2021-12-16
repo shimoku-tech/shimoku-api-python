@@ -48,6 +48,16 @@ class PlotApi(PlotAux):
         and the path normalized name if any"""
         # remove empty spaces and put everything in lower case
         menu_path: str = menu_path.strip().lower()
+
+        try:
+            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
+        except AssertionError:
+            raise ValueError(
+                f'We only allow one subpath in your request | '
+                f'you introduced {menu_path} it should be maximum '
+                f'{"/".join(menu_path.split("/")[:1])}'
+            )
+
         # Split AppType Normalized Name
         app_type_normalized_name: str = menu_path.split('/')[0]
         app_type_name: str = (

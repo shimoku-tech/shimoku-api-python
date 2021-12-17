@@ -61,15 +61,14 @@ def test_line():
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/line-test',
-        row=2, column=2,
+        row=1, column=1,
     )
 
     assert r
 
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/line-test',
+        row=1, column=1,
     )
 
 
@@ -592,12 +591,24 @@ def test_line_with_confidence_area():
 
 
 def test_predictive_line():
-    # s.plt.predictive_line()
-    raise NotImplementedError
+    s.plt.predictive_line(
+        data=data,
+        x='date', y=['x', 'y'],
+        min_value_mark=dt.date(2021, 1, 4).isoformat(),
+        max_value_mark=dt.date(2021, 1, 5).isoformat(),
+        menu_path='test/line-test',
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path='test/line-test',
+        row=1, column=1,
+    )
 
 
 # test_bar()
-test_line()
+# test_line()
+test_predictive_line()
 test_scatter()
 test_stockline()
 test_bubble_chart()
@@ -611,5 +622,4 @@ test_treemap()
 test_indicator()
 test_alert_indicator()
 test_line_with_confidence_area()
-test_predictive_line()
 test_radar()

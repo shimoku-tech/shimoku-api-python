@@ -7,15 +7,15 @@ from pandas import DataFrame
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, ReportExplorerApi,
+    MultiCreateApi, ReportExplorerApi, DeleteExplorerApi
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
-from .app_metadata_api import AppMetadataApi
 
 
 class PlotAux:
     _get_business_apps = BusinessExplorerApi.get_business_apps
+    get_business_apps = BusinessExplorerApi.get_business_apps
 
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
@@ -28,13 +28,13 @@ class PlotAux:
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
+    _get_app_by_type = CascadeExplorerAPI.get_app_by_type
 
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
 
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
-    _get_app_by_type = AppMetadataApi.get_app_by_type
 
     _update_report_data = DataManagingApi.update_report_data
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
@@ -45,6 +45,8 @@ class PlotAux:
     _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
 
     _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
+
+    _delete_report = DeleteExplorerApi.delete_report
 
 
 class PlotApi(PlotAux):
@@ -114,11 +116,16 @@ class PlotApi(PlotAux):
         )
 
         if reports:
-            order = min([
+            orders = [
                 report['order']
                 for report in reports
                 if report['path'] == path_name
-            ])
+            ]
+
+            if orders:
+                order = min(orders)
+            else:
+                order = 1
         else:
             apps: List[Dict] = self._get_business_apps(self.business_id)
 
@@ -159,13 +166,12 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-        self, menu_path: str,
-        type: str, row: int, column: int,
+        self, menu_path: str, row: int, column: int,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
         """
-        grid: str = f'{row} {column}'
+        grid: str = f'{row}, {column}'
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         app_type: Dict = self._get_app_type_by_name(name=app_type_name)
 
@@ -185,7 +191,7 @@ class PlotApi(PlotAux):
             if (
                     report['path'] == path_name
                     and report['grid'] == grid
-                    and report['reportType'] == type
+                    and report['reportType'] == 'ECHARTS'
             )
         ]
 
@@ -308,7 +314,7 @@ class PlotApi(PlotAux):
         }
 
         data_fields: Dict = {
-            'chart_options': chart_options,
+            'chartOptions': chart_options,
         }
 
         if option_modifications:
@@ -395,7 +401,7 @@ class PlotApi(PlotAux):
         :param filters:
         """
         option_modifications = {
-            'series': [{
+            'series': {
                 'smooth': True,
                 'markArea': {
                     'itemStyle': {
@@ -413,7 +419,7 @@ class PlotApi(PlotAux):
                         ],
                     ],
                 }
-            },],
+            },
         }
 
         return self._create_trend_chart(

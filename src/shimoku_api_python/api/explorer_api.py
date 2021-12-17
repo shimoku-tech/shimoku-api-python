@@ -411,6 +411,64 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     reports.append(report)
             return reports
 
+    def get_app_by_type(
+        self, business_id: str, app_type_id: str,
+    ) -> Dict:
+        """
+        :param business_id: business UUID
+        :param app_type_id: appType UUID
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Any = {}
+        for app in apps:
+            if app['type']['id'] == app_type_id:
+                if result:
+                    if len(result) == 1:
+                        result: List[Dict] = result + [app]
+                    else:
+                        result: List[Dict] = result + [app]
+                else:
+                    result: List[Dict] = [app]
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
+
+    def get_app_by_name(
+        self, business_id: str, name: str,
+    ) -> Dict:
+        """
+        :param business_id: business UUID
+        :param app_type_id: appType UUID
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Any = {}
+        for app in apps:
+            app_type: Dict = self.get_app_by_type(
+                business_id=business_id,
+                app_type_id=app['type']['id'],
+            )
+            if app_type['name'] == name:
+                if result:
+                    if len(result) == 1:
+                        result: List[Dict] = result + [app]
+                    else:
+                        result: List[Dict] = result + [app]
+                else:
+                    result: List[Dict] = [app]
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
+
 
 class CreateExplorerAPI(object):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -882,6 +940,8 @@ class MultiCreateApi(MultiDeleteApi):
     """If some upper level elements are not created it does it
     """
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+    _get_app_by_type = CascadeExplorerAPI.get_app_by_type
+
     _create_business = CreateExplorerAPI.create_business
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
@@ -938,32 +998,19 @@ class MultiCreateApi(MultiDeleteApi):
         try:
             app_type: Dict = self._create_app_type(**app_type_metadata)
         except ValueError:
-            app_types: List[Dict] = self._get_universe_app_types()
             app_type_name: str = app_type_metadata['name']
-            app_type: Dict = [
-                app_type
-                for app_type in app_types
-                if app_type['name'] == app_type_name
-            ]
-            app_type = app_type[0]
+            app_type: Dict = self._get_app_type_by_name(app_type_name)
 
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
         app_metadata['business_id'] = business_id
 
-        try:
+        app: Dict = self._get_app_by_type(
+            business_id=business_id,
+            app_type_id=app_type_id,
+        )
+        if not app:
             app: Dict = self._create_app(**app_metadata)
-        except Exception as e:
-            self._delete_app_type(app_type_id=app_type_id)
-            try:
-                _ = self._get_app_type(app_type_id)
-                raise ValueError(
-                    f'{e} | The app was not created but a new app_type did '
-                    f'that probably should be deleted manually with id '
-                    f'{app_type_id}'
-                )
-            except ApiClientError:
-                return {}
 
         return {
             'app_type': app_type,
@@ -1205,6 +1252,8 @@ class AppExplorerApi:
     get_app_report_ids = CascadeExplorerAPI.get_app_report_ids
     get_app_path_names = CascadeExplorerAPI.get_app_path_names
     get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
+    get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    get_app_by_name = CascadeExplorerAPI.get_app_by_name
 
     delete_app = DeleteExplorerApi.delete_app
 

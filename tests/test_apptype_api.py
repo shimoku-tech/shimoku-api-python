@@ -10,7 +10,7 @@ from shimoku_api_python.exceptions import ApiClientError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
-app_type_id: str = getenv('app_type_id')
+app_type_id: str = getenv('APP_TYPE_ID')
 
 
 config = {
@@ -32,12 +32,29 @@ def test_get_app_type():
     assert app_type
 
 
+def test_cannot_create_duplicated_app_type():
+    class MyTestCase(unittest.TestCase):
+        def check_app_type_not_exists(self):
+            with self.assertRaises(ValueError):
+                s.app_type.create_app_type(name='Whispers test')
+
+    t = MyTestCase()
+    t.check_app_type_not_exists()
+
+
 def test_create_and_delete_app_type():
-    app_type_new: Dict = s.app_type.create_app_type(name='test')
+    app_type_new: Dict = s.app_type.create_app_type(name='new-test')
     app_type_id_: str = app_type_new['id']
 
     app_type_: Dict = s.app_type.get_app_type(app_type_id=app_type_id_)
-    assert app_type_ == app_type_new
+    assert app_type_new == {
+        k: v
+        for k, v in app_type_.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    }
 
     s.app_type.delete_app_type(app_type_id=app_type_id_)
 
@@ -70,17 +87,30 @@ def test_update_app_type():
         {
             k: v
             for k, v in app_type.items()
-            if k != target_col_name
+            if k in [
+                'id', 'key', 'universe',  # name excluded
+                'normalizedName', '__typename',
+            ]
         } == {
             k: v
             for k, v in app_type_updated.items()
-            if k != target_col_name
+            if k in [
+                'id', 'key', 'universe',  # name excluded
+                'normalizedName', '__typename',
+            ]
         }
     )
     assert app_type_updated[target_col_name] == new_name
     app_type_updated_: Dict = s.app_type.get_app_type(app_type_id=app_type_id)
     assert app_type_updated_[target_col_name] == new_name
-    assert app_type_updated_ == app_type_updated
+    assert app_type_updated == {
+        k: v
+        for k, v in app_type_updated_.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    }
 
     # Undo change
     data = {'name': name}
@@ -90,7 +120,21 @@ def test_update_app_type():
             app_type_metadata=data,
         )
     )
-    assert app_type_restored == app_type
+    assert {
+        k: v
+        for k, v in app_type_restored.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    } == {
+        k: v
+        for k, v in app_type.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    }
 
 
 def test_rename_apps_types():
@@ -109,17 +153,30 @@ def test_rename_apps_types():
         {
             k: v
             for k, v in app_type.items()
-            if k != target_col_name
+            if k in [
+                'id', 'key', 'universe',  # name excluded
+                'normalizedName', '__typename',
+            ]
         } == {
             k: v
             for k, v in app_type_updated.items()
-            if k != target_col_name
+            if k in [
+                'id', 'key', 'universe',  # name excluded
+                'normalizedName', '__typename',
+            ]
         }
     )
     assert app_type_updated[target_col_name] == new_name
     app_type_updated_: Dict = s.app_type.get_app_type(app_type_id=app_type_id)
     assert app_type_updated_[target_col_name] == new_name
-    assert app_type_updated_ == app_type_updated
+    assert app_type_updated == {
+        k: v
+        for k, v in app_type_updated_.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    }
 
     # Undo change
     app_type_restored: Dict = (
@@ -128,10 +185,25 @@ def test_rename_apps_types():
             new_name=name,
         )
     )
-    assert app_type_restored == app_type
+    assert {
+        k: v
+        for k, v in app_type_restored.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    } == {
+        k: v
+        for k, v in app_type.items()
+        if k in [
+            'id', 'key', 'name', 'universe',
+            'normalizedName', '__typename',
+        ]
+    }
 
 
 test_get_app_type()
+test_cannot_create_duplicated_app_type()
 test_create_and_delete_app_type()
 test_update_app_type()
 test_rename_apps_types()

@@ -19,17 +19,17 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         self, business_id: str, app_id: str,
         var_name: str, var_value: str,
         path: Optional[str] = None,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """Given a business retrieve all app metadata
 
         :param business_id: business UUID
         :param app_id: business UUID
         :param report_name:
         """
-        endpoint: str = f'business/{business_id}/app/{app_id}'
-        reports: Dict = (
-            self.api_client.query_element(
-                endpoint=endpoint, method='GET',
+        reports: List[Dict] = (
+            self._get_app_reports(
+                business_id=business_id,
+                app_id=app_id,
             )
         )
 
@@ -42,12 +42,9 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
                     continue
             if report.get(var_name) == var_value:
                 if result:
-                    if len(result) == 1:
-                        result: List[Dict] = [result] + [report]
-                    else:
-                        result: List[Dict] = result + [report]
+                    result: List[Dict] = result + [report]
                 else:
-                    result: Dict = report
+                    result: List[Dict] = [report]
         return result
 
     def has_report_data(
@@ -94,10 +91,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         )
         return report['dataFields']
 
-    def get_report_by_path(
+    def get_reports_by_path(
         self, business_id: str, app_id: str,
         path: str,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """
         :param business_id: business UUID
         :param app_id: business UUID
@@ -112,10 +109,38 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
-    def get_report_by_title(
+    def get_reports_in_same_path(
+        self, business_id: str, app_id: str, report_id: str,
+    ) -> List[Dict]:
+        """
+        :param business_id: business UUID
+        :param app_id: business UUID
+        :param report_id:
+        """
+        report: Dict = self.get_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+        report_path = report.get('path')
+        output_reports: List[Dict] = list()
+
+        if report_path:
+            reports: List[Dict] = self._get_app_reports(
+                business_id=business_id,
+                app_id=app_id
+            )
+            for report_ in reports:
+                if report_.get('path') == report_path:
+                    output_reports = output_reports + [report_]
+            return output_reports
+        else:
+            return []
+
+    def get_reports_by_title(
         self, business_id: str, app_id: str,
         title: str, path: Optional[str] = None,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """
         :param business_id: business UUID
         :param app_id: business UUID
@@ -132,10 +157,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
-    def get_report_by_external_id(
+    def get_reports_by_external_id(
         self, business_id: str, app_id: str,
         external_id: str, path: Optional[str] = None,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """
         :param business_id: business UUID
         :param app_id: business UUID
@@ -152,10 +177,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
-    def get_report_by_grid_position(
+    def get_reports_by_grid_position(
         self, business_id: str, app_id: str,
         row: int, column: int, path: Optional[str] = None,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """
         :param business_id: business UUID
         :param app_id: business UUID
@@ -174,10 +199,10 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
-    def get_report_by_chart_type(
+    def get_reports_by_chart_type(
         self, business_id: str, app_id: str,
         chart_type: str, path: Optional[str] = None,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> List[Dict]:
         """Given a business retrieve all app metadata
 
         :param business_id: business UUID
@@ -194,6 +219,14 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
                 var_value=chart_type,
             )
         )
+
+    # TODO pending
+    def get_reports_by_path_grid_and_type(
+        self, business_id: str, app_id: str,
+        grid: str, chart_type: str, path: str,
+    ):
+        """"""
+        raise NotImplementedError
 
     def update_report_title(
         self, business_id: str, app_id: str, report_id: str,
@@ -360,11 +393,9 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             app_id=app_id,
         )
 
-        # TODO voy por aqui, tengo que coger la config de report Filter para ver si
-        #  el report_id que tengo por objetivo esta ahi
         filter_report_candidates: List[Dict] = [
             # TODO falta aplicar una funcion aqui abajo:
-            report['dataFields']  # TODO is dataFields?
+            report['dataFields']
             for report_ in reports
             if report_['reportType'].lower() == 'filter'
         ]

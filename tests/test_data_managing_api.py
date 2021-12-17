@@ -34,11 +34,12 @@ s = shimoku.Client(
 
 # Fixtures
 data: Dict = {
-    'a': range(10),
+    'a': [x for x in range(10)],
     'b': [x ** 2 for x in range(10)],
 }
+data_oriented: List = pd.DataFrame(data).to_dict(orient='records')
 df = pd.DataFrame(data)
-data_json: str = json.loads(data)
+data_json: str = json.dumps(data_oriented)
 
 
 def test_get_report_data():
@@ -76,7 +77,7 @@ def test_update_report_data():
         )
     )
 
-    assert new_data == data
+    assert new_data == data_oriented
 
     # Revert it
 

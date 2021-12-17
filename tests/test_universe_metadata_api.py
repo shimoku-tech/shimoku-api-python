@@ -36,21 +36,5 @@ def test_get_universe_app_types():
     assert app_types
 
 
-def test_get_universe_apps_by_type():
-    app_types: List[Dict] = (
-        s.universe.get_universe_app_types()
-    )
-    app_types_ids: List[str] = [app_type['id'] for app_type in app_types]
-
-    apps: List[Dict] = (
-        s.universe.get_universe_apps_by_type(
-            app_type_id=app_type_id,
-        )
-    )
-    assert apps
-    assert all([app['appTypeId'] in app_types_ids for app in apps])
-
-
 test_get_universe_businesses()
 test_get_universe_app_types()
-test_get_universe_apps_by_type()

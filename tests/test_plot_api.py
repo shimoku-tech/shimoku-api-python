@@ -38,6 +38,82 @@ data = [
 ]
 
 
+def test_update():
+    menu_path = 'test/update-test'
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    data_: List[Dict] = [
+        {
+            "date": "2021-01-24",
+            "open": 78,
+            "close": 85,
+            "highest": 94,
+            "lowest": 6
+        },
+        {
+            "date": "2021-01-25",
+            "open": 17,
+            "close": 13,
+            "highest": 7,
+            "lowest": 18
+        },
+        {
+            "date": "2021-01-26",
+            "open": 18,
+            "close": 38,
+            "highest": 33,
+            "lowest": 39
+        },
+        {
+            "date": "2021-01-27",
+            "open": 9,
+            "close": 27,
+            "highest": 46,
+            "lowest": 93
+        },
+        {
+            "date": "2021-01-28",
+            "open": 59,
+            "close": 45,
+            "highest": 90,
+            "lowest": 75
+        },
+        {
+            "date": "2021-01-29",
+            "open": 45,
+            "close": 18,
+            "highest": 0,
+            "lowest": 68
+        },
+        {
+            "date": "2021-01-30",
+            "open": 48,
+            "close": 57,
+            "highest": 13,
+            "lowest": 6
+        },
+        {
+            "date": "2021-01-31",
+            "open": 79,
+            "close": 84,
+            "highest": 58,
+            "lowest": 14
+        }
+    ]
+    s.plt.update(
+        data=data_,
+        x='date', y=['open', 'close', 'highest', 'lowest'],
+        menu_path=menu_path,
+        row=1, column=1,
+        component_type='bar',
+    )
+
+
 def test_bar():
     s.plt.bar(
         data=data,
@@ -45,8 +121,6 @@ def test_bar():
         menu_path='test/bar-test',
         row=1, column=1,
     )
-
-    assert r
 
     s.plt.delete(
         menu_path='test/bar-test',
@@ -184,6 +258,7 @@ def test_candlestick():
             "lowest": 14
         }
     ]
+
     s.plt.candlestick(
         data=data_, x='date',
         menu_path='test/candlestick-test',
@@ -661,6 +736,7 @@ def test_predictive_line():
     )
 
 
+test_update()
 # test_bar()
 # test_stockline()
 # test_line()

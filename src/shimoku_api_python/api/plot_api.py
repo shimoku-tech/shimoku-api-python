@@ -20,6 +20,7 @@ class PlotAux:
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
     _update_report = ReportExplorerApi.update_report
+    update_report = ReportExplorerApi.update_report
 
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
@@ -214,6 +215,27 @@ class PlotApi(PlotAux):
                 app_id=app_id,
                 report_id=report['id']
             )
+
+    def update(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: List[str],  # first layer
+        menu_path: str, row: int, column: int, component_type: str,
+        **kwargs,
+    ):
+        """"""
+        self.delete(
+            menu_path=menu_path,
+            component_type=component_type,
+            row=row, column=column,
+        )
+        m = getattr(self, component_type)
+        return m(
+            data=data,
+            x=x, y=y,
+            menu_path=menu_path,
+            row=1, column=1,
+            **kwargs
+        )
 
     def _create_trend_chart(
         self, echart_type: str,

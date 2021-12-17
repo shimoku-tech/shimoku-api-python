@@ -1,12 +1,10 @@
 """"""
 from os import getenv
 from typing import Dict, List
-import unittest
 
 import datetime as dt
 
 import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -52,23 +50,23 @@ def test_bar():
 
     s.plt.delete(
         menu_path='test/bar-test',
-        type='bar', row=1, column=1,
+        component_type='bar',
+        row=1, column=1,
     )
 
 
 def test_line():
-    r = s.plt.line(
+    s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/line-test',
         row=1, column=1,
     )
 
-    assert r
-
     s.plt.delete(
         menu_path='test/line-test',
         row=1, column=1,
+        component_type='line',
     )
 
 
@@ -99,10 +97,28 @@ def test_scatter():
 
     assert r
 
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/line-test',
+        row=1, column=1,
+        component_type='scatter',
+    )
+
+
+# TODO WiP
+def test_scatter_with_confidence_area():
+    r = s.plt.scatter_with_confidence_area(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/scatter-confidence-test',
+        row=1, column=1,
+    )
+
+    assert r
+
+    s.plt.delete(
+        menu_path='test/scatter-confidence-test',
+        row=1, column=1,
+        component_type='scatter_with_confidence_area',
     )
 
 
@@ -114,56 +130,56 @@ def test_bubble_chart():
 def test_candlestick():
     data_: List[Dict] = [
         {
-            "date": "2021/1/24",
+            "date": "2021-01-24",
             "open": 78,
             "close": 85,
             "highest": 94,
             "lowest": 6
         },
         {
-            "date": "2021/1/25",
+            "date": "2021-01-25",
             "open": 17,
             "close": 13,
             "highest": 7,
             "lowest": 18
         },
         {
-            "date": "2021/1/26",
+            "date": "2021-01-26",
             "open": 18,
             "close": 38,
             "highest": 33,
             "lowest": 39
         },
         {
-            "date": "2021/1/27",
+            "date": "2021-01-27",
             "open": 9,
             "close": 27,
             "highest": 46,
             "lowest": 93
         },
         {
-            "date": "2021/1/28",
+            "date": "2021-01-28",
             "open": 59,
             "close": 45,
             "highest": 90,
             "lowest": 75
         },
         {
-            "date": "2021/1/29",
+            "date": "2021-01-29",
             "open": 45,
             "close": 18,
             "highest": 0,
             "lowest": 68
         },
         {
-            "date": "2021/1/30",
+            "date": "2021-01-30",
             "open": 48,
             "close": 57,
             "highest": 13,
             "lowest": 6
         },
         {
-            "date": "2021/1/31",
+            "date": "2021-01-31",
             "open": 79,
             "close": 84,
             "highest": 58,
@@ -208,18 +224,16 @@ def test_funnel():
             "name": "First"
         }
     ]
-    r = s.plt.funnel(
+    s.plt.funnel(
         data=data_, name='name', value='value',
         menu_path='test/funnel-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/funnel-test',
+        row=1, column=1,
+        component_type='funnel',
     )
 
 
@@ -344,18 +358,16 @@ def test_gauge():
             "name": "First"
         }
     ]
-    r = s.plt.gauge(
+    s.plt.gauge(
         data=data_, name='name', value='value',
         menu_path='test/gauge-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/gauge-test',
+        component_type='gauge',
+        row=1, column=1,
     )
 
 
@@ -544,45 +556,92 @@ def test_radar():
         {'name': 'Cheese Cocoa', 'value1': 18, 'value2': 15, 'value3': 65},
         {'name': 'Walnut Brownie', 'value1': 9, 'value2': 71, 'value3': 16},
     ]
-    r = s.plt.radar(
-        data=data_, x='name', y=['value1', 'value2', 'value3'],
+    s.plt.radar(
+        data=data_,
+        x='name', y=['value1', 'value2', 'value3'],
         menu_path='test/radar-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/radar-test',
+        component_type='radar',
+        row=1, column=1,
     )
 
 
-# TODO WiP
 def test_indicator():
-    r = s.plt.indicator(
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+        {
+            "description": "",
+            "title": "Price ($)",
+            "value": "455"
+        },
+        {
+            "description": "",
+            "title": "Volumen",
+            "value": "41153"
+        },
+        {
+            "description": "",
+            "title": "Cambio €/$",
+            "value": "1.1946",
+        },
+    ]
+    s.plt.indicator(
         data=data_,
         menu_path='test/indicator-test',
         row=1, column=1,
-        header='',
-        footer='',
-        color='',
+        value='value',
+        header='title',
+        footer='description',
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/indicator-test',
+        component_type='indicator',
+        row=1, column=1,
     )
 
 
-# TODO
 def test_alert_indicator():
-    # s.plt.alert_indicator()
-    raise NotImplementedError
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "color": "warning-background",
+            "targetPath": "/whispers-test/test",
+        },
+        {
+            "description": "",
+            "title": "Metodo",
+            "value": "Entrada",
+            "color": "error-background",
+            "targetPath": "/whispers-test/test",
+        },
+    ]
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path='test/indicator-path-test',
+        row=1, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        color='color',
+        target_path='targetPath',
+    )
+
+    s.plt.delete(
+        menu_path='test/indicator-test',
+        row=1, column=1,
+        component_type='alert_indicator',
+    )
 
 
 def test_line_with_confidence_area():
@@ -608,18 +667,22 @@ def test_predictive_line():
 
 # test_bar()
 # test_line()
-test_predictive_line()
-test_scatter()
+# test_predictive_line()
+# test_scatter()
+# test_funnel()
+# test_radar()
+# test_gauge()
+# test_indicator()
+# test_alert_indicator()
+# TODO test_candlestick()
+test_scatter_with_confidence_area()
+
+# TODO til here
 test_stockline()
 test_bubble_chart()
-test_candlestick()
-test_funnel()
+
 test_heatmap()
-test_gauge()
 test_sunburst()
 test_tree()
 test_treemap()
-test_indicator()
-test_alert_indicator()
 test_line_with_confidence_area()
-test_radar()

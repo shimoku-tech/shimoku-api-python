@@ -257,9 +257,9 @@ def test_remove_filter_for_report():
     raise NotImplementedError
 
 
-test_get_report()
-test_update_report()
+# test_get_report()
 test_create_and_delete_report()
+test_update_report()
 test_get_reports_in_same_path()
 test_get_report_data()
 

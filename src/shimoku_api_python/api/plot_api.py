@@ -166,11 +166,24 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-        self, menu_path: str, row: int, column: int,
+        self, menu_path: str, row: int, column: int, component_type: str,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
         """
+        type_map = {
+            'alert_indicator': 'INDICATOR',
+            'indicator': 'INDICATOR',
+            'table': None,
+            'table': None,
+            'stockline': 'STOCKLINECHART',
+            'html': 'HTML'
+        }
+        if component_type in type_map.keys():
+            component_type = type_map[component_type]
+        else:
+            component_type = 'ECHARTS'
+
         grid: str = f'{row}, {column}'
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         app_type: Dict = self._get_app_type_by_name(name=app_type_name)
@@ -191,7 +204,7 @@ class PlotApi(PlotAux):
             if (
                     report['path'] == path_name
                     and report['grid'] == grid
-                    and report['reportType'] == 'ECHARTS'
+                    and report['reportType'] == component_type
             )
         ]
 
@@ -324,6 +337,10 @@ class PlotApi(PlotAux):
 
     # TODO
     def table(self):
+        raise NotImplementedError
+
+    # TODO
+    def html(self):
         raise NotImplementedError
 
     def bar(
@@ -701,7 +718,7 @@ class PlotApi(PlotAux):
             raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
 
         return self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
+            data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -737,26 +754,39 @@ class PlotApi(PlotAux):
     def indicator(
         self, data: Union[str, DataFrame, List[Dict]], value: str,
         menu_path: str, row: int, column: int,  # report creation
+        set_title: Optional[str] = None,
         title: Optional[str] = None,
         header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
     ):
-        """"""
+        """
+        :param set_title: the title of the set of indicators
+        """
         elements: List[str] = [header, footer, value, color]
+        elements = [element for element in elements if element]
+
         self._validate_table_data(data, elements=elements)
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[elements]  # keep only x and y
+
         cols_to_rename: Dict[str, str] = {
             header: 'title',
             footer: 'description',
             value: 'value',
+            color: 'color',
         }
-        df.rename(columns={cols_to_rename}, inplace=True)
+        cols_to_rename = {
+            col_to_rename: v
+            for col_to_rename, v in cols_to_rename.items()
+            if col_to_rename in elements
+        }
+        df.rename(columns=cols_to_rename, inplace=True)
 
         report_metadata: Dict = {
-            'reportType': 'INDICATOR',
+            'reportType': 'INDICATORS',
             'grid': f'{row}, {column}',
+            'title': set_title if set_title else ''
         }
 
         if title:
@@ -770,15 +800,16 @@ class PlotApi(PlotAux):
 
     def alert_indicator(
         self, data: Union[str, DataFrame, List[Dict]],
-        value: str, link_url: str,
+        value: str, target_path: str,
         menu_path: str, row: int, column: int,  # report creation
+        set_title: Optional[str] = None,
         title: Optional[str] = None,
         header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
     ):
         """"""
-        elements: List[str] = [header, footer, value, color, link_url]
+        elements: List[str] = [header, footer, value, color, target_path]
         self._validate_table_data(data, elements=elements)
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[elements]  # keep only x and y
@@ -786,12 +817,15 @@ class PlotApi(PlotAux):
             header: 'title',
             footer: 'description',
             value: 'value',
+            color: 'color',
+            target_path: 'targetPath',
         }
-        df.rename(columns={cols_to_rename}, inplace=True)
+        df.rename(columns=cols_to_rename, inplace=True)
 
         report_metadata: Dict = {
-            'reportType': 'INDICATOR',
+            'reportType': 'INDICATORS',
             'grid': f'{row}, {column}',
+            'title': set_title if set_title else ''
         }
 
         if title:
@@ -841,7 +875,7 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        subtitle: Optional[str] = None,
+        # subtitle: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
@@ -851,10 +885,16 @@ class PlotApi(PlotAux):
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'name'}, inplace=True)
+        data_fields: Dict = {
+            'type': 'radar',
+        }
+
+        if option_modifications:
+            data_fields['optionModifications'] = option_modifications
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
-            'dataFields': {'type': 'radar'},
+            'dataFields': data_fields,
             'title': title,
             'grid': f'{row}, {column}',
         }
@@ -866,7 +906,6 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            option_modifications=option_modifications,
         )
 
     def tree(
@@ -982,11 +1021,11 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, subtitle=subtitle, color=color,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
-            echart_type='CANDLESTICK',
+            echart_type='candlestick',
             filters=filters,
         )
 
@@ -1074,20 +1113,20 @@ class PlotApi(PlotAux):
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
-                name: 'value',
+                name: 'name',
                 value: 'value',
             },
             inplace=True,
         )
 
         return self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
+            data=df, x=name, y=[value], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
-            echart_type='FUNNEL',
+            echart_type='funnel',
             filters=filters,
         )
 
@@ -1096,32 +1135,44 @@ class PlotApi(PlotAux):
         name: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        subtitle: Optional[str] = None,
+        # subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
+        self._validate_table_data(data, elements=[name, value])
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
-                name: 'value',
+                name: 'name',
                 value: 'value',
             },
             inplace=True,
         )
 
-        return self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='FUNNEL',
-            filters=filters,
+        data_fields: Dict = {
+            'type': 'gauge',
+        }
+        if option_modifications:
+            data_fields['optionModifications'] = option_modifications
+
+        report_metadata: Dict = {
+            'reportType': 'ECHARTS',
+            'dataFields': data_fields,
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        return self._create_chart(
+            data=df,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
         )
 
     def themeriver(

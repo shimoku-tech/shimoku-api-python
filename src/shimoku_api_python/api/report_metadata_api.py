@@ -393,11 +393,9 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             app_id=app_id,
         )
 
-        # TODO voy por aqui, tengo que coger la config de report Filter para ver si
-        #  el report_id que tengo por objetivo esta ahi
         filter_report_candidates: List[Dict] = [
             # TODO falta aplicar una funcion aqui abajo:
-            report['dataFields']  # TODO is dataFields?
+            report['dataFields']
             for report_ in reports
             if report_['reportType'].lower() == 'filter'
         ]

@@ -676,28 +676,44 @@ class PlotApi(PlotAux):
             filters=filters,
         )
 
-    # TODO this is not a ECHART
     def stockline(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
-        title: Optional[str] = None,  # second layer
-        subtitle: Optional[str] = None,
+        title: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='STOCKLINECHART',
-            filters=filters,
+        self._validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        data_fields: Dict = {
+            "key": x_axis_name,
+            "labels": {
+                "key": x_axis_name,
+                "value": y_axis_name,
+                "hideKey": False,
+                "hideValue": False
+            },
+            "values": y,
+            "dataZoomX": True,
+            "smooth": True,
+            "symbol": "circle",
+        }
+
+        report_metadata: Dict = {
+            'reportType': 'STOCKLINECHART',
+            'grid': f'{row}, {column}',
+            'title': title if title else '',
+            'dataFields': data_fields,
+        }
+
+        return self._create_chart(
+            data=df,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
         )
 
     def scatter(

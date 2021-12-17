@@ -322,7 +322,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [report['id'] for report in reports]
 
-# TODO pending
+    # TODO pending
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
         """Given a report retrieve all reportEntries
 
@@ -361,15 +361,10 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 path_reports = path_reports + [report]
         return path_reports
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
-    # TODO paginate
     def get_business_apps_with_filter(
             self, business_id: str, app_filter: Dict
     ) -> List[Dict]:
         """
-        # TODO filter example!!
         """
         app_ids: List[str] = (
             self.get_business_apps(
@@ -385,9 +380,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     apps.append(app)
         return apps
 
-    # TODO pending
-    #  https://trello.com/c/lLvXz5UB
-    # TODO paginate
     def get_app_reports_by_filter(
         self, app_id: str,
         report_filter: Dict
@@ -574,10 +566,6 @@ class CreateExplorerAPI(object):
         else:
             app: Dict = target_apps[0]
         return app
-
-    # TODO
-    def create_path(self):
-        pass
 
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,

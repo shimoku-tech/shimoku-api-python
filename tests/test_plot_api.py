@@ -71,19 +71,17 @@ def test_line():
 
 
 def test_stockline():
-    r = s.plt.stockline(
+    s.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/stockline-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/stockline-test',
+        component_type='stockline',
+        row=1, column=1,
     )
 
 
@@ -666,6 +664,7 @@ def test_predictive_line():
 
 
 # test_bar()
+# test_stockline()
 # test_line()
 # test_predictive_line()
 # test_scatter()
@@ -674,13 +673,10 @@ def test_predictive_line():
 # test_gauge()
 # test_indicator()
 # test_alert_indicator()
-# TODO test_candlestick()
+test_candlestick()
+# TODO
 test_scatter_with_confidence_area()
-
-# TODO til here
-test_stockline()
 test_bubble_chart()
-
 test_heatmap()
 test_sunburst()
 test_tree()

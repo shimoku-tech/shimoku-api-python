@@ -10,10 +10,6 @@ from .explorer_api import GetExplorerAPI
 from .report_metadata_api import ReportMetadataApi
 
 
-# TODO to add data resistance will be required to check df integrity, etc
-# TODO allow dataframe but also List[Dict] of json as input
-
-
 class DataExplorerApi:
     get_report = ReportMetadataApi.get_report
     _get_report_with_data = GetExplorerAPI._get_report_with_data
@@ -231,7 +227,6 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
         return entries
 
-    # TODO pending data resistance
     def append_report_data(
         self, business_id: str, app_id: str,
         report_data: Union[List[Dict], str, DataFrame, Dict],
@@ -346,7 +341,6 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            # TODO method pending to be created
             self.delete_report_data(
                 business_id=business_id,
                 app_id=app_id,

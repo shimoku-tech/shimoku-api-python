@@ -39,7 +39,7 @@ data = [
 
 
 def test_bar():
-    r = s.plt.bar(
+    s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
@@ -184,18 +184,16 @@ def test_candlestick():
             "lowest": 14
         }
     ]
-    r = s.plt.candlestick(
+    s.plt.candlestick(
         data=data_, x='date',
         menu_path='test/candlestick-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/candlestick-test',
+        component_type='candlestick',
+        row=1, column=1,
     )
 
 

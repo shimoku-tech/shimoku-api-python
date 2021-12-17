@@ -179,10 +179,65 @@ def test_change_path_position():
     assert position == 0
 
 
-# TODO pending to be tried
+def test_set_paths_position():
+    paths: List[str] = s.path._get_app_path_names(
+        business_id=business_id,
+        app_id=app_id,
+    )
+    reports: List[Dict] = s.path._get_app_reports(
+        business_id=business_id,
+        app_id=app_id,
+    )
+
+    # Example: {'catalog_path': 1, 'map_path': 2, ...}
+    new_path_order: Dict[str, int] = {
+        path: index
+        for index, path in enumerate(paths)
+    }
+
+    s.path.set_paths_position(
+        business_id=business_id,
+        app_id=app_id,
+        paths_position=new_path_order,
+    )
+
+    reports_new: List[Dict] = s.path._get_app_reports(
+        business_id=business_id,
+        app_id=app_id,
+    )
+
+    # This is to check that all reports from a path have the order that we have set
+    assert all([
+        report_new['order'] == new_path_order[report_new['path']]
+        for report_new in reports_new
+    ])
+
+    # Restore previous version
+    for report in reports:
+        s.path._update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata={'order': report['order']}
+        )
+
+    reports_restored: List[Dict] = s.path._get_app_reports(
+        business_id=business_id,
+        app_id=app_id,
+    )
+
+    assert report == reports_restored
+
+
+def test_fix_path_grid():
+    # s.path.fix_path_grid()
+    raise NotImplementedError
+
+
 test_check_if_path_exists()
 test_get_path_position()
 test_get_app_path_all_reports()
 test_change_path_name()
 test_get_path_reports()
 test_change_path_position()
+test_set_paths_position()
+test_fix_path_grid()

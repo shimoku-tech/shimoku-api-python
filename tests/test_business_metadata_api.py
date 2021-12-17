@@ -3,10 +3,8 @@ from os import getenv
 from typing import Dict, List
 import unittest
 
-import datetime as dt
-
 import shimoku_api_python as shimoku
-from shimoku_api_python.client import ApiClientError
+from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -22,11 +20,6 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
 )
-
-
-def test_get_universe_businesses():
-    businesses: List[Dict] = s.business.get_universe_businesses()
-    assert businesses
 
 
 def test_get_business():
@@ -59,17 +52,28 @@ def test_create_and_delete_business():
         )
     )
 
-    assert business_from_db == business
-    assert business['createdAt'] == dt.date.today()
+    assert business_from_db == {
+        k: v
+        for k, v in business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     del business_from_db
 
-    result: Dict = (
-        s.business.delete_business(
-            business_id=business_id_,
-        )
-    )
+    s.business.delete_business(business_id=business_id_)
 
-    assert result
+    class MyBusinessDeletedCase(unittest.TestCase):
+        def test_business_deleted(self):
+            with self.assertRaises(ApiClientError):
+                s.business.get_business(
+                    business_id=business_id_,
+                )
+
+    t = MyBusinessDeletedCase()
+    t.test_business_deleted()
 
 
 def test_update_business():
@@ -87,7 +91,15 @@ def test_update_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert new_business == business_changed
+    assert business_changed == {
+        k: v
+        for k, v in new_business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     assert new_business_name == business_changed['name']
 
     # Restore previous name
@@ -116,7 +128,15 @@ def test_rename_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert new_business == business_changed
+    assert business_changed == {
+        k: v
+        for k, v in new_business.items()
+        if k in [
+            'id', 'name', 'type',
+            'integrationId',
+            'universe', '__typename',
+        ]
+    }
     assert new_business_name == business_changed['name']
 
     # Restore previous name
@@ -130,10 +150,14 @@ def test_rename_business():
     assert business_name == business_restored['name']
 
 
-test_get_universe_businesses()
+def test_get_business_apps():
+    apps: List[Dict] = s.business.get_business_apps(business_id)
+    assert apps
+
+
 test_get_business()
 test_get_fake_business()
-# TODO no funca:
 test_create_and_delete_business()
 test_update_business()
 test_rename_business()
+test_get_business_apps()

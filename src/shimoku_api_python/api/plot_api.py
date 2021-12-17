@@ -20,6 +20,7 @@ class PlotAux:
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
     _update_report = ReportExplorerApi.update_report
+    update_report = ReportExplorerApi.update_report
 
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter

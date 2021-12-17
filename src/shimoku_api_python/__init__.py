@@ -28,11 +28,11 @@ class Client(object):
 
         self.universe = UniverseMetadataApi(self._api_client)
         self.business = BusinessMetadataApi(self._api_client)
-        # self.app_type = AppTypeMetadataApi(self._api_client)
-        # self.app = AppMetadataApi(self._api_client)
-        # self.path = PathMetadataApi(self._api_client)
-        # self.report = ReportMetadataApi(self._api_client)
-        # self.data = DataManagingApi(self._api_client)
+        self.app_type = AppTypeMetadataApi(self._api_client)
+        self.app = AppMetadataApi(self._api_client)
+        self.path = PathMetadataApi(self._api_client)
+        self.report = ReportMetadataApi(self._api_client)
+        self.data = DataManagingApi(self._api_client)
         self.plt = PlotApi(self._api_client)
         # self.creator = MultiCreateApi()
 

@@ -28,7 +28,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
 
     def get_app_by_type(
         self, business_id: str, app_type_id: str,
-    ) -> Union[Dict, List[Dict]]:
+    ) -> Dict:
         """
         :param business_id: business UUID
         :param app_type_id: appType UUID
@@ -37,17 +37,21 @@ class AppMetadataApi(AppExplorerApi, ABC):
 
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name
-        result: Union[Dict, List[Dict]] = {}
+        result: Any = {}
         for app in apps:
             if app['type']['id'] == app_type_id:
                 if result:
                     if len(result) == 1:
-                        result: List[Dict] = [result] + [app]
+                        result: List[Dict] = result + [app]
                     else:
                         result: List[Dict] = result + [app]
                 else:
-                    result: Dict = app
-        return result
+                    result: List[Dict] = [app]
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
 
     def hide_title(
         self, business_id: str, app_id: str, hide_title: bool = True

@@ -50,10 +50,9 @@ def test_bar():
 
     assert r
 
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/bar-test',
+        type='bar', row=1, column=1,
     )
 
 
@@ -62,7 +61,7 @@ def test_line():
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/line-test',
-        row=1, column=1,
+        row=2, column=2,
     )
 
     assert r
@@ -427,7 +426,7 @@ def test_sunburst():
         }
     ]
     r = s.plt.sunburst(
-        data=data_, x='xAxis', y=,
+        data=data_, x='xAxis', y=None,  # TODO
         menu_path='test/sunburst-test',
         row=1, column=1,
     )
@@ -597,7 +596,7 @@ def test_predictive_line():
     raise NotImplementedError
 
 
-test_bar()
+# test_bar()
 test_line()
 test_scatter()
 test_stockline()

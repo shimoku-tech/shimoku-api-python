@@ -220,6 +220,14 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    # TODO pending
+    def get_reports_by_path_grid_and_type(
+        self, business_id: str, app_id: str,
+        grid: str, chart_type: str, path: str,
+    ):
+        """"""
+        raise NotImplementedError
+
     def update_report_title(
         self, business_id: str, app_id: str, report_id: str,
         title: str,

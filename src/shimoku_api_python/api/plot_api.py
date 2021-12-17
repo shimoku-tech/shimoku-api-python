@@ -1,24 +1,44 @@
 """"""
 from typing import List, Dict, Optional, Union, Tuple, Any
+import json
 
 from pandas import DataFrame
 
 from .data_managing_api import DataValidation
 from .explorer_api import (
-    BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI, MultiCreateApi
+    BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
+    MultiCreateApi, ReportExplorerApi,
 )
+from .data_managing_api import DataManagingApi
+from .app_type_metadata_api import AppTypeMetadataApi
+from .app_metadata_api import AppMetadataApi
 
 
 class PlotAux:
+    _get_business_apps = BusinessExplorerApi.get_business_apps
+
+    get_report = ReportExplorerApi.get_report
+    _get_report_with_data = ReportExplorerApi._get_report_with_data
+    _update_report = ReportExplorerApi.update_report
+
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
+    # TODO this shit has to be fixed
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-
+    _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
+
+    _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
-    _get_business_apps = BusinessExplorerApi.get_business_apps
+
+    _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
+    _get_app_by_type = AppMetadataApi.get_app_by_type
+
+    _update_report_data = DataManagingApi.update_report_data
+    _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
+    _is_report_data_empty = DataManagingApi._is_report_data_empty
 
     _validate_table_data = DataValidation._validate_table_data
     _validate_tree_data = DataValidation._validate_tree_data
@@ -77,40 +97,8 @@ class PlotApi(PlotAux):
     def _create_chart(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, report_metadata: Dict,
-        third_layer: Optional[Dict] = None,
     ) -> Dict:
         """"""
-# TODO use chart_options!!!
-        if third_layer.get('chart_options'):
-            chart_options: Dict = third_layer.get('chart_options')
-        else:
-            chart_options: Dict = {
-                'title': 'Title LineChart',
-                'subtitle': 'Subtitle LineChart',
-                'legend': True,
-                'tooltip': True,
-                'axisPointer': True,
-                'toolbox': {
-                    'saveAsImage': True,
-                    'restore': True,
-                    'dataView': True,
-                    'dataZoom': True,
-                    'magicType': False,
-                },
-                'xAxis': {
-                    'name': 'xAxisName',
-                    'type': 'category',
-                },
-                'yAxis': {
-                    'name': 'yAxisName',
-                    'type': 'value',
-                },
-                'dataZoom': True,
-            }
-
-        if third_layer:
-            report_metadata.update(third_layer)
-
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
             business_id=self.business_id,
@@ -118,10 +106,11 @@ class PlotApi(PlotAux):
             app_metadata={},
         )
         app: Dict = d['app']
+        app_id: str = app['id']
 
         reports = self._get_app_reports(
             business_id=self.business_id,
-            app_id=app['id'],
+            app_id=app_id,
         )
 
         if reports:
@@ -134,31 +123,78 @@ class PlotApi(PlotAux):
             apps: List[Dict] = self._get_business_apps(self.business_id)
 
             orders: int = 0
-            for app in apps:
+            for app_ in apps:
                 reports_ = self._get_app_reports(
                     business_id=self.business_id,
-                    app_id=app['id'],
+                    app_id=app_['id'],
                 )
-                order_temp = max([report['order'] for report in reports])
+
+                try:
+                    order_temp = max([report['order'] for report in reports])
+                except ValueError:
+                    order_temp = 0
+
                 orders = max(orders, order_temp)
             order: int = orders + 1
 
         report_metadata.update({'path': path_name})
         report_metadata.update({'order': order})
 
-        report: Dict = self.create_report(
+        if report_metadata.get('dataFields'):
+            report_metadata['dataFields'] = json.dumps(report_metadata['dataFields'])
+
+        report: Dict = self._create_report(
             business_id=self.business_id,
-            app_id=self.app_id,
+            app_id=app_id,
             report_metadata=report_metadata,
         )
         report_id: str = report['id']
 
-        self.update_report_data(
+        self._update_report_data(
             business_id=self.business_id,
-            app_id=self.app_id,
+            app_id=app_id,
             report_id=report_id,
             report_data=data,
         )
+
+    # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
+    def delete(
+        self, menu_path: str,
+        type: str, row: int, column: int,
+    ) -> None:
+        """In cascade find the reports that match the query
+        and delete them all
+        """
+        grid: str = f'{row} {column}'
+        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+
+        app: Dict = self._get_app_by_type(
+            business_id=self.business_id,
+            app_type_id=app_type['id']
+        )
+        app_id: str = app['id']
+
+        reports: List[Dict] = self._get_app_reports(
+            business_id=self.business_id, app_id=app_id,
+        )
+
+        target_reports: List[Dict] = [
+            report
+            for report in reports
+            if (
+                    report['path'] == path_name
+                    and report['grid'] == grid
+                    and report['reportType'] == type
+            )
+        ]
+
+        for report in target_reports:
+            self._delete_report(
+                business_id=self.business_id,
+                app_id=app_id,
+                report_id=report['id']
+            )
 
     def _create_trend_chart(
         self, echart_type: str,
@@ -166,9 +202,10 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
@@ -190,7 +227,7 @@ class PlotApi(PlotAux):
             column: 1
             title: 'Purchases by week'
             color: None
-            third_layer: {}
+            option_modifications: {}
 
         :param echart_type:
         :param data:
@@ -203,11 +240,23 @@ class PlotApi(PlotAux):
         :param row:
         :param column:
         :param title:
-        :param third_layer:
+        :param option_modifications:
         :param filters: To create a filter for every specified column
         """
         self._validate_table_data(data, elements=[x] + y)
-        data_fields: Dict = self._set_data_fields(x, y, x_axis_name, y_axis_name)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x] + y]  # keep only x and y
+        df.rename(columns={x: 'xAxis'}, inplace=True)
+
+        # TODO we have two titles now, take a decision
+        #  one in dataFields the other as field
+        data_fields: Dict = self._set_data_fields(
+            x=x, y=y,
+            title='', subtitle=subtitle,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            option_modifications=option_modifications,
+        )
         data_fields['type'] = echart_type
 
         report_metadata: Dict = {
@@ -221,29 +270,49 @@ class PlotApi(PlotAux):
             raise NotImplementedError
 
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
         )
 
     def _set_data_fields(
-        self, x: str, y: str, x_axis_name: str, y_axis_name: str
+        self, x: str, y: str,
+        title: str, subtitle: str,
+        x_axis_name: str, y_axis_name: str,
+        option_modifications: Dict,
     ) -> Dict:
         """"""
-        data_fields = {
-            "key": x,
-            "values": y,
+        chart_options: Dict = {
+            'title': title if title else "",
+            'subtitle': subtitle if subtitle else "",
+            'legend': True,
+            'tooltip': True,
+            'axisPointer': True,
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': False,
+                'dataZoom': True,
+                'magicType': False,
+            },
+            'xAxis': {
+                'name': x_axis_name if x_axis_name else "",
+                'type': 'category',
+            },
+            'yAxis': {
+                'name': y_axis_name if y_axis_name else "",
+                'type': 'value',
+            },
+            'dataZoom': True,
+            'smooth': True,
         }
 
-        labels: Dict = {}
-        if x_axis_name:
-            labels.update({"key": x_axis_name})
-        if y_axis_name:
-            labels.update({"value": y_axis_name})
+        data_fields: Dict = {
+            'chart_options': chart_options,
+        }
 
-        if labels:
-            data_fields.update({'labels': labels})
+        if option_modifications:
+            data_fields['optionModifications'] = option_modifications
 
         return data_fields
 
@@ -256,9 +325,10 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a barchart
@@ -266,11 +336,11 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='BARCHART',
+            option_modifications=option_modifications,
+            echart_type='bar',
             filters=filters,
         )
 
@@ -279,20 +349,21 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # thid layer
+        option_modifications: Optional[Dict] = None,  # thid layer
         filters: Optional[List[str]] = None,  # thid layer
     ):
         """"""
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='LINECHART',
+            option_modifications=option_modifications,
+            echart_type='line',
             filters=filters,
         )
 
@@ -303,6 +374,7 @@ class PlotApi(PlotAux):
         min_value_mark: Any, max_value_mark: Any,
         color_mark: str = 'rgba(255, 173, 177, 0.4)',
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         filters: Optional[List[str]] = None,
@@ -322,7 +394,7 @@ class PlotApi(PlotAux):
         :param y_axis_name:
         :param filters:
         """
-        third_layer = {
+        option_modifications = {
             'series': [{
                 'smooth': True,
                 'markArea': {
@@ -347,11 +419,11 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='LINECHART',
+            option_modifications=option_modifications,
+            echart_type='line',
             filters=filters,
         )
 
@@ -360,6 +432,7 @@ class PlotApi(PlotAux):
         x: str, y: str,  #  above_band_name: str, below_band_name: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         filters: Optional[List[str]] = None,
@@ -442,7 +515,7 @@ class PlotApi(PlotAux):
         };
 
         """
-        third_layer = {
+        option_modifications = {
             'series': [{
                 'smooth': True,
                 'lineStyle': {
@@ -459,11 +532,11 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='LINECHART',
+            option_modifications=option_modifications,
+            echart_type='line',
             filters=filters,
         )
 
@@ -472,6 +545,7 @@ class PlotApi(PlotAux):
         x: str, y: str,  #  above_band_name: str, below_band_name: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         filters: Optional[List[str]] = None,
@@ -554,7 +628,7 @@ class PlotApi(PlotAux):
         };
 
         """
-        third_layer = {
+        option_modifications = {
             'series': [{
                 'smooth': True,
                 'lineStyle': {
@@ -571,32 +645,34 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='SCATTER',
+            option_modifications=option_modifications,
+            echart_type='scatter',
             filters=filters,
         )
 
+    # TODO this is not a ECHART
     def stockline(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='STOCKLINECHART',
             filters=filters,
         )
@@ -606,9 +682,10 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -617,18 +694,14 @@ class PlotApi(PlotAux):
         except Exception:
             raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[[x] + y]  # keep only x and y
-        df.rename(columns={x: 'xAxis'}, inplace=True)
-
         return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='SCATTER',
+            option_modifications=option_modifications,
+            echart_type='scatter',
             filters=filters,
         )
 
@@ -637,20 +710,21 @@ class PlotApi(PlotAux):
         x: str, y: List[str], z: str, # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,  # to create filters
     ):
         """"""
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
-            echart_type='SCATTER',
+            option_modifications=option_modifications,
+            echart_type='scatter',
             filters=filters,
         )
 
@@ -728,7 +802,8 @@ class PlotApi(PlotAux):
         x: str, y: str,  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        third_layer: Optional[Dict] = None,  # third layer
+        subtitle: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a Piechart
@@ -752,7 +827,7 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
         )
 
     def radar(
@@ -760,7 +835,8 @@ class PlotApi(PlotAux):
         x: str, y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        third_layer: Optional[Dict] = None,  # third layer
+        subtitle: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a RADAR
@@ -784,14 +860,15 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
         )
 
     def tree(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        third_layer: Optional[Dict] = None,  # third layer
+        subtitle: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a Tree
@@ -812,14 +889,15 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
         )
 
     def treemap(
         self, data: Union[str, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        third_layer: Optional[Dict] = None,  # third layer
+        subtitle: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a Treemap
@@ -840,7 +918,7 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
         )
 
     def sunburst(
@@ -848,7 +926,8 @@ class PlotApi(PlotAux):
         name: str, children: List[Dict],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        third_layer: Optional[Dict] = None,  # third layer
+        subtitle: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a Tree
@@ -878,7 +957,7 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
         )
 
     def candlestick(
@@ -886,9 +965,10 @@ class PlotApi(PlotAux):
         x: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -896,10 +976,10 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title, color=color,
+            title=title, subtitle=subtitle, color=color,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='CANDLESTICK',
             filters=filters,
         )
@@ -909,9 +989,10 @@ class PlotApi(PlotAux):
         x: str, y: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -921,10 +1002,10 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='HEATMAP',
             filters=filters,
         )
@@ -942,9 +1023,10 @@ class PlotApi(PlotAux):
         source: str, target: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -962,10 +1044,10 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='SANKEY',
             filters=filters,
         )
@@ -975,9 +1057,10 @@ class PlotApi(PlotAux):
         name: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -994,10 +1077,10 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='FUNNEL',
             filters=filters,
         )
@@ -1007,9 +1090,10 @@ class PlotApi(PlotAux):
         name: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """"""
@@ -1026,10 +1110,10 @@ class PlotApi(PlotAux):
         return self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='FUNNEL',
             filters=filters,
         )
@@ -1039,9 +1123,10 @@ class PlotApi(PlotAux):
         x: str, y: str, name: str,  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None, # second layer
+        subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
-        third_layer: Optional[Dict] = None,  # third layer
+        option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
         """Create a barchart
@@ -1059,10 +1144,10 @@ class PlotApi(PlotAux):
         self._create_trend_chart(
             data=df, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
-            title=title,
+            title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
-            third_layer=third_layer,
+            option_modifications=option_modifications,
             echart_type='THEMERIVER',
             filters=filters,
         )

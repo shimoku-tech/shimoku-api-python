@@ -695,9 +695,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
     def __init__(self, api_client):
         super().__init__(api_client)
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
     def delete_business(self, business_id: str):
         """Delete a Business.
         All apps, reports and data associated with that business is removed by the API
@@ -714,12 +711,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             method='DELETE', endpoint=endpoint,
         )
 
-# TODO remove reports must not be configurable, it must do it always
-# TODO joder claro puedo hacer un cascade de business
-#  y así con el app_id por parte del cliente es suficiente!!!
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
     def delete_app(self, business_id: str, app_id: str) -> Dict:
         """Delete an App
         All reports and data associated with that app is removed by the API
@@ -730,9 +721,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
     def delete_path(self, business_id: str, app_id: str, path_name: str):
         """Delete all Reports in a path
         All data associated with that report is removed by the API"""
@@ -746,10 +734,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         for report_id in report_ids:
             self.delete_report_and_entries(report_id)
 
-    # TODO pending
-    #  https://trello.com/c/18GLgLoQ
-    #  https://trello.com/c/lLvXz5UB
-    # TODO WiP
     def delete_report(
         self, business_id: str, app_id: str, report_id: str,
         relocating: bool = True, delete_data: bool = True,
@@ -897,6 +881,7 @@ class MultiDeleteApi:
 class MultiCreateApi(MultiDeleteApi):
     """If some upper level elements are not created it does it
     """
+    _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _create_business = CreateExplorerAPI.create_business
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
@@ -950,10 +935,22 @@ class MultiCreateApi(MultiDeleteApi):
         """
         If app_type_id is None we create it
         """
-        app_type: Dict = self._create_app_type(**app_type_metadata)
+        try:
+            app_type: Dict = self._create_app_type(**app_type_metadata)
+        except ValueError:
+            app_types: List[Dict] = self._get_universe_app_types()
+            app_type_name: str = app_type_metadata['name']
+            app_type: Dict = [
+                app_type
+                for app_type in app_types
+                if app_type['name'] == app_type_name
+            ]
+            app_type = app_type[0]
+
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
         app_metadata['business_id'] = business_id
+
         try:
             app: Dict = self._create_app(**app_metadata)
         except Exception as e:

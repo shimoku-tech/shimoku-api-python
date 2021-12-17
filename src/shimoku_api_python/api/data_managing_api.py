@@ -2,6 +2,7 @@
 import json
 from typing import List, Dict, Optional, Union
 
+import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
@@ -117,9 +118,8 @@ class DataManagingApi(DataExplorerApi, DataValidation):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    @staticmethod
     def _is_report_data_empty(
-        report_data: Union[List[Dict], str, DataFrame, Dict],
+        self, report_data: Union[List[Dict], str, DataFrame, Dict, List],
     ) -> bool:
         if isinstance(report_data, DataFrame):
             if report_data.empty:
@@ -143,9 +143,8 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 f'Provided: {type(report_data)}'
             )
 
-    @staticmethod
     def _transform_report_data_to_chart_data(
-        report_data: Union[List[Dict], str, DataFrame, Dict],
+        self, report_data: Union[List[Dict], str, DataFrame, Dict],
     ) -> List[Dict]:
         if isinstance(report_data, DataFrame):
             chart_data: List[Dict] = report_data.to_dict(orient='records')
@@ -249,24 +248,14 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         if self._is_report_data_empty(report_data):
             return
 
-        if report_id:
-            report: Dict = (
-                self._get_report_with_data(
-                    business_id=business_id,
-                    app_id=app_id,
-                    report_id=report_id
-                )
+        report: Dict = (
+            self._get_report_with_data(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                external_id=external_id,
             )
-        elif external_id:
-            report: Dict = (
-                self._get_report_with_data(
-                    business_id=business_id,
-                    app_id=app_id,
-                    external_id=external_id,
-                )
-            )
-        else:
-            raise ValueError('Either report_id or external_id must be provided')
+        )
 
         if report.get('reportType'):
             chart_data_new: List[Dict] = (
@@ -314,25 +303,14 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         if self._is_report_data_empty(report_data):
             return
 
-        if report_id:
-            report: Dict = (
-                self.get_report(
-                    business_id=business_id,
-                    app_id=app_id,
-                    report_id=report_id
-                )
+        report: Dict = (
+            self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                external_id=external_id,
             )
-        elif external_id:
-            report: Dict = (
-                self.get_report_by_external_id(
-                    business_id=business_id,
-                    app_id=app_id,
-                    external_id=external_id,
-                )
-            )
-            report_id: str = report['id']
-        else:
-            raise ValueError('Either report_id or external_id must be provided')
+        )
 
         if report.get('reportType'):
             chart_data_new: List[Dict] = (
@@ -345,9 +323,22 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             else:
                 chart_data = chart_data_new
 
-            report_data_ = {
-                'chartData': json.dumps(chart_data),
-            }
+            try:
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in chart_data:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
+
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
+
             self._update_report(
                 business_id=business_id,
                 app_id=app_id,

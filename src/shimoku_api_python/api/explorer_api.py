@@ -628,6 +628,36 @@ class CreateExplorerAPI(object):
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
 
+    def _create_report_entry(
+        self, business_id: str, app_id: str, report_id: str,
+        items: List[Dict],
+    ) -> List[Dict]:
+        """Create new reportEntry associated to a Report
+
+        :param business_id:
+        :param app_id:
+        :param report_id:
+        :param report_entry_metadata: A dict with all the values required to create a reportEntry
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'reportEntry'
+        )
+
+        report_entries: List[Dict] = []
+        for item in items:
+            report_entry: Dict = (
+                self.api_client.query_element(
+                    method='PUT', endpoint=endpoint,
+                    **{'body_params': item},
+                )
+            )
+            report_entries = report_entries + [report_entry]
+
+        return report_entries
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -820,6 +850,32 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         result: Dict = self.api_client.query_element(
             method='DELETE', endpoint=endpoint
         )
+        return result
+
+    def delete_report_entries(
+        self, business_id: str, app_id: str, report_id: str,
+    ) -> None:
+        """Delete a Report, relocating reports underneath to avoid errors
+        """
+        report_entries: List[Dict] = (
+            self._get_report_entries(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+        )
+
+        for report_entry in report_entries:
+            report_entry_id: str = report_entry['id']
+            endpoint: str = (
+                f'business/{business_id}/'
+                f'app/{app_id}/'
+                f'report/{report_id}/'
+                f'reportEntry/{report_entry_id}'
+            )
+            result: Dict = self.api_client.query_element(
+                method='DELETE', endpoint=endpoint
+            )
         return result
 
 

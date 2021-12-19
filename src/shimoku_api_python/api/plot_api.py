@@ -40,6 +40,7 @@ class PlotAux:
     _update_report_data = DataManagingApi.update_report_data
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
     _is_report_data_empty = DataManagingApi._is_report_data_empty
+    _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
 
     _validate_table_data = DataValidation._validate_table_data
     _validate_tree_data = DataValidation._validate_tree_data
@@ -367,7 +368,6 @@ class PlotApi(PlotAux):
 
         return data_fields
 
-    # TODO WiP
     def table(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
@@ -389,7 +389,7 @@ class PlotApi(PlotAux):
         }
         """
         df: DataFrame = self._validate_data_is_pandarable(data)
-        report_entry: List[Dict] = (
+        report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df,
                 filters=filters,
@@ -433,12 +433,11 @@ class PlotApi(PlotAux):
         )
         report_id: str = report['id']
 
-# TODO esto tiene que ser un update_report_entry()
         self._update_report_data(
             business_id=self.business_id,
             app_id=app_id,
             report_id=report_id,
-            report_data=data,
+            report_data=report_entries,
         )
 
     # TODO

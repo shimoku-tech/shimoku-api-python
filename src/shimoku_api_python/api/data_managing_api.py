@@ -6,7 +6,7 @@ import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
-from .explorer_api import GetExplorerAPI
+from .explorer_api import GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI
 from .report_metadata_api import ReportMetadataApi
 
 
@@ -15,6 +15,9 @@ class DataExplorerApi:
     _get_report_with_data = GetExplorerAPI._get_report_with_data
     get_report_data = ReportMetadataApi.get_report_data
     _update_report = ReportMetadataApi.update_report
+
+    _create_report_entries = CreateExplorerAPI._create_report_entries
+    delete_report_entries = DeleteExplorerApi.delete_report_entries
 
     _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
 
@@ -105,8 +108,6 @@ class DataValidation:
             raise ValueError('data keys must be "name", "value" and "children"')
 
 
-# TODO importante!! Iterar (paginar) el READ / WRITE
-#  depende el tamaño de dataset que nos llegue de usuario
 class DataManagingApi(DataExplorerApi, DataValidation):
     """
     """
@@ -417,21 +418,10 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            self.delete_report_data(
+            self.delete_report_entries(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
             )
 
-            item: Dict = {'reportId': report_id}
-
-            data: List[Dict] = (
-                self.convert_dataframe_to_report_entry(
-                    report_id=report_id, df=report_data,
-                )
-            )
-
-            # TODO we can store batches and go faster than one by one
-            for datum in data:
-                item.update(datum)
-                self.post_report_entry(item)
+            self._create_report_entries(report_data)

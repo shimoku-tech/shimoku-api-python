@@ -66,6 +66,40 @@ class PlotApi(PlotAux):
         """"""
         self.business_id: str = business_id
 
+    def _get_component_order(
+        self, reports: List[Dict], path_name: str,
+    ) -> int:
+        """"""
+        if reports:
+            orders = [
+                report['order']
+                for report in reports
+                if report['path'] == path_name
+            ]
+
+            if orders:
+                order = min(orders)
+            else:
+                order = 1
+        else:
+            apps: List[Dict] = self._get_business_apps(self.business_id)
+
+            orders: int = 0
+            for app_ in apps:
+                reports_ = self._get_app_reports(
+                    business_id=self.business_id,
+                    app_id=app_['id'],
+                )
+
+                try:
+                    order_temp = max([report['order'] for report in reports])
+                except ValueError:
+                    order_temp = 0
+
+                orders = max(orders, order_temp)
+            order: int = orders + 1
+        return order
+
     def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
         """Break the menu path in the app type normalized name
         and the path normalized name if any"""
@@ -116,34 +150,10 @@ class PlotApi(PlotAux):
             app_id=app_id,
         )
 
-        if reports:
-            orders = [
-                report['order']
-                for report in reports
-                if report['path'] == path_name
-            ]
-
-            if orders:
-                order = min(orders)
-            else:
-                order = 1
-        else:
-            apps: List[Dict] = self._get_business_apps(self.business_id)
-
-            orders: int = 0
-            for app_ in apps:
-                reports_ = self._get_app_reports(
-                    business_id=self.business_id,
-                    app_id=app_['id'],
-                )
-
-                try:
-                    order_temp = max([report['order'] for report in reports])
-                except ValueError:
-                    order_temp = 0
-
-                orders = max(orders, order_temp)
-            order: int = orders + 1
+        order: int = self._get_component_order(
+            reports=reports,
+            path_name=path_name,
+        )
 
         report_metadata.update({'path': path_name})
         report_metadata.update({'order': order})
@@ -357,12 +367,85 @@ class PlotApi(PlotAux):
 
         return data_fields
 
-    # TODO
-    def table(self):
-        raise NotImplementedError
+    # TODO WiP
+    def table(
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        filters: Optional[List[str]] = None,
+    ):
+        """
+        {
+            "Product": null,
+            "Monetary importance": {
+                "field": "stringField2",
+                "filterBy": ["High", "Medium", "Low"]
+            },
+            "Purchase soon": {
+                "field": "stringField3",
+                "filterBy": ["Yes", "No"]
+            },
+        }
+        """
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        report_entry: List[Dict] = (
+            self._convert_dataframe_to_report_entry(
+                df=df,
+                filters=filters,
+            )
+        )
+
+        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
+        d: Dict[str, Dict] = self._create_app_type_and_app(
+            business_id=self.business_id,
+            app_type_metadata={'name': app_type_name},
+            app_metadata={},
+        )
+        app: Dict = d['app']
+        app_id: str = app['id']
+
+        reports = self._get_app_reports(
+            business_id=self.business_id,
+            app_id=app_id,
+        )
+
+        order: int = self._get_component_order(
+            reports=reports,
+            path_name=path_name,
+        )
+
+        report_metadata: Dict[str, Any] = {
+            'title': title,
+            'grid': f'{row}, {column}',
+            'path': path_name,
+            'order': order,
+        }
+
+# TODO esta tiene que rehacerse
+        if report_metadata.get('dataFields'):
+            report_metadata['dataFields'] = json.dumps(report_metadata['dataFields'])
+
+        report: Dict = self._create_report(
+            business_id=self.business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+        )
+        report_id: str = report['id']
+
+# TODO esto tiene que ser un update_report_entry()
+        self._update_report_data(
+            business_id=self.business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_data=data,
+        )
 
     # TODO
     def html(self):
+        raise NotImplementedError
+
+    def iframe(self):
         raise NotImplementedError
 
     def bar(

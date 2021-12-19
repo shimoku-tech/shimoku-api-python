@@ -159,64 +159,140 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
+    def _set_report_filter_fields(
+        self, df: DataFrame, filter_columns: List[str],
+    ) -> Dict[str, List[str]]:
+        """
+        Example
+        ----------------
+        input
+            df
+                x, y, Monetary importance,
+                1, 2,                high,
+                2, 2,                high,
+               10, 9,                 low,
+                2, 1,                high,
+                4, 6,              medium,
+
+            filter_columns = ["Monetary importance"]
+
+        output
+            filters = {
+                'stringField1': ['high', 'medium', 'low'],
+            }
+        """
+        filters: Dict[str, List[str]] = {}
+        key_prefix_name: str = 'stringField'
+        for index, filter_column in enumerate(filter_columns):
+            values: List[str] = df[filter_column].unique()
+
+            try:
+                assert len(values) <= 20
+            except AssertionError:
+                raise ValueError(
+                    f'At maximum a table may have 20 different values in a filter | '
+                    f'You provided {len(values)} | '
+                    f'You provided {values}'
+                )
+            filters[f'{key_prefix_name}{index+1}'] = values
+
+        return filters
+
+# TODO pensarla mejor
+    def _set_report_entry_filter_fields(
+        self, datum: Dict[str, Any], filter_columns: List[str],
+    ) -> Dict[str, str]:
+        """
+        Example
+        ----------------
+        input
+            data = {
+                'x': 1,
+                'y' : 2,
+                'Monetary importance': 'high'
+                'Purchase soon': 'improbable'
+            }
+
+            filter_columns = {
+                "Monetary importance": "stringField1",
+                "Purchase soon": "improbable",
+            }
+
+        output
+            filters = {
+                'stringField1': 'high',
+                'stringField2': 'improbable',
+            }
+        """
+        filters: Dict[str, List[str]] = {}
+        key_prefix_name: str = 'stringField'
+        for index, filter_column in enumerate(filter_columns):
+            filters[f'{key_prefix_name}{index+1}'] = datum[filter_column]
+        return filters
+
     def _convert_dataframe_to_report_entry(
         self, business_id: str, app_id: str, df: DataFrame,
         report_id: Optional[str] = None,
         external_id: Optional[str] = None,
+        filter_columns: Optional[List[str]] = None
     ) -> List[Dict]:
-        if report_id:
-            pass
-        elif external_id:
-            report: Dict = (
-                self.get_report_by_external_id(
-                    business_id=business_id,
-                    app_id=app_id,
-                    external_id=external_id,
-                )
-            )
-            report_id: str = report['id']
-        else:
-            raise ValueError('Either report_id or external_id must be provided')
-
-        # Save the initial columns that are
-        # all the fields that will get into `data`
-        # column in `reportEntry` table
-        data_columns: List[str] = [
-            col
-            for col in df.columns
-            if col != 'description'
-        ]
-
-        fields: Dict = self.get_report_fields(report_id=report_id)
-        # Some QA
-        # Validate that all the filter column names
-        # are in the dataframe otherwise raise an error
+        """"""
         cols: List[str] = df.columns
-        for real_name, abstract_name in fields.items():
-            assert real_name in cols
+
+        if filter_columns:
             try:
-                df[abstract_name['field']] = df[real_name]
-            except AttributeError:
-                continue
-            except TypeError:
-                continue
+                assert len(filter_columns) <= 4
+            except AssertionError:
+                raise ValueError(
+                    f'At maximum a table may have 4 different filters | '
+                    f'You provided {len(filter_columns)} | '
+                    f'You provided {filter_columns}'
+                )
 
-        # pick all columns that are not in `data`. Including `description`
-        non_data_columns = [
-            col
-            for col in df.columns
-            if col not in data_columns
-        ]
+            report: Dict = self.get_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+            filter_columns_in_report: Optional[List[str]] = [
+                k for k, v in report['dataFields'].items() if v
+            ]
 
-        # `data` column in DynamoDB `ReportEntry`
-        data_entries: List[Dict] = [
-            {'data': d}
+            # Save the initial columns that are
+            # all the fields that will get into `data`
+            # column in `reportEntry` table
+            data_columns: List[str] = [
+                col for col in cols
+                if col not in filter_columns
+            ]
+
+            try:
+                assert all([
+                    c in filter_columns_in_report
+                    for c in filter_columns
+                ])
+            except AssertionError:
+                raise ValueError(
+                    'At least one of the filters you '
+                    'provided is not in the dataset'
+                )
+
+            other_entries: List[Dict] = [
+                {
+                }
+                for d in df[filter_columns].to_dict(orient='records')
+            ]
+        else:
+            data_columns: List[str] = cols
+
+        # `data` and `reportId`
+        entries: List[Dict] = [
+            {
+                'data': d,
+                'reportId': report_id,
+            }
             for d in df[data_columns].to_dict(orient='records')
         ]
-        # owner, reportId and abstract columns
-        other_entries: List[Dict] = (
-            df[non_data_columns].to_dict(orient='records')
-        )
 
         # Generate the list of single entries with all
         # necessary information to be posted

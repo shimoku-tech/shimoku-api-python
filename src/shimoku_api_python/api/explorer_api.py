@@ -171,11 +171,12 @@ class GetExplorerAPI(object):
                 f'app/{app_id}/'
                 f'report/{report_id}/reportEntries'
             )
-            return ([
+            report_entries: Dict = [
                 self.api_client.query_element(
                     method='GET', endpoint=endpoint,
                 )
-            ])
+            ]
+            return report_entries[0]['items']
 
 
 class CascadeExplorerAPI(GetExplorerAPI):
@@ -602,7 +603,8 @@ class CreateExplorerAPI(object):
             item['path'] = path
 
         report_type: str = report_metadata.get('reportType')
-        report_metadata.pop('reportType')
+        if report_type:
+            report_metadata.pop('reportType')
 
         # Update items with kwargs
         item.update(report_metadata)
@@ -858,7 +860,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         """Delete a Report, relocating reports underneath to avoid errors
         """
         report_entries: List[Dict] = (
-            self._get_report_entries(
+            self.get_report_data(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
@@ -876,7 +878,6 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             result: Dict = self.api_client.query_element(
                 method='DELETE', endpoint=endpoint
             )
-        return result
 
 
 class MultiDeleteApi:

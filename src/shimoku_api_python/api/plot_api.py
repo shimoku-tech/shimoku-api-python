@@ -21,6 +21,7 @@ class PlotAux:
     _get_report_with_data = ReportExplorerApi._get_report_with_data
     _update_report = ReportExplorerApi.update_report
     update_report = ReportExplorerApi.update_report
+    get_report_data = ReportExplorerApi.get_report_data
 
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
@@ -42,6 +43,7 @@ class PlotAux:
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
     _set_report_entry_filter_fields = DataManagingApi._set_report_entry_filter_fields
+    _create_report_entries = DataManagingApi._create_report_entries
 
     _validate_table_data = DataValidation._validate_table_data
     _validate_tree_data = DataValidation._validate_tree_data
@@ -50,6 +52,7 @@ class PlotAux:
     _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
 
     _delete_report = DeleteExplorerApi.delete_report
+    _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
 class PlotApi(PlotAux):
@@ -371,6 +374,7 @@ class PlotApi(PlotAux):
     def table(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
+        date_columns: List[str] = None,
         title: Optional[str] = None,  # second layer
         filter_columns: Optional[List[str]] = None,
     ):

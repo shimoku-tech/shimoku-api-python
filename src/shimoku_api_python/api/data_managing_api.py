@@ -17,7 +17,7 @@ class DataExplorerApi:
     _update_report = ReportMetadataApi.update_report
 
     _create_report_entries = CreateExplorerAPI._create_report_entries
-    delete_report_entries = DeleteExplorerApi.delete_report_entries
+    _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
     _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
 
@@ -237,14 +237,30 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             data_columns: List[str] = cols
             filter_entries: List[Dict] = []
 
-        # `data` and `reportId`
-        data_entries: List[Dict] = [
-            {
-                'data': d,
-                'reportId': report_id,
-            }
-            for d in df.to_dict(orient='records')
-        ]
+        records: List[Dict] = df.to_dict(orient='records')
+        try:
+            data_entries: List[Dict] = [
+                {
+                    'data': json.dumps(d),
+                    'reportId': report_id,
+                }
+                for d in records
+            ]
+        except TypeError:
+            # If we have date or datetime values
+            # then we need to convert them to isoformat
+            for datum in records:
+                for k, v in datum.items():
+                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                        datum[k] = v.isoformat()
+
+            data_entries: List[Dict] = [
+                {
+                    'data': json.dumps(d),
+                    'reportId': report_id,
+                }
+                for d in records
+            ]
 
         # Generate the list of single entries with all
         # necessary information to be posted
@@ -369,10 +385,15 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            self.delete_report_entries(
+            self._delete_report_entries(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
             )
 
-            self._create_report_entries(report_data)
+            self._create_report_entries(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                items=report_data,
+            )

@@ -303,12 +303,23 @@ class PlotApi(PlotAux):
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
+        # Default
         option_modifications_temp = {
             "legend": {"type": "scroll"},
             "toolbox": {"orient": "vertical", "top": 20},
             'series': {'smooth': True}
         }
-        if not option_modifications:
+
+        # TODO this will be done in FE
+        #  https://trello.com/c/GXRYHEsO/
+        num_size: int = len(df[y].max())
+        if num_size > 6:
+            margin: int = 12 * (num_size - 6)  # 12 pixels by extra num
+            option_modifications_temp["yAxis"] = {
+                "axisLabel": {"margin": margin},
+            }
+
+        if option_modifications:
             if not option_modifications.get('legend'):
                 option_modifications.update({"legend": {"type": "scroll"}})
             if not option_modifications.get('toolbox').get('orient'):

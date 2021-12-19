@@ -10,12 +10,6 @@ import shimoku_api_python as shimoku
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
-app_id: str = getenv('APP_ID')
-app_type_id: str = getenv('APP_TYPE_ID')
-app_element: Dict[str, str] = dict(
-    business_id=business_id,
-    app_id=app_id,
-)
 
 
 config = {

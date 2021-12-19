@@ -303,6 +303,21 @@ class PlotApi(PlotAux):
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
+        option_modifications_temp = {
+            "legend": {"type": "scroll"},
+            "toolbox": {"orient": "vertical", "top": 20},
+            'series': {'smooth': True}
+        }
+        if not option_modifications:
+            if not option_modifications.get('legend'):
+                option_modifications.update({"legend": {"type": "scroll"}})
+            if not option_modifications.get('toolbox').get('orient'):
+                option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
+            if not option_modifications.get('series').get('smooth'):
+                option_modifications['series'].update({'smooth': True})
+        else:
+            option_modifications = option_modifications_temp
+
         # TODO we have two titles now, take a decision
         #  one in dataFields the other as field
         data_fields: Dict = self._set_data_fields(
@@ -377,6 +392,7 @@ class PlotApi(PlotAux):
         date_columns: List[str] = None,
         title: Optional[str] = None,  # second layer
         filter_columns: Optional[List[str]] = None,
+        sort_table_by_cols: Optional[List] = None
     ):
         """
         {
@@ -405,9 +421,12 @@ class PlotApi(PlotAux):
             """
             filters_map: Dict[str, str] = {}
             key_prefix_name: str = 'stringField'
-            for index, filter_column in enumerate(filter_columns):
-                filters_map[filter_column] = f'{key_prefix_name}{index + 1}'
-            return filters_map
+            if filter_columns:
+                for index, filter_column in enumerate(filter_columns):
+                    filters_map[filter_column] = f'{key_prefix_name}{index + 1}'
+                return filters_map
+            else:
+                return {}
 
         def _calculate_table_filter_fields() -> Dict[str, List[str]]:
             """
@@ -430,20 +449,22 @@ class PlotApi(PlotAux):
                 }
             """
             filters: Dict[str, List[str]] = {}
-            for filter_column in filter_columns:
-                values: List[str] = df[filter_column].unique().tolist()
+            if filter_columns:
+                for filter_column in filter_columns:
+                    values: List[str] = df[filter_column].unique().tolist()
 
-                try:
-                    assert len(values) <= 20
-                except AssertionError:
-                    raise ValueError(
-                        f'At maximum a table may have 20 different values in a filter | '
-                        f'You provided {len(values)} | '
-                        f'You provided {values}'
-                    )
-                filters[filter_column] = values
-
-            return filters
+                    try:
+                        assert len(values) <= 20
+                    except AssertionError:
+                        raise ValueError(
+                            f'At maximum a table may have 20 different values in a filter | '
+                            f'You provided {len(values)} | '
+                            f'You provided {values}'
+                        )
+                    filters[filter_column] = values
+                return filters
+            else:
+                return {}
 
         def _calculate_table_data_fields() -> Dict:
             """
@@ -528,6 +549,10 @@ class PlotApi(PlotAux):
             filter_map[filter_name]: values
             for filter_name, values in filter_fields.items()
         }
+
+        if sort_table_by_cols:
+            df = df.sort_values(by=sort_table_by_cols, ascending=True)
+
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df, report_id=report_id,

@@ -262,14 +262,15 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 for d in records
             ]
 
-        # Generate the list of single entries with all
-        # necessary information to be posted
-        entries: List[Dict] = [
-            {**data_entry, **filters_entry}
-            for data_entry, filters_entry in zip(data_entries, filter_entries)
-        ]
-
-        return entries
+        if filter_entries:
+            # Generate the list of single entries with all
+            # necessary information to be posted
+            return [
+                {**data_entry, **filters_entry}
+                for data_entry, filters_entry in zip(data_entries, filter_entries)
+            ]
+        else:
+            return data_entries
 
     def append_report_data(
         self, business_id: str, app_id: str,

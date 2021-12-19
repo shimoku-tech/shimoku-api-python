@@ -628,7 +628,7 @@ class CreateExplorerAPI(object):
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
 
-    def _create_report_entry(
+    def _create_report_entries(
         self, business_id: str, app_id: str, report_id: str,
         items: List[Dict],
     ) -> List[Dict]:

@@ -114,6 +114,29 @@ def test_update():
     )
 
 
+def test_table():
+    data_ = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
+    ]
+    filter_columns: List[str] = ['filtA', 'filtB']
+    s.plt.table(
+        data=data_,
+        menu_path='test/table-test',
+        row=1, column=1,
+        filter_columns=filter_columns,
+    )
+
+    s.plt.delete(
+        menu_path='test/table-test',
+        component_type='table',
+        row=1, column=1,
+    )
+
+
 def test_bar():
     s.plt.bar(
         data=data,
@@ -736,7 +759,8 @@ def test_predictive_line():
     )
 
 
-test_update()
+# test_update()
+test_table()
 # test_bar()
 # test_stockline()
 # test_line()

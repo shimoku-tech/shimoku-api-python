@@ -1,6 +1,6 @@
 """"""
 import json
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
 
 import datetime as dt
 import pandas as pd
@@ -160,146 +160,97 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
-    def _set_report_filter_fields(
-        self, df: DataFrame, filter_columns: List[str],
-    ) -> Dict[str, List[str]]:
-        """
-        Example
-        ----------------
-        input
-            df
-                x, y, Monetary importance,
-                1, 2,                high,
-                2, 2,                high,
-               10, 9,                 low,
-                2, 1,                high,
-                4, 6,              medium,
-
-            filter_columns = ["Monetary importance"]
-
-        output
-            filters = {
-                'stringField1': ['high', 'medium', 'low'],
-            }
-        """
-        filters: Dict[str, List[str]] = {}
-        key_prefix_name: str = 'stringField'
-        for index, filter_column in enumerate(filter_columns):
-            values: List[str] = df[filter_column].unique()
-
-            try:
-                assert len(values) <= 20
-            except AssertionError:
-                raise ValueError(
-                    f'At maximum a table may have 20 different values in a filter | '
-                    f'You provided {len(values)} | '
-                    f'You provided {values}'
-                )
-            filters[f'{key_prefix_name}{index+1}'] = values
-
-        return filters
-
-# TODO pensarla mejor
     def _set_report_entry_filter_fields(
-        self, datum: Dict[str, Any], filter_columns: List[str],
+        self, df: DataFrame, filter_fields: List[str], filter_map: Dict[str, str],
     ) -> Dict[str, str]:
         """
         Example
         ----------------
         input
-            data = {
-                'x': 1,
-                'y' : 2,
-                'Monetary importance': 'high'
-                'Purchase soon': 'improbable'
+            df
+                x, y, Monetary importance, Purchase soon,
+                1, 2,                high,      probable,
+                2, 2,                high,      probable,
+               10, 9,                 low,    improbable,
+
+            filter_fields = {
+                'stringField1': ['high', 'medium', 'low'],
+                'stringField2': ['probable', 'improbable'],
             }
 
-            filter_columns = {
-                "Monetary importance": "stringField1",
-                "Purchase soon": "improbable",
+            filter_map = {
+                'Monetary importance': 'stringField1',
+                'Purchase soon': 'stringField2',
             }
 
         output
-            filters = {
-                'stringField1': 'high',
-                'stringField2': 'improbable',
-            }
+            filter_data = [
+                {
+                    'stringField1': 'high',
+                    'stringField2': 'probable',
+                },
+                                {
+                    'stringField1': 'high',
+                    'stringField2': 'probable',
+                },
+                {
+                    'stringField1': 'low',
+                    'stringField2': 'improbable',
+                },
+            ]
         """
-        filters: Dict[str, List[str]] = {}
-        key_prefix_name: str = 'stringField'
-        for index, filter_column in enumerate(filter_columns):
-            filters[f'{key_prefix_name}{index+1}'] = datum[filter_column]
-        return filters
+        df_ = df.rename(columns=filter_map)
+        return df_[list(filter_fields.keys())].to_dict(orient='records')
 
     def _convert_dataframe_to_report_entry(
-        self, business_id: str, app_id: str, df: DataFrame,
-        report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
-        filter_columns: Optional[List[str]] = None
+        self, df: DataFrame, report_id: str,
+        filter_map: Optional[Dict[str, str]] = None,
+        filter_fields: Optional[Dict[str, List[str]]] = None,
     ) -> List[Dict]:
-        """"""
+        """
+        :param df:
+        :param report_id:
+        :param filter_fields: Example: {
+                'stringField1': ['high', 'medium', 'low'],
+                'stringField2': ['probable', 'improbable'],
+            }
+        """
         cols: List[str] = df.columns
 
-        if filter_columns:
+        if filter_fields:
             try:
-                assert len(filter_columns) <= 4
+                assert len(filter_fields) <= 4
             except AssertionError:
                 raise ValueError(
                     f'At maximum a table may have 4 different filters | '
-                    f'You provided {len(filter_columns)} | '
-                    f'You provided {filter_columns}'
+                    f'You provided {len(filter_fields)} | '
+                    f'You provided {filter_fields}'
                 )
 
-            report: Dict = self.get_report(
-                business_id=business_id,
-                app_id=app_id,
-                report_id=report_id,
+            filter_entries: List[Dict] = (
+                self._set_report_entry_filter_fields(
+                    df=df, filter_fields=filter_fields,
+                    filter_map=filter_map,
+                )
             )
-            filter_columns_in_report: Optional[List[str]] = [
-                k for k, v in report['dataFields'].items() if v
-            ]
-
-            # Save the initial columns that are
-            # all the fields that will get into `data`
-            # column in `reportEntry` table
-            data_columns: List[str] = [
-                col for col in cols
-                if col not in filter_columns
-            ]
-
-            try:
-                assert all([
-                    c in filter_columns_in_report
-                    for c in filter_columns
-                ])
-            except AssertionError:
-                raise ValueError(
-                    'At least one of the filters you '
-                    'provided is not in the dataset'
-                )
-
-            other_entries: List[Dict] = [
-                {
-                }
-                for d in df[filter_columns].to_dict(orient='records')
-            ]
         else:
             data_columns: List[str] = cols
+            filter_entries: List[Dict] = []
 
         # `data` and `reportId`
-        entries: List[Dict] = [
+        data_entries: List[Dict] = [
             {
                 'data': d,
                 'reportId': report_id,
             }
-            for d in df[data_columns].to_dict(orient='records')
+            for d in df.to_dict(orient='records')
         ]
 
         # Generate the list of single entries with all
         # necessary information to be posted
         entries: List[Dict] = [
-            {**data_entry, **other_entry}
-            for data_entry, other_entry in zip(data_entries, other_entries)
+            {**data_entry, **filters_entry}
+            for data_entry, filters_entry in zip(data_entries, filter_entries)
         ]
 
         return entries

@@ -41,6 +41,7 @@ class PlotAux:
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
+    _set_report_entry_filter_fields = DataManagingApi._set_report_entry_filter_fields
 
     _validate_table_data = DataValidation._validate_table_data
     _validate_tree_data = DataValidation._validate_tree_data
@@ -186,7 +187,6 @@ class PlotApi(PlotAux):
         type_map = {
             'alert_indicator': 'INDICATOR',
             'indicator': 'INDICATOR',
-            'table': None,
             'table': None,
             'stockline': 'STOCKLINECHART',
             'html': 'HTML'
@@ -372,8 +372,7 @@ class PlotApi(PlotAux):
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
-        subtitle: Optional[str] = None,
-        filters: Optional[List[str]] = None,
+        filter_columns: Optional[List[str]] = None,
     ):
         """
         {
@@ -388,13 +387,105 @@ class PlotApi(PlotAux):
             },
         }
         """
+        def _calculate_table_filter_map() -> Dict[str, str]:
+            """
+            Example
+            ----------------
+            input
+                filter_columns = ["Monetary importance"]
+
+            output
+                filters_map = {
+                    'stringField1': 'Monetary importance',
+                }
+            """
+            filters_map: Dict[str, str] = {}
+            key_prefix_name: str = 'stringField'
+            for index, filter_column in enumerate(filter_columns):
+                filters_map[filter_column] = f'{key_prefix_name}{index + 1}'
+            return filters_map
+
+        def _calculate_table_filter_fields() -> Dict[str, List[str]]:
+            """
+            Example
+            ----------------
+            input
+                df
+                    x, y, Monetary importance,
+                    1, 2,                high,
+                    2, 2,                high,
+                   10, 9,                 low,
+                    2, 1,                high,
+                    4, 6,              medium,
+
+                filter_columns = ["Monetary importance"]
+
+            output
+                filter_fields = {
+                    'Monetary importance': ['high', 'medium', 'low'],
+                }
+            """
+            filters: Dict[str, List[str]] = {}
+            for filter_column in filter_columns:
+                values: List[str] = df[filter_column].unique().tolist()
+
+                try:
+                    assert len(values) <= 20
+                except AssertionError:
+                    raise ValueError(
+                        f'At maximum a table may have 20 different values in a filter | '
+                        f'You provided {len(values)} | '
+                        f'You provided {values}'
+                    )
+                filters[filter_column] = values
+
+            return filters
+
+        def _calculate_table_data_fields() -> Dict:
+            """
+            Example
+            -------------
+            input
+                df
+                    x, y, Monetary importance,
+                    1, 2,                high,
+                    2, 2,                high,
+                   10, 9,                 low,
+                    2, 1,                high,
+                    4, 6,              medium,
+
+                filters_map = {
+                    'stringField1': 'Monetary importance',
+                }
+
+                filter_fields = {
+                    'Monetary importance': ['high', 'medium', 'low'],
+                }
+
+            output
+                {
+                    "Product": null,
+                    "Monetary importance": {
+                        "field": "stringField1",
+                        "filterBy": ["high", "medium", "low"]
+                    },
+                }
+            """
+            data_fields: Dict = {}
+            cols: List[str] = df.columns
+            for col in cols:
+                if col in filter_fields:
+                    data_fields[col] = {
+                        'field': filter_map[col],
+                        'filterBy': filter_fields[col],
+                    }
+                else:
+                    data_fields[col] = None
+            return json.dumps(data_fields)
+
         df: DataFrame = self._validate_data_is_pandarable(data)
-        report_entries: List[Dict] = (
-            self._convert_dataframe_to_report_entry(
-                df=df,
-                filters=filters,
-            )
-        )
+        filter_map: Dict[str, str] = _calculate_table_filter_map()
+        filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
@@ -405,13 +496,11 @@ class PlotApi(PlotAux):
         app: Dict = d['app']
         app_id: str = app['id']
 
-        reports = self._get_app_reports(
-            business_id=self.business_id,
-            app_id=app_id,
-        )
-
         order: int = self._get_component_order(
-            reports=reports,
+            reports=self._get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            ),
             path_name=path_name,
         )
 
@@ -422,9 +511,7 @@ class PlotApi(PlotAux):
             'order': order,
         }
 
-# TODO esta tiene que rehacerse
-        if report_metadata.get('dataFields'):
-            report_metadata['dataFields'] = json.dumps(report_metadata['dataFields'])
+        report_metadata['dataFields'] = _calculate_table_data_fields()
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -432,6 +519,18 @@ class PlotApi(PlotAux):
             report_metadata=report_metadata,
         )
         report_id: str = report['id']
+
+        report_entry_filter_fields: Dict[str, List[str]] = {
+            filter_map[filter_name]: values
+            for filter_name, values in filter_fields.items()
+        }
+        report_entries: List[Dict] = (
+            self._convert_dataframe_to_report_entry(
+                df=df, report_id=report_id,
+                filter_map=filter_map,
+                filter_fields=report_entry_filter_fields
+            )
+        )
 
         self._update_report_data(
             business_id=self.business_id,

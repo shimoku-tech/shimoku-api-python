@@ -174,12 +174,13 @@ class PlotApi(PlotAux):
         )
         report_id: str = report['id']
 
-        self._update_report_data(
-            business_id=self.business_id,
-            app_id=app_id,
-            report_id=report_id,
-            report_data=data,
-        )
+        if data:
+            self._update_report_data(
+                business_id=self.business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_data=data,
+            )
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
@@ -580,12 +581,48 @@ class PlotApi(PlotAux):
             report_data=report_entries,
         )
 
-    # TODO
-    def html(self):
-        raise NotImplementedError
+    def html(
+        self, html: str, menu_path: str,
+        title: Optional[str] = None,
+        row: Optional[int] = None,
+        column: Optional[int] = None,
+        order: Optional[int] = None,
+    ):
+        report_metadata: Dict = {
+            'reportType': 'HTML',
+            'order': order if order else 1,
+            'title': title if title else '',
+            'grid': f'{row}, {column}' if row else '1, 1',
+        }
 
-    def iframe(self):
-        raise NotImplementedError
+        return self._create_chart(
+            data=[{'value': html}],
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+        )
+
+    def iframe(
+        self, menu_path: str, url: str,
+        row: int, column: int,
+        title: Optional[str] = None,
+        height: Optional[int] = None,
+        order: Optional[int] = None,
+    ):
+        report_metadata: Dict = {
+            'reportType': 'IFRAME',
+            'dataFields': {
+                'url': url,
+                'height': height if height else 600
+            },
+            'order': order if order else 1,
+            'title': title if title else '',
+            'grid': f'{row}, {column}',
+        }
+
+        return self._create_chart(
+            data=[], menu_path=menu_path,
+            report_metadata=report_metadata,
+        )
 
     def bar(
         self, data: Union[str, DataFrame, List[Dict]],

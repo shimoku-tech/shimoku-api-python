@@ -903,6 +903,46 @@ def test_pie():
     )
 
 
+def test_iframe():
+    url = 'https://www.marca.com/'
+    s.plt.iframe(
+        url=url,
+        menu_path='test/iframe-test',
+        row=1, column=1, order=0,
+    )
+
+    s.plt.delete(
+        menu_path='test/iframe-test',
+        component_type='iframe',
+        row=1, column=1,
+    )
+
+
+def test_html():
+    html = (
+        "<p style='background-color: #daf4f0';>"
+        "Comparing the results of predictions that happened previous "
+        "periods vs reality, so that you can measure the accuracy of our predictor"
+        "</p>"
+    )
+    s.plt.html(
+        html=html,
+        menu_path='test/html-test',
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path='test/html-test',
+        component_type='html',
+        row=1, column=1,
+    )
+
+
+def test_cohorts():
+    # s.plt.cohort()
+    raise NotImplementedError
+
+
 # test_update()
 # test_table()
 # test_bar()
@@ -921,10 +961,12 @@ def test_pie():
 # test_treemap()
 # test_sankey()
 # test_pie()
+# test_iframe()
+# test_html()
 # TODO
+test_cohorts()
 test_themeriver()
 test_candlestick()
 test_scatter_with_confidence_area()
 test_bubble_chart()
 test_line_with_confidence_area()
-

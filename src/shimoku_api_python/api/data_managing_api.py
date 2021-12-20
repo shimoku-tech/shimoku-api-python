@@ -97,10 +97,12 @@ class DataValidation:
         """To validate Tree and Treemap data"""
         if isinstance(data, list):
             pass
+        elif isinstance(data, dict):
+            pass
         elif isinstance(data, str):
             data = json.loads(data)
         else:
-            raise ValueError('data must be either a list or a json')
+            raise ValueError('data must be either a list, dict or a json')
 
         try:
             assert sorted(data.keys()) == sorted(vals)

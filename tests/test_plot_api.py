@@ -408,18 +408,15 @@ def test_heatmap():
             "value": 6
         }
     ]
-    r = s.plt.heatmap(
-        data=data_, x='xAxis', y='yAxis', value='value',
+    s.plt.heatmap(
+        data=data_, x='xAxis', y=['yAxis'], value='value',
         menu_path='test/heatmap-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/heatmap-test',
+        row=1, column=1,
     )
 
 
@@ -524,18 +521,16 @@ def test_sunburst():
             ]
         }
     ]
-    r = s.plt.sunburst(
-        data=data_, x='xAxis', y=None,  # TODO
+    s.plt.sunburst(
+        data=data_,
+        name='xAxis', children='children', value='value',
         menu_path='test/sunburst-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/sunburst-test',
+        row=1, column=1,
     )
 
 
@@ -573,18 +568,15 @@ def test_tree():
             },
         ],
     }]
-    r = s.plt.tree(
+    s.plt.tree(
         data=data_,
         menu_path='test/tree-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/tree-test',
+        row=1, column=1,
     )
 
 
@@ -622,18 +614,15 @@ def test_treemap():
             },
         ],
     }]
-    r = s.plt.treemap(
+    s.plt.treemap(
         data=data_,
         menu_path='test/treemap-test',
         row=1, column=1,
     )
 
-    assert r
-
-    s.report.delete_report(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=r['id']
+    s.plt.delete(
+        menu_path='test/treemap-test',
+        row=1, column=1,
     )
 
 
@@ -754,7 +743,7 @@ def test_predictive_line():
 
 
 # test_update()
-test_table()
+# test_table()
 # test_bar()
 # test_stockline()
 # test_line()
@@ -765,12 +754,12 @@ test_table()
 # test_gauge()
 # test_indicator()
 # test_alert_indicator()
-test_candlestick()
+# test_heatmap()
+# test_sunburst()
+# test_tree()
+# test_treemap()
 # TODO
+test_candlestick()
 test_scatter_with_confidence_area()
 test_bubble_chart()
-test_heatmap()
-test_sunburst()
-test_tree()
-test_treemap()
 test_line_with_confidence_area()

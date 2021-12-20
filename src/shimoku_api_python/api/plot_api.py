@@ -155,6 +155,7 @@ class PlotApi(PlotAux):
             app_id=app_id,
         )
 
+# TODO this is not working
         order: int = self._get_component_order(
             reports=reports,
             path_name=path_name,
@@ -1177,7 +1178,7 @@ class PlotApi(PlotAux):
     ):
         """Create a Tree
         """
-        self._validate_tree_data(data, vals=['name', 'value', 'children'])
+        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -1193,7 +1194,6 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            option_modifications=option_modifications,
         )
 
     def treemap(
@@ -1206,7 +1206,7 @@ class PlotApi(PlotAux):
     ):
         """Create a Treemap
         """
-        self._validate_tree_data(data, vals=['name', 'value', 'children'])
+        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'title': title,
@@ -1222,30 +1222,20 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            option_modifications=option_modifications,
         )
 
     def sunburst(
-        self, data: Union[str, DataFrame, List[Dict]],
-        name: str, children: List[Dict],  # first layer
+        self, data: List[Dict],
+        name: str, children: str, value: str,
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
         subtitle: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[List[str]] = None,
     ):
-        """Create a Tree
+        """Create a Sunburst
         """
-        self._validate_tree_data(data, vals=['name', 'children'])
-        df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[[name, children]]  # keep only x and y
-        df.rename(
-            columns={
-                name: 'name',
-                children: 'children',
-            },
-            inplace=True,
-        )
+        self._validate_tree_data(data[0], vals=['name', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -1261,7 +1251,6 @@ class PlotApi(PlotAux):
             data=data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            option_modifications=option_modifications,
         )
 
     def candlestick(
@@ -1303,14 +1292,19 @@ class PlotApi(PlotAux):
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
+
+        option_modifications: Dict = {
+            "toolbox": {"orient": "horizontal", "top": 0},
+        }
+
         return self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
+            data=df, x=x, y=[y, value], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
-            echart_type='HEATMAP',
+            echart_type='heatmap',
             filters=filters,
         )
 

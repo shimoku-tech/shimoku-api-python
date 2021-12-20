@@ -174,13 +174,22 @@ class PlotApi(PlotAux):
         )
         report_id: str = report['id']
 
-        if data:
-            self._update_report_data(
-                business_id=self.business_id,
-                app_id=app_id,
-                report_id=report_id,
-                report_data=data,
-            )
+        try:
+            if data:
+                self._update_report_data(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id,
+                    report_data=data,
+                )
+        except ValueError:
+            if not data.empty:
+                self._update_report_data(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id,
+                    report_data=data,
+                )
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(

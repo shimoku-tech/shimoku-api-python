@@ -1,12 +1,12 @@
 """"""
 import json
-from typing import List, Dict, Optional, Union
+from typing import List, Dict, Optional, Union, Any
 
 import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
-from .explorer_api import GetExplorerAPI
+from .explorer_api import GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI
 from .report_metadata_api import ReportMetadataApi
 
 
@@ -15,6 +15,9 @@ class DataExplorerApi:
     _get_report_with_data = GetExplorerAPI._get_report_with_data
     get_report_data = ReportMetadataApi.get_report_data
     _update_report = ReportMetadataApi.update_report
+
+    _create_report_entries = CreateExplorerAPI._create_report_entries
+    _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
     _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
 
@@ -94,10 +97,12 @@ class DataValidation:
         """To validate Tree and Treemap data"""
         if isinstance(data, list):
             pass
+        elif isinstance(data, dict):
+            pass
         elif isinstance(data, str):
             data = json.loads(data)
         else:
-            raise ValueError('data must be either a list or a json')
+            raise ValueError('data must be either a list, dict or a json')
 
         try:
             assert sorted(data.keys()) == sorted(vals)
@@ -105,8 +110,6 @@ class DataValidation:
             raise ValueError('data keys must be "name", "value" and "children"')
 
 
-# TODO importante!! Iterar (paginar) el READ / WRITE
-#  depende el tamaño de dataset que nos llegue de usuario
 class DataManagingApi(DataExplorerApi, DataValidation):
     """
     """
@@ -159,73 +162,117 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
+    def _set_report_entry_filter_fields(
+        self, df: DataFrame, filter_fields: List[str], filter_map: Dict[str, str],
+    ) -> Dict[str, str]:
+        """
+        Example
+        ----------------
+        input
+            df
+                x, y, Monetary importance, Purchase soon,
+                1, 2,                high,      probable,
+                2, 2,                high,      probable,
+               10, 9,                 low,    improbable,
+
+            filter_fields = {
+                'stringField1': ['high', 'medium', 'low'],
+                'stringField2': ['probable', 'improbable'],
+            }
+
+            filter_map = {
+                'Monetary importance': 'stringField1',
+                'Purchase soon': 'stringField2',
+            }
+
+        output
+            filter_data = [
+                {
+                    'stringField1': 'high',
+                    'stringField2': 'probable',
+                },
+                                {
+                    'stringField1': 'high',
+                    'stringField2': 'probable',
+                },
+                {
+                    'stringField1': 'low',
+                    'stringField2': 'improbable',
+                },
+            ]
+        """
+        df_ = df.rename(columns=filter_map)
+        return df_[list(filter_fields.keys())].to_dict(orient='records')
+
     def _convert_dataframe_to_report_entry(
-        self, business_id: str, app_id: str, df: DataFrame,
-        report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
+        self, df: DataFrame, report_id: str,
+        filter_map: Optional[Dict[str, str]] = None,
+        filter_fields: Optional[Dict[str, List[str]]] = None,
     ) -> List[Dict]:
-        if report_id:
-            pass
-        elif external_id:
-            report: Dict = (
-                self.get_report_by_external_id(
-                    business_id=business_id,
-                    app_id=app_id,
-                    external_id=external_id,
+        """
+        :param df:
+        :param report_id:
+        :param filter_fields: Example: {
+                'stringField1': ['high', 'medium', 'low'],
+                'stringField2': ['probable', 'improbable'],
+            }
+        """
+        cols: List[str] = df.columns
+
+        if filter_fields:
+            try:
+                assert len(filter_fields) <= 4
+            except AssertionError:
+                raise ValueError(
+                    f'At maximum a table may have 4 different filters | '
+                    f'You provided {len(filter_fields)} | '
+                    f'You provided {filter_fields}'
+                )
+
+            filter_entries: List[Dict] = (
+                self._set_report_entry_filter_fields(
+                    df=df, filter_fields=filter_fields,
+                    filter_map=filter_map,
                 )
             )
-            report_id: str = report['id']
         else:
-            raise ValueError('Either report_id or external_id must be provided')
+            data_columns: List[str] = cols
+            filter_entries: List[Dict] = []
 
-        # Save the initial columns that are
-        # all the fields that will get into `data`
-        # column in `reportEntry` table
-        data_columns: List[str] = [
-            col
-            for col in df.columns
-            if col != 'description'
-        ]
+        records: List[Dict] = df.to_dict(orient='records')
+        try:
+            data_entries: List[Dict] = [
+                {
+                    'data': json.dumps(d),
+                    'reportId': report_id,
+                }
+                for d in records
+            ]
+        except TypeError:
+            # If we have date or datetime values
+            # then we need to convert them to isoformat
+            for datum in records:
+                for k, v in datum.items():
+                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                        datum[k] = v.isoformat()
 
-        fields: Dict = self.get_report_fields(report_id=report_id)
-        # Some QA
-        # Validate that all the filter column names
-        # are in the dataframe otherwise raise an error
-        cols: List[str] = df.columns
-        for real_name, abstract_name in fields.items():
-            assert real_name in cols
-            try:
-                df[abstract_name['field']] = df[real_name]
-            except AttributeError:
-                continue
-            except TypeError:
-                continue
+            data_entries: List[Dict] = [
+                {
+                    'data': json.dumps(d),
+                    'reportId': report_id,
+                }
+                for d in records
+            ]
 
-        # pick all columns that are not in `data`. Including `description`
-        non_data_columns = [
-            col
-            for col in df.columns
-            if col not in data_columns
-        ]
-
-        # `data` column in DynamoDB `ReportEntry`
-        data_entries: List[Dict] = [
-            {'data': d}
-            for d in df[data_columns].to_dict(orient='records')
-        ]
-        # owner, reportId and abstract columns
-        other_entries: List[Dict] = (
-            df[non_data_columns].to_dict(orient='records')
-        )
-
-        # Generate the list of single entries with all
-        # necessary information to be posted
-        entries: List[Dict] = [
-            {**data_entry, **other_entry}
-            for data_entry, other_entry in zip(data_entries, other_entries)
-        ]
-
-        return entries
+        if filter_entries:
+            # Generate the list of single entries with all
+            # necessary information to be posted
+            return [
+                {**data_entry, **filters_entry}
+                for data_entry, filters_entry in zip(data_entries, filter_entries)
+            ]
+        else:
+            return data_entries
 
     def append_report_data(
         self, business_id: str, app_id: str,
@@ -341,21 +388,15 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            self.delete_report_data(
+            self._delete_report_entries(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
             )
 
-            item: Dict = {'reportId': report_id}
-
-            data: List[Dict] = (
-                self.convert_dataframe_to_report_entry(
-                    report_id=report_id, df=report_data,
-                )
+            self._create_report_entries(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                items=report_data,
             )
-
-            # TODO we can store batches and go faster than one by one
-            for datum in data:
-                item.update(datum)
-                self.post_report_entry(item)

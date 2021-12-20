@@ -742,6 +742,167 @@ def test_predictive_line():
     )
 
 
+def test_themeriver():
+    data_ = [
+        {
+            "date": "2021/11/08",
+            "value": "10",
+            "name": "First"
+        },
+        {
+            "date": "2021/11/09",
+            "value": "15",
+            "name": "First"
+        },
+        {
+            "date": "2021/11/10",
+            "value": "35",
+            "name": "First"
+        },
+        {
+            "date": "2021/11/11",
+            "value": "38",
+            "name": "First"
+        },
+        {
+            "date": "2021/11/12",
+            "value": "22",
+            "name": "First"
+        },
+        {
+            "date": "2021/11/08",
+            "value": "35",
+            "name": "Second"
+        },
+        {
+            "date": "2021/11/09",
+            "value": "36",
+            "name": "Second"
+        },
+        {
+            "date": "2021/11/10",
+            "value": "37",
+            "name": "Second"
+        },
+        {
+            "date": "2021/11/11",
+            "value": "22",
+            "name": "Second"
+        },
+        {
+            "date": "2021/11/12",
+            "value": "24",
+            "name": "Second"
+        },
+        {
+            "date": "2021/11/08",
+            "value": "21",
+            "name": "Third"
+        },
+        {
+            "date": "2021/11/09",
+            "value": "25",
+            "name": "Third"
+        },
+        {
+            "date": "2021/11/10",
+            "value": "27",
+            "name": "Third"
+        },
+        {
+            "date": "2021/11/11",
+            "value": "23",
+            "name": "Third"
+        },
+        {
+            "date": "2021/11/12",
+            "value": "24",
+            "name": "Third"
+        }
+    ]
+    s.plt.themeriver(
+        data=data_,
+        x='date', y='value', name='name',
+        menu_path='test/themeriver-test',
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path='test/themeriver-test',
+        component_type='themeriver',
+        row=1, column=1,
+    )
+
+
+def test_sankey():
+    data_ = [
+        {
+            "source": "a",
+            "target": "a1",
+            "value": 5
+        },
+        {
+            "source": "a",
+            "target": "a2",
+            "value": 3
+        },
+        {
+            "source": "a",
+            "target": "b1",
+            "value": 8
+        },
+        {
+            "source": "b",
+            "target": "b1",
+            "value": 6
+        },
+        {
+            "source": "b1",
+            "target": "a1",
+            "value": 1
+        },
+        {
+            "source": "b1",
+            "target": "c",
+            "value": 2
+        }
+    ]
+    s.plt.sankey(
+        data=data_,
+        source='source', target='target', value='value',
+        menu_path='test/sankey-test',
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path='test/sankey-test',
+        component_type='sankey',
+        row=1, column=1,
+    )
+
+
+def test_pie():
+    data_ = [
+        {'name': 'Matcha Latte', 'value': 78},
+        {'name': 'Milk Tea', 'value': 17},
+        {'name': 'Cheese Cocoa', 'value': 18},
+        {'name': 'Walnut Brownie', 'value': 9},
+    ]
+
+    s.plt.pie(
+        data=data_,
+        x='name', y='value',
+        menu_path='test/pie-test',
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path='test/pie-test',
+        component_type='pie',
+        row=1, column=1,
+    )
+
+
 # test_update()
 # test_table()
 # test_bar()
@@ -758,8 +919,12 @@ def test_predictive_line():
 # test_sunburst()
 # test_tree()
 # test_treemap()
+# test_sankey()
+# test_pie()
 # TODO
+test_themeriver()
 test_candlestick()
 test_scatter_with_confidence_area()
 test_bubble_chart()
 test_line_with_confidence_area()
+

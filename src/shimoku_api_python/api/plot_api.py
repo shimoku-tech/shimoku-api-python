@@ -1127,7 +1127,6 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            option_modifications=option_modifications,
         )
 
     def radar(
@@ -1329,7 +1328,7 @@ class PlotApi(PlotAux):
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[[soruce, target, value]]  # keep only x and y
+        df = df[[source, target, value]]  # keep only x and y
         df.rename(
             columns={
                 source: 'source',
@@ -1339,15 +1338,19 @@ class PlotApi(PlotAux):
             inplace=True,
         )
 
-        return self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='SANKEY',
-            filters=filters,
+        report_metadata: Dict = {
+            'title': title,
+            'grid': f'{row}, {column}',
+            'reportType': 'ECHARTS',
+            'dataFields': {'type': 'sankey'},
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        return self._create_chart(
+            data=df, menu_path=menu_path,
+            report_metadata=report_metadata,
         )
 
     def funnel(
@@ -1458,6 +1461,6 @@ class PlotApi(PlotAux):
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
-            echart_type='THEMERIVER',
+            echart_type='themeriver',
             filters=filters,
         )

@@ -199,8 +199,8 @@ class PlotApi(PlotAux):
         and delete them all
         """
         type_map = {
-            'alert_indicator': 'INDICATOR',
-            'indicator': 'INDICATOR',
+            'alert_indicator': 'INDICATORS',
+            'indicator': 'INDICATORS',
             'table': None,
             'stockline': 'STOCKLINECHART',
             'html': 'HTML'

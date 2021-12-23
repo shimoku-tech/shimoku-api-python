@@ -954,7 +954,7 @@ def test_cohorts():
 # test_radar()
 # test_gauge()
 # test_indicator()
-# test_alert_indicator()
+test_alert_indicator()
 # test_heatmap()
 # test_sunburst()
 # test_tree()

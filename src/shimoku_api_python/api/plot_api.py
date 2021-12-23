@@ -183,7 +183,7 @@ class PlotApi(PlotAux):
                     report_data=data,
                 )
         except ValueError:
-            if data.empty:
+            if not data.empty:
                 self._update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,

@@ -32,6 +32,15 @@ data = [
 ]
 
 
+def test_set_new_business():
+    name: str = 'new-business-test'
+    s.plt.set_new_business(name)
+    bs = s.universe.get_universe_businesses()
+    for b in bs:
+        if b['name'] == name:
+            s.business.delete_business(b['id'])
+
+
 def test_update():
     menu_path = 'test/update-test'
     s.plt.bar(
@@ -943,7 +952,9 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_set_new_business()
 # test_update()
+
 # test_table()
 # test_bar()
 # test_stockline()

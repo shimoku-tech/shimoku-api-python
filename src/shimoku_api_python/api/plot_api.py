@@ -7,7 +7,7 @@ from pandas import DataFrame
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, ReportExplorerApi, DeleteExplorerApi
+    MultiCreateApi, ReportExplorerApi, DeleteExplorerApi, UniverseExplorerApi
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
@@ -16,6 +16,8 @@ from .app_type_metadata_api import AppTypeMetadataApi
 class PlotAux:
     _get_business_apps = BusinessExplorerApi.get_business_apps
     get_business_apps = BusinessExplorerApi.get_business_apps
+
+    get_universe_businesses = UniverseExplorerApi.get_universe_businesses
 
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
@@ -31,10 +33,12 @@ class PlotAux:
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_app = CreateExplorerAPI.create_app
+    _create_business = CreateExplorerAPI.create_business
 
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
 
@@ -70,6 +74,11 @@ class PlotApi(PlotAux):
     def set_business(self, business_id: str):
         """"""
         self.business_id: str = business_id
+
+    def set_new_business(self, name: str):
+        """"""
+        business: Dict = self._create_business(name=name)
+        self.business_id: str = business['id']
 
     def _get_component_order(
         self, reports: List[Dict], path_name: str,

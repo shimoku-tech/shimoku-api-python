@@ -595,8 +595,7 @@ class PlotApi(PlotAux):
 
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
-                df=df, report_id=report_id,
-                filter_map=filter_map,
+                df=df, filter_map=filter_map,
                 filter_fields=report_entry_filter_fields
             )
         )

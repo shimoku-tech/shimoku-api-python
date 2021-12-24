@@ -102,17 +102,17 @@ def set_overview_page():
         {
             "description": "Average apps per business",
             "title": "Average apps per business",
-            "value": f'{len(apps) / len(businesses)}',
+            "value": f'{round(len(apps) / len(businesses), 2)}',
         },
         {
             "description": "Average reports per app",
             "title": "Average reports per app",
-            "value": f'{len(reports) / len(apps)}',
+            "value": f'{round(len(reports) / len(apps), 2)}',
         },
         {
             "description": "Average reports per business",
             "title": "Average reports per business",
-            "value": f'{len(reports) / len(business)}',
+            "value": f'{round(len(reports) / len(business), 2)}',
         },
     ]
 
@@ -202,6 +202,9 @@ def set_apps_detail():
 
 
 def set_report_detail():
+    if not reports:
+        return
+
     menu_path: str = f'{menu_path_seed}/reports-detail'
     report_types: List[str] = [
         json.loads(report['dataFields'])['type'].capitalize()

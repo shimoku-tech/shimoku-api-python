@@ -342,17 +342,23 @@ class PlotApi(PlotAux):
         if option_modifications:
             if not option_modifications.get('legend'):
                 option_modifications.update({"legend": {"type": "scroll"}})
-            if not option_modifications.get('toolbox').get('orient'):
+
+            if not option_modifications.get('toolbox'):
+                option_modifications['toolbox'] = {"orient": "vertical", "top": 20}
+            elif not option_modifications.get('toolbox').get('orient'):
                 option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
-            if not option_modifications.get('series').get('smooth'):
+
+            if not option_modifications.get('series'):
+                option_modifications['series'] = {'smooth': True}
+            elif not option_modifications.get('series').get('smooth'):
                 option_modifications['series'].update({'smooth': True})
+
         else:
             option_modifications = option_modifications_temp
 
         # TODO we have two titles now, take a decision
         #  one in dataFields the other as field
         data_fields: Dict = self._set_data_fields(
-            x=x, y=y,
             title='', subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
@@ -377,8 +383,7 @@ class PlotApi(PlotAux):
         )
 
     def _set_data_fields(
-        self, x: str, y: str,
-        title: str, subtitle: str,
+        self, title: str, subtitle: str,
         x_axis_name: str, y_axis_name: str,
         option_modifications: Dict,
     ) -> Dict:
@@ -413,7 +418,11 @@ class PlotApi(PlotAux):
         }
 
         if option_modifications:
-            data_fields['optionModifications'] = option_modifications
+            for k, v in option_modifications.items():
+                if k == 'optionModifications':
+                    data_fields[k] = v
+                else:
+                    data_fields['chartOptions'][k] = v
 
         return data_fields
 
@@ -655,6 +664,7 @@ class PlotApi(PlotAux):
     ):
         """Create a barchart
         """
+        option_modifications: Dict[str, Any] = {'dataZoom': False}
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,

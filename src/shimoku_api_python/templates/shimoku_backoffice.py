@@ -181,7 +181,7 @@ def set_app_type_detail():
 
 
 def set_apps_detail():
-    menu_path: str = f'{menu_path_seed}/app-detail'
+    menu_path: str = f'{menu_path_seed}/apps-detail'
     df_ = pd.DataFrame(reports)
     reports_by_apps = df_.groupby('appId')['id'].count().to_dict()
     data_error: List[str] = []
@@ -202,7 +202,7 @@ def set_apps_detail():
 
 
 def set_report_detail():
-    menu_path: str = f'{menu_path_seed}/report-detail'
+    menu_path: str = f'{menu_path_seed}/reports-detail'
     report_types: List[str] = [
         json.loads(report['dataFields'])['type'].capitalize()
         if report["reportType"] == 'ECHARTS'
@@ -211,36 +211,29 @@ def set_report_detail():
         else 'Table'
         for report in reports
     ]
-    data_reports_indicator = [
-        {
-            "description": "Different types of reports",
-            "title": "Type of reports",
-            "value": f'{set(report_types)}',
-        },
-    ]
-
-    s.plt.indicator(
-        data=data_reports_indicator,
-        menu_path=menu_path,
-        row=1, column=1,
-        value='value',
-        header='title',
-        footer='description',
-    )
 
     data = dict(Counter(report_types))
+    df = pd.DataFrame(data, index=[0]).T.reset_index()
+    df.columns = ['report_type', 'count']
     s.plt.bar(
-        data=data,
-        x='report_type', y='count',
-        menu_path='test/bar-test',
-        row=2, column=1,
+        data=df,
+        title='Total number of reports by type in your apps',
+        x='report_type', y=['count'],
+        x_axis_name='Report Type', y_axis_name='Count',
+        menu_path=menu_path,
+        row=1, column=1,
     )
 
     filter_columns: List[str] = []
+    reports_df: pd.DataFrame = pd.DataFrame(reports)
+    cols_to_keep: List[str] = [
+        'id', 'appId', 'path', 'grid', 'createdAt', 'reportType',
+    ]
+    reports_df = reports_df[cols_to_keep]
     s.plt.table(
-        data=reports,
+        data=reports_df,
         menu_path=menu_path,
-        row=3, column=1,
+        row=2, column=1,
         filter_columns=filter_columns,
     )
 

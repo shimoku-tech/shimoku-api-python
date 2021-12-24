@@ -1519,3 +1519,6 @@ class PlotApi(PlotAux):
             echart_type='themeriver',
             filters=filters,
         )
+
+    def stacked_barchart(self):
+        raise NotImplementedError

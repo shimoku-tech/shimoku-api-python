@@ -582,11 +582,6 @@ class CreateExplorerAPI(object):
         # These are the mandatory fields
         title: int = report_metadata['title']
         order: int = report_metadata['order']
-        is_disabled: bool = (
-            report_metadata.get('isDisabled')
-            if report_metadata.get('isDisabled')
-            else False
-        )
         grid: bool = report_metadata['grid']
 
         # These are the mandatory fields
@@ -595,7 +590,6 @@ class CreateExplorerAPI(object):
             'title': title,
             'order': order,
             'grid': grid,
-            'isDisabled': is_disabled,
         }
 
         path: str = report_metadata.get('path')

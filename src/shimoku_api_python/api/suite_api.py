@@ -2,6 +2,8 @@
 from typing import List, Dict
 import datetime as dt
 
+import pandas as pd
+
 from src.shimoku_api_python.templates.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
     set_business_detail, set_overview_page,
@@ -15,7 +17,43 @@ class SuiteApi:
     def __init__(self, api_client):
         self.api_client = api_client
 
+    def get_predictions(self, suite: str):
+        """
+        :param suite: for example 'retention' the name of the suite
+         to get data from. In that case return the table of the
+         Retention Suite with users in churn
+        """
+        # TODO first check that the specified suite exists
+        # TODO for every suite the report to retrieve will be different
+        raise NotImplementedError
+
+    def get_prediction_performance(self, suite: str):
+        """
+        :param suite: for example 'retention' the name of the suite
+         to get data from. In that case return the results table
+         of the Retention Suite
+        """
+        # TODO first check that the specified suite exists
+        # TODO for every suite the report to retrieve will be different
+        raise NotImplementedError
+
+    def connect_predictions(self, suite: str, third_party_tool: str):
+        """Connect predictions to third party tools
+        such as Hubspot, Klaviyo or Mailchimp
+
+        :param suite: for example 'retention' the name of the suite
+         to get data from.
+        :param third_party_tool: The tool you want to connect a suite to
+        """
+        # TODO first check that the specified suite exists
+        # TODO second check that the specified third_party_tool is allowed
+        raise NotImplementedError
+
     def shimoku_backoffice(self):
+        """Create a BackOffice for Shimoku users that contain
+        all the data regarding what Businesses, AppTypes, Apps, Reports
+        they do have active for a target business
+        """
         menu_path_seed: str = 'shimoku-backoffice'
         businesses: List[Dict] = self.universe.get_universe_businesses()
 
@@ -88,23 +126,15 @@ class SuiteApi:
         print(f'End time {end_time}')
         print(f'Execution time: {end_time - start_time}')
 
-    def cohorts(self):
+    def cohorts(self, df: pd.DataFrame):
+        # TODO data is for create or update?
         raise NotImplementedError
 
-    def predictive_cohorts(self):
+    def predictive_cohorts(self, df: pd.DataFrame):
+        # TODO data is for create or update?
         raise NotImplementedError
 
-    def retention(self):
+    def retention(self, df: pd.DataFrame):
         """Create the Retention Suite"""
-
-        # TODO this two methods will always be created for suites
-        def get_predictions():
-            """Return the table of Retention Suite with users in churn"""
-            raise NotImplementedError
-
-        def connect_predictions():
-            """Connect predictions to third party tools
-            such as Hubspot, Klaviyo or Mailchimp"""
-            raise NotImplementedError
-
+        # TODO data is for create or update?
         raise NotImplementedError

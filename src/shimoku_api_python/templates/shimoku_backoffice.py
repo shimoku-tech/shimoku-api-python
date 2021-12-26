@@ -5,8 +5,17 @@ import json
 
 import pandas as pd
 
+from shimoku_api_python import Client as Shimoku
 
-def set_overview_page():
+
+def set_overview_page(
+    shimoku: Shimoku,
+    menu_path_seed: str,
+    businesses: List[Dict],
+    app_types: List[Dict],
+    apps: List[Dict],
+    reports: List[Dict],
+):
     menu_path: str = f'{menu_path_seed}/overview'
     data_overview_alert_indicator: List[Dict] = [
         {
@@ -39,7 +48,7 @@ def set_overview_page():
         },
     ]
 
-    s.plt.alert_indicator(
+    shimoku.plt.alert_indicator(
         data=data_overview_alert_indicator,
         menu_path=menu_path,
         row=1, column=1,
@@ -64,11 +73,11 @@ def set_overview_page():
         {
             "description": "Average reports per business",
             "title": "Average reports per business",
-            "value": f'{round(len(reports) / len(business), 2)}',
+            "value": f'{round(len(reports) / len(businesses), 2)}',
         },
     ]
 
-    s.plt.indicator(
+    shimoku.plt.indicator(
         data=data_overview_indicator,
         menu_path=menu_path,
         row=2, column=1,
@@ -78,7 +87,12 @@ def set_overview_page():
     )
 
 
-def set_business_detail():
+def set_business_detail(
+    shimoku: Shimoku,
+    menu_path_seed: str,
+    businesses: List[Dict],
+    apps: List[Dict],
+):
     menu_path: str = f'{menu_path_seed}/business-detail'
     df_ = pd.DataFrame(apps)
     apps_by_business = df_.groupby('appBusinessId')['id'].count().to_dict()
@@ -99,7 +113,7 @@ def set_business_detail():
     business_df = business_df[cols_to_keep]
 
     filter_columns: List[str] = []
-    s.plt.table(
+    shimoku.plt.table(
         data=business_df,
         menu_path=menu_path,
         row=1, column=1,
@@ -107,7 +121,12 @@ def set_business_detail():
     )
 
 
-def set_app_type_detail():
+def set_app_type_detail(
+    shimoku: Shimoku,
+    menu_path_seed: str,
+    app_types: List[Dict],
+    apps: List[Dict],
+):
     menu_path: str = f'{menu_path_seed}/app-type-detail'
     for app_ in apps:
         app_['app_type_id'] = app_['type']['id']
@@ -130,7 +149,7 @@ def set_app_type_detail():
     app_types_df = app_types_df[cols_to_keep]
 
     filter_columns: List[str] = []
-    s.plt.table(
+    shimoku.plt.table(
         data=app_types_df,
         menu_path=menu_path,
         row=1, column=1,
@@ -138,7 +157,12 @@ def set_app_type_detail():
     )
 
 
-def set_apps_detail():
+def set_apps_detail(
+    shimoku: Shimoku,
+    menu_path_seed: str,
+    apps: List[Dict],
+    reports: List[Dict],
+):
     menu_path: str = f'{menu_path_seed}/apps-detail'
     df_ = pd.DataFrame(reports)
     reports_by_apps = df_.groupby('appId')['id'].count().to_dict()
@@ -156,7 +180,7 @@ def set_apps_detail():
         'id', 'appBusinessId', 'createdAt',
     ]
     apps_df = apps_df[cols_to_keep]
-    s.plt.table(
+    shimoku.plt.table(
         data=apps_df,
         menu_path=menu_path,
         row=1, column=1,
@@ -164,7 +188,11 @@ def set_apps_detail():
     )
 
 
-def set_report_detail():
+def set_report_detail(
+    shimoku: Shimoku,
+    menu_path_seed: str,
+    reports: List[Dict],
+):
     if not reports:
         return
 
@@ -181,7 +209,7 @@ def set_report_detail():
     data = dict(Counter(report_types))
     df = pd.DataFrame(data, index=[0]).T.reset_index()
     df.columns = ['report_type', 'count']
-    s.plt.bar(
+    shimoku.plt.bar(
         data=df,
         title='Total number of reports by type in your apps',
         x='report_type', y=['count'],
@@ -196,7 +224,7 @@ def set_report_detail():
         'id', 'appId', 'path', 'grid', 'createdAt', 'reportType',
     ]
     reports_df = reports_df[cols_to_keep]
-    s.plt.table(
+    shimoku.plt.table(
         data=reports_df,
         menu_path=menu_path,
         row=2, column=1,

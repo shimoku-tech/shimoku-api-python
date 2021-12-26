@@ -4,10 +4,14 @@ from typing import List, Dict
 from collections import Counter
 import json
 
+import datetime as dt
 import pandas as pd
 
 import shimoku_api_python as shimoku
 
+
+start_time = dt.datetime.now()
+print(f'Start time {start_time}')
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -131,7 +135,10 @@ def set_business_detail():
     df_ = pd.DataFrame(apps)
     apps_by_business = df_.groupby('appBusinessId')['id'].count().to_dict()
     for business_ in businesses:
-        business_['apps number'] = apps_by_business[business_['id']]
+        try:
+            business_['apps number'] = apps_by_business[business_['id']]
+        except KeyError:
+            business_['apps number'] = 0
         business_['universe_id'] = business_['universe']['id']
 
     cols_to_keep: List[str] = [
@@ -159,7 +166,10 @@ def set_app_type_detail():
     df_ = pd.DataFrame(apps)
     apps_by_type = df_.groupby('app_type_id')['id'].count().to_dict()
     for app_type in app_types:
-        app_type['apps number'] = apps_by_type[app_type['id']]
+        try:
+            app_type['apps number'] = apps_by_type[app_type['id']]
+        except KeyError:
+            app_type['apps number'] = 0
         app_type['universe_id'] = app_type['universe']['id']
 
     cols_to_keep: List[str] = [
@@ -193,8 +203,13 @@ def set_apps_detail():
             data_error: List[str] = data_error + [app_['id']]
 
     filter_columns: List[str] = []
+    apps_df: pd.DataFrame = pd.DataFrame(apps)
+    cols_to_keep: List[str] = [
+        'id', 'appBusinessId', 'createdAt',
+    ]
+    apps_df = apps_df[cols_to_keep]
     s.plt.table(
-        data=apps,
+        data=apps_df,
         menu_path=menu_path,
         row=1, column=1,
         filter_columns=filter_columns,
@@ -237,6 +252,7 @@ def set_report_detail():
         data=reports_df,
         menu_path=menu_path,
         row=2, column=1,
+        title='All reports detail',
         filter_columns=filter_columns,
     )
 
@@ -251,3 +267,6 @@ set_business_detail()
 print('business detail created')
 set_overview_page()
 print('overview created')
+end_time = dt.datetime.now()
+print(f'End time {end_time}')
+print(f'Execution time: {end_time - start_time}')

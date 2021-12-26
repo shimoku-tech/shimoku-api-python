@@ -1,8 +1,8 @@
 """"""
-from typing import List, Dict
+from typing import List, Dict, Union
 import datetime as dt
 
-import pandas as pd
+from pandas import DataFrame
 
 from src.shimoku_api_python.templates.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
@@ -49,6 +49,7 @@ class SuiteApi:
         # TODO second check that the specified third_party_tool is allowed
         raise NotImplementedError
 
+    # TODO WiP
     def shimoku_backoffice(self):
         """Create a BackOffice for Shimoku users that contain
         all the data regarding what Businesses, AppTypes, Apps, Reports
@@ -126,15 +127,15 @@ class SuiteApi:
         print(f'End time {end_time}')
         print(f'Execution time: {end_time - start_time}')
 
-    def cohorts(self, df: pd.DataFrame):
+    def cohorts(self, data: Union[str, DataFrame, List[Dict]],):
         # TODO data is for create or update?
         raise NotImplementedError
 
-    def predictive_cohorts(self, df: pd.DataFrame):
+    def predictive_cohorts(self, data: Union[str, DataFrame, List[Dict]]):
         # TODO data is for create or update?
         raise NotImplementedError
 
-    def retention(self, df: pd.DataFrame):
+    def retention(self, data: Union[str, DataFrame, List[Dict]]):
         """Create the Retention Suite"""
         # TODO data is for create or update?
         raise NotImplementedError

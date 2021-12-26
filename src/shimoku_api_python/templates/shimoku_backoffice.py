@@ -1,15 +1,13 @@
 """"""
-from typing import List, Dict
+from typing import List, Dict, Callable
 from collections import Counter
 import json
 
 import pandas as pd
 
-from shimoku_api_python import Client as Shimoku
-
 
 def set_overview_page(
-    shimoku: Shimoku,
+    shimoku: Callable,
     menu_path_seed: str,
     businesses: List[Dict],
     app_types: List[Dict],
@@ -88,7 +86,7 @@ def set_overview_page(
 
 
 def set_business_detail(
-    shimoku: Shimoku,
+    shimoku: Callable,
     menu_path_seed: str,
     businesses: List[Dict],
     apps: List[Dict],
@@ -122,7 +120,7 @@ def set_business_detail(
 
 
 def set_app_type_detail(
-    shimoku: Shimoku,
+    shimoku: Callable,
     menu_path_seed: str,
     app_types: List[Dict],
     apps: List[Dict],
@@ -158,7 +156,7 @@ def set_app_type_detail(
 
 
 def set_apps_detail(
-    shimoku: Shimoku,
+    shimoku: Callable,
     menu_path_seed: str,
     apps: List[Dict],
     reports: List[Dict],
@@ -189,7 +187,7 @@ def set_apps_detail(
 
 
 def set_report_detail(
-    shimoku: Shimoku,
+    shimoku: Callable,
     menu_path_seed: str,
     reports: List[Dict],
 ):

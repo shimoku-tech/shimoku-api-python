@@ -2,13 +2,13 @@
 from typing import List, Dict
 import datetime as dt
 
-from src.shimoku_api_python.templateself.shimoku_backoffice import (
+from src.shimoku_api_python.templates.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
     set_business_detail, set_overview_page,
 )
 
 
-class TemplateApi:
+class SuiteApi:
     """
     """
 
@@ -92,4 +92,19 @@ class TemplateApi:
         raise NotImplementedError
 
     def predictive_cohorts(self):
+        raise NotImplementedError
+
+    def retention(self):
+        """Create the Retention Suite"""
+
+        # TODO this two methods will always be created for suites
+        def get_predictions():
+            """Return the table of Retention Suite with users in churn"""
+            raise NotImplementedError
+
+        def connect_predictions():
+            """Connect predictions to third party tools
+            such as Hubspot, Klaviyo or Mailchimp"""
+            raise NotImplementedError
+
         raise NotImplementedError

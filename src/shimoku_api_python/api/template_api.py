@@ -2,7 +2,7 @@
 from typing import List, Dict
 import datetime as dt
 
-from src.shimoku_api_python.templates.shimoku_backoffice import (
+from src.shimoku_api_python.templateself.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
     set_business_detail, set_overview_page,
 )
@@ -24,17 +24,17 @@ class TemplateApi:
             if business['name'] == menu_path_seed
         ]
         if not bo_business:
-            bo_business = s.business.create_business(name=menu_path_seed)
+            bo_business = self.businesself.create_business(name=menu_path_seed)
         else:
             bo_business = bo_business[0]
         business_id = bo_business['id']
-        s.plt.set_business(business_id)
+        self.plt.set_business(business_id)
 
         app_types: List[Dict] = self.universe.get_universe_app_types()
 
         apps: List[Dict] = []
         for business in businesses:
-            apps_temp: List[Dict] = self.business.get_business_apps(business['id'])
+            apps_temp: List[Dict] = self.businesself.get_business_apps(business['id'])
             apps = apps + apps_temp
 
         reports: List[Dict] = []
@@ -48,16 +48,48 @@ class TemplateApi:
         print('Note - It takes about 5 minutes to process')
         start_time = dt.datetime.now()
         print(f'Start time {start_time}')
-        set_report_detail()
+        set_report_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            reports=reports,
+        )
         print('report detail created')
-        set_apps_detail()
+        set_apps_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            apps=apps,
+            reports=reports,
+        )
         print('apps detail created')
-        set_app_type_detail()
+        set_app_type_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            app_types=app_types,
+            apps=apps,
+        )
         print('apptype detail created')
-        set_business_detail()
+        set_business_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            businesses=businesses,
+            apps=apps,
+        )
         print('business detail created')
-        set_overview_page()
+        set_overview_page(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            businesses=businesses,
+            app_types=app_types,
+            apps=apps,
+            reports=reports,
+        )
         print('overview created')
         end_time = dt.datetime.now()
         print(f'End time {end_time}')
         print(f'Execution time: {end_time - start_time}')
+
+    def cohorts(self):
+        raise NotImplementedError
+
+    def predictive_cohorts(self):
+        raise NotImplementedError

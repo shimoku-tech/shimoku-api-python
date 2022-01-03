@@ -1,5 +1,5 @@
 """"""
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 import datetime as dt
 
 from pandas import DataFrame
@@ -47,6 +47,23 @@ class SuiteApi:
         """
         # TODO first check that the specified suite exists
         # TODO second check that the specified third_party_tool is allowed
+        raise NotImplementedError
+
+    def predict(self, suite: str) -> List[Dict]:
+        """Use a model from a suite to predict a chunk of data
+        that will be returned immediately (as Neuro.ai)
+
+        :param suite: for example 'retention' the name of the suite
+         to get data from.
+        :return: the prediction
+        """
+        # TODO first check that the specified suite exists
+        raise NotImplementedError
+
+    def store_prediction_in_db(self):
+        """This is all what MindsDB does
+        NOT TO BE IMPLEMENTED SOON
+        """
         raise NotImplementedError
 
     # TODO WiP
@@ -127,15 +144,64 @@ class SuiteApi:
         print(f'End time {end_time}')
         print(f'Execution time: {end_time - start_time}')
 
-    def cohorts(self, data: Union[str, DataFrame, List[Dict]],):
+    def cohorts(
+        self, data: Union[str, DataFrame, List[Dict]],
+        user_col: str, event_date_col: str, creation_date_col: str,
+    ):
         # TODO data is for create or update?
         raise NotImplementedError
 
-    def predictive_cohorts(self, data: Union[str, DataFrame, List[Dict]]):
+    def predictive_cohorts(
+        self, data: Union[str, DataFrame, List[Dict]],
+        user_col: str, event_date_col: str, creation_date_col: str,
+        metadata: Dict,
+    ):
         # TODO data is for create or update?
         raise NotImplementedError
 
-    def retention(self, data: Union[str, DataFrame, List[Dict]]):
-        """Create the Retention Suite"""
+    def retention(
+        self, data: Union[str, DataFrame, List[Dict]],
+        user_col: str, event_date_col: str, event_revenue_col: str,
+        metadata: Dict,
+        churn_col: Optional[str] = None  # Supervised (churn) or unsupervised (retention)
+    ):
+        """Create the Retention Suite
+
+        :param data:
+        :param user_col:
+        :param event_date_col:
+        :param event_revenue_col:
+        :param metadata: Further columns to consider in the prediction (AutoML)
+        :param churn_col:
+        """
+        # TODO data is for create or update?
+        raise NotImplementedError
+
+    def recommender(
+        self, data: Union[str, DataFrame, List[Dict]],
+        user_col: str, purchase_id_col: str, product_id_col: str,
+        event_date_col: str, event_revenue_col: str,
+        metadata: Dict,
+    ):
+        """Create a Recommender Suite"""
+        # TODO data is for create or update?
+        raise NotImplementedError
+
+    def anomaly(
+        self, data: Union[str, DataFrame, List[Dict]],
+        target_cols: List[str], event_datetime_col: str,
+        metadata: Dict,
+    ):
+        """Create the Anomaly Suite"""
+        # TODO data is for create or update?
+        raise NotImplementedError
+
+    def sales_prediction(
+        self, data: Union[str, DataFrame, List[Dict]],
+        user_col: str, purchase_id_col: str, product_id_col: str,
+        event_date_col: str, event_revenue_col: str,
+        metadata: Dict,
+    ):
+        """Create the Product Sales Suite"""
         # TODO data is for create or update?
         raise NotImplementedError

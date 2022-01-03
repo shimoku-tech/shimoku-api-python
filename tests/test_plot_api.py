@@ -41,6 +41,56 @@ def test_set_new_business():
             s.business.delete_business(b['id'])
 
 
+def test_delete_path():
+    app_path: str = 'test-path'
+    menu_path: str = f'{app_path}/line-test'
+    menu_path_2: str = f'{app_path}/line-test-2'
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=2, column=1,
+    )
+
+    # TODO get app_id
+
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    assert len(reports) == 2
+
+    s.plt.delete_path(menu_path=menu_path)
+
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    assert len(reports) == 0
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path_2,
+        row=1, column=1,
+    )
+
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    assert len(reports) == 2
+
+    s.plt.delete_path(menu_path=app_path)
+
+    # TODO assert que no existe la app
+
+
+
 def test_update():
     menu_path = 'test/update-test'
     s.plt.bar(
@@ -951,6 +1001,8 @@ def test_cohorts():
     # s.plt.cohort()
     raise NotImplementedError
 
+
+test_delete_path()
 
 test_set_new_business()
 # test_update()

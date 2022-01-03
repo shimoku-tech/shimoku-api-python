@@ -56,6 +56,7 @@ class PlotAux:
     _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
 
     _delete_report = DeleteExplorerApi.delete_report
+    _delete_app = DeleteExplorerApi.delete_app
     _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
@@ -119,6 +120,8 @@ class PlotApi(PlotAux):
         and the path normalized name if any"""
         # remove empty spaces and put everything in lower case
         menu_path: str = menu_path.strip().lower()
+        # replace "_" for www protocol it is not good
+        menu_path = menu_path.replace('_', '-')
 
         try:
             assert len(menu_path.split('/')) <= 2  # we allow only one level of path
@@ -148,8 +151,20 @@ class PlotApi(PlotAux):
     def _create_chart(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, report_metadata: Dict,
+        row: Optional[int] = None,
+        column: Optional[int] = None,
+        overwrite: bool = True,
     ) -> Dict:
-        """"""
+        """
+        :param data:
+        :param menu_path:
+        :param report_metadata:
+        :param row: Only required for Overwrite
+        :param column: Only required for Overwrite
+        :param report_type: Only required for Overwrite
+        :param overwrite: Whether to Update (delete) any report in
+            the same menu_path and grid position or not
+        """
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
             business_id=self.business_id,
@@ -175,6 +190,18 @@ class PlotApi(PlotAux):
 
         if report_metadata.get('dataFields'):
             report_metadata['dataFields'] = json.dumps(report_metadata['dataFields'])
+
+        if overwrite:
+            if not row or not column:
+                raise ValueError(
+                    'Row and Column must be specified to overwrite a report'
+                )
+
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -202,7 +229,9 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-        self, menu_path: str, row: int, column: int, component_type: str,
+        self, menu_path: str, row: int, column: int,
+        component_type: Optional[str] = None,
+        by_component_type: bool = True,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
@@ -233,15 +262,27 @@ class PlotApi(PlotAux):
             business_id=self.business_id, app_id=app_id,
         )
 
-        target_reports: List[Dict] = [
-            report
-            for report in reports
-            if (
-                    report['path'] == path_name
-                    and report['grid'] == grid
-                    and report['reportType'] == component_type
-            )
-        ]
+        # Delete specific components in a path / grid
+        # or all of them whatsoever is its component_type
+        if by_component_type:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                        and report['reportType'] == component_type
+                )
+            ]
+        else:  # Whatever is the reportType delete it
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                )
+            ]
 
         for report in target_reports:
             self._delete_report(
@@ -249,6 +290,38 @@ class PlotApi(PlotAux):
                 app_id=app_id,
                 report_id=report['id']
             )
+
+    def delete_path(self, menu_path: str) -> None:
+        """In cascade delete an App or Path and all the reports within it
+
+        If menu_path contains an "{App}/{Path}" then it removes the path
+        otherwise it removes the whole app
+        """
+        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+
+        app: Dict = self._get_app_by_type(
+            business_id=self.business_id,
+            app_type_id=app_type['id']
+        )
+        app_id: str = app['id']
+
+        reports: List[Dict] = self._get_app_reports(
+            business_id=self.business_id, app_id=app_id,
+        )
+
+        for report in reports:
+            self._delete_report(
+                business_id=self.business_id,
+                app_id=app_id,
+                report_id=report['id']
+            )
+        else:
+            if '/' not in menu_path:
+                self._delete_app(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                )
 
     def update(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -380,6 +453,8 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
+            row=row, column=column,
+            overwrite=True,
         )
 
     def _set_data_fields(
@@ -429,10 +504,10 @@ class PlotApi(PlotAux):
     def table(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
-        date_columns: List[str] = None,
         title: Optional[str] = None,  # second layer
         filter_columns: Optional[List[str]] = None,
-        sort_table_by_cols: Optional[List] = None
+        sort_table_by_cols: Optional[List] = None,
+        horizontal_scrolling: bool = False,
     ):
         """
         {
@@ -549,6 +624,16 @@ class PlotApi(PlotAux):
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
+
+        # This is for the responsive part of the application
+        #  by default 6 is the maximum for average desktop screensize
+        #  then it starts creating an horizontal scrolling
+        if horizontal_scrolling:
+            if len(df.columns) > 6:
+                raise ValueError(
+                    f'Tables with more than 6 columns are not allowed'
+                )
+
         filter_map: Dict[str, str] = _calculate_table_filter_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
@@ -624,6 +709,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=[{'value': html}],
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -647,6 +733,7 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=[], menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1021,6 +1108,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1083,9 +1171,20 @@ class PlotApi(PlotAux):
         header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
+        multi_column: int = 4,
     ):
         """
+        :param data:
+        :param value:
+        :param menu_path:
+        :param row:
+        :param column:
         :param set_title: the title of the set of indicators
+        :param title:
+        :param header:
+        :param footer:
+        :param color:
+        :param multi_column: how many indicators are allowed by column
         """
         elements: List[str] = [header, footer, value, color]
         elements = [element for element in elements if element]
@@ -1113,12 +1212,26 @@ class PlotApi(PlotAux):
             'title': set_title if set_title else ''
         }
 
+        # By default Shimoku assigns 4 indicators per row
+        #  the following lines adjust it to the nature of the data
+        #  and the multi_column variable
+        len_df: int = len(df)
+        if len_df < multi_column:
+            report_metadata.update({
+                'dataFields': {'columns': len_df}
+            })
+        elif multi_column != 4:
+            report_metadata.update({
+                'dataFields': {'columns': multi_column}
+            })
+
         if title:
             report_metadata['title'] = title
 
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1158,6 +1271,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1190,6 +1304,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1228,6 +1343,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1256,6 +1372,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1284,6 +1401,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1313,6 +1431,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1414,6 +1533,7 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=df, menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1492,6 +1612,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 

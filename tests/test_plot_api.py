@@ -58,8 +58,12 @@ def test_delete_path():
         menu_path=menu_path,
         row=2, column=1,
     )
-
-    # TODO get app_id
+    apps: List[Dict] = s.business.get_business_apps(business_id)
+    app_id = max([
+        app['id']
+        for app in apps
+        if app['appType']['name'] == app_path
+    ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
     assert len(reports) == 2
@@ -88,7 +92,6 @@ def test_delete_path():
     s.plt.delete_path(menu_path=app_path)
 
     # TODO assert que no existe la app
-
 
 
 def test_update():
@@ -164,6 +167,16 @@ def test_update():
         menu_path=menu_path,
         row=1, column=1,
         component_type='bar',
+    )
+
+    # Change to linechart
+    s.plt.update(
+        data=data_,
+        x='date', y=['open', 'close', 'highest', 'lowest'],
+        menu_path=menu_path,
+        row=1, column=1,
+        component_type='line',
+        by_component_type=False,
     )
 
 
@@ -1002,10 +1015,14 @@ def test_cohorts():
     raise NotImplementedError
 
 
+# TODO WiP
 test_delete_path()
+test_update()
+test_indicator()
+test_table()
+
 
 test_set_new_business()
-# test_update()
 
 # test_table()
 # test_bar()

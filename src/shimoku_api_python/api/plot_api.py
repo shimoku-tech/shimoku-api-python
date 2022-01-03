@@ -326,15 +326,25 @@ class PlotApi(PlotAux):
     def update(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
-        menu_path: str, row: int, column: int, component_type: str,
+        menu_path: str, row: int, column: int,
+        component_type: str,
+        by_component_type: bool = True,
         **kwargs,
     ):
         """"""
-        self.delete(
-            menu_path=menu_path,
-            component_type=component_type,
-            row=row, column=column,
-        )
+        if by_component_type:
+            self.delete(
+                menu_path=menu_path,
+                component_type=component_type,
+                row=row, column=column,
+            )
+        else:
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
+
         m = getattr(self, component_type)
         return m(
             data=data,

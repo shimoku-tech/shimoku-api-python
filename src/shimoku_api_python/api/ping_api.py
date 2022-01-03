@@ -1,4 +1,6 @@
 """"""
+from requests import get
+from requests.models import Response
 
 
 class PingApi(object):
@@ -10,7 +12,14 @@ class PingApi(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
-    def ping(self) -> str:
+    def __call__(self, *args, **kwargs) -> bool:
         """Check if the API is alive"""
-        raise NotImplementedError
-        # return self.api_client.query_element(element_name='ping')
+        response: Response = get(url='https://api.shimoku.com/status')
+        response = response.json()
+        try:
+            assert response['success'] == 'External API is Up!'
+            return True
+        except KeyError:
+            return False
+        except AssertionError:
+            return False

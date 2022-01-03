@@ -39,5 +39,11 @@ def test_query_element():
     print(result)
 
 
-test_request()
-test_query_element()
+def test_ping():
+    is_alive: bool = s.ping()
+    assert is_alive
+
+
+# test_request()
+# test_query_element()
+test_ping()

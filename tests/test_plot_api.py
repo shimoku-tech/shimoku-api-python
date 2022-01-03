@@ -1,10 +1,12 @@
 """"""
 from os import getenv
 from typing import Dict, List
+import unittest
 
 import datetime as dt
 
 import shimoku_api_python as shimoku
+from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -32,6 +34,58 @@ data = [
 ]
 
 
+def test_ux():
+    """
+    1. Create single indicator centered
+    2. Create single indicator with chart in another column
+    """
+    menu_path: str = 'test/ux-test'
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=1, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        align='center',
+    )
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+        {
+            "description": "",
+            "title": "Price ($)",
+            "value": "455"
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=2, column=1,
+        value='value',
+        header='title',
+        footer='description',
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=2, column=2,
+    )
+
+
 def test_set_new_business():
     name: str = 'new-business-test'
     s.plt.set_new_business(name)
@@ -45,6 +99,7 @@ def test_delete_path():
     app_path: str = 'test-path'
     menu_path: str = f'{app_path}/line-test'
     menu_path_2: str = f'{app_path}/line-test-2'
+    menu_path_3: str = f'{app_path}/line-test-3'
 
     s.plt.line(
         data=data,
@@ -58,11 +113,18 @@ def test_delete_path():
         menu_path=menu_path,
         row=2, column=1,
     )
+    app_types: List[Dict] = s.universe.get_universe_app_types()
+    app_type_id = max([
+        app_type['id']
+        for app_type in app_types
+        if app_type['normalizedName'] == app_path
+    ])
+    assert app_type_id
     apps: List[Dict] = s.business.get_business_apps(business_id)
     app_id = max([
         app['id']
         for app in apps
-        if app['appType']['name'] == app_path
+        if app['type']['id'] == app_type_id
     ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
@@ -70,8 +132,7 @@ def test_delete_path():
 
     s.plt.delete_path(menu_path=menu_path)
 
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
-    assert len(reports) == 0
+    assert len(s.app.get_app_reports(business_id, app_id)) == 0
 
     s.plt.line(
         data=data,
@@ -85,13 +146,29 @@ def test_delete_path():
         menu_path=menu_path_2,
         row=1, column=1,
     )
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path_3,
+        row=1, column=1,
+    )
 
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    assert len(reports) == 3
+
+    s.plt.delete_path(menu_path=menu_path)
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=app_path)
 
-    # TODO assert que no existe la app
+    # Check it does not exists anymore
+    class MyTestCase(unittest.TestCase):
+        def check_reports_not_exists(self):
+            with self.assertRaises(ApiClientError):
+                s.app.get_app_reports(business_id, app_id)
+    t = MyTestCase()
+    t.check_reports_not_exists()
 
 
 def test_update():
@@ -1016,10 +1093,10 @@ def test_cohorts():
 
 
 # TODO WiP
-test_delete_path()
-test_update()
-test_indicator()
-test_table()
+# test_delete_path()
+# test_update()
+# test_table()
+test_ux()
 
 
 test_set_new_business()

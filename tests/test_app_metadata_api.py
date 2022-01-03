@@ -3,8 +3,6 @@ from os import getenv
 from typing import Dict, List
 import unittest
 
-import datetime as dt
-
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
 

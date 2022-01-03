@@ -44,6 +44,6 @@ def test_ping():
     assert is_alive
 
 
-# test_request()
-# test_query_element()
+test_request()
+test_query_element()
 test_ping()

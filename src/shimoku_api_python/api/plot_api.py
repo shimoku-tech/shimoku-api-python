@@ -144,7 +144,7 @@ class PlotApi(PlotAux):
                 ' '.join(path_normalized_name.split('-')).capitalize()
             )
         except IndexError:
-            path_normalized_name = None
+            path_name = None
 
         return app_type_name, path_name
 
@@ -304,13 +304,25 @@ class PlotApi(PlotAux):
             business_id=self.business_id,
             app_type_id=app_type['id']
         )
+        if not app:
+            return
+
         app_id: str = app['id']
 
         reports: List[Dict] = self._get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
-        for report in reports:
+        if path_name:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if report['path'] == path_name
+            ]
+        else:
+            target_reports: List[Dict] = reports
+
+        for report in target_reports:
             self._delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
@@ -1181,6 +1193,7 @@ class PlotApi(PlotAux):
         header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
+        align: Optional[str] = None,
         multi_column: int = 4,
     ):
         """
@@ -1194,8 +1207,24 @@ class PlotApi(PlotAux):
         :param header:
         :param footer:
         :param color:
+        :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
         """
+        def _set_indicator_columns(columns: int) -> Dict:
+            if align:
+                return {'dataFields': {'columns': columns, 'align': align}}
+            else:
+                return {'dataFields': {'columns': columns}}
+
+        if align:
+            try:
+                assert align in ['center', 'left', 'right']
+            except AssertionError:
+                raise ValueError(
+                    f'Align must be either "left", "center" or "right" '
+                    f'| value passed {align}'
+                )
+
         elements: List[str] = [header, footer, value, color]
         elements = [element for element in elements if element]
 
@@ -1222,18 +1251,19 @@ class PlotApi(PlotAux):
             'title': set_title if set_title else ''
         }
 
+        # TODO align is not working well yet
         # By default Shimoku assigns 4 indicators per row
         #  the following lines adjust it to the nature of the data
         #  and the multi_column variable
         len_df: int = len(df)
         if len_df < multi_column:
-            report_metadata.update({
-                'dataFields': {'columns': len_df}
-            })
+            columns: int = len_df
+            data_fields = _set_indicator_columns(columns)
+            report_metadata.update(data_fields)
         elif multi_column != 4:
-            report_metadata.update({
-                'dataFields': {'columns': multi_column}
-            })
+            columns: int = multi_column
+            data_fields = _set_indicator_columns(columns)
+            report_metadata.update(data_fields)
 
         if title:
             report_metadata['title'] = title

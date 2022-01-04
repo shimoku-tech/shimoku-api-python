@@ -74,6 +74,8 @@ class PlotApi(PlotAux):
 
     def set_business(self, business_id: str):
         """"""
+        if not business_id:
+            raise ValueError('Provided business_id is empty')
         self.business_id: str = business_id
 
     def set_new_business(self, name: str):

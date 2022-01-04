@@ -4,7 +4,7 @@ import datetime as dt
 
 from pandas import DataFrame
 
-from src.shimoku_api_python.templates.shimoku_backoffice import (
+from .templates.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
     set_business_detail, set_overview_page,
 )

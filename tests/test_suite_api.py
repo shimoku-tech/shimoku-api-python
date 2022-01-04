@@ -17,6 +17,7 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
 )
+# TODO si business_id es None hacer un raise de el business_id es none
 s.plt.set_business(business_id=business_id)
 
 

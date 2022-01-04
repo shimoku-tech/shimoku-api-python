@@ -23,8 +23,12 @@ class SuiteApi:
     """
     """
 
-    def __init__(self, api_client):
-        self.api_client = api_client
+    def __init__(self, s):
+        """
+        :param s: Shimoku instance
+        """
+        # Assign to the self the object 's' as the new 'self'
+        self.__dict__.update(s.__dict__)
 
     def get_predictions(self, suite: str):
         """
@@ -75,64 +79,64 @@ class SuiteApi:
         """
         raise NotImplementedError
 
-    def charts_catalog(self, s: Callable):
+    def charts_catalog(self):
         """
         :param s: SDK class instance Client()
         """
         print('Note - It takes about ~3 minutes to process it all')
-        create_bar(s)
-        create_pie(s)
-        create_html(s)
-        create_line(s)
-        create_tree(s)
-        create_table(s)
-        create_gauge(s)
-        create_radar(s)
-        create_funnel(s)
-        create_iframe(s)
-        create_sankey(s)
-        create_scatter(s)
-        create_heatmap(s)
-        create_treemap(s)
-        create_themeriver(s)
-        create_sunburst(s)
-        create_stockline(s)
-        create_indicator(s)
-        create_alert_indicator(s)
-        create_predictive_line(s)
+        create_bar(self)
+        create_pie(self)
+        create_html(self)
+        create_line(self)
+        create_tree(self)
+        create_table(self)
+        create_gauge(self)
+        create_radar(self)
+        create_funnel(self)
+        create_iframe(self)
+        create_sankey(self)
+        create_scatter(self)
+        create_heatmap(self)
+        create_treemap(self)
+        create_themeriver(self)
+        create_sunburst(self)
+        create_stockline(self)
+        create_indicator(self)
+        create_alert_indicator(self)
+        create_predictive_line(self)
 
     # TODO WiP
-    def shimoku_backoffice(self, s):
+    def shimoku_backoffice(self):
         """Create a BackOffice for Shimoku users that contain
         all the data regarding what Businesses, AppTypes, Apps, Reports
         they do have active for a target business
         """
         menu_path_seed: str = 'shimoku-backoffice'
-        businesses: List[Dict] = s.universe.get_universe_businesses()
+        businesses: List[Dict] = self.universe.get_universe_businesses()
 
         bo_business = [
             business for business in businesses
             if business['name'] == menu_path_seed
         ]
         if not bo_business:
-            bo_business = s.business.create_business(name=menu_path_seed)
+            bo_business = self.business.create_business(name=menu_path_seed)
         else:
             bo_business = bo_business[0]
         business_id = bo_business['id']
-        s.plt.set_business(business_id)
+        self.plt.set_business(business_id)
 
-        app_types: List[Dict] = s.universe.get_universe_app_types()
+        app_types: List[Dict] = self.universe.get_universe_app_types()
 
         apps: List[Dict] = []
         for business in businesses:
-            apps_temp: List[Dict] = s.business.get_business_apps(business['id'])
+            apps_temp: List[Dict] = self.business.get_business_apps(business['id'])
             apps = apps + apps_temp
 
         reports: List[Dict] = []
         for app in apps:
 # TODO quitar este try exceot
             try:
-                reports_temp = s.app.get_app_reports(
+                reports_temp = self.app.get_app_reports(
                     business_id=app['appBusinessId'],
                     app_id=app['id'],
                 )

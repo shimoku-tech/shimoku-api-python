@@ -33,7 +33,8 @@ class Client(object):
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.plt = PlotApi(self._api_client)
-        self.suite = SuiteApi(self._api_client)
+
+        self.suite = SuiteApi(self)  # it takes all the others classes
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

@@ -15,12 +15,14 @@ s.plt.set_business(business_id=business_id)
 
 
 def test_shimoku_backoffice():
-    s.suite.shimoku_backoffice(s)
+# TODO there are some bugs (ToDo) within it
+    s.suite.shimoku_backoffice()
 
 
 def test_charts_catalog():
-    s.suite.charts_catalog(s)
+# TODO it is not creating all of them!!
+    s.suite.charts_catalog()
 
 
-test_shimoku_backoffice()
-# test_charts_catalog()
+# test_shimoku_backoffice()
+test_charts_catalog()

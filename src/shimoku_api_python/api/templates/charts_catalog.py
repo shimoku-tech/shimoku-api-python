@@ -2,14 +2,9 @@
 """
 
 """"""
-from os import getenv
-from typing import Dict, List
-import unittest
+from typing import List
 
 import datetime as dt
-
-import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
 
 
 data = [
@@ -66,22 +61,10 @@ def create_stockline():
 
 
 def create_scatter():
-    r = s.plt.scatter(
+    s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/scatter-test',
-        row=1, column=1,
-    )
-
-    assert r
-
-
-# TODO WiP
-def create_scatter_with_confidence_area():
-    r = s.plt.scatter_with_confidence_area(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path='test/scatter-confidence-test',
         row=1, column=1,
     )
 

@@ -14,7 +14,7 @@ class PingApi(object):
 
     def __call__(self, *args, **kwargs) -> bool:
         """Check if the API is alive"""
-        response: Response = get(url='https://api.shimoku.com/status')
+        response: Response = get(url='https://api.shimoku.io/external/v1/status')
         response = response.json()
         try:
             assert response['success'] == 'External API is Up!'

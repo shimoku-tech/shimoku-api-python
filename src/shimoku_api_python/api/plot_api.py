@@ -14,6 +14,7 @@ from .app_type_metadata_api import AppTypeMetadataApi
 
 
 class PlotAux:
+    _get_business = BusinessExplorerApi.get_business
     _get_business_apps = BusinessExplorerApi.get_business_apps
     get_business_apps = BusinessExplorerApi.get_business_apps
 
@@ -74,8 +75,8 @@ class PlotApi(PlotAux):
 
     def set_business(self, business_id: str):
         """"""
-        if not business_id:
-            raise ValueError('Provided business_id is empty')
+        # If the business id does not exists it raises an ApiClientError
+        _ = self._get_business(business_id)
         self.business_id: str = business_id
 
     def set_new_business(self, name: str):

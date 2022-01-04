@@ -1,5 +1,5 @@
 """"""
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Callable
 import datetime as dt
 
 from pandas import DataFrame
@@ -7,6 +7,15 @@ from pandas import DataFrame
 from .templates.shimoku_backoffice import (
     set_report_detail, set_apps_detail, set_app_type_detail,
     set_business_detail, set_overview_page,
+)
+from .templates.charts_catalog import (
+    create_bar, create_pie, create_html,
+    create_line, create_tree, create_table,
+    create_gauge, create_radar, create_funnel,
+    create_iframe, create_sankey, create_scatter,
+    create_heatmap, create_treemap, create_themeriver,
+    create_sunburst, create_stockline, create_indicator,
+    create_alert_indicator, create_predictive_line
 )
 
 
@@ -66,73 +75,104 @@ class SuiteApi:
         """
         raise NotImplementedError
 
+    def charts_catalog(self, s: Callable):
+        """
+        :param s: SDK class instance Client()
+        """
+        print('Note - It takes about ~3 minutes to process it all')
+        create_bar(s)
+        create_pie(s)
+        create_html(s)
+        create_line(s)
+        create_tree(s)
+        create_table(s)
+        create_gauge(s)
+        create_radar(s)
+        create_funnel(s)
+        create_iframe(s)
+        create_sankey(s)
+        create_scatter(s)
+        create_heatmap(s)
+        create_treemap(s)
+        create_themeriver(s)
+        create_sunburst(s)
+        create_stockline(s)
+        create_indicator(s)
+        create_alert_indicator(s)
+        create_predictive_line(s)
+
     # TODO WiP
-    def shimoku_backoffice(self):
+    def shimoku_backoffice(self, s):
         """Create a BackOffice for Shimoku users that contain
         all the data regarding what Businesses, AppTypes, Apps, Reports
         they do have active for a target business
         """
         menu_path_seed: str = 'shimoku-backoffice'
-        businesses: List[Dict] = self.universe.get_universe_businesses()
+        businesses: List[Dict] = s.universe.get_universe_businesses()
 
         bo_business = [
             business for business in businesses
             if business['name'] == menu_path_seed
         ]
         if not bo_business:
-            bo_business = self.businesself.create_business(name=menu_path_seed)
+            bo_business = s.business.create_business(name=menu_path_seed)
         else:
             bo_business = bo_business[0]
         business_id = bo_business['id']
-        self.plt.set_business(business_id)
+        s.plt.set_business(business_id)
 
-        app_types: List[Dict] = self.universe.get_universe_app_types()
+        app_types: List[Dict] = s.universe.get_universe_app_types()
 
         apps: List[Dict] = []
         for business in businesses:
-            apps_temp: List[Dict] = self.businesself.get_business_apps(business['id'])
+            apps_temp: List[Dict] = s.business.get_business_apps(business['id'])
             apps = apps + apps_temp
 
         reports: List[Dict] = []
         for app in apps:
-            reports_temp = self.app.get_app_reports(
-                business_id=app['appBusinessId'],
-                app_id=app['id'],
-            )
+# TODO quitar este try exceot
+            try:
+                reports_temp = s.app.get_app_reports(
+                    business_id=app['appBusinessId'],
+                    app_id=app['id'],
+                )
+            except Exception:
+                continue
             reports = reports + reports_temp
 
+# TODO quitar los pirnts
         print('Note - It takes about 5 minutes to process')
         start_time = dt.datetime.now()
         print(f'Start time {start_time}')
         set_report_detail(
-            shimoku=self,
+            shimoku=s,
             menu_path_seed=menu_path_seed,
             reports=reports,
         )
         print('report detail created')
         set_apps_detail(
-            shimoku=self,
+            shimoku=s,
             menu_path_seed=menu_path_seed,
             apps=apps,
             reports=reports,
         )
         print('apps detail created')
         set_app_type_detail(
-            shimoku=self,
+            shimoku=s,
             menu_path_seed=menu_path_seed,
             app_types=app_types,
             apps=apps,
         )
         print('apptype detail created')
         set_business_detail(
-            shimoku=self,
+            shimoku=s,
             menu_path_seed=menu_path_seed,
             businesses=businesses,
             apps=apps,
         )
         print('business detail created')
         set_overview_page(
-            shimoku=self,
+            shimoku=s,
             menu_path_seed=menu_path_seed,
             businesses=businesses,
             app_types=app_types,

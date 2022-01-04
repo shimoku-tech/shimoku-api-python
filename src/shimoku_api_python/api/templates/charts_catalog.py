@@ -1,7 +1,6 @@
 """To create all available charts in an App
 """
 
-""""""
 from typing import List
 
 import datetime as dt
@@ -16,7 +15,7 @@ data = [
 ]
 
 
-def create_table():
+def create_table(s):
     data_ = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
         {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z'},
@@ -33,7 +32,7 @@ def create_table():
     )
 
 
-def create_bar():
+def create_bar(s):
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
@@ -42,7 +41,7 @@ def create_bar():
     )
 
 
-def create_line():
+def create_line(s):
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
@@ -51,7 +50,7 @@ def create_line():
     )
 
 
-def create_stockline():
+def create_stockline(s):
     s.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
@@ -60,7 +59,7 @@ def create_stockline():
     )
 
 
-def create_scatter():
+def create_scatter(s):
     s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
@@ -69,7 +68,7 @@ def create_scatter():
     )
 
 
-def create_funnel():
+def create_funnel(s):
     data_ = [
         {
             "value": 60,
@@ -99,7 +98,7 @@ def create_funnel():
     )
 
 
-def create_heatmap():
+def create_heatmap(s):
     data_ = [
         {
             "xAxis": "Lunes",
@@ -189,7 +188,7 @@ def create_heatmap():
     )
 
 
-def create_gauge():
+def create_gauge(s):
     data_ = [
         {
             "value": 60,
@@ -219,7 +218,7 @@ def create_gauge():
     )
 
 
-def create_sunburst():
+def create_sunburst(s):
     data_ = [
         {
             "name": "Root 1",
@@ -291,7 +290,7 @@ def create_sunburst():
     )
 
 
-def create_tree():
+def create_tree(s):
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -332,7 +331,7 @@ def create_tree():
     )
 
 
-def create_treemap():
+def create_treemap(s):
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -373,7 +372,7 @@ def create_treemap():
     )
 
 
-def create_radar():
+def create_radar(s):
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
         {'name': 'Milk Tea', 'value1': 17, 'value2': 10, 'value3': 63},
@@ -388,7 +387,7 @@ def create_radar():
     )
 
 
-def create_indicator():
+def create_indicator(s):
     data_ = [
         {
             "description": "",
@@ -421,7 +420,7 @@ def create_indicator():
     )
 
 
-def create_alert_indicator():
+def create_alert_indicator(s):
     data_ = [
         {
             "description": "",
@@ -450,7 +449,7 @@ def create_alert_indicator():
     )
 
 
-def create_predictive_line():
+def create_predictive_line(s):
     s.plt.predictive_line(
         data=data,
         x='date', y=['x', 'y'],
@@ -461,7 +460,7 @@ def create_predictive_line():
     )
 
 
-def create_themeriver():
+def create_themeriver(s):
     data_ = [
         {
             "date": "2021/11/08",
@@ -547,7 +546,7 @@ def create_themeriver():
     )
 
 
-def create_sankey():
+def create_sankey(s):
     data_ = [
         {
             "source": "a",
@@ -588,7 +587,7 @@ def create_sankey():
     )
 
 
-def create_pie():
+def create_pie(s):
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
         {'name': 'Milk Tea', 'value': 17},
@@ -604,7 +603,7 @@ def create_pie():
     )
 
 
-def create_iframe():
+def create_iframe(s):
     url = 'https://www.shimoku.com/'
     s.plt.iframe(
         url=url,
@@ -613,7 +612,7 @@ def create_iframe():
     )
 
 
-def create_html():
+def create_html(s):
     html = (
         "<p style='background-color: #daf4f0';>"
         "Comparing the results of predictions that happened previous "

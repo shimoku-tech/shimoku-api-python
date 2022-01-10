@@ -205,7 +205,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         return df_[list(filter_fields.keys())].to_dict(orient='records')
 
     def _convert_dataframe_to_report_entry(
-        self, df: DataFrame, report_id: str,
+        self, df: DataFrame,
         filter_map: Optional[Dict[str, str]] = None,
         filter_fields: Optional[Dict[str, List[str]]] = None,
     ) -> List[Dict]:
@@ -229,7 +229,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     f'You provided {filter_fields}'
                 )
 
-            filter_entries: List[Dict] = (
+            filter_entries: Dict = (
                 self._set_report_entry_filter_fields(
                     df=df, filter_fields=filter_fields,
                     filter_map=filter_map,
@@ -242,10 +242,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         records: List[Dict] = df.to_dict(orient='records')
         try:
             data_entries: List[Dict] = [
-                {
-                    'data': json.dumps(d),
-                    'reportId': report_id,
-                }
+                {'data': json.dumps(d)}
                 for d in records
             ]
         except TypeError:
@@ -257,10 +254,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                         datum[k] = v.isoformat()
 
             data_entries: List[Dict] = [
-                {
-                    'data': json.dumps(d),
-                    'reportId': report_id,
-                }
+                {'data': json.dumps(d)}
                 for d in records
             ]
 

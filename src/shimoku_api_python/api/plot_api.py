@@ -1,5 +1,7 @@
 """"""
+from sys import stdout
 from typing import List, Dict, Optional, Union, Tuple, Any
+import logging
 import json
 
 from pandas import DataFrame
@@ -13,7 +15,17 @@ from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
 
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.basicConfig(
+    stream=stdout,
+    datefmt='%Y-%m-%d %H:%M',
+    format='%(asctime)s | %(levelname)s | %(message)s'
+)
+
+
 class PlotAux:
+    _get_business = BusinessExplorerApi.get_business
     _get_business_apps = BusinessExplorerApi.get_business_apps
     get_business_apps = BusinessExplorerApi.get_business_apps
 
@@ -56,6 +68,7 @@ class PlotAux:
     _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
 
     _delete_report = DeleteExplorerApi.delete_report
+    _delete_app = DeleteExplorerApi.delete_app
     _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
@@ -73,6 +86,8 @@ class PlotApi(PlotAux):
 
     def set_business(self, business_id: str):
         """"""
+        # If the business id does not exists it raises an ApiClientError
+        _ = self._get_business(business_id)
         self.business_id: str = business_id
 
     def set_new_business(self, name: str):
@@ -80,45 +95,80 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    def _get_component_order(
-        self, reports: List[Dict], path_name: str,
-    ) -> int:
-        """"""
-        if reports:
-            orders = [
-                report['order']
-                for report in reports
-                if report['path'] == path_name
-            ]
+    # TODO to be tried
+    def set_path_orders(
+        self, app_name: str, path_order: Dict[str, int],
+    ) -> None:
+        """
+        :param app_name: the App name
+        :param path_order: example {'test': 0, 'more-test': 1}
+        """
+        apps: List[Dict] = self._get_business_apps(self.business_id)
+        app_types: List[Dict] = self.get_universe_app_types()
+        for app in apps:
+            app_id: str = app['id']
+            app_type_id: str = app['type']['id']
 
-            if orders:
-                order = min(orders)
-            else:
-                order = 1
+            # Check that it is of the target app_name
+            if not any([
+                True
+                if app_type['id'] == app_type_id and app_type['name'] == app_name
+                else False
+                for app_type in app_types
+            ]):
+                continue
+
+            reports = self._get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
+
+            for report in reports:
+                path: str = report['path']
+                order: int = path_order.get(path)
+                if order:
+                    self.update_report(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                        report_id=report['id'],
+                        report_metadata={'order': order},
+                    )
+
+    def _get_component_order(self, app_id: str, path_name: str) -> int:
+        """Set an ascending report.Order to new path created
+
+        If a report in the same path exists take its order
+        otherwise find the higher report.Order and set it +1
+        as the report.Order of the new path
+        """
+        reports_ = self._get_app_reports(
+            business_id=self.business_id,
+            app_id=app_id,
+        )
+
+        try:
+            order_temp = max([report['order'] for report in reports_])
+        except ValueError:
+            order_temp = 0
+
+        path_order: List[int] = [
+            report['order']
+            for report in reports_
+            if report['path'] == path_name
+        ]
+
+        if path_order:
+            return min(path_order)
         else:
-            apps: List[Dict] = self._get_business_apps(self.business_id)
-
-            orders: int = 0
-            for app_ in apps:
-                reports_ = self._get_app_reports(
-                    business_id=self.business_id,
-                    app_id=app_['id'],
-                )
-
-                try:
-                    order_temp = max([report['order'] for report in reports])
-                except ValueError:
-                    order_temp = 0
-
-                orders = max(orders, order_temp)
-            order: int = orders + 1
-        return order
+            return order_temp + 1
 
     def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
         """Break the menu path in the app type normalized name
         and the path normalized name if any"""
         # remove empty spaces and put everything in lower case
         menu_path: str = menu_path.strip().lower()
+        # replace "_" for www protocol it is not good
+        menu_path = menu_path.replace('_', '-')
 
         try:
             assert len(menu_path.split('/')) <= 2  # we allow only one level of path
@@ -141,15 +191,27 @@ class PlotApi(PlotAux):
                 ' '.join(path_normalized_name.split('-')).capitalize()
             )
         except IndexError:
-            path_normalized_name = None
+            path_name = None
 
         return app_type_name, path_name
 
     def _create_chart(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, report_metadata: Dict,
+        row: Optional[int] = None,
+        column: Optional[int] = None,
+        overwrite: bool = True,
     ) -> Dict:
-        """"""
+        """
+        :param data:
+        :param menu_path:
+        :param report_metadata:
+        :param row: Only required for Overwrite
+        :param column: Only required for Overwrite
+        :param report_type: Only required for Overwrite
+        :param overwrite: Whether to Update (delete) any report in
+            the same menu_path and grid position or not
+        """
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
             business_id=self.business_id,
@@ -164,10 +226,8 @@ class PlotApi(PlotAux):
             app_id=app_id,
         )
 
-# TODO this is not working
         order: int = self._get_component_order(
-            reports=reports,
-            path_name=path_name,
+            app_id=app_id, path_name=path_name,
         )
 
         report_metadata.update({'path': path_name})
@@ -175,6 +235,18 @@ class PlotApi(PlotAux):
 
         if report_metadata.get('dataFields'):
             report_metadata['dataFields'] = json.dumps(report_metadata['dataFields'])
+
+        if overwrite:
+            if not row or not column:
+                raise ValueError(
+                    'Row and Column must be specified to overwrite a report'
+                )
+
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -202,7 +274,9 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-        self, menu_path: str, row: int, column: int, component_type: str,
+        self, menu_path: str, row: int, column: int,
+        component_type: Optional[str] = None,
+        by_component_type: bool = True,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
@@ -233,15 +307,27 @@ class PlotApi(PlotAux):
             business_id=self.business_id, app_id=app_id,
         )
 
-        target_reports: List[Dict] = [
-            report
-            for report in reports
-            if (
-                    report['path'] == path_name
-                    and report['grid'] == grid
-                    and report['reportType'] == component_type
-            )
-        ]
+        # Delete specific components in a path / grid
+        # or all of them whatsoever is its component_type
+        if by_component_type:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                        and report['reportType'] == component_type
+                )
+            ]
+        else:  # Whatever is the reportType delete it
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                )
+            ]
 
         for report in target_reports:
             self._delete_report(
@@ -250,18 +336,73 @@ class PlotApi(PlotAux):
                 report_id=report['id']
             )
 
+    def delete_path(self, menu_path: str) -> None:
+        """In cascade delete an App or Path and all the reports within it
+
+        If menu_path contains an "{App}/{Path}" then it removes the path
+        otherwise it removes the whole app
+        """
+        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+
+        app: Dict = self._get_app_by_type(
+            business_id=self.business_id,
+            app_type_id=app_type['id']
+        )
+        if not app:
+            return
+
+        app_id: str = app['id']
+
+        reports: List[Dict] = self._get_app_reports(
+            business_id=self.business_id, app_id=app_id,
+        )
+
+        if path_name:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if report['path'] == path_name
+            ]
+        else:
+            target_reports: List[Dict] = reports
+
+        for report in target_reports:
+            self._delete_report(
+                business_id=self.business_id,
+                app_id=app_id,
+                report_id=report['id']
+            )
+        else:
+            if '/' not in menu_path:
+                self._delete_app(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                )
+
     def update(
         self, data: Union[str, DataFrame, List[Dict]],
         x: str, y: List[str],  # first layer
-        menu_path: str, row: int, column: int, component_type: str,
+        menu_path: str, row: int, column: int,
+        component_type: str,
+        by_component_type: bool = True,
         **kwargs,
     ):
         """"""
-        self.delete(
-            menu_path=menu_path,
-            component_type=component_type,
-            row=row, column=column,
-        )
+        logger.warning('To be deprecated')
+        if by_component_type:
+            self.delete(
+                menu_path=menu_path,
+                component_type=component_type,
+                row=row, column=column,
+            )
+        else:
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
+
         m = getattr(self, component_type)
         return m(
             data=data,
@@ -342,17 +483,23 @@ class PlotApi(PlotAux):
         if option_modifications:
             if not option_modifications.get('legend'):
                 option_modifications.update({"legend": {"type": "scroll"}})
-            if not option_modifications.get('toolbox').get('orient'):
+
+            if not option_modifications.get('toolbox'):
+                option_modifications['toolbox'] = {"orient": "vertical", "top": 20}
+            elif not option_modifications.get('toolbox').get('orient'):
                 option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
-            if not option_modifications.get('series').get('smooth'):
+
+            if not option_modifications.get('series'):
+                option_modifications['series'] = {'smooth': True}
+            elif not option_modifications.get('series').get('smooth'):
                 option_modifications['series'].update({'smooth': True})
+
         else:
             option_modifications = option_modifications_temp
 
         # TODO we have two titles now, take a decision
         #  one in dataFields the other as field
         data_fields: Dict = self._set_data_fields(
-            x=x, y=y,
             title='', subtitle=subtitle,
             x_axis_name=x_axis_name,
             y_axis_name=y_axis_name,
@@ -374,11 +521,12 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
+            row=row, column=column,
+            overwrite=True,
         )
 
     def _set_data_fields(
-        self, x: str, y: str,
-        title: str, subtitle: str,
+        self, title: str, subtitle: str,
         x_axis_name: str, y_axis_name: str,
         option_modifications: Dict,
     ) -> Dict:
@@ -413,17 +561,22 @@ class PlotApi(PlotAux):
         }
 
         if option_modifications:
-            data_fields['optionModifications'] = option_modifications
+            for k, v in option_modifications.items():
+                if k == 'optionModifications':
+                    data_fields[k] = v
+                else:
+                    data_fields['chartOptions'][k] = v
 
         return data_fields
 
     def table(
         self, data: Union[str, DataFrame, List[Dict]],
         menu_path: str, row: int, column: int,  # report creation
-        date_columns: List[str] = None,
         title: Optional[str] = None,  # second layer
         filter_columns: Optional[List[str]] = None,
-        sort_table_by_cols: Optional[List] = None
+        sort_table_by_cols: Optional[List] = None,
+        horizontal_scrolling: bool = False,
+        overwrite: bool = True,
     ):
         """
         {
@@ -540,6 +693,16 @@ class PlotApi(PlotAux):
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
+
+        # This is for the responsive part of the application
+        #  by default 6 is the maximum for average desktop screensize
+        #  then it starts creating an horizontal scrolling
+        if horizontal_scrolling:
+            if len(df.columns) > 6:
+                raise ValueError(
+                    f'Tables with more than 6 columns are not allowed'
+                )
+
         filter_map: Dict[str, str] = _calculate_table_filter_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
@@ -553,11 +716,7 @@ class PlotApi(PlotAux):
         app_id: str = app['id']
 
         order: int = self._get_component_order(
-            reports=self._get_app_reports(
-                business_id=self.business_id,
-                app_id=app_id,
-            ),
-            path_name=path_name,
+            app_id=app_id, path_name=path_name,
         )
 
         report_metadata: Dict[str, Any] = {
@@ -568,6 +727,18 @@ class PlotApi(PlotAux):
         }
 
         report_metadata['dataFields'] = _calculate_table_data_fields()
+
+        if overwrite:
+            if not row or not column:
+                raise ValueError(
+                    'Row and Column must be specified to overwrite a report'
+                )
+
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -584,10 +755,11 @@ class PlotApi(PlotAux):
         if sort_table_by_cols:
             df = df.sort_values(by=sort_table_by_cols, ascending=True)
 
+        # We do not allow NaN values for report Entry
+        df = df.fillna('')
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
-                df=df, report_id=report_id,
-                filter_map=filter_map,
+                df=df, filter_map=filter_map,
                 filter_fields=report_entry_filter_fields
             )
         )
@@ -616,6 +788,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=[{'value': html}],
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -639,6 +812,7 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=[], menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -655,6 +829,7 @@ class PlotApi(PlotAux):
     ):
         """Create a barchart
         """
+        option_modifications: Dict[str, Any] = {'dataZoom': False}
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
@@ -1012,6 +1187,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1074,10 +1250,38 @@ class PlotApi(PlotAux):
         header: Optional[str] = None,
         footer: Optional[str] = None,
         color: Optional[str] = None,
+        align: Optional[str] = None,
+        multi_column: int = 4,
     ):
         """
+        :param data:
+        :param value:
+        :param menu_path:
+        :param row:
+        :param column:
         :param set_title: the title of the set of indicators
+        :param title:
+        :param header:
+        :param footer:
+        :param color:
+        :param align: to align center, left or right a component
+        :param multi_column: how many indicators are allowed by column
         """
+        def _set_indicator_columns(columns: int) -> Dict:
+            if align:
+                return {'dataFields': {'columns': columns, 'align': align}}
+            else:
+                return {'dataFields': {'columns': columns}}
+
+        if align:
+            try:
+                assert align in ['center', 'left', 'right']
+            except AssertionError:
+                raise ValueError(
+                    f'Align must be either "left", "center" or "right" '
+                    f'| value passed {align}'
+                )
+
         elements: List[str] = [header, footer, value, color]
         elements = [element for element in elements if element]
 
@@ -1104,12 +1308,27 @@ class PlotApi(PlotAux):
             'title': set_title if set_title else ''
         }
 
+        # TODO align is not working well yet
+        # By default Shimoku assigns 4 indicators per row
+        #  the following lines adjust it to the nature of the data
+        #  and the multi_column variable
+        len_df: int = len(df)
+        if len_df < multi_column:
+            columns: int = len_df
+            data_fields = _set_indicator_columns(columns)
+            report_metadata.update(data_fields)
+        elif multi_column != 4:
+            columns: int = multi_column
+            data_fields = _set_indicator_columns(columns)
+            report_metadata.update(data_fields)
+
         if title:
             report_metadata['title'] = title
 
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1149,6 +1368,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1181,6 +1401,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1219,6 +1440,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1247,6 +1469,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1275,6 +1498,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1304,6 +1528,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=data,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1405,6 +1630,7 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=df, menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1483,6 +1709,7 @@ class PlotApi(PlotAux):
         return self._create_chart(
             data=df,
             menu_path=menu_path,
+            row=row, column=column,
             report_metadata=report_metadata,
         )
 
@@ -1519,3 +1746,6 @@ class PlotApi(PlotAux):
             echart_type='themeriver',
             filters=filters,
         )
+
+    def stacked_barchart(self):
+        raise NotImplementedError

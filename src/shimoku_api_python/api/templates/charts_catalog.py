@@ -1,28 +1,9 @@
-""""""
-from os import getenv
-from typing import Dict, List
-import unittest
+"""To create all available charts in an App
+"""
+
+from typing import List
 
 import datetime as dt
-
-import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
-
-
-api_key: str = getenv('API_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
-business_id: str = getenv('BUSINESS_ID')
-
-
-config = {
-    'access_token': api_key,
-}
-
-s = shimoku.Client(
-    config=config,
-    universe_id=universe_id,
-)
-s.plt.set_business(business_id=business_id)
 
 
 data = [
@@ -32,236 +13,10 @@ data = [
     {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
     {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
 ]
+app_name: str = 'Catalog'
 
 
-def test_ux():
-    """
-    1. Create single indicator centered
-    2. Create single indicator with chart in another column
-    """
-    menu_path: str = 'test/ux-test'
-    data_ = [
-        {
-            "description": "",
-            "title": "Estado",
-            "value": "Abierto",
-        },
-    ]
-    s.plt.indicator(
-        data=data_,
-        menu_path=menu_path,
-        row=1, column=1,
-        value='value',
-        header='title',
-        footer='description',
-        align='center',
-    )
-
-    data_ = [
-        {
-            "description": "",
-            "title": "Estado",
-            "value": "Abierto",
-        },
-        {
-            "description": "",
-            "title": "Price ($)",
-            "value": "455"
-        },
-    ]
-    s.plt.indicator(
-        data=data_,
-        menu_path=menu_path,
-        row=2, column=1,
-        value='value',
-        header='title',
-        footer='description',
-    )
-
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=2, column=2,
-    )
-
-
-def test_set_path_orders():
-    s.plt.set_path_orders(path_order={'test': 1})
-
-
-def test_set_new_business():
-    name: str = 'new-business-test'
-    s.plt.set_new_business(name)
-    bs = s.universe.get_universe_businesses()
-    for b in bs:
-        if b['name'] == name:
-            s.business.delete_business(b['id'])
-
-
-def test_delete_path():
-    app_path: str = 'test-path'
-    menu_path: str = f'{app_path}/line-test'
-    menu_path_2: str = f'{app_path}/line-test-2'
-    menu_path_3: str = f'{app_path}/line-test-3'
-
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=2, column=1,
-    )
-    app_types: List[Dict] = s.universe.get_universe_app_types()
-    app_type_id = max([
-        app_type['id']
-        for app_type in app_types
-        if app_type['normalizedName'] == app_path
-    ])
-    assert app_type_id
-    apps: List[Dict] = s.business.get_business_apps(business_id)
-    app_id = max([
-        app['id']
-        for app in apps
-        if app['type']['id'] == app_type_id
-    ])
-
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
-    assert len(reports) == 2
-
-    s.plt.delete_path(menu_path=menu_path)
-
-    assert len(s.app.get_app_reports(business_id, app_id)) == 0
-
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path_2,
-        row=1, column=1,
-    )
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path_3,
-        row=1, column=1,
-    )
-
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
-    assert len(reports) == 3
-
-    s.plt.delete_path(menu_path=menu_path)
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
-    assert len(reports) == 2
-
-    s.plt.delete_path(menu_path=app_path)
-
-    # Check it does not exists anymore
-    class MyTestCase(unittest.TestCase):
-        def check_reports_not_exists(self):
-            with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
-    t = MyTestCase()
-    t.check_reports_not_exists()
-
-
-def test_update():
-    menu_path = 'test/update-test'
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-
-    data_: List[Dict] = [
-        {
-            "date": "2021-01-24",
-            "open": 78,
-            "close": 85,
-            "highest": 94,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-25",
-            "open": 17,
-            "close": 13,
-            "highest": 7,
-            "lowest": 18
-        },
-        {
-            "date": "2021-01-26",
-            "open": 18,
-            "close": 38,
-            "highest": 33,
-            "lowest": 39
-        },
-        {
-            "date": "2021-01-27",
-            "open": 9,
-            "close": 27,
-            "highest": 46,
-            "lowest": 93
-        },
-        {
-            "date": "2021-01-28",
-            "open": 59,
-            "close": 45,
-            "highest": 90,
-            "lowest": 75
-        },
-        {
-            "date": "2021-01-29",
-            "open": 45,
-            "close": 18,
-            "highest": 0,
-            "lowest": 68
-        },
-        {
-            "date": "2021-01-30",
-            "open": 48,
-            "close": 57,
-            "highest": 13,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-31",
-            "open": 79,
-            "close": 84,
-            "highest": 58,
-            "lowest": 14
-        }
-    ]
-    s.plt.update(
-        data=data_,
-        x='date', y=['open', 'close', 'highest', 'lowest'],
-        menu_path=menu_path,
-        row=1, column=1,
-        component_type='bar',
-    )
-
-    # Change to linechart
-    s.plt.update(
-        data=data_,
-        x='date', y=['open', 'close', 'highest', 'lowest'],
-        menu_path=menu_path,
-        row=1, column=1,
-        component_type='line',
-        by_component_type=False,
-    )
-
-
-def test_table():
+def create_table(shimoku):
     data_ = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
         {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z'},
@@ -270,179 +25,51 @@ def test_table():
         {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
     ]
     filter_columns: List[str] = ['filtA', 'filtB']
-    s.plt.table(
+    shimoku.plt.table(
         data=data_,
-        menu_path='test/table-test',
+        menu_path=f'{app_name}/table-test',
         row=1, column=1,
         filter_columns=filter_columns,
     )
 
-    s.plt.delete(
-        menu_path='test/table-test',
-        component_type='table',
-        row=1, column=1,
-    )
 
-
-def test_bar():
-    s.plt.bar(
+def create_bar(shimoku):
+    shimoku.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/bar-test',
-        component_type='bar',
+        menu_path=f'{app_name}/bar-test',
         row=1, column=1,
     )
 
 
-def test_line():
-    s.plt.line(
+def create_line(shimoku):
+    shimoku.plt.line(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/line-test',
+        menu_path=f'{app_name}/line-test',
         row=1, column=1,
     )
 
-    s.plt.delete(
-        menu_path='test/line-test',
-        row=1, column=1,
-        component_type='line',
-    )
 
-
-def test_stockline():
-    s.plt.stockline(
+def create_stockline(shimoku):
+    shimoku.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/stockline-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/stockline-test',
-        component_type='stockline',
+        menu_path=f'{app_name}/stockline-test',
         row=1, column=1,
     )
 
 
-def test_scatter():
-    r = s.plt.scatter(
+def create_scatter(shimoku):
+    shimoku.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/scatter-test',
-        row=1, column=1,
-    )
-
-    assert r
-
-    s.plt.delete(
-        menu_path='test/line-test',
-        row=1, column=1,
-        component_type='scatter',
-    )
-
-
-# TODO WiP
-def test_scatter_with_confidence_area():
-    r = s.plt.scatter_with_confidence_area(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path='test/scatter-confidence-test',
-        row=1, column=1,
-    )
-
-    assert r
-
-    s.plt.delete(
-        menu_path='test/scatter-confidence-test',
-        row=1, column=1,
-        component_type='scatter_with_confidence_area',
-    )
-
-
-def test_bubble_chart():
-    # s.plt.bubble_chart()
-    raise NotImplementedError
-
-
-def test_candlestick():
-    data_: List[Dict] = [
-        {
-            "date": "2021-01-24",
-            "open": 78,
-            "close": 85,
-            "highest": 94,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-25",
-            "open": 17,
-            "close": 13,
-            "highest": 7,
-            "lowest": 18
-        },
-        {
-            "date": "2021-01-26",
-            "open": 18,
-            "close": 38,
-            "highest": 33,
-            "lowest": 39
-        },
-        {
-            "date": "2021-01-27",
-            "open": 9,
-            "close": 27,
-            "highest": 46,
-            "lowest": 93
-        },
-        {
-            "date": "2021-01-28",
-            "open": 59,
-            "close": 45,
-            "highest": 90,
-            "lowest": 75
-        },
-        {
-            "date": "2021-01-29",
-            "open": 45,
-            "close": 18,
-            "highest": 0,
-            "lowest": 68
-        },
-        {
-            "date": "2021-01-30",
-            "open": 48,
-            "close": 57,
-            "highest": 13,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-31",
-            "open": 79,
-            "close": 84,
-            "highest": 58,
-            "lowest": 14
-        }
-    ]
-
-    s.plt.candlestick(
-        data=data_, x='date',
-        menu_path='test/candlestick-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/candlestick-test',
-        component_type='candlestick',
+        menu_path=f'{app_name}/scatter-test',
         row=1, column=1,
     )
 
 
-def test_funnel():
+def create_funnel(shimoku):
     data_ = [
         {
             "value": 60,
@@ -465,20 +92,14 @@ def test_funnel():
             "name": "First"
         }
     ]
-    s.plt.funnel(
+    shimoku.plt.funnel(
         data=data_, name='name', value='value',
-        menu_path='test/funnel-test',
+        menu_path=f'{app_name}/funnel-test',
         row=1, column=1,
     )
 
-    s.plt.delete(
-        menu_path='test/funnel-test',
-        row=1, column=1,
-        component_type='funnel',
-    )
 
-
-def test_heatmap():
+def create_heatmap(shimoku):
     data_ = [
         {
             "xAxis": "Lunes",
@@ -561,19 +182,14 @@ def test_heatmap():
             "value": 6
         }
     ]
-    s.plt.heatmap(
+    shimoku.plt.heatmap(
         data=data_, x='xAxis', y=['yAxis'], value='value',
-        menu_path='test/heatmap-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/heatmap-test',
+        menu_path=f'{app_name}/heatmap-test',
         row=1, column=1,
     )
 
 
-def test_gauge():
+def create_gauge(shimoku):
     data_ = [
         {
             "value": 60,
@@ -596,21 +212,14 @@ def test_gauge():
             "name": "First"
         }
     ]
-    s.plt.gauge(
+    shimoku.plt.gauge(
         data=data_, name='name', value='value',
-        menu_path='test/gauge-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/gauge-test',
-        component_type='gauge',
+        menu_path=f'{app_name}/gauge-test',
         row=1, column=1,
     )
 
 
-# TODO WiP
-def test_sunburst():
+def create_sunburst(shimoku):
     data_ = [
         {
             "name": "Root 1",
@@ -674,20 +283,15 @@ def test_sunburst():
             ]
         }
     ]
-    s.plt.sunburst(
+    shimoku.plt.sunburst(
         data=data_,
         name='xAxis', children='children', value='value',
-        menu_path='test/sunburst-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/sunburst-test',
+        menu_path=f'{app_name}/sunburst-test',
         row=1, column=1,
     )
 
 
-def test_tree():
+def create_tree(shimoku):
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -721,19 +325,14 @@ def test_tree():
             },
         ],
     }]
-    s.plt.tree(
+    shimoku.plt.tree(
         data=data_,
-        menu_path='test/tree-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/tree-test',
+        menu_path=f'{app_name}/tree-test',
         row=1, column=1,
     )
 
 
-def test_treemap():
+def create_treemap(shimoku):
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -767,40 +366,29 @@ def test_treemap():
             },
         ],
     }]
-    s.plt.treemap(
+    shimoku.plt.treemap(
         data=data_,
-        menu_path='test/treemap-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/treemap-test',
+        menu_path=f'{app_name}/treemap-test',
         row=1, column=1,
     )
 
 
-def test_radar():
+def create_radar(shimoku):
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
         {'name': 'Milk Tea', 'value1': 17, 'value2': 10, 'value3': 63},
         {'name': 'Cheese Cocoa', 'value1': 18, 'value2': 15, 'value3': 65},
         {'name': 'Walnut Brownie', 'value1': 9, 'value2': 71, 'value3': 16},
     ]
-    s.plt.radar(
+    shimoku.plt.radar(
         data=data_,
         x='name', y=['value1', 'value2', 'value3'],
-        menu_path='test/radar-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/radar-test',
-        component_type='radar',
+        menu_path=f'{app_name}/radar-test',
         row=1, column=1,
     )
 
 
-def test_indicator():
+def create_indicator(shimoku):
     data_ = [
         {
             "description": "",
@@ -823,23 +411,17 @@ def test_indicator():
             "value": "1.1946",
         },
     ]
-    s.plt.indicator(
+    shimoku.plt.indicator(
         data=data_,
-        menu_path='test/indicator-test',
+        menu_path=f'{app_name}/indicator-test',
         row=1, column=1,
         value='value',
         header='title',
         footer='description',
     )
 
-    s.plt.delete(
-        menu_path='test/indicator-test',
-        component_type='indicator',
-        row=1, column=1,
-    )
 
-
-def test_alert_indicator():
+def create_alert_indicator(shimoku):
     data_ = [
         {
             "description": "",
@@ -856,9 +438,9 @@ def test_alert_indicator():
             "targetPath": "/whispers-test/test",
         },
     ]
-    s.plt.alert_indicator(
+    shimoku.plt.alert_indicator(
         data=data_,
-        menu_path='test/indicator-path-test',
+        menu_path=f'{app_name}/indicator-path-test',
         row=1, column=1,
         value='value',
         header='title',
@@ -867,35 +449,19 @@ def test_alert_indicator():
         target_path='targetPath',
     )
 
-    s.plt.delete(
-        menu_path='test/indicator-test',
-        row=1, column=1,
-        component_type='alert_indicator',
-    )
 
-
-def test_line_with_confidence_area():
-    # s.plt.line_with_confidence_area()
-    raise NotImplementedError
-
-
-def test_predictive_line():
-    s.plt.predictive_line(
+def create_predictive_line(shimoku):
+    shimoku.plt.predictive_line(
         data=data,
         x='date', y=['x', 'y'],
         min_value_mark=dt.date(2021, 1, 4).isoformat(),
         max_value_mark=dt.date(2021, 1, 5).isoformat(),
-        menu_path='test/line-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/line-test',
+        menu_path=f'{app_name}/line-test',
         row=1, column=1,
     )
 
 
-def test_themeriver():
+def create_themeriver(shimoku):
     data_ = [
         {
             "date": "2021/11/08",
@@ -973,21 +539,15 @@ def test_themeriver():
             "name": "Third"
         }
     ]
-    s.plt.themeriver(
+    shimoku.plt.themeriver(
         data=data_,
         x='date', y='value', name='name',
-        menu_path='test/themeriver-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/themeriver-test',
-        component_type='themeriver',
+        menu_path=f'{app_name}/themeriver-test',
         row=1, column=1,
     )
 
 
-def test_sankey():
+def create_sankey(shimoku):
     data_ = [
         {
             "source": "a",
@@ -1020,21 +580,15 @@ def test_sankey():
             "value": 2
         }
     ]
-    s.plt.sankey(
+    shimoku.plt.sankey(
         data=data_,
         source='source', target='target', value='value',
-        menu_path='test/sankey-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/sankey-test',
-        component_type='sankey',
+        menu_path=f'{app_name}/sankey-test',
         row=1, column=1,
     )
 
 
-def test_pie():
+def create_pie(shimoku):
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
         {'name': 'Milk Tea', 'value': 17},
@@ -1042,90 +596,32 @@ def test_pie():
         {'name': 'Walnut Brownie', 'value': 9},
     ]
 
-    s.plt.pie(
+    shimoku.plt.pie(
         data=data_,
         x='name', y='value',
-        menu_path='test/pie-test',
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path='test/pie-test',
-        component_type='pie',
+        menu_path=f'{app_name}/pie-test',
         row=1, column=1,
     )
 
 
-def test_iframe():
-    url = 'https://www.marca.com/'
-    s.plt.iframe(
+def create_iframe(shimoku):
+    url = 'https://www.shimoku.com/'
+    shimoku.plt.iframe(
         url=url,
-        menu_path='test/iframe-test',
+        menu_path=f'{app_name}/iframe-test',
         row=1, column=1, order=0,
     )
 
-    s.plt.delete(
-        menu_path='test/iframe-test',
-        component_type='iframe',
-        row=1, column=1,
-    )
 
-
-def test_html():
+def create_html(shimoku):
     html = (
         "<p style='background-color: #daf4f0';>"
         "Comparing the results of predictions that happened previous "
         "periods vs reality, so that you can measure the accuracy of our predictor"
         "</p>"
     )
-    s.plt.html(
+    shimoku.plt.html(
         html=html,
-        menu_path='test/html-test',
+        menu_path=f'{app_name}/html-test',
         row=1, column=1,
     )
-
-    s.plt.delete(
-        menu_path='test/html-test',
-        component_type='html',
-        row=1, column=1,
-    )
-
-
-def test_cohorts():
-    # s.plt.cohort()
-    raise NotImplementedError
-
-
-test_delete_path()
-test_update()
-test_ux()
-test_set_path_orders()
-test_set_new_business()
-
-test_table()
-test_bar()
-test_stockline()
-test_line()
-test_predictive_line()
-test_scatter()
-test_funnel()
-test_radar()
-test_gauge()
-test_indicator()
-test_alert_indicator()
-test_heatmap()
-test_sunburst()
-test_tree()
-test_treemap()
-test_sankey()
-test_pie()
-test_iframe()
-test_html()
-
-# TODO
-# test_cohorts()
-# test_themeriver()
-# test_candlestick()
-# test_scatter_with_confidence_area()
-# test_bubble_chart()
-# test_line_with_confidence_area()

@@ -17,11 +17,8 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     def __init__(self, universe_id: str, config={}):
-        # TODO use this one when published
-        # self.host = "https://api.shimoku.com"
-        import os
-        host_suffix: str = os.getenv('API_HOST')  # <API_URL>/external/v1/
-        self.host: str = f'{host_suffix}universe/{universe_id}/'
+        self.host = 'https://api.shimoku.io/external/v1/'
+        self.host: str = f'{self.host}universe/{universe_id}/'
 
         # DEFAULTS
         # Api key

@@ -222,6 +222,7 @@ def set_report_detail(
         'id', 'appId', 'path', 'grid', 'createdAt', 'reportType',
     ]
     reports_df = reports_df[cols_to_keep]
+    reports_df = reports_df.fillna('-')
     shimoku.plt.table(
         data=reports_df,
         menu_path=menu_path,

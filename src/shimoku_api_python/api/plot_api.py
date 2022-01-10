@@ -1,5 +1,7 @@
 """"""
+from sys import stdout
 from typing import List, Dict, Optional, Union, Tuple, Any
+import logging
 import json
 
 from pandas import DataFrame
@@ -11,6 +13,15 @@ from .explorer_api import (
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.basicConfig(
+    stream=stdout,
+    datefmt='%Y-%m-%d %H:%M',
+    format='%(asctime)s | %(levelname)s | %(message)s'
+)
 
 
 class PlotAux:
@@ -84,39 +95,72 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    def _get_component_order(
-        self, reports: List[Dict], path_name: str,
-    ) -> int:
-        """"""
-        if reports:
-            orders = [
-                report['order']
-                for report in reports
-                if report['path'] == path_name
-            ]
+    # TODO to be tried
+    def set_path_orders(
+        self, app_name: str, path_order: Dict[str, int],
+    ) -> None:
+        """
+        :param app_name: the App name
+        :param path_order: example {'test': 0, 'more-test': 1}
+        """
+        apps: List[Dict] = self._get_business_apps(self.business_id)
+        app_types: List[Dict] = self.get_universe_app_types()
+        for app in apps:
+            app_id: str = app['id']
+            app_type_id: str = app['type']['id']
 
-            if orders:
-                order = min(orders)
-            else:
-                order = 1
+            # Check that it is of the target app_name
+            if not any([
+                True
+                if app_type['id'] == app_type_id and app_type['name'] == app_name
+                else False
+                for app_type in app_types
+            ]):
+                continue
+
+            reports = self._get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
+
+            for report in reports:
+                path: str = report['path']
+                order: int = path_order.get(path)
+                if order:
+                    self.update_report(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                        report_id=report['id'],
+                        report_metadata={'order': order},
+                    )
+
+    def _get_component_order(self, app_id: str, path_name: str) -> int:
+        """Set an ascending report.Order to new path created
+
+        If a report in the same path exists take its order
+        otherwise find the higher report.Order and set it +1
+        as the report.Order of the new path
+        """
+        reports_ = self._get_app_reports(
+            business_id=self.business_id,
+            app_id=app_id,
+        )
+
+        try:
+            order_temp = max([report['order'] for report in reports_])
+        except ValueError:
+            order_temp = 0
+
+        path_order: List[int] = [
+            report['order']
+            for report in reports_
+            if report['path'] == path_name
+        ]
+
+        if path_order:
+            return min(path_order)
         else:
-            apps: List[Dict] = self._get_business_apps(self.business_id)
-
-            orders: int = 0
-            for app_ in apps:
-                reports_ = self._get_app_reports(
-                    business_id=self.business_id,
-                    app_id=app_['id'],
-                )
-
-                try:
-                    order_temp = max([report['order'] for report in reports])
-                except ValueError:
-                    order_temp = 0
-
-                orders = max(orders, order_temp)
-            order: int = orders + 1
-        return order
+            return order_temp + 1
 
     def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
         """Break the menu path in the app type normalized name
@@ -182,10 +226,8 @@ class PlotApi(PlotAux):
             app_id=app_id,
         )
 
-# TODO this is not working
         order: int = self._get_component_order(
-            reports=reports,
-            path_name=path_name,
+            app_id=app_id, path_name=path_name,
         )
 
         report_metadata.update({'path': path_name})
@@ -347,6 +389,7 @@ class PlotApi(PlotAux):
         **kwargs,
     ):
         """"""
+        logger.warning('To be deprecated')
         if by_component_type:
             self.delete(
                 menu_path=menu_path,
@@ -533,6 +576,7 @@ class PlotApi(PlotAux):
         filter_columns: Optional[List[str]] = None,
         sort_table_by_cols: Optional[List] = None,
         horizontal_scrolling: bool = False,
+        overwrite: bool = True,
     ):
         """
         {
@@ -672,11 +716,7 @@ class PlotApi(PlotAux):
         app_id: str = app['id']
 
         order: int = self._get_component_order(
-            reports=self._get_app_reports(
-                business_id=self.business_id,
-                app_id=app_id,
-            ),
-            path_name=path_name,
+            app_id=app_id, path_name=path_name,
         )
 
         report_metadata: Dict[str, Any] = {
@@ -687,6 +727,18 @@ class PlotApi(PlotAux):
         }
 
         report_metadata['dataFields'] = _calculate_table_data_fields()
+
+        if overwrite:
+            if not row or not column:
+                raise ValueError(
+                    'Row and Column must be specified to overwrite a report'
+                )
+
+            self.delete(
+                menu_path=menu_path,
+                row=row, column=column,
+                by_component_type=False,
+            )
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -703,6 +755,8 @@ class PlotApi(PlotAux):
         if sort_table_by_cols:
             df = df.sort_values(by=sort_table_by_cols, ascending=True)
 
+        # We do not allow NaN values for report Entry
+        df = df.fillna('')
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df, filter_map=filter_map,

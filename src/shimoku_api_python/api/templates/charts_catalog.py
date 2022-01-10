@@ -13,6 +13,7 @@ data = [
     {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
     {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
 ]
+app_name: str = 'Catalog'
 
 
 def create_table(shimoku):
@@ -26,7 +27,7 @@ def create_table(shimoku):
     filter_columns: List[str] = ['filtA', 'filtB']
     shimoku.plt.table(
         data=data_,
-        menu_path='test/table-test',
+        menu_path=f'{app_name}/table-test',
         row=1, column=1,
         filter_columns=filter_columns,
     )
@@ -36,7 +37,7 @@ def create_bar(shimoku):
     shimoku.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path=f'{app_name}/bar-test',
         row=1, column=1,
     )
 
@@ -45,7 +46,7 @@ def create_line(shimoku):
     shimoku.plt.line(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/line-test',
+        menu_path=f'{app_name}/line-test',
         row=1, column=1,
     )
 
@@ -54,7 +55,7 @@ def create_stockline(shimoku):
     shimoku.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/stockline-test',
+        menu_path=f'{app_name}/stockline-test',
         row=1, column=1,
     )
 
@@ -63,7 +64,7 @@ def create_scatter(shimoku):
     shimoku.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/scatter-test',
+        menu_path=f'{app_name}/scatter-test',
         row=1, column=1,
     )
 
@@ -93,7 +94,7 @@ def create_funnel(shimoku):
     ]
     shimoku.plt.funnel(
         data=data_, name='name', value='value',
-        menu_path='test/funnel-test',
+        menu_path=f'{app_name}/funnel-test',
         row=1, column=1,
     )
 
@@ -183,7 +184,7 @@ def create_heatmap(shimoku):
     ]
     shimoku.plt.heatmap(
         data=data_, x='xAxis', y=['yAxis'], value='value',
-        menu_path='test/heatmap-test',
+        menu_path=f'{app_name}/heatmap-test',
         row=1, column=1,
     )
 
@@ -213,7 +214,7 @@ def create_gauge(shimoku):
     ]
     shimoku.plt.gauge(
         data=data_, name='name', value='value',
-        menu_path='test/gauge-test',
+        menu_path=f'{app_name}/gauge-test',
         row=1, column=1,
     )
 
@@ -285,7 +286,7 @@ def create_sunburst(shimoku):
     shimoku.plt.sunburst(
         data=data_,
         name='xAxis', children='children', value='value',
-        menu_path='test/sunburst-test',
+        menu_path=f'{app_name}/sunburst-test',
         row=1, column=1,
     )
 
@@ -326,7 +327,7 @@ def create_tree(shimoku):
     }]
     shimoku.plt.tree(
         data=data_,
-        menu_path='test/tree-test',
+        menu_path=f'{app_name}/tree-test',
         row=1, column=1,
     )
 
@@ -367,7 +368,7 @@ def create_treemap(shimoku):
     }]
     shimoku.plt.treemap(
         data=data_,
-        menu_path='test/treemap-test',
+        menu_path=f'{app_name}/treemap-test',
         row=1, column=1,
     )
 
@@ -382,7 +383,7 @@ def create_radar(shimoku):
     shimoku.plt.radar(
         data=data_,
         x='name', y=['value1', 'value2', 'value3'],
-        menu_path='test/radar-test',
+        menu_path=f'{app_name}/radar-test',
         row=1, column=1,
     )
 
@@ -412,7 +413,7 @@ def create_indicator(shimoku):
     ]
     shimoku.plt.indicator(
         data=data_,
-        menu_path='test/indicator-test',
+        menu_path=f'{app_name}/indicator-test',
         row=1, column=1,
         value='value',
         header='title',
@@ -439,7 +440,7 @@ def create_alert_indicator(shimoku):
     ]
     shimoku.plt.alert_indicator(
         data=data_,
-        menu_path='test/indicator-path-test',
+        menu_path=f'{app_name}/indicator-path-test',
         row=1, column=1,
         value='value',
         header='title',
@@ -455,7 +456,7 @@ def create_predictive_line(shimoku):
         x='date', y=['x', 'y'],
         min_value_mark=dt.date(2021, 1, 4).isoformat(),
         max_value_mark=dt.date(2021, 1, 5).isoformat(),
-        menu_path='test/line-test',
+        menu_path=f'{app_name}/line-test',
         row=1, column=1,
     )
 
@@ -541,7 +542,7 @@ def create_themeriver(shimoku):
     shimoku.plt.themeriver(
         data=data_,
         x='date', y='value', name='name',
-        menu_path='test/themeriver-test',
+        menu_path=f'{app_name}/themeriver-test',
         row=1, column=1,
     )
 
@@ -582,7 +583,7 @@ def create_sankey(shimoku):
     shimoku.plt.sankey(
         data=data_,
         source='source', target='target', value='value',
-        menu_path='test/sankey-test',
+        menu_path=f'{app_name}/sankey-test',
         row=1, column=1,
     )
 
@@ -598,7 +599,7 @@ def create_pie(shimoku):
     shimoku.plt.pie(
         data=data_,
         x='name', y='value',
-        menu_path='test/pie-test',
+        menu_path=f'{app_name}/pie-test',
         row=1, column=1,
     )
 
@@ -607,7 +608,7 @@ def create_iframe(shimoku):
     url = 'https://www.shimoku.com/'
     shimoku.plt.iframe(
         url=url,
-        menu_path='test/iframe-test',
+        menu_path=f'{app_name}/iframe-test',
         row=1, column=1, order=0,
     )
 
@@ -621,6 +622,6 @@ def create_html(shimoku):
     )
     shimoku.plt.html(
         html=html,
-        menu_path='test/html-test',
+        menu_path=f'{app_name}/html-test',
         row=1, column=1,
     )

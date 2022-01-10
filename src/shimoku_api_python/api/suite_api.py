@@ -1,7 +1,9 @@
 """"""
-from typing import List, Dict, Union, Optional, Callable
-import datetime as dt
+from sys import stdout
+from typing import List, Dict, Union, Optional
+import logging
 
+import datetime as dt
 from pandas import DataFrame
 
 from .templates.shimoku_backoffice import (
@@ -16,6 +18,15 @@ from .templates.charts_catalog import (
     create_heatmap, create_treemap, create_themeriver,
     create_sunburst, create_stockline, create_indicator,
     create_alert_indicator, create_predictive_line
+)
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.basicConfig(
+    stream=stdout,
+    datefmt='%Y-%m-%d %H:%M',
+    format='%(asctime)s | %(levelname)s | %(message)s'
 )
 
 
@@ -62,16 +73,44 @@ class SuiteApi:
         # TODO second check that the specified third_party_tool is allowed
         raise NotImplementedError
 
-    def predict(self, suite: str) -> List[Dict]:
+    def predict(
+        self, data: Union[str, DataFrame, List[Dict]], suite: str,
+    ) -> List[Dict]:
         """Use a model from a suite to predict a chunk of data
         that will be returned immediately (as Neuro.ai)
 
+        :param data:
         :param suite: for example 'retention' the name of the suite
          to get data from.
         :return: the prediction
         """
+        available_suites: List[str] = [
+            'retention',
+            'predictive_cohorts',
+            'recommender',
+            'anomaly',
+            'sales_prediction',
+        ]
+
+        if suite not in available_suites:
+            raise ValueError(
+                f'Suite {suite} | '
+                f'Not available |  '
+                f'Available suites are {available_suites}'
+            )
+
+        if not isinstance(data, DataFrame):
+            df: DataFrame = self._validate_data_is_pandarable(data)
+        else:
+            df = data.copy()
+            del data
         # TODO first check that the specified suite exists
-        raise NotImplementedError
+
+        # TODO this method needs to be created
+        #  and potentially needs to be async
+        #  study it!!!
+        # df_pred: DataFrame = await self.api_get_predictions(df, suite)
+        return df_pred
 
     def store_prediction_in_db(self):
         """This is all what MindsDB does
@@ -80,10 +119,9 @@ class SuiteApi:
         raise NotImplementedError
 
     def charts_catalog(self):
+        """self is an instance of the Client()
         """
-        :param s: SDK class instance Client()
-        """
-        print('Note - It takes about ~3 minutes to process it all')
+        logger.info('Note - It takes about ~3 minutes to process it all')
         create_bar(self)
         create_pie(self)
         create_html(self)
@@ -105,12 +143,14 @@ class SuiteApi:
         create_alert_indicator(self)
         create_predictive_line(self)
 
-    # TODO WiP
     def shimoku_backoffice(self):
         """Create a BackOffice for Shimoku users that contain
         all the data regarding what Businesses, AppTypes, Apps, Reports
         they do have active for a target business
         """
+        logger.info('Shimoku Backoffice - It takes about 5 minutes to be processed')
+        start_time = dt.datetime.now()
+
         menu_path_seed: str = 'shimoku-backoffice'
         businesses: List[Dict] = self.universe.get_universe_businesses()
 
@@ -134,59 +174,53 @@ class SuiteApi:
 
         reports: List[Dict] = []
         for app in apps:
-# TODO quitar este try exceot
             try:
                 reports_temp = self.app.get_app_reports(
                     business_id=app['appBusinessId'],
                     app_id=app['id'],
                 )
-            except Exception:
+            except Exception as e:
                 continue
             reports = reports + reports_temp
 
-# TODO quitar los pirnts
-        print('Note - It takes about 5 minutes to process')
-        start_time = dt.datetime.now()
-        print(f'Start time {start_time}')
-        set_report_detail(
-            shimoku=s,
-            menu_path_seed=menu_path_seed,
-            reports=reports,
-        )
-        print('report detail created')
-        set_apps_detail(
-            shimoku=s,
-            menu_path_seed=menu_path_seed,
-            apps=apps,
-            reports=reports,
-        )
-        print('apps detail created')
-        set_app_type_detail(
-            shimoku=s,
-            menu_path_seed=menu_path_seed,
-            app_types=app_types,
-            apps=apps,
-        )
-        print('apptype detail created')
-        set_business_detail(
-            shimoku=s,
-            menu_path_seed=menu_path_seed,
-            businesses=businesses,
-            apps=apps,
-        )
-        print('business detail created')
         set_overview_page(
-            shimoku=s,
+            shimoku=self,
             menu_path_seed=menu_path_seed,
             businesses=businesses,
             app_types=app_types,
             apps=apps,
             reports=reports,
         )
-        print('overview created')
+        logger.info('Page "Overview" created')
+        set_business_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            businesses=businesses,
+            apps=apps,
+        )
+        logger.info('Page "Business detail" created')
+        set_app_type_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            app_types=app_types,
+            apps=apps,
+        )
+        logger.info('Page "Apptype detail" created')
+        set_apps_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            apps=apps,
+            reports=reports,
+        )
+        logger.info('Page "Apps detail" created')
+        set_report_detail(
+            shimoku=self,
+            menu_path_seed=menu_path_seed,
+            reports=reports,
+        )
+        logger.info('Page "Report detail" created')
         end_time = dt.datetime.now()
-        print(f'End time {end_time}')
-        print(f'Execution time: {end_time - start_time}')
+        logger.info(f'Execution time: {end_time - start_time}')
 
     def cohorts(
         self, data: Union[str, DataFrame, List[Dict]],
@@ -218,6 +252,8 @@ class SuiteApi:
         :param metadata: Further columns to consider in the prediction (AutoML)
         :param churn_col:
         """
+        # TODO _validate_data_is_pandarable should be inherited
+        df: DataFrame = self._validate_data_is_pandarable(data)
         # TODO data is for create or update?
         raise NotImplementedError
 

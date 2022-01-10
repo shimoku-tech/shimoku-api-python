@@ -86,6 +86,10 @@ def test_ux():
     )
 
 
+def test_set_path_orders():
+    s.plt.set_path_orders(path_order={'test': 1})
+
+
 def test_set_new_business():
     name: str = 'new-business-test'
     s.plt.set_new_business(name)
@@ -1092,38 +1096,36 @@ def test_cohorts():
     raise NotImplementedError
 
 
-# TODO WiP
-# test_delete_path()
-# test_update()
-# test_table()
+test_delete_path()
+test_update()
 test_ux()
-
-
+test_set_path_orders()
 test_set_new_business()
 
-# test_table()
-# test_bar()
-# test_stockline()
-# test_line()
-# test_predictive_line()
-# test_scatter()
-# test_funnel()
-# test_radar()
-# test_gauge()
-# test_indicator()
+test_table()
+test_bar()
+test_stockline()
+test_line()
+test_predictive_line()
+test_scatter()
+test_funnel()
+test_radar()
+test_gauge()
+test_indicator()
 test_alert_indicator()
-# test_heatmap()
-# test_sunburst()
-# test_tree()
-# test_treemap()
-# test_sankey()
-# test_pie()
-# test_iframe()
-# test_html()
+test_heatmap()
+test_sunburst()
+test_tree()
+test_treemap()
+test_sankey()
+test_pie()
+test_iframe()
+test_html()
+
 # TODO
-test_cohorts()
-test_themeriver()
-test_candlestick()
-test_scatter_with_confidence_area()
-test_bubble_chart()
-test_line_with_confidence_area()
+# test_cohorts()
+# test_themeriver()
+# test_candlestick()
+# test_scatter_with_confidence_area()
+# test_bubble_chart()
+# test_line_with_confidence_area()

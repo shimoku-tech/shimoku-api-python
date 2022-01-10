@@ -8,8 +8,6 @@ from shimoku_api_python.client import ApiClientError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
-business_id: str = getenv('BUSINESS_ID')
-app_type_id: str = getenv('APP_TYPE_ID')
 
 
 config = {

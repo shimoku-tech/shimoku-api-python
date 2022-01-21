@@ -1096,13 +1096,13 @@ def test_cohorts():
     raise NotImplementedError
 
 
-test_delete_path()
-test_update()
-test_ux()
-test_set_path_orders()
-test_set_new_business()
+# test_delete_path()
+# test_update()
+# test_ux()
+# test_set_path_orders()
+# test_set_new_business()
 
-test_table()
+# test_table()
 test_bar()
 test_stockline()
 test_line()

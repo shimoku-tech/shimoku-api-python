@@ -16,8 +16,19 @@ from shimoku_api_python.exceptions import ApiClientError
 class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
-    def __init__(self, universe_id: str, config={}):
-        self.host = 'https://api.shimoku.io/external/v1/'
+    def __init__(self, universe_id: str, namespace:str = 'staging', config={}):
+        if namespace == 'production':
+            self.host = 'https://api.shimoku.io/external/v1/'
+        elif namespace == 'staging':
+            self.host = 'https://api.staging.shimoku.io/external/v1/'
+        elif namespace == 'develop':
+            self.host = 'https://api.develop.shimoku.io/external/v1/'
+        else:
+            raise ValueError(
+                f'The namespace must be either "production", "staging" or "develop | '
+                f'namespace introduced: {namespace}'
+            )
+
         self.host: str = f'{self.host}universe/{universe_id}/'
 
         # DEFAULTS

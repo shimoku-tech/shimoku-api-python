@@ -40,7 +40,7 @@ def test_ux():
     1. Create single indicator centered
     2. Create single indicator with chart in another column
     """
-    menu_path: str = 'test/ux-test'
+    menu_path: str = 'test/UX-test'
     data_ = [
         {
             "description": "",
@@ -84,6 +84,57 @@ def test_ux():
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         row=2, column=2,
+    )
+
+    ###################
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "target_path": 'www.shimoku.com',
+        },
+    ]
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=3, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        target_path='target_path',
+    )
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "target_path": 'www.shimoku.com',
+        },
+        {
+            "description": "",
+            "title": "Price ($)",
+            "value": "455",
+            "target_path": 'www.shimoku.com',
+        },
+    ]
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=4, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        target_path='target_path',
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=4, column=2,
     )
 
 
@@ -1250,17 +1301,17 @@ def test_cohorts():
 # test_delete_path()
 # test_delete()
 # test_append_data_to_trend_chart()
-test_zero_centered_barchart()
+test_ux()
 test_indicator()
 test_alert_indicator()
 # test_set_path_orders()
 # test_update()
-# test_ux()
 # test_set_new_business()
 
 test_table()
 test_bar()
 test_horizontal_barchart()
+test_zero_centered_barchart()
 test_stockline()
 test_line()
 test_predictive_line()

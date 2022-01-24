@@ -1482,6 +1482,7 @@ class PlotApi(PlotAux):
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
+        elements = [element for element in elements if element]
         self._validate_table_data(data, elements=elements)
         return self.indicator(
             data=data, value=value,

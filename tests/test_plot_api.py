@@ -21,6 +21,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
+    environment='production',
 )
 s.plt.set_business(business_id=business_id)
 
@@ -238,9 +239,9 @@ def test_delete():
     t.check_reports_not_exists()
 
 
-def test_append_data():
-    app_path: str = 'test-delete'
-    menu_path: str = f'{app_path}/line-test'
+def test_append_data_to_trend_chart():
+    app_path: str = 'test'
+    menu_path: str = f'{app_path}/append-test'
 
     s.plt.line(
         data=data,
@@ -249,39 +250,23 @@ def test_append_data():
         row=1, column=1,
     )
 
-    s.plt.append_data(
+    data_ = [
+        {'date': dt.date(2021, 1, 6), 'x': 5, 'y': 5},
+        {'date': dt.date(2021, 1, 7), 'x': 6, 'y': 5},
+    ]
+
+    s.plt.append_data_to_trend_chart(
         menu_path=menu_path,
         row=1, column=1,
         component_type='line',
-        data=data,
-    )
-
-    s.plt.delete(
-        menu_path=menu_path,
-        row=1, column=1,
-        component_type='line',
-    )
-
-    # Check it does not exists anymore
-    class MyTestCase(unittest.TestCase):
-        def check_reports_not_exists(self):
-            with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
-
-    t = MyTestCase()
-    t.check_reports_not_exists()
-
-    s.plt.line(
-        data=data,
+        data=data_,
         x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
     )
 
     s.plt.delete(
         menu_path=menu_path,
         row=1, column=1,
-        by_component_type=False,
+        component_type='line',
     )
 
     # Check it does not exists anymore
@@ -418,27 +403,18 @@ def test_bar():
     )
 
 
-def test_normalized_barchart():
-    menu_path: str = 'test/normalized-bar-test'
-    s.plt.normalized_barchart(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='normalized_barchart',
-        row=1, column=1,
-    )
-
-
 def test_zero_centered_barchart():
     menu_path: str = 'test/zero-centered-bar-test'
+    data_ = [
+        {'Name': 'a', 'y': 5},
+        {'Name': 'b', 'y': -7},
+        {'Name': 'c', 'y': 3},
+        {'Name': 'd', 'y': -5},
+    ]
+
     s.plt.zero_centered_barchart(
-        data=data,
-        x='date', y=['x', 'y'],
+        data=data_,
+        x=['y'], y='Name',
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -452,9 +428,17 @@ def test_zero_centered_barchart():
 
 def test_horizontal_barchart():
     menu_path: str = 'test/horizontal-bar-test'
+
+    data_ = [
+        {'Name': 'a', 'y': 5, 'z': 3},
+        {'Name': 'b', 'y': 7, 'z': 4},
+        {'Name': 'c', 'y': 3, 'z': 5},
+        {'Name': 'd', 'y': 5, 'z': 6},
+    ]
+
     s.plt.horizontal_barchart(
-        data=data,
-        x=['x', 'y'], y='date',
+        data=data_,
+        x=['y', 'z'], y='Name',
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -1263,19 +1247,20 @@ def test_cohorts():
     raise NotImplementedError
 
 
-test_delete_path()
-test_delete()
-test_append_data()
-test_table()
-test_horizontal_barchart()
-test_normalized_barchart()
+# test_delete_path()
+# test_delete()
+# test_append_data_to_trend_chart()
 test_zero_centered_barchart()
-test_set_path_orders()
+test_indicator()
+test_alert_indicator()
+# test_set_path_orders()
 # test_update()
 # test_ux()
 # test_set_new_business()
 
+test_table()
 test_bar()
+test_horizontal_barchart()
 test_stockline()
 test_line()
 test_predictive_line()

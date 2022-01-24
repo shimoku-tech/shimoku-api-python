@@ -175,6 +175,125 @@ def test_delete_path():
     t.check_reports_not_exists()
 
 
+def test_delete():
+    app_path: str = 'test-delete'
+    menu_path: str = f'{app_path}/line-test'
+
+    app_types: List[Dict] = s.universe.get_universe_app_types()
+    app_type_id = max([
+        app_type['id']
+        for app_type in app_types
+        if app_type['normalizedName'] == app_path
+    ])
+    assert app_type_id
+    apps: List[Dict] = s.business.get_business_apps(business_id)
+    app_id = max([
+        app['id']
+        for app in apps
+        if app['type']['id'] == app_type_id
+    ])
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        row=1, column=1,
+        component_type='line',
+    )
+
+    # Check it does not exists anymore
+    class MyTestCase(unittest.TestCase):
+        def check_reports_not_exists(self):
+            with self.assertRaises(ApiClientError):
+                s.app.get_app_reports(business_id, app_id)
+
+    t = MyTestCase()
+    t.check_reports_not_exists()
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        row=1, column=1,
+        by_component_type=False,
+    )
+
+    # Check it does not exists anymore
+    class MyTestCase(unittest.TestCase):
+        def check_reports_not_exists(self):
+            with self.assertRaises(ApiClientError):
+                s.app.get_app_reports(business_id, app_id)
+
+    t = MyTestCase()
+    t.check_reports_not_exists()
+
+
+def test_append_data():
+    app_path: str = 'test-delete'
+    menu_path: str = f'{app_path}/line-test'
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.append_data(
+        menu_path=menu_path,
+        row=1, column=1,
+        component_type='line',
+        data=data,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        row=1, column=1,
+        component_type='line',
+    )
+
+    # Check it does not exists anymore
+    class MyTestCase(unittest.TestCase):
+        def check_reports_not_exists(self):
+            with self.assertRaises(ApiClientError):
+                s.app.get_app_reports(business_id, app_id)
+
+    t = MyTestCase()
+    t.check_reports_not_exists()
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        row=1, column=1,
+        by_component_type=False,
+    )
+
+    # Check it does not exists anymore
+    class MyTestCase(unittest.TestCase):
+        def check_reports_not_exists(self):
+            with self.assertRaises(ApiClientError):
+                s.app.get_app_reports(business_id, app_id)
+
+    t = MyTestCase()
+    t.check_reports_not_exists()
+
+
 def test_update():
     menu_path = 'test/update-test'
     s.plt.bar(
@@ -295,6 +414,54 @@ def test_bar():
     s.plt.delete(
         menu_path='test/bar-test',
         component_type='bar',
+        row=1, column=1,
+    )
+
+
+def test_normalized_barchart():
+    menu_path: str = 'test/normalized-bar-test'
+    s.plt.normalized_barchart(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='normalized_barchart',
+        row=1, column=1,
+    )
+
+
+def test_zero_centered_barchart():
+    menu_path: str = 'test/zero-centered-bar-test'
+    s.plt.zero_centered_barchart(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='zero_centered_barchart',
+        row=1, column=1,
+    )
+
+
+def test_horizontal_barchart():
+    menu_path: str = 'test/horizontal-bar-test'
+    s.plt.horizontal_barchart(
+        data=data,
+        x=['x', 'y'], y='date',
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='horizontal_barchart',
         row=1, column=1,
     )
 
@@ -1096,13 +1263,18 @@ def test_cohorts():
     raise NotImplementedError
 
 
-# test_delete_path()
+test_delete_path()
+test_delete()
+test_append_data()
+test_table()
+test_horizontal_barchart()
+test_normalized_barchart()
+test_zero_centered_barchart()
+test_set_path_orders()
 # test_update()
 # test_ux()
-# test_set_path_orders()
 # test_set_new_business()
 
-# test_table()
 test_bar()
 test_stockline()
 test_line()

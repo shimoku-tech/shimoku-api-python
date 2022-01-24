@@ -55,6 +55,7 @@ class PlotAux:
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
 
     _update_report_data = DataManagingApi.update_report_data
+    _append_report_data = DataManagingApi.append_report_data
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
@@ -83,6 +84,61 @@ class PlotApi(PlotAux):
             self.business_id: Optional[str] = kwargs['business_id']
         else:
             self.business_id: Optional[str] = None
+
+    def _find_target_reports(
+            self, menu_path: str, row: int, column: int,
+            component_type: Optional[str] = None,
+            by_component_type: bool = True,
+    ) -> List[Dict]:
+        type_map = {
+            'alert_indicator': 'INDICATORS',
+            'indicator': 'INDICATORS',
+            'table': None,
+            'stockline': 'STOCKLINECHART',
+            'html': 'HTML'
+        }
+        if component_type in type_map.keys():
+            component_type = type_map[component_type]
+        else:
+            component_type = 'ECHARTS'
+
+        grid: str = f'{row}, {column}'
+        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+
+        app: Dict = self._get_app_by_type(
+            business_id=self.business_id,
+            app_type_id=app_type['id']
+        )
+        app_id: str = app['id']
+
+        reports: List[Dict] = self._get_app_reports(
+            business_id=self.business_id, app_id=app_id,
+        )
+
+        # Delete specific components in a path / grid
+        # or all of them whatsoever is its component_type
+        if by_component_type:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                        and report['reportType'] == component_type
+                )
+            ]
+        else:  # Whatever is the reportType delete it
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['grid'] == grid
+                )
+            ]
+
+        return target_reports
 
     def set_business(self, business_id: str):
         """"""
@@ -272,6 +328,29 @@ class PlotApi(PlotAux):
                     report_data=data,
                 )
 
+    def append_data(
+            self, data: Union[str, DataFrame, List[Dict]],
+            menu_path: str, row: int, column: int, component_type: str,
+    ) -> None:
+        """Append new data"""
+        target_reports: List[Dict] = (
+            self._find_target_reports(
+                menu_path=menu_path, row=row, column=column,
+                component_type=component_type,
+            )
+        )
+
+        # TODO for multifilter we will need to iterate on this
+        assert len(target_reports) == 1
+
+        for report in target_reports:
+            self._append_report_data(
+                business_id=self.business_id,
+                app_id=report['appId'],
+                report_id=report['id'],
+                report_data=data,
+            )
+
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
         self, menu_path: str, row: int, column: int,
@@ -281,53 +360,13 @@ class PlotApi(PlotAux):
         """In cascade find the reports that match the query
         and delete them all
         """
-        type_map = {
-            'alert_indicator': 'INDICATORS',
-            'indicator': 'INDICATORS',
-            'table': None,
-            'stockline': 'STOCKLINECHART',
-            'html': 'HTML'
-        }
-        if component_type in type_map.keys():
-            component_type = type_map[component_type]
-        else:
-            component_type = 'ECHARTS'
-
-        grid: str = f'{row}, {column}'
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
-
-        app: Dict = self._get_app_by_type(
-            business_id=self.business_id,
-            app_type_id=app_type['id']
+        target_reports: List[Dict] = (
+            self._find_target_reports(
+                menu_path=menu_path, row=row, column=column,
+                component_type=component_type,
+                by_component_type=by_component_type
+            )
         )
-        app_id: str = app['id']
-
-        reports: List[Dict] = self._get_app_reports(
-            business_id=self.business_id, app_id=app_id,
-        )
-
-        # Delete specific components in a path / grid
-        # or all of them whatsoever is its component_type
-        if by_component_type:
-            target_reports: List[Dict] = [
-                report
-                for report in reports
-                if (
-                        report['path'] == path_name
-                        and report['grid'] == grid
-                        and report['reportType'] == component_type
-                )
-            ]
-        else:  # Whatever is the reportType delete it
-            target_reports: List[Dict] = [
-                report
-                for report in reports
-                if (
-                        report['path'] == path_name
-                        and report['grid'] == grid
-                )
-            ]
 
         for report in target_reports:
             self._delete_report(
@@ -415,7 +454,7 @@ class PlotApi(PlotAux):
     def _create_trend_chart(
         self, echart_type: str,
         data: Union[str, DataFrame, List[Dict]],
-        x: str, y: List[str],  # first layer
+        x: List[str], y: List[str],  # first layer
         menu_path: str, row: int, column: int,  # report creation
         title: Optional[str] = None,  # second layer
         subtitle: Optional[str] = None,
@@ -459,9 +498,10 @@ class PlotApi(PlotAux):
         :param option_modifications:
         :param filters: To create a filter for every specified column
         """
-        self._validate_table_data(data, elements=[x] + y)
+        cols: List[str] = x + y
+        self._validate_table_data(data, elements=cols)
         df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[[x] + y]  # keep only x and y
+        df = df[cols]  # keep only x and y
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
         # Default
@@ -831,7 +871,106 @@ class PlotApi(PlotAux):
         """
         option_modifications: Dict[str, Any] = {'dataZoom': False}
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
+            row=row, column=column,
+            title=title, subtitle=subtitle,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            option_modifications=option_modifications,
+            echart_type='bar',
+            filters=filters,
+        )
+
+    def horizontal_barchart(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: List[str], y: str,  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
+    ):
+        """Create a Horizontal barchart
+        https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
+        """
+        option_modifications: Dict[str, Any] = {'dataZoom': False}
+        return self._create_trend_chart(
+            data=data, x=x, y=[y], menu_path=menu_path,
+            row=row, column=column,
+            title=title, subtitle=subtitle,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            option_modifications=option_modifications,
+            echart_type='bar',
+            filters=filters,
+        )
+
+    def zero_centered_barchart(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: List[str], y: str,  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
+    ):
+        """Create a Horizontal barchart
+        https://echarts.apache.org/examples/en/editor.html?c=bar-negative2
+        """
+        option_modifications: Dict[str, Any] = {'dataZoom': False}
+        return self._create_trend_chart(
+            data=data, x=x, y=[y], menu_path=menu_path,
+            row=row, column=column,
+            title=title, subtitle=subtitle,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            option_modifications=option_modifications,
+            echart_type='bar',
+            filters=filters,
+        )
+
+    def normalized_barchart(
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: List[str], y: str,  # first layer
+        menu_path: str, row: int, column: int,  # report creation
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[List[str]] = None,
+    ):
+        """Create a Horizontal barchart
+        https://echarts.apache.org/examples/en/editor.html?c=bar-gradient
+        """
+        # TODO see how you can apply a gradient
+        """
+              itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#83bff6' },
+          { offset: 0.5, color: '#188df0' },
+          { offset: 1, color: '#188df0' }
+        ])
+      },
+      emphasis: {
+        itemStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: '#2378f7' },
+            { offset: 0.7, color: '#2378f7' },
+            { offset: 1, color: '#83bff6' }
+          ])
+        }
+        """
+        option_modifications: Dict[str, Any] = {
+            'dataZoom': False,
+            'showBackground': True,
+        }
+        return self._create_trend_chart(
+            data=data, x=x, y=[y], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -854,7 +993,7 @@ class PlotApi(PlotAux):
     ):
         """"""
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -914,7 +1053,7 @@ class PlotApi(PlotAux):
         }
 
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1027,7 +1166,7 @@ class PlotApi(PlotAux):
         }
 
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=[y], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1140,7 +1279,7 @@ class PlotApi(PlotAux):
         }
 
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=[y], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1209,7 +1348,7 @@ class PlotApi(PlotAux):
             raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
 
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1232,7 +1371,7 @@ class PlotApi(PlotAux):
     ):
         """"""
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1546,7 +1685,7 @@ class PlotApi(PlotAux):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
         return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
+            data=data, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1577,7 +1716,7 @@ class PlotApi(PlotAux):
         }
 
         return self._create_trend_chart(
-            data=df, x=x, y=[y, value], menu_path=menu_path,
+            data=df, x=[x], y=[y, value], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1657,7 +1796,7 @@ class PlotApi(PlotAux):
         )
 
         return self._create_trend_chart(
-            data=df, x=name, y=[value], menu_path=menu_path,
+            data=df, x=[name], y=[value], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,
@@ -1737,7 +1876,7 @@ class PlotApi(PlotAux):
         )
         y = [y, name]
         self._create_trend_chart(
-            data=df, x=x, y=y, menu_path=menu_path,
+            data=df, x=[x], y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
             x_axis_name=x_axis_name,

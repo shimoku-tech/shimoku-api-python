@@ -20,6 +20,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
+    environment='production',
 )
 
 
@@ -36,7 +37,7 @@ def test_cannot_create_duplicated_app_type():
     class MyTestCase(unittest.TestCase):
         def check_app_type_not_exists(self):
             with self.assertRaises(ValueError):
-                s.app_type.create_app_type(name='Whispers test')
+                s.app_type.create_app_type(name='test')
 
     t = MyTestCase()
     t.check_app_type_not_exists()

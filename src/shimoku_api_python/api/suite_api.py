@@ -11,7 +11,8 @@ from .templates.shimoku_backoffice import (
     set_business_detail, set_overview_page,
 )
 from .templates.charts_catalog import (
-    create_bar, create_pie, create_html,
+    create_bar, create_horizontal_bar, create_zero_centered_barchart,
+    create_pie, create_html,
     create_line, create_tree, create_table,
     create_gauge, create_radar, create_funnel,
     create_iframe, create_sankey, create_scatter,
@@ -123,6 +124,8 @@ class SuiteApi:
         """
         logger.info('Note - It takes about ~3 minutes to process it all')
         create_bar(self)
+        create_horizontal_bar(self)
+        create_zero_centered_barchart(self)
         create_pie(self)
         create_html(self)
         create_line(self)

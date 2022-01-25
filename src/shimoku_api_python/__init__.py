@@ -17,10 +17,11 @@ from shimoku_api_python.client import ApiClient
 
 
 class Client(object):
-    def __init__(self, universe_id: str, config={}):
+    def __init__(self, universe_id: str, environment: str = 'staging', config={}):
         self._api_client = ApiClient(
             config=config,
             universe_id=universe_id,
+            environment=environment,
         )
 
         self.ping = PingApi(self._api_client)

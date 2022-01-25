@@ -25,6 +25,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
+    environment='production',
 )
 
 
@@ -54,11 +55,11 @@ def test_update_app():
     """Set the updatedAt field of an App to '2000-01-01'
     Then revert the updatedAt to its original value
     """
-    var: str = 'trialDays'
+    var: str = 'hideTitle'
     app: Dict = s.app.get_app(**app_element)
     old_val: str = app.get(var)
 
-    val: str = 10
+    val: str = True
     app_data: Dict = {var: val}
     x: Dict = s.app.update_app(
         app_metadata=app_data, **app_element

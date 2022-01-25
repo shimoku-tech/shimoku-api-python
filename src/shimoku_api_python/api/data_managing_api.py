@@ -1,6 +1,7 @@
 """"""
 import json
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Set
+from itertools import chain
 
 import datetime as dt
 import pandas as pd
@@ -293,20 +294,48 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         )
 
-        if report.get('reportType'):
+        if report.get('reportType'):  # For non-table chart
             chart_data_new: List[Dict] = (
                 self._transform_report_data_to_chart_data(report_data)
             )
 
             chart_data: Dict = report.get('chartData')
+
+            # Data resistance
+            #  check that the column names are the
+            #  same in the data we try to append
+            all_keys: Set[str] = set(chain.from_iterable(chart_data))
+            for d in chart_data_new:
+                try:
+                    assert set(sorted((d.keys()))) == all_keys
+                except AssertionError:
+                    KeyError(
+                        f'The provided data has not the same keys'
+                        f' that the data it tries to append | '
+                        f'Required keys: {all_keys}'
+                    )
+
             if chart_data:
                 chart_data = chart_data + chart_data_new
             else:
                 chart_data = chart_data_new
 
-            report_data_ = {
-                'chartData': json.dumps(chart_data),
-            }
+            try:
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in chart_data:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
+
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
+
             self._update_report(
                 business_id=business_id,
                 app_id=app_id,

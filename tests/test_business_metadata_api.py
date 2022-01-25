@@ -19,6 +19,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
+    environment='production',
 )
 
 
@@ -52,12 +53,18 @@ def test_create_and_delete_business():
         )
     )
 
-    assert business_from_db == {
+    assert {
+        k: v
+        for k, v in business_from_db.items()
+        if k in [
+            'id', 'name',
+            'universe', '__typename',
+        ]
+    } == {
         k: v
         for k, v in business.items()
         if k in [
-            'id', 'name', 'type',
-            'integrationId',
+            'id', 'name',
             'universe', '__typename',
         ]
     }
@@ -91,12 +98,18 @@ def test_update_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert business_changed == {
+    assert {
+        k: v
+        for k, v in business_changed.items()
+        if k in [
+            'id', 'name',
+            'universe', '__typename',
+        ]
+    } == {
         k: v
         for k, v in new_business.items()
         if k in [
-            'id', 'name', 'type',
-            'integrationId',
+            'id', 'name',
             'universe', '__typename',
         ]
     }
@@ -128,12 +141,18 @@ def test_rename_business():
     )
 
     business_changed: Dict = s.business.get_business(business_id)
-    assert business_changed == {
+    assert {
+        k: v
+        for k, v in business_changed.items()
+        if k in [
+            'id', 'name',
+            'universe', '__typename',
+        ]
+    } == {
         k: v
         for k, v in new_business.items()
         if k in [
-            'id', 'name', 'type',
-            'integrationId',
+            'id', 'name',
             'universe', '__typename',
         ]
     }

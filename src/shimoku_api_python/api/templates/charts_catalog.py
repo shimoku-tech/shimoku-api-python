@@ -42,6 +42,38 @@ def create_bar(shimoku):
     )
 
 
+def create_horizontal_bar(shimoku):
+    data_ = [
+        {'Name': 'a', 'y': 5, 'z': 3},
+        {'Name': 'b', 'y': 7, 'z': 4},
+        {'Name': 'c', 'y': 3, 'z': 5},
+        {'Name': 'd', 'y': 5, 'z': 6},
+    ]
+
+    shimoku.plt.horizontal_barchart(
+        data=data_,
+        x=['y', 'z'], y='Name',
+        menu_path=f'{app_name}/horizontal-bar-test',
+        row=1, column=1,
+    )
+
+
+def create_zero_centered_barchart(shimoku):
+    data_ = [
+        {'Name': 'a', 'y': 5},
+        {'Name': 'b', 'y': -7},
+        {'Name': 'c', 'y': 3},
+        {'Name': 'd', 'y': -5},
+    ]
+
+    shimoku.plt.zero_centered_barchart(
+        data=data_,
+        x=['y'], y='Name',
+        menu_path=f'{app_name}/zero-centered-bar-test',
+        row=1, column=1,
+    )
+
+
 def create_line(shimoku):
     shimoku.plt.line(
         data=data,
@@ -183,7 +215,7 @@ def create_heatmap(shimoku):
         }
     ]
     shimoku.plt.heatmap(
-        data=data_, x='xAxis', y=['yAxis'], value='value',
+        data=data_, x='xAxis', y='yAxis', value='value',
         menu_path=f'{app_name}/heatmap-test',
         row=1, column=1,
     )

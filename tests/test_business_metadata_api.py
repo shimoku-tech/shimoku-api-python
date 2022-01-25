@@ -19,6 +19,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
+    environment='production',
 )
 
 

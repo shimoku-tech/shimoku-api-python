@@ -216,7 +216,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
-        )
+        )['items']
 
     def find_app_type_by_name_filter(
         self, name: Optional[str] = None,

@@ -891,7 +891,35 @@ class PlotApi(PlotAux):
     ):
         """Create a barchart
         """
-        option_modifications: Dict[str, Any] = {'dataZoom': False}
+
+        # TODO this only works for single bar:
+        """
+        'xAxis': {
+            'axisLabel': {
+                'inside': True,
+                'color': '#ffffff'
+            },
+            'axisTick': {
+                'show': False
+            }
+        },
+        'color': '#002FD8',  # put multicolor
+        """
+
+        option_modifications: Dict[str, Any] = {
+            'dataZoom': False,
+            'optionModifications': {
+                'series': {
+                    'itemStyle': {
+                        'borderRadius': [9, 9, 0, 0]
+                    }
+                },
+                # 'color': '#002FD8',  # TODO put multicolor
+                'emphasis': {
+                    'itemStyle': {'color': '#29D86F'}
+                },
+            }
+        }
         return self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,

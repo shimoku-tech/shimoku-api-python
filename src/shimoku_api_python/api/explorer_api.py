@@ -190,7 +190,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
-        )
+        )['items']
 
     def find_business_by_name_filter(
         self, name: Optional[str] = None,
@@ -216,7 +216,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
-        )
+        )['items']
 
     def find_app_type_by_name_filter(
         self, name: Optional[str] = None,
@@ -481,7 +481,7 @@ class CreateExplorerAPI(object):
         item: Dict = {'name': name}
 
         return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
+            method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
     def create_app_type(self, name: str) -> Dict:
@@ -505,7 +505,7 @@ class CreateExplorerAPI(object):
         }
 
         return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
+            method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
     def create_app(
@@ -540,7 +540,7 @@ class CreateExplorerAPI(object):
             item.update(app_metadata)
 
         return self.api_client.query_element(
-            method='PUT', endpoint=endpoint, **{'body_params': item},
+            method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
     def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
@@ -613,7 +613,7 @@ class CreateExplorerAPI(object):
 
         report: Dict = (
             self.api_client.query_element(
-                method='PUT', endpoint=endpoint,
+                method='POST', endpoint=endpoint,
                 **{'body_params': item},
             )
         )
@@ -646,7 +646,7 @@ class CreateExplorerAPI(object):
         for item in items:
             report_entry: Dict = (
                 self.api_client.query_element(
-                    method='PUT', endpoint=endpoint,
+                    method='POST', endpoint=endpoint,
                     **{'body_params': item},
                 )
             )

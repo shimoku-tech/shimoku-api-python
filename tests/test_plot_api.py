@@ -1298,6 +1298,7 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_bar()
 # test_delete_path()
 # test_delete()
 # test_append_data_to_trend_chart()
@@ -1309,7 +1310,6 @@ test_alert_indicator()
 # test_set_new_business()
 
 test_table()
-test_bar()
 test_horizontal_barchart()
 test_zero_centered_barchart()
 test_stockline()

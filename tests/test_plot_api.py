@@ -826,7 +826,7 @@ def test_sunburst():
                    "value": 2
                   },
                   {
-                   "name": "Chidren AA1",
+                   "name": "Children AA1",
                    "value": 5,
                    "children": [
                     {
@@ -864,11 +864,11 @@ def test_sunburst():
                  "name": "Children A1",
                  "children": [
                   {
-                   "name": "Chidren AA1",
+                   "name": "Children AA1",
                    "value": 1
                   },
                   {
-                   "name": "Chidren AA2",
+                   "name": "Children AA2",
                    "value": 2
                   }
                  ]

@@ -4,6 +4,7 @@ from typing import Dict, List
 import unittest
 
 import datetime as dt
+import pandas as pd
 
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
@@ -12,6 +13,7 @@ from shimoku_api_python.exceptions import ApiClientError
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
+environment: str = getenv('ENVIRONMENT')
 
 
 config = {
@@ -21,7 +23,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 s.plt.set_business(business_id=business_id)
 
@@ -436,6 +438,41 @@ def test_table():
         menu_path='test/table-test',
         component_type='table',
         row=1, column=1,
+    )
+
+
+def test_bar_with_filters():
+    data_ = pd.read_csv('../data/test_multifilter.csv')
+    y: List[str] = [
+        'Acné', 'Adeslas', 'Asisa',
+        'Aspy', 'Caser', 'Clínica Navarra', 'Cualtis', 'Cáncer', 'DKV',
+        'Depresión', 'Dermatólogo', 'Dermatólogo Adeslas', 'Diabetes',
+        'Fundación Jiménez Díaz', 'Ginecólogo', 'Ginecólogo Adeslas',
+        'HM Hospitales', 'Hemorroides', 'IMQ', 'Preving', 'Psicólogo',
+        'Psiquiatra', 'Quirón', 'Quirón Prevención + quirónprevención',
+        'Quirón+Quirónsalud', 'Quirónsalud', 'Ruber', 'Ruber Internacional',
+        'Ruber Juan Bravo', 'Sanitas', 'Teknon', 'Traumatólogo', 'Vithas'
+    ]
+    filters: Dict = {
+        'exists': False,
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    s.plt.bar(
+        data=data_,
+        x='fecha', y=y,
+        menu_path='test/multifilter-bar-test',
+        row=2, column=1,
+        filters=filters,
+    )
+
+    s.plt.delete(
+        menu_path='test/multifilter-bar-test',
+        component_type='bar',
+        row=2, column=1,
     )
 
 
@@ -1298,6 +1335,7 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_bar_with_filters()
 test_bar()
 # test_delete_path()
 # test_delete()

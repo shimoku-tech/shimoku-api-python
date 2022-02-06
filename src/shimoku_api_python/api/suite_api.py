@@ -288,3 +288,18 @@ class SuiteApi:
         """Create the Product Sales Suite"""
         # TODO data is for create or update?
         raise NotImplementedError
+
+    def canva(self):
+        """
+        The idea is to define a whole path with a single element
+
+        canva = {
+            'metrica': {
+                'normalizada': {'row': 1, 'column': 1, 'component_type': 'bar'},
+                'trend5': {'row': 1, 'column': 2, 'component_type': 'line'},
+                'trend53': {'row': 2, 'column': 1, 'component_type': 'predictive_line'},
+                'anual': {'row': 2, 'column': 2, 'component_type': 'line'},
+            }
+        }
+        """
+        raise NotImplementedError

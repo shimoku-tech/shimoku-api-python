@@ -1,11 +1,14 @@
 """"""
 from sys import stdout
-from typing import List, Dict, Optional, Union, Tuple, Any
+from typing import List, Dict, Optional, Union, Tuple, Any, Iterable
 import logging
 import json
+from itertools import product
 
-from pandas import DataFrame
 import datetime as dt
+
+import pandas as pd
+from pandas import DataFrame
 
 from .data_managing_api import DataValidation
 from .explorer_api import (
@@ -85,6 +88,24 @@ class PlotApi(PlotAux):
         else:
             self.business_id: Optional[str] = None
 
+    @staticmethod
+    def _validate_filters(filters: Dict) -> None:
+        # Check the filters is built properly
+        try:
+            assert (
+                sorted(
+                    list(filters.keys())
+                ) == sorted(
+                    ['exists', 'row', 'column', 'filter_cols']
+                )
+            )
+        except AssertionError:
+            raise KeyError(
+                f'filters object must contain the keys'
+                f'"exists", "row", "column", "filter_cols" | '
+                f'Provided keys are: {list(filters.keys())}'
+            )
+
     def _find_target_reports(
             self, menu_path: str, row: int, column: int,
             component_type: Optional[str] = None,
@@ -139,56 +160,6 @@ class PlotApi(PlotAux):
             ]
 
         return target_reports
-
-    def set_business(self, business_id: str):
-        """"""
-        # If the business id does not exists it raises an ApiClientError
-        _ = self._get_business(business_id)
-        self.business_id: str = business_id
-
-    def set_new_business(self, name: str):
-        """"""
-        business: Dict = self._create_business(name=name)
-        self.business_id: str = business['id']
-
-    # TODO to be tried
-    def set_path_orders(
-            self, app_name: str, path_order: Dict[str, int],
-    ) -> None:
-        """
-        :param app_name: the App name
-        :param path_order: example {'test': 0, 'more-test': 1}
-        """
-        apps: List[Dict] = self._get_business_apps(self.business_id)
-        app_types: List[Dict] = self.get_universe_app_types()
-        for app in apps:
-            app_id: str = app['id']
-            app_type_id: str = app['type']['id']
-
-            # Check that it is of the target app_name
-            if not any([
-                True
-                if app_type['id'] == app_type_id and app_type['name'] == app_name
-                else False
-                for app_type in app_types
-            ]):
-                continue
-
-            reports = self._get_app_reports(
-                business_id=self.business_id,
-                app_id=app_id,
-            )
-
-            for report in reports:
-                path: str = report['path']
-                order: int = path_order.get(path)
-                if order:
-                    self.update_report(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                        report_id=report['id'],
-                        report_metadata={'order': order},
-                    )
 
     def _get_component_order(self, app_id: str, path_name: str) -> int:
         """Set an ascending report.Order to new path created
@@ -257,7 +228,7 @@ class PlotApi(PlotAux):
             row: Optional[int] = None,
             column: Optional[int] = None,
             overwrite: bool = True,
-    ) -> Dict:
+    ) -> str:
         """
         :param data:
         :param menu_path:
@@ -276,11 +247,6 @@ class PlotApi(PlotAux):
         )
         app: Dict = d['app']
         app_id: str = app['id']
-
-        reports = self._get_app_reports(
-            business_id=self.business_id,
-            app_id=app_id,
-        )
 
         order: int = self._get_component_order(
             app_id=app_id, path_name=path_name,
@@ -329,6 +295,400 @@ class PlotApi(PlotAux):
                     report_id=report_id,
                     report_data=data,
                 )
+
+        return report_id
+
+    def _create_trend_chart(
+            self, echart_type: str,
+            data: Union[str, DataFrame, List[Dict]],
+            x: str, y: List[str],  # first layer
+            menu_path: str, row: int, column: int,  # report creation
+            title: Optional[str] = None,  # second layer
+            subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            option_modifications: Optional[Dict] = None,  # third layer
+            filters: Optional[Dict] = None,
+            overwrite: bool = True,
+    ) -> str:
+        """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
+
+        Example
+        -------------------
+        input
+            data:
+                val_a, val_b,
+                  mon,     7,
+                  tue,     10,
+                  wed,     11,
+                  thu,     20,
+                  fri,     27,
+            x: 'val_a'
+            y: 'val_b'
+            menu_path: 'purchases/weekly'
+            row: 2
+            column: 1
+            title: 'Purchases by week'
+            color: None
+            option_modifications: {}
+
+        :param echart_type:
+        :param data:
+        :param x:
+        :param y:
+        :param menu_path: it contain the `app_name/path` for instance "product-suite/results"
+            and it will use the AppType ProductSuite (if it does not it will create it)
+            then it will check if the App exists, if not create it and finally create
+            the report with the specific path "results"
+        :param row:
+        :param column:
+        :param title:
+        :param option_modifications:
+        :param filters: To create a filter for every specified column
+        """
+        cols: List[str] = [x] + y
+        self._validate_table_data(data, elements=cols)
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[cols]  # keep only x and y
+
+        df.rename(columns={x: 'xAxis'}, inplace=True)
+
+        # Default
+        option_modifications_temp = {
+            "legend": {"type": "scroll"},
+            "toolbox": {"orient": "vertical", "top": 20},
+            'series': {'smooth': True}
+        }
+
+        # TODO this will be done in FE
+        #  https://trello.com/c/GXRYHEsO/
+        num_size: int = len(df[y].max())
+        if num_size > 6:
+            margin: int = 12 * (num_size - 6)  # 12 pixels by extra num
+            option_modifications_temp["yAxis"] = {
+                "axisLabel": {"margin": margin},
+            }
+
+        if option_modifications:
+            if not option_modifications.get('legend'):
+                option_modifications.update({"legend": {"type": "scroll"}})
+
+            if not option_modifications.get('toolbox'):
+                option_modifications['toolbox'] = {"orient": "vertical", "top": 20}
+            elif not option_modifications.get('toolbox').get('orient'):
+                option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
+
+            if not option_modifications.get('series'):
+                option_modifications['series'] = {'smooth': True}
+            elif not option_modifications.get('series').get('smooth'):
+                option_modifications['series'].update({'smooth': True})
+
+        else:
+            option_modifications = option_modifications_temp
+
+        # TODO we have two titles now, take a decision
+        #  one in dataFields the other as field
+        data_fields: Dict = self._set_data_fields(
+            title='', subtitle=subtitle,
+            x_axis_name=x_axis_name,
+            y_axis_name=y_axis_name,
+            option_modifications=option_modifications,
+        )
+        data_fields['type'] = echart_type
+
+        report_metadata: Dict = {
+            'reportType': 'ECHARTS',
+            'dataFields': data_fields,
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        return self._create_chart(
+            data=df,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            row=row, column=column,
+            overwrite=overwrite,
+        )
+
+    def _create_multifilter_reports(
+            self, data: Union[str, DataFrame, List[Dict]], filters: Dict,
+    ) -> Iterable:
+        """
+        Create chunks of the data to create N reports for every filter combination
+        """
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        filter_cols: List[str] = filters['filter_cols']
+
+        select_filter: Dict[str, str] = {
+            v: f'Select{index + 1}'
+            for index, v in enumerate(filter_cols)
+        }
+
+        # Create all combinations
+        # https://stackoverflow.com/questions/18497604/combining-all-combinations-of-two-lists-into-a-dict-of-special-form
+        d: Dict = {}
+        for filter_name in filter_cols:
+            d[filter_name] = df[filter_name].unique().tolist()
+
+        filter_combinations = [
+            dict(zip((list(d.keys())), row))
+            for row in product(*list(d.values()))
+        ]
+
+        for filter_combination in filter_combinations:
+            df_temp = df.copy()
+            filter_element: Dict = {}
+            for filter_, value in filter_combination.items():
+                filter_element[select_filter[filter_]] = value
+                df_temp = df_temp[df_temp[filter_] == value]
+
+                if df_temp.empty:
+                    break
+
+            if df_temp.empty:
+                continue
+
+            # Get rid of NaN columns based on the filters
+            df_temp = df_temp.dropna(axis=1)
+
+            yield df_temp, filter_element
+
+# TODO WiP
+    def _update_filter_report(
+            self, filter_row: int,
+            filter_column: int,
+            filter_elements: List,
+            menu_path: str,
+    ) -> None:
+        """"""
+# TODO
+        filter_report: Dict = self.get_report_data()  # TODO
+        filter_report_data: Dict = filter_report['chartData']
+
+        # Check the filter_report is in the right position
+        try:
+            assert filter_row == int(
+                filter_report['grid'].split(',')[0].strip()
+            )
+        except AssertionError:
+            raise ValueError()
+
+        try:
+            assert filter_column == int(
+                filter_report['grid'].split(',')[1].strip()
+            )
+        except AssertionError:
+            raise ValueError()
+
+        # Here we append old and new reportId
+        df_filter_report_data: pd.DataFrame = pd.DataFrame(filter_report_data)
+        df_filter_elements: pd.DataFrame = pd.DataFrame(filter_elements)
+        df_chart_data: pd.DataFrame = pd.merge(
+            df_filter_report_data, df_filter_elements,
+            how='left', on=[
+                c
+                for c in df_filter_report_data.columns
+                if 'Select' in c
+            ], suffixes=('_old', '_new')
+        )
+        df_chart_data['reportId'] = (
+            df_chart_data['reportId_old']
+            +
+            df_chart_data['reportId_new']
+        )
+        df_chart_data.drop(
+            columns=['reportId_old', 'reportId_new'],
+            axis=1, inplace=True,
+        )
+        chart_data: List[Dict] = df_chart_data.to_dict(orient='records')
+        del df_chart_data
+
+        report_metadata: Dict = {
+            'reportType': 'MULTIFILTER',  # TODO multifilter?
+            # 'dataFields': data_fields,  # TODO unnecessary?
+            'grid': f'{filter_row}, {filter_column}',
+        }
+
+        self._create_chart(
+            data=chart_data,
+            menu_path=menu_path,
+            report_metadata=report_metadata,
+            row=filter_row, column=filter_column,
+            overwrite=True,
+        )
+
+# TODO WiP
+    def _create_trend_charts_with_filters(
+            self, data: Union[str, DataFrame, List[Dict]],
+            filters: Dict, **kwargs,
+    ):
+        """"""
+        filter_elements: List[Dict] = []
+        self._validate_filters(filters=filters)
+
+        # We are going to save all the reports one by one
+        for df_temp, filter_element in (
+                self._create_multifilter_reports(
+                    data=data, filters=filters,
+                )
+        ):
+            cols: List[str] = df_temp.columns
+            kwargs['y'] = [
+                value for value in kwargs['y']
+                if value in cols
+            ]
+            report_id = self._create_trend_chart(
+                data=df_temp, overwrite=False, **kwargs,
+            )
+            filter_element['reportId'] = [report_id]
+            filter_elements.append(filter_element)
+
+        filter_exists: bool = filters['exists']
+        filter_row: int = filters['row']
+        filter_column: int = filters['column']
+
+        # TODO
+        if filter_exists:
+            self._update_filter_report(
+                filter_row=filter_row,
+                filter_column=filter_column,
+                filter_elements=filter_elements,
+                menu_path=kwargs['menu_path'],
+            )
+        else:
+            report_metadata: Dict = {
+                'reportType': 'MULTIFILTER',  # TODO multifilter?
+                # 'dataFields': data_fields,  # TODO unnecessary?
+                'grid': f'{filter_row}, {filter_column}',
+            }
+
+            self._create_chart(
+                data=filter_elements,
+                menu_path=kwargs['menu_path'],
+                report_metadata=report_metadata,
+                row=filter_row, column=filter_column,
+                overwrite=True,
+            )
+
+    def _create_trend_charts(
+            self, data: Union[str, DataFrame, List[Dict]],
+            filters: List, **kwargs,
+    ):
+        """
+        Example
+        -----------------
+        filters: Dict = {
+            'exists': False,
+            'row': 1, 'column': 1,
+            'filter_cols': [
+                'seccion', 'frecuencia', 'region',
+            ],
+        }
+        """
+        if filters:
+            self._create_trend_charts_with_filters(
+                data=data, filters=filters, **kwargs
+            )
+        else:
+            self._create_trend_chart(data=data, **kwargs)
+
+    def _set_data_fields(
+            self, title: str, subtitle: str,
+            x_axis_name: str, y_axis_name: str,
+            option_modifications: Dict,
+    ) -> Dict:
+        """"""
+        chart_options: Dict = {
+            'title': title if title else "",
+            'subtitle': subtitle if subtitle else "",
+            'legend': True,
+            'tooltip': True,
+            'axisPointer': True,
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': False,
+                'dataZoom': True,
+                'magicType': False,
+            },
+            'xAxis': {
+                'name': x_axis_name if x_axis_name else "",
+                'type': 'category',
+            },
+            'yAxis': {
+                'name': y_axis_name if y_axis_name else "",
+                'type': 'value',
+            },
+            'dataZoom': True,
+            'smooth': True,
+        }
+
+        data_fields: Dict = {
+            'chartOptions': chart_options,
+        }
+
+        if option_modifications:
+            for k, v in option_modifications.items():
+                if k == 'optionModifications':
+                    data_fields[k] = v
+                else:
+                    data_fields['chartOptions'][k] = v
+
+        return data_fields
+
+    def set_business(self, business_id: str):
+        """"""
+        # If the business id does not exists it raises an ApiClientError
+        _ = self._get_business(business_id)
+        self.business_id: str = business_id
+
+    def set_new_business(self, name: str):
+        """"""
+        business: Dict = self._create_business(name=name)
+        self.business_id: str = business['id']
+
+    # TODO to be tried
+    def set_path_orders(
+            self, app_name: str, path_order: Dict[str, int],
+    ) -> None:
+        """
+        :param app_name: the App name
+        :param path_order: example {'test': 0, 'more-test': 1}
+        """
+        apps: List[Dict] = self._get_business_apps(self.business_id)
+        app_types: List[Dict] = self.get_universe_app_types()
+        for app in apps:
+            app_id: str = app['id']
+            app_type_id: str = app['type']['id']
+
+            # Check that it is of the target app_name
+            if not any([
+                True
+                if app_type['id'] == app_type_id and app_type['name'] == app_name
+                else False
+                for app_type in app_types
+            ]):
+                continue
+
+            reports = self._get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
+
+            for report in reports:
+                path: str = report['path']
+                order: int = path_order.get(path)
+                if order:
+                    self.update_report(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                        report_id=report['id'],
+                        report_metadata={'order': order},
+                    )
 
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -439,6 +799,7 @@ class PlotApi(PlotAux):
                     app_id=app_id,
                 )
 
+    # TODO to be deprecated
     def update(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -470,165 +831,6 @@ class PlotApi(PlotAux):
             row=1, column=1,
             **kwargs
         )
-
-    def _create_trend_chart(
-            self, echart_type: str,
-            data: Union[str, DataFrame, List[Dict]],
-            x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
-            title: Optional[str] = None,  # second layer
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
-    ):
-        """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
-
-        Example
-        -------------------
-        input
-            data:
-                val_a, val_b,
-                  mon,     7,
-                  tue,     10,
-                  wed,     11,
-                  thu,     20,
-                  fri,     27,
-            x: 'val_a'
-            y: 'val_b'
-            menu_path: 'purchases/weekly'
-            row: 2
-            column: 1
-            title: 'Purchases by week'
-            color: None
-            option_modifications: {}
-
-        :param echart_type:
-        :param data:
-        :param x:
-        :param y:
-        :param menu_path: it contain the `app_name/path` for instance "product-suite/results"
-            and it will use the AppType ProductSuite (if it does not it will create it)
-            then it will check if the App exists, if not create it and finally create
-            the report with the specific path "results"
-        :param row:
-        :param column:
-        :param title:
-        :param option_modifications:
-        :param filters: To create a filter for every specified column
-        """
-        cols: List[str] = [x] + y
-        self._validate_table_data(data, elements=cols)
-        df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[cols]  # keep only x and y
-
-        df.rename(columns={x: 'xAxis'}, inplace=True)
-
-        # Default
-        option_modifications_temp = {
-            "legend": {"type": "scroll"},
-            "toolbox": {"orient": "vertical", "top": 20},
-            'series': {'smooth': True}
-        }
-
-        # TODO this will be done in FE
-        #  https://trello.com/c/GXRYHEsO/
-        num_size: int = len(df[y].max())
-        if num_size > 6:
-            margin: int = 12 * (num_size - 6)  # 12 pixels by extra num
-            option_modifications_temp["yAxis"] = {
-                "axisLabel": {"margin": margin},
-            }
-
-        if option_modifications:
-            if not option_modifications.get('legend'):
-                option_modifications.update({"legend": {"type": "scroll"}})
-
-            if not option_modifications.get('toolbox'):
-                option_modifications['toolbox'] = {"orient": "vertical", "top": 20}
-            elif not option_modifications.get('toolbox').get('orient'):
-                option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
-
-            if not option_modifications.get('series'):
-                option_modifications['series'] = {'smooth': True}
-            elif not option_modifications.get('series').get('smooth'):
-                option_modifications['series'].update({'smooth': True})
-
-        else:
-            option_modifications = option_modifications_temp
-
-        # TODO we have two titles now, take a decision
-        #  one in dataFields the other as field
-        data_fields: Dict = self._set_data_fields(
-            title='', subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-        )
-        data_fields['type'] = echart_type
-
-        report_metadata: Dict = {
-            'reportType': 'ECHARTS',
-            'dataFields': data_fields,
-            'title': title,
-            'grid': f'{row}, {column}',
-        }
-
-        if filters:
-            raise NotImplementedError
-
-        return self._create_chart(
-            data=df,
-            menu_path=menu_path,
-            report_metadata=report_metadata,
-            row=row, column=column,
-            overwrite=True,
-        )
-
-    def _set_data_fields(
-            self, title: str, subtitle: str,
-            x_axis_name: str, y_axis_name: str,
-            option_modifications: Dict,
-    ) -> Dict:
-        """"""
-        chart_options: Dict = {
-            'title': title if title else "",
-            'subtitle': subtitle if subtitle else "",
-            'legend': True,
-            'tooltip': True,
-            'axisPointer': True,
-            'toolbox': {
-                'saveAsImage': True,
-                'restore': True,
-                'dataView': False,
-                'dataZoom': True,
-                'magicType': False,
-            },
-            'xAxis': {
-                'name': x_axis_name if x_axis_name else "",
-                'type': 'category',
-            },
-            'yAxis': {
-                'name': y_axis_name if y_axis_name else "",
-                'type': 'value',
-            },
-            'dataZoom': True,
-            'smooth': True,
-        }
-
-        data_fields: Dict = {
-            'chartOptions': chart_options,
-        }
-
-        if option_modifications:
-            for k, v in option_modifications.items():
-                if k == 'optionModifications':
-                    data_fields[k] = v
-                else:
-                    data_fields['chartOptions'][k] = v
-
-        return data_fields
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -887,7 +1089,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a barchart
         """
@@ -920,15 +1122,19 @@ class PlotApi(PlotAux):
                 },
             }
         }
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='bar',
-            filters=filters,
+
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='bar',
+            )
         )
 
     def horizontal_barchart(
@@ -940,7 +1146,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -971,7 +1177,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1014,7 +1220,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # thid layer
-            filters: Optional[List[str]] = None,  # thid layer
+            filters: Optional[Dict] = None,  # thid layer
     ):
         """"""
         return self._create_trend_chart(
@@ -1038,7 +1244,7 @@ class PlotApi(PlotAux):
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -1096,7 +1302,7 @@ class PlotApi(PlotAux):
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1209,7 +1415,7 @@ class PlotApi(PlotAux):
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1322,7 +1528,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         self._validate_table_data(data, elements=[x] + y)
@@ -1364,7 +1570,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         try:
@@ -1392,7 +1598,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,  # to create filters
+            filters: Optional[Dict] = None,  # to create filters
     ):
         """"""
         return self._create_trend_chart(
@@ -1529,7 +1735,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Piechart
         """
@@ -1562,7 +1768,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a RADAR
         """
@@ -1600,7 +1806,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Tree
         """
@@ -1629,7 +1835,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Treemap
         """
@@ -1659,7 +1865,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a Sunburst
         """
@@ -1691,7 +1897,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -1715,7 +1921,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1754,7 +1960,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1793,7 +1999,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1826,7 +2032,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -1872,7 +2078,7 @@ class PlotApi(PlotAux):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[List[str]] = None,
+            filters: Optional[Dict] = None,
     ):
         """Create a barchart
         """

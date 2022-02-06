@@ -1008,11 +1008,13 @@ def test_indicator():
             "description": "",
             "title": "Estado",
             "value": "Abierto",
+            "align": "center",
         },
         {
             "description": "",
             "title": "Price ($)",
-            "value": "455"
+            "value": "455",
+            "color": "success",
         },
         {
             "description": "",
@@ -1032,6 +1034,8 @@ def test_indicator():
         value='value',
         header='title',
         footer='description',
+        align='align',
+        color='color'
     )
 
     s.plt.delete(
@@ -1301,7 +1305,7 @@ def test_cohorts():
 # test_delete_path()
 # test_delete()
 # test_append_data_to_trend_chart()
-test_ux()
+# test_ux()
 test_indicator()
 test_alert_indicator()
 # test_set_path_orders()

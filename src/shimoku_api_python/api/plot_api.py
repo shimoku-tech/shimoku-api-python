@@ -1637,34 +1637,23 @@ class PlotApi(PlotAux):
         :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
         """
+        mandatory_elements: List[str] = [
+            header, value, target_path,
+        ]
+        mandatory_elements = [element for element in mandatory_elements if element]
+        extra_elements: List[str] = [footer, color, align]
+        extra_elements = [element for element in extra_elements if element]
 
-        def _set_indicator_columns(columns: int) -> Dict:
-            if align:
-                return {'dataFields': {'columns': columns, 'align': align}}
-            else:
-                return {'dataFields': {'columns': columns}}
-
-        if align:
-            try:
-                assert align in ['center', 'left', 'right']
-            except AssertionError:
-                raise ValueError(
-                    f'Align must be either "left", "center" or "right" '
-                    f'| value passed {align}'
-                )
-
-        elements: List[str] = [header, footer, value, color, target_path]
-        elements = [element for element in elements if element]
-
-        self._validate_table_data(data, elements=elements)
+        self._validate_table_data(data, elements=mandatory_elements)
         df: DataFrame = self._validate_data_is_pandarable(data)
-        df = df[elements]  # keep only x and y
+        df = df[mandatory_elements + extra_elements]  # keep only x and y
 
         cols_to_rename: Dict[str, str] = {
             header: 'title',
             footer: 'description',
             value: 'value',
             color: 'color',
+            align: 'align',
         }
 
         if target_path:
@@ -1673,9 +1662,18 @@ class PlotApi(PlotAux):
         cols_to_rename = {
             col_to_rename: v
             for col_to_rename, v in cols_to_rename.items()
-            if col_to_rename in elements
+            if col_to_rename in mandatory_elements + extra_elements
         }
         df.rename(columns=cols_to_rename, inplace=True)
+        for extra_element in extra_elements:
+            if extra_element == 'align':
+                df['align'] = df['align'].fillna('right')
+            elif extra_element == 'color':
+                df['color'] = df['color'].fillna('black')
+            elif extra_element == 'footer':
+                df['footer'] = df['footer'].fillna('')
+            else:
+                raise ValueError(f'{extra_element} is not solved')
 
         report_metadata: Dict = {
             'reportType': 'INDICATORS',
@@ -1688,14 +1686,14 @@ class PlotApi(PlotAux):
         #  the following lines adjust it to the nature of the data
         #  and the multi_column variable
         len_df: int = len(df)
+        columns: int = 4
         if len_df < multi_column:
             columns: int = len_df
-            data_fields = _set_indicator_columns(columns)
-            report_metadata.update(data_fields)
         elif multi_column != 4:
             columns: int = multi_column
-            data_fields = _set_indicator_columns(columns)
-            report_metadata.update(data_fields)
+
+        data_fields: Dict = {'dataFields': {'columns': columns}}
+        report_metadata.update(data_fields)
 
         return self._create_chart(
             data=df,

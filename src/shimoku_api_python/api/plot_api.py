@@ -1464,8 +1464,8 @@ class PlotApi(PlotAux):
                 df['align'] = df['align'].fillna('right')
             elif extra_element == 'color':
                 df['color'] = df['color'].fillna('black')
-            elif extra_element == 'footer':
-                df['footer'] = df['footer'].fillna('')
+            elif extra_element == 'description':
+                df['description'] = df['description'].fillna('')
             else:
                 raise ValueError(f'{extra_element} is not solved')
 

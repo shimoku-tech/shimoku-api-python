@@ -1017,7 +1017,7 @@ def test_indicator():
             "color": "success",
         },
         {
-            "description": "",
+            "description": "this is a description",
             "title": "Volumen",
             "value": "41153"
         },

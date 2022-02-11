@@ -427,6 +427,21 @@ def test_table():
         {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
     ]
     filter_columns: List[str] = ['filtA', 'filtB']
+
+    s.plt.table(
+        data=data_,
+        menu_path='test/sorted-table-test',
+        row=1, column=1,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+    )
+
+    s.plt.delete(
+        menu_path='test/sorted-table-test',
+        component_type='table',
+        row=1, column=1,
+    )
+
     s.plt.table(
         data=data_,
         menu_path='test/table-test',
@@ -812,7 +827,28 @@ def test_heatmap():
     )
 
 
-def test_gauge():
+def test_speed_gauge():
+    data_ = [
+        {
+            "value": 60,
+            "name": "Third"
+        },
+    ]
+    s.plt.speed_gauge(
+        data=data_, name='name', value='value',
+        menu_path='test/speed-gauge-test',
+        row=1, column=1,
+        min=0, max=70,
+    )
+
+    s.plt.delete(
+        menu_path='test/speed-gauge-test',
+        component_type='speed_gauge',
+        row=1, column=1,
+    )
+
+
+def test_ring_gauge():
     data_ = [
         {
             "value": 60,
@@ -835,15 +871,15 @@ def test_gauge():
             "name": "First"
         }
     ]
-    s.plt.gauge(
+    s.plt.ring_gauge(
         data=data_, name='name', value='value',
-        menu_path='test/gauge-test',
+        menu_path='test/ring-gauge-test',
         row=1, column=1,
     )
 
     s.plt.delete(
-        menu_path='test/gauge-test',
-        component_type='gauge',
+        menu_path='test/ring-gauge-test',
+        component_type='ring_gauge',
         row=1, column=1,
     )
 
@@ -1339,6 +1375,8 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_speed_gauge()
+test_table()
 test_bar_with_filters()
 test_bar()
 # test_delete_path()
@@ -1351,7 +1389,6 @@ test_alert_indicator()
 # test_update()
 # test_set_new_business()
 
-test_table()
 test_horizontal_barchart()
 test_zero_centered_barchart()
 test_stockline()
@@ -1360,7 +1397,7 @@ test_predictive_line()
 test_scatter()
 test_funnel()
 test_radar()
-test_gauge()
+test_ring_gauge()
 test_indicator()
 test_alert_indicator()
 test_heatmap()

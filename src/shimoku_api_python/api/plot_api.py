@@ -837,7 +837,7 @@ class PlotApi(PlotAux):
             menu_path: str, row: int, column: int,  # report creation
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
-            sort_table_by_cols: Optional[List] = None,
+            sort_table_by_col: Optional[Dict] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
     ):
@@ -847,6 +847,7 @@ class PlotApi(PlotAux):
             "Monetary importance": {
                 "field": "stringField2",
                 "filterBy": ["High", "Medium", "Low"]
+                "defaultOrder": "asc",
             },
             "Purchase soon": {
                 "field": "stringField3",
@@ -869,8 +870,9 @@ class PlotApi(PlotAux):
             """
             filters_map: Dict[str, str] = {}
             key_prefix_name: str = 'stringField'
-            if filter_columns:
-                for index, filter_column in enumerate(filter_columns):
+            field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+            if field_cols:
+                for index, filter_column in enumerate(field_cols):
                     filters_map[filter_column] = f'{key_prefix_name}{index + 1}'
                 return filters_map
             else:
@@ -946,6 +948,7 @@ class PlotApi(PlotAux):
             """
             data_fields: Dict = {}
             cols: List[str] = df.columns
+            cols_to_sort_by: List[str] = sort_table_by_col.keys()
             for col in cols:
                 if col in filter_fields:
                     data_fields[col] = {
@@ -954,9 +957,39 @@ class PlotApi(PlotAux):
                     }
                 else:
                     data_fields[col] = None
+
+                if col in cols_to_sort_by:
+                    if data_fields:
+                        if data_fields[col]:
+                            data_fields[col].update(
+                                {
+                                    'field': filter_map[col],
+                                    "defaultOrder": sort_table_by_col[col],
+                                }
+                            )
+                        else:
+                            data_fields[col] = {
+                                'field': filter_map[col],
+                                "defaultOrder": sort_table_by_col[col],
+                            }
+                    else:
+                        data_fields[col] = {
+                            'field': filter_map[col],
+                            "defaultOrder": sort_table_by_col[col],
+                        }
+
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
+
+        if sort_table_by_col:
+            try:
+                assert len(sort_table_by_col) == 1
+            except AssertionError:
+                raise ValueError(
+                    f'Currently we can only sort tables by one column '
+                    f'You passed {len(sort_table_by_col)} columns'
+                )
 
         # This is for the responsive part of the application
         #  by default 6 is the maximum for average desktop screensize
@@ -1015,9 +1048,6 @@ class PlotApi(PlotAux):
             filter_map[filter_name]: values
             for filter_name, values in filter_fields.items()
         }
-
-        if sort_table_by_cols:
-            df = df.sort_values(by=sort_table_by_cols, ascending=True)
 
         # We do not allow NaN values for report Entry
         df = df.fillna('')
@@ -2021,7 +2051,156 @@ class PlotApi(PlotAux):
             filters=filters,
         )
 
-    def gauge(
+    def speed_gauge(
+            self, data: Union[str, DataFrame, List[Dict]],
+            name: str, value: str,
+            menu_path: str, row: int, column: int,  # report creation
+            min: int, max: int,
+            title: Optional[str] = None,  # second layer
+            # subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            option_modifications: Optional[Dict] = None,  # third layer
+            filters: Optional[Dict] = None,
+    ) -> str:
+        """
+        option = {
+          series: [
+            {
+              type: 'gauge',
+              min: 0,
+              max: 240,
+              progress: {
+                show: true,
+                width: 18
+              },
+              axisLine: {
+                lineStyle: {
+                  width: 18
+                }
+              },
+              axisTick: {
+                show: true
+              },
+              splitLine: {
+                length: 5,
+                lineStyle: {
+                  width: 3,
+                  color: '#999'
+                }
+              },
+              axisLabel: {
+                distance: 25,
+                color: '#999',
+                fontSize: 20
+              },
+              anchor: {
+                show: true,
+                showAbove: true,
+                size: 15,
+                itemStyle: {
+                  borderWidth: 10
+                }
+              },
+              title: {
+                show: false
+              },
+              detail: {
+                valueAnimation: true,
+                fontSize: 40,
+                offsetCenter: [0, '80%']
+              },
+              data: [
+                {
+                  value: 70
+                }
+              ]
+            }
+          ]
+        };
+        """
+        self._validate_table_data(data, elements=[name, value])
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name, value]]  # keep only x and y
+        df.rename(
+            columns={
+                name: 'name',
+                value: 'value',
+            },
+            inplace=True,
+        )
+
+        data_fields: Dict = {
+            'type': 'gauge',
+            'series': {
+                'startAngle': 210,
+                'endAngle': -30,
+                'min': min,
+                'max': max,
+                'progress': {
+                    'show': True,
+                    'width': 18
+                },
+                'axisLine': {
+                    'lineStyle': {
+                        'width': 18
+                    }
+                },
+                'axisTick': {
+                    'show': True
+                },
+                'splitLine': {
+                    'length': 5,
+                    'lineStyle': {
+                        'width': 3,
+                        'color': '#999'
+                    }
+                },
+                'axisLabel': {
+                    'distance': 25,
+                    'color': '#999',
+                    'fontSize': 20
+                },
+                'anchor': {
+                    'show': True,
+                    'showAbove': True,
+                    'size': 15,
+                    'itemStyle': {
+                        'borderWidth': 10
+                    }
+                },
+                'title': {
+                    'show': False,
+                },
+                'detail': {
+                    'valueAnimation': True,
+                    'fontSize': 40,
+                    'offsetCenter': [0, '80%']
+                },
+            }
+        }
+
+        if option_modifications:
+            raise NotImplementedError
+
+        report_metadata: Dict = {
+            'reportType': 'ECHARTS',
+            'dataFields': data_fields,
+            'title': title,
+            'grid': f'{row}, {column}',
+        }
+
+        if filters:
+            raise NotImplementedError
+
+        return self._create_chart(
+            data=df,
+            menu_path=menu_path,
+            row=row, column=column,
+            report_metadata=report_metadata,
+        )
+
+    def ring_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
             menu_path: str, row: int, column: int,  # report creation
@@ -2031,7 +2210,7 @@ class PlotApi(PlotAux):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-    ):
+    ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
         df: DataFrame = self._validate_data_is_pandarable(data)

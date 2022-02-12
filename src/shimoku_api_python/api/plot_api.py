@@ -62,7 +62,6 @@ class PlotAux:
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
-    _set_report_entry_filter_fields = DataManagingApi._set_report_entry_filter_fields
     _create_report_entries = DataManagingApi._create_report_entries
 
     _validate_table_data = DataValidation._validate_table_data
@@ -856,16 +855,18 @@ class PlotApi(PlotAux):
         }
         """
 
-        def _calculate_table_filter_map() -> Dict[str, str]:
+        def _calculate_table_extra_map() -> Dict[str, str]:
             """
             Example
             ----------------
             input
                 filter_columns = ["Monetary importance"]
+                sort_table_by_col = {'date': 'asc'}
 
             output
                 filters_map = {
                     'stringField1': 'Monetary importance',
+                    'stringField2': 'date',
                 }
             """
             filters_map: Dict[str, str] = {}
@@ -898,7 +899,7 @@ class PlotApi(PlotAux):
                     'Monetary importance': ['high', 'medium', 'low'],
                 }
             """
-            filters: Dict[str, List[str]] = {}
+            filter_fields_: Dict[str, List[str]] = {}
             if filter_columns:
                 for filter_column in filter_columns:
                     values: List[str] = df[filter_column].unique().tolist()
@@ -911,8 +912,8 @@ class PlotApi(PlotAux):
                             f'You provided {len(values)} | '
                             f'You provided {values}'
                         )
-                    filters[filter_column] = values
-                return filters
+                    filter_fields_[filter_column] = values
+                return filter_fields_
             else:
                 return {}
 
@@ -947,12 +948,12 @@ class PlotApi(PlotAux):
                 }
             """
             data_fields: Dict = {}
-            cols: List[str] = df.columns
-            cols_to_sort_by: List[str] = sort_table_by_col.keys()
+            cols: List[str] = df.columns.tolist()
+            cols_to_sort_by: List[str] = list(sort_table_by_col.keys())
             for col in cols:
                 if col in filter_fields:
                     data_fields[col] = {
-                        'field': filter_map[col],
+                        'field': extra_map[col],
                         'filterBy': filter_fields[col],
                     }
                 else:
@@ -963,18 +964,18 @@ class PlotApi(PlotAux):
                         if data_fields[col]:
                             data_fields[col].update(
                                 {
-                                    'field': filter_map[col],
+                                    'field': extra_map[col],
                                     "defaultOrder": sort_table_by_col[col],
                                 }
                             )
                         else:
                             data_fields[col] = {
-                                'field': filter_map[col],
+                                'field': extra_map[col],
                                 "defaultOrder": sort_table_by_col[col],
                             }
                     else:
                         data_fields[col] = {
-                            'field': filter_map[col],
+                            'field': extra_map[col],
                             "defaultOrder": sort_table_by_col[col],
                         }
 
@@ -1000,7 +1001,7 @@ class PlotApi(PlotAux):
                     f'Tables with more than 6 columns are not allowed'
                 )
 
-        filter_map: Dict[str, str] = _calculate_table_filter_map()
+        extra_map: Dict[str, str] = _calculate_table_extra_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
@@ -1021,9 +1022,8 @@ class PlotApi(PlotAux):
             'grid': f'{row}, {column}',
             'path': path_name,
             'order': order,
+            'dataFields': _calculate_table_data_fields(),
         }
-
-        report_metadata['dataFields'] = _calculate_table_data_fields()
 
         if overwrite:
             if not row or not column:
@@ -1045,15 +1045,16 @@ class PlotApi(PlotAux):
         report_id: str = report['id']
 
         report_entry_filter_fields: Dict[str, List[str]] = {
-            filter_map[filter_name]: values
-            for filter_name, values in filter_fields.items()
+            extra_map[extra_name]: values
+            for extra_name, values in filter_fields.items()
         }
 
         # We do not allow NaN values for report Entry
         df = df.fillna('')
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
-                df=df, filter_map=filter_map,
+                df=df, filter_map=extra_map,
+                sort_table_by_col=sort_table_by_col,
                 filter_fields=report_entry_filter_fields
             )
         )

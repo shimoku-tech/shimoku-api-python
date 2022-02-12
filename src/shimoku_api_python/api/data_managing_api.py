@@ -163,52 +163,11 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
-    def _set_report_entry_filter_fields(
-        self, df: DataFrame, filter_fields: List[str], filter_map: Dict[str, str],
-    ) -> Dict[str, str]:
-        """
-        Example
-        ----------------
-        input
-            df
-                x, y, Monetary importance, Purchase soon,
-                1, 2,                high,      probable,
-                2, 2,                high,      probable,
-               10, 9,                 low,    improbable,
-
-            filter_fields = {
-                'stringField1': ['high', 'medium', 'low'],
-                'stringField2': ['probable', 'improbable'],
-            }
-
-            filter_map = {
-                'Monetary importance': 'stringField1',
-                'Purchase soon': 'stringField2',
-            }
-
-        output
-            filter_data = [
-                {
-                    'stringField1': 'high',
-                    'stringField2': 'probable',
-                },
-                                {
-                    'stringField1': 'high',
-                    'stringField2': 'probable',
-                },
-                {
-                    'stringField1': 'low',
-                    'stringField2': 'improbable',
-                },
-            ]
-        """
-        df_ = df.rename(columns=filter_map)
-        return df_[list(filter_fields.keys())].to_dict(orient='records')
-
     def _convert_dataframe_to_report_entry(
         self, df: DataFrame,
         filter_map: Optional[Dict[str, str]] = None,
         filter_fields: Optional[Dict[str, List[str]]] = None,
+        sort_table_by_col: Optional[Dict[str, List[str]]] = None,
     ) -> List[Dict]:
         """
         :param df:
@@ -217,8 +176,11 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 'stringField1': ['high', 'medium', 'low'],
                 'stringField2': ['probable', 'improbable'],
             }
+        :param sort_table_by_col: Example : {
+            'date': 'asc'
+        }
         """
-        cols: List[str] = df.columns
+        cols: List[str] = df.columns.tolist()
 
         if filter_fields:
             try:
@@ -230,15 +192,11 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     f'You provided {filter_fields}'
                 )
 
-            filter_entries: Dict = (
-                self._set_report_entry_filter_fields(
-                    df=df, filter_fields=filter_fields,
-                    filter_map=filter_map,
-                )
-            )
+            df_ = df.rename(columns=filter_map)
+            metadata_entries: Dict = df_[list(filter_map.values())].to_dict(orient='records')
         else:
             data_columns: List[str] = cols
-            filter_entries: List[Dict] = []
+            metadata_entries: List[Dict] = []
 
         records: List[Dict] = df.to_dict(orient='records')
         try:
@@ -259,12 +217,22 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 for d in records
             ]
 
-        if filter_entries:
+        if metadata_entries:
+            try:
+                _ = json.dumps(metadata_entries)
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in metadata_entries:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
+
             # Generate the list of single entries with all
             # necessary information to be posted
             return [
-                {**data_entry, **filters_entry}
-                for data_entry, filters_entry in zip(data_entries, filter_entries)
+                {**data_entry, **metadata_entry}
+                for data_entry, metadata_entry in zip(data_entries, metadata_entries)
             ]
         else:
             return data_entries
@@ -357,10 +325,10 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 self.post_report_entry(item)
 
     def update_report_data(
-        self, business_id: str, app_id: str,
-        report_data: Union[Dict, str, DataFrame],
-        report_id: Optional[str] = None,
-        external_id: Optional[str] = None,
+            self, business_id: str, app_id: str,
+            report_data: Union[List, Dict, str, DataFrame],
+            report_id: Optional[str] = None,
+            external_id: Optional[str] = None,
     ) -> None:
         """Remove old add new"""
         _ = self._validate_data_is_pandarable(report_data)

@@ -1375,8 +1375,8 @@ def test_cohorts():
     raise NotImplementedError
 
 
-test_speed_gauge()
 test_table()
+test_speed_gauge()
 test_bar_with_filters()
 test_bar()
 # test_delete_path()

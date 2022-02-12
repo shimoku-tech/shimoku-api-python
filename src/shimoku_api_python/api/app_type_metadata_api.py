@@ -36,7 +36,7 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
                 )
 
         return self.rename_apps_types(
-            app_type_id=target_app_type['id'],
+            app_type_id=target_app_type[0]['id'],
             new_name=new_name,
         )
 

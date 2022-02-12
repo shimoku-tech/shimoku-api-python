@@ -2068,59 +2068,74 @@ class PlotApi(PlotAux):
           series: [
             {
               type: 'gauge',
+              startAngle: 190,
+              endAngle: -10,
               min: 0,
-              max: 240,
+              max: 80,
+              pointer: {
+                show: true
+              },
               progress: {
                 show: true,
-                width: 18
+                overlap: false,
+                roundCap: true,
+                clip: false,
+                itemStyle: {
+                  borderWidth: 0,
+                  borderColor: '#464646'
+                }
               },
               axisLine: {
                 lineStyle: {
-                  width: 18
+                  width: 10
                 }
+              },
+              splitLine: {
+                show: true,
+                distance: 0,
+                length: 5
               },
               axisTick: {
                 show: true
               },
-              splitLine: {
-                length: 5,
-                lineStyle: {
-                  width: 3,
-                  color: '#999'
-                }
-              },
               axisLabel: {
-                distance: 25,
-                color: '#999',
-                fontSize: 20
+                show: true,
+                distance: 30
+              },
+              data: gaugeData,
+              title: {
+                fontSize: 14,
+                offsetCenter: ['0%', '30%'],
               },
               anchor: {
                 show: true,
                 showAbove: true,
-                size: 15,
+                size: 25,
                 itemStyle: {
                   borderWidth: 10
                 }
               },
-              title: {
-                show: false
-              },
               detail: {
-                valueAnimation: true,
-                fontSize: 40,
-                offsetCenter: [0, '80%']
-              },
-              data: [
-                {
-                  value: 70
-                }
-              ]
+                bottom: 10,
+                width: 10,
+                height: 14,
+                fontSize: 14,
+                color: 'auto',
+                borderRadius: 20,
+                borderWidth: 0,
+                formatter: '{value}%',
+                offsetCenter: [0, '45%']
+              }
             }
           ]
-        };
+        }
         """
         self._validate_table_data(data, elements=[name, value])
         df: DataFrame = self._validate_data_is_pandarable(data)
+        title: str = (
+            title if title
+            else f'{df["name"].to_list()[0]}: {df["value"].to_list()[0]}'
+        )
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
@@ -2132,52 +2147,58 @@ class PlotApi(PlotAux):
 
         data_fields: Dict = {
             'type': 'gauge',
-            'series': {
-                'startAngle': 210,
-                'endAngle': -30,
-                'min': min,
-                'max': max,
-                'progress': {
-                    'show': True,
-                    'width': 18
-                },
-                'axisLine': {
-                    'lineStyle': {
-                        'width': 18
+            'optionModifications': {
+                'series': {
+                    'startAngle': 190,
+                    'endAngle': -10,
+                    'min': min,
+                    'max': max,
+                    'pointer': {
+                        'show': True
+                    },
+                    'progress': {
+                        'show': True,
+                        'overlap': False,
+                        'roundCap': True,
+                        'clip': False,
+                        'itemStyle': {
+                            'borderWidth': 0,
+                            'borderColor': '#464646'
+                        }
+                    },
+                    'axisLine': {
+                        'lineStyle': {
+                            'width': 10
+                        }
+                    },
+                    'splitLine': {
+                        'show': True,
+                        'distance': 0,
+                        'length': 5
+                    },
+                    'axisTick': {
+                        'show': True,
+                    },
+                    'axisLabel': {
+                        'show': True,
+                        'distance': 30
+                    },
+                    'title': {
+                        'show': False,
+                    },
+                    'anchor': {
+                        'show': True,
+                        'showAbove': True,
+                        'size': 25,
+                        'itemStyle': {
+                            'borderWidth': 10
+                        }
+                    },
+                    'detail': {
+                        'show': False,
                     }
                 },
-                'axisTick': {
-                    'show': True
-                },
-                'splitLine': {
-                    'length': 5,
-                    'lineStyle': {
-                        'width': 3,
-                        'color': '#999'
-                    }
-                },
-                'axisLabel': {
-                    'distance': 25,
-                    'color': '#999',
-                    'fontSize': 20
-                },
-                'anchor': {
-                    'show': True,
-                    'showAbove': True,
-                    'size': 15,
-                    'itemStyle': {
-                        'borderWidth': 10
-                    }
-                },
-                'title': {
-                    'show': False,
-                },
-                'detail': {
-                    'valueAnimation': True,
-                    'fontSize': 40,
-                    'offsetCenter': [0, '80%']
-                },
-            }
+            },
         }
 
         if option_modifications:

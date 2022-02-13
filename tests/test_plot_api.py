@@ -476,11 +476,13 @@ def test_bar_with_filters():
         ],
     }
 
+    data_ = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
+
     s.plt.bar(
         data=data_,
         x='fecha', y=y,
         menu_path='test/multifilter-bar-test',
-        row=1, column=1,
+        row=2, column=1,
         filters=filters,
     )
 

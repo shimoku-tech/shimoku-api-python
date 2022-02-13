@@ -580,7 +580,7 @@ class CreateExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
-        title: int = report_metadata['title']
+        title: str = report_metadata['title']
         order: int = report_metadata['order']
         grid: bool = report_metadata['grid']
 

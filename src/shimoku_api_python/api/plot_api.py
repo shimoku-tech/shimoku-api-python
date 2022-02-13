@@ -535,13 +535,14 @@ class PlotApi(PlotAux):
                     data=data, filters=filters,
                 )
         ):
+            kwargs_: Dict = kwargs.copy()
             cols: List[str] = df_temp.columns
-            kwargs['y'] = [
-                value for value in kwargs['y']
+            kwargs_['y'] = [
+                value for value in kwargs_['y']
                 if value in cols
             ]
             report_id = self._create_trend_chart(
-                data=df_temp, overwrite=False, **kwargs,
+                data=df_temp, overwrite=False, **kwargs_,
             )
             filter_element['reportId'] = [report_id]
             filter_elements.append(filter_element)
@@ -560,9 +561,10 @@ class PlotApi(PlotAux):
             )
         else:
             report_metadata: Dict = {
-                'reportType': 'MULTIFILTER',  # TODO multifilter?
+                'reportType': 'MULTIFILTER',
                 # 'dataFields': data_fields,  # TODO unnecessary?
                 'grid': f'{filter_row}, {filter_column}',
+                'title': '',
             }
 
             self._create_chart(

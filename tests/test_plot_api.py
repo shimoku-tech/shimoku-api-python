@@ -480,7 +480,7 @@ def test_bar_with_filters():
         data=data_,
         x='fecha', y=y,
         menu_path='test/multifilter-bar-test',
-        row=2, column=1,
+        row=1, column=1,
         filters=filters,
     )
 
@@ -1375,9 +1375,9 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_bar_with_filters()
 test_table()
 test_speed_gauge()
-test_bar_with_filters()
 test_bar()
 # test_delete_path()
 # test_delete()

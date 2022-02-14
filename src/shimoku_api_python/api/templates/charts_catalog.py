@@ -52,7 +52,7 @@ def create_horizontal_bar(shimoku):
 
     shimoku.plt.horizontal_barchart(
         data=data_,
-        x=['y', 'z'], y='Name',
+        x=['y', 'z'], y=['Name'],
         menu_path=f'{app_name}/horizontal-bar-test',
         row=1, column=1,
     )
@@ -221,7 +221,7 @@ def create_heatmap(shimoku):
     )
 
 
-def create_gauge(shimoku):
+def create_ring_gauge(shimoku):
     data_ = [
         {
             "value": 60,
@@ -244,9 +244,23 @@ def create_gauge(shimoku):
             "name": "First"
         }
     ]
-    shimoku.plt.gauge(
+    shimoku.plt.ring_gauge(
         data=data_, name='name', value='value',
-        menu_path=f'{app_name}/gauge-test',
+        menu_path=f'{app_name}/ring-gauge-test',
+        row=1, column=1,
+    )
+
+
+def create_speed_gauge(shimoku):
+    data_ = [
+        {
+            "value": 60,
+            "name": "Third"
+        },
+    ]
+    shimoku.plt.speed_gauge(
+        data=data_, name='name', value='value',
+        menu_path=f'{app_name}/speed-gauge-test',
         row=1, column=1,
     )
 

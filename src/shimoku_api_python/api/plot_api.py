@@ -897,7 +897,11 @@ class PlotApi(PlotAux):
             """
             filters_map: Dict[str, str] = {}
             key_prefix_name: str = 'stringField'
-            field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+            if sort_table_by_col:
+                field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+            else:
+                field_cols: List[str] = filter_columns
+
             if field_cols:
                 for index, filter_column in enumerate(field_cols):
                     filters_map[filter_column] = f'{key_prefix_name}{index + 1}'
@@ -975,7 +979,11 @@ class PlotApi(PlotAux):
             """
             data_fields: Dict = {}
             cols: List[str] = df.columns.tolist()
-            cols_to_sort_by: List[str] = list(sort_table_by_col.keys())
+            if sort_table_by_col:
+                cols_to_sort_by: List[str] = list(sort_table_by_col.keys())
+            else:
+                cols_to_sort_by: List[str] = []
+
             for col in cols:
                 if col in filter_fields:
                     data_fields[col] = {

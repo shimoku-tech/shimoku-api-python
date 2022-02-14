@@ -14,7 +14,7 @@ from .templates.charts_catalog import (
     create_bar, create_horizontal_bar, create_zero_centered_barchart,
     create_pie, create_html,
     create_line, create_tree, create_table,
-    create_gauge, create_radar, create_funnel,
+    create_ring_gauge, create_speed_gauge, create_radar, create_funnel,
     create_iframe, create_sankey, create_scatter,
     create_heatmap, create_treemap, create_themeriver,
     create_sunburst, create_stockline, create_indicator,
@@ -131,7 +131,8 @@ class SuiteApi:
         create_line(self)
         create_tree(self)
         create_table(self)
-        create_gauge(self)
+        create_ring_gauge(self)
+        create_speed_gauge(self)
         create_radar(self)
         create_funnel(self)
         create_iframe(self)

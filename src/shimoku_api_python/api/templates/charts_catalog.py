@@ -52,7 +52,7 @@ def create_horizontal_bar(shimoku):
 
     shimoku.plt.horizontal_barchart(
         data=data_,
-        x=['y', 'z'], y=['Name'],
+        x='Name', y=['y', 'z'],
         menu_path=f'{app_name}/horizontal-bar-test',
         row=1, column=1,
     )
@@ -68,7 +68,7 @@ def create_zero_centered_barchart(shimoku):
 
     shimoku.plt.zero_centered_barchart(
         data=data_,
-        x=['y'], y='Name',
+        x='y', y=['Name'],
         menu_path=f'{app_name}/zero-centered-bar-test',
         row=1, column=1,
     )
@@ -260,6 +260,7 @@ def create_speed_gauge(shimoku):
     ]
     shimoku.plt.speed_gauge(
         data=data_, name='name', value='value',
+        min=0, max=80,
         menu_path=f'{app_name}/speed-gauge-test',
         row=1, column=1,
     )

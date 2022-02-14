@@ -57,7 +57,6 @@ def test_ux():
         value='value',
         header='title',
         footer='description',
-        align='center',
     )
 
     data_ = [
@@ -322,15 +321,6 @@ def test_append_data_to_trend_chart():
         component_type='line',
     )
 
-    # Check it does not exists anymore
-    class MyTestCase(unittest.TestCase):
-        def check_reports_not_exists(self):
-            with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
-
-    t = MyTestCase()
-    t.check_reports_not_exists()
-
 
 def test_update():
     menu_path = 'test/update-test'
@@ -549,7 +539,7 @@ def test_zero_centered_barchart():
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x=['y'], y='Name',
+        x='y', y=['Name'],
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -573,7 +563,7 @@ def test_horizontal_barchart():
 
     s.plt.horizontal_barchart(
         data=data_,
-        x=['y', 'z'], y='Name',
+        x='Name', y=['y', 'z'],
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -616,14 +606,12 @@ def test_stockline():
 
 
 def test_scatter():
-    r = s.plt.scatter(
+    s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/scatter-test',
         row=1, column=1,
     )
-
-    assert r
 
     s.plt.delete(
         menu_path='test/line-test',
@@ -848,7 +836,7 @@ def test_heatmap():
         }
     ]
     s.plt.heatmap(
-        data=data_, x='xAxis', y=['yAxis'], value='value',
+        data=data_, x='xAxis', y='yAxis', value='value',
         menu_path='test/heatmap-test',
         row=1, column=1,
     )
@@ -1407,39 +1395,40 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_radar()
+test_ring_gauge()
+test_indicator()
+test_alert_indicator()
+test_sunburst()
+test_tree()
+test_treemap()
+test_ux()
+test_append_data_to_trend_chart()
+test_heatmap()
+test_sankey()
+test_pie()
+test_iframe()
+test_html()
+test_horizontal_barchart()
 test_bar_with_filters()
 test_predictive_line()
 test_table()
 test_speed_gauge()
 test_bar()
-# test_delete_path()
+test_delete_path()
 # test_delete()
-# test_append_data_to_trend_chart()
-# test_ux()
 test_indicator()
 test_alert_indicator()
 # test_set_path_orders()
 # test_update()
 # test_set_new_business()
 
-test_horizontal_barchart()
 test_zero_centered_barchart()
 test_stockline()
 test_line()
 test_scatter()
 test_funnel()
-test_radar()
-test_ring_gauge()
-test_indicator()
-test_alert_indicator()
-test_heatmap()
-test_sunburst()
-test_tree()
-test_treemap()
-test_sankey()
-test_pie()
-test_iframe()
-test_html()
+
 
 # TODO
 # test_cohorts()

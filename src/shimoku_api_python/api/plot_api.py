@@ -507,8 +507,7 @@ class PlotApi(PlotAux):
         del df_chart_data
 
         report_metadata: Dict = {
-            'reportType': 'MULTIFILTER',  # TODO multifilter?
-            # 'dataFields': data_fields,  # TODO unnecessary?
+            'reportType': 'MULTIFILTER',
             'grid': f'{filter_row}, {filter_column}',
         }
 

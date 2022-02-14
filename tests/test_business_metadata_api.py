@@ -10,6 +10,7 @@ from shimoku_api_python.exceptions import ApiClientError
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
+environment: str = getenv('ENVIRONMENT')
 
 
 config = {
@@ -19,7 +20,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 
 

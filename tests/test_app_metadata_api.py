@@ -12,11 +12,11 @@ universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 app_id: str = getenv('APP_ID')
 app_type_id: str = getenv('APP_TYPE_ID')
+environment: str = getenv('ENVIRONMENT')
 app_element: Dict[str, str] = dict(
     business_id=business_id,
     app_id=app_id,
 )
-
 
 config = {
     'access_token': api_key,
@@ -25,7 +25,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 
 

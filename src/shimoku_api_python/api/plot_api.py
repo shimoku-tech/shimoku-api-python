@@ -520,7 +520,6 @@ class PlotApi(PlotAux):
             overwrite=True,
         )
 
-# TODO WiP
     def _create_trend_charts_with_filters(
             self, data: Union[str, DataFrame, List[Dict]],
             filters: Dict, **kwargs,
@@ -562,7 +561,6 @@ class PlotApi(PlotAux):
         else:
             report_metadata: Dict = {
                 'reportType': 'MULTIFILTER',
-                # 'dataFields': data_fields,  # TODO unnecessary?
                 'grid': f'{filter_row}, {filter_column}',
                 'title': '',
             }
@@ -1190,15 +1188,18 @@ class PlotApi(PlotAux):
             'yAxis': {'type': 'category'},
             'optionModifications': {'yAxis': {'boundaryGap': True}},
         }
-        return self._create_trend_chart(
-            data=data, x=y, y=x, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='bar',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='bar',
+            )
         )
 
     def zero_centered_barchart(
@@ -1233,15 +1234,18 @@ class PlotApi(PlotAux):
             },
             'optionModifications': {'yAxis': {'boundaryGap': True}},
         }
-        return self._create_trend_chart(
-            data=data, x=y, y=x, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='bar',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='bar',
+            )
         )
 
     def line(
@@ -1256,15 +1260,18 @@ class PlotApi(PlotAux):
             filters: Optional[Dict] = None,  # thid layer
     ):
         """"""
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='line',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='line',
+            )
         )
 
     def predictive_line(
@@ -1318,15 +1325,18 @@ class PlotApi(PlotAux):
             }
         }
 
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='line',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='line',
+            )
         )
 
     def line_with_confidence_area(
@@ -1431,15 +1441,18 @@ class PlotApi(PlotAux):
             }, ],
         }
 
-        return self._create_trend_chart(
-            data=data, x=x, y=[y], menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='line',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=[y],
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='line',
+            )
         )
 
     def scatter_with_confidence_area(
@@ -1613,15 +1626,18 @@ class PlotApi(PlotAux):
         except Exception:
             raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
 
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='scatter',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='scatter',
+            )
         )
 
     def bubble_chart(
@@ -1934,15 +1950,19 @@ class PlotApi(PlotAux):
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
-        return self._create_trend_chart(
-            data=data, x=x, y=y, menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='candlestick',
-            filters=filters,
+
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=y,
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='candlestick',
+            )
         )
 
     def heatmap(
@@ -1965,15 +1985,18 @@ class PlotApi(PlotAux):
             "toolbox": {"orient": "horizontal", "top": 0},
         }
 
-        return self._create_trend_chart(
-            data=df, x=x, y=[y, value], menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='heatmap',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=[y, value],
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='heatmap',
+            )
         )
 
     def cohort(self):
@@ -2045,15 +2068,18 @@ class PlotApi(PlotAux):
             inplace=True,
         )
 
-        return self._create_trend_chart(
-            data=df, x=name, y=[value], menu_path=menu_path,
-            row=row, column=column,
-            title=title, subtitle=subtitle,
-            x_axis_name=x_axis_name,
-            y_axis_name=y_axis_name,
-            option_modifications=option_modifications,
-            echart_type='funnel',
-            filters=filters,
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=name, y=[value],
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='funnel',
+            )
         )
 
     def speed_gauge(

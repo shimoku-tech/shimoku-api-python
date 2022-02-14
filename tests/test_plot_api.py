@@ -457,6 +457,7 @@ def test_table():
 
 
 def test_bar_with_filters():
+    menu_path: str = 'test/multifilter-bar-test'
     data_ = pd.read_csv('../data/test_multifilter.csv')
     y: List[str] = [
         'Acné', 'Adeslas', 'Asisa',
@@ -469,28 +470,57 @@ def test_bar_with_filters():
         'Ruber Juan Bravo', 'Sanitas', 'Teknon', 'Traumatólogo', 'Vithas'
     ]
     filters: Dict = {
-        'exists': False,
         'row': 1, 'column': 1,
         'filter_cols': [
             'seccion', 'frecuencia', 'region',
         ],
     }
 
-    data_ = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
+    data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
 
     s.plt.bar(
-        data=data_,
+        data=data_1,
         x='fecha', y=y,
-        menu_path='test/multifilter-bar-test',
+        menu_path=menu_path,
         row=2, column=1,
         filters=filters,
     )
 
-    s.plt.delete(
-        menu_path='test/multifilter-bar-test',
-        component_type='bar',
+    data_2 = data_[data_['seccion'].isin(['Enfermedades'])]
+    filters: Dict = {
+        'update_filter_type': 'concat',
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    s.plt.bar(
+        data=data_2,
+        x='fecha', y=y,
+        menu_path=menu_path,
         row=2, column=1,
+        filters=filters,
     )
+
+    filters: Dict = {
+        'update_filter_type': 'append',
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    data_3 = pd.concat([data_1, data_2])
+    s.plt.bar(
+        data=data_3,
+        x='fecha', y=y,
+        menu_path=menu_path,
+        row=2, column=2,
+        filters=filters,
+    )
+
+    s.plt.delete_path(menu_path)
 
 
 def test_bar():
@@ -1377,8 +1407,8 @@ def test_cohorts():
     raise NotImplementedError
 
 
-test_predictive_line()
 test_bar_with_filters()
+test_predictive_line()
 test_table()
 test_speed_gauge()
 test_bar()

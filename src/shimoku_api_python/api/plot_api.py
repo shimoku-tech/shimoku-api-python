@@ -91,12 +91,12 @@ class PlotApi(PlotAux):
     def _validate_filters(filters: Dict) -> None:
         # Check the filters is built properly
         try:
+            if filters.get('update_filter_type'):
+                cols: List[str] = ['row', 'column', 'filter_cols', 'update_filter_type']
+            else:
+                cols: List[str] = ['row', 'column', 'filter_cols']
             assert (
-                sorted(
-                    list(filters.keys())
-                ) == sorted(
-                    ['exists', 'row', 'column', 'filter_cols']
-                )
+                sorted(list(filters.keys())) == sorted(cols)
             )
         except AssertionError:
             raise KeyError(
@@ -115,7 +115,8 @@ class PlotApi(PlotAux):
             'indicator': 'INDICATORS',
             'table': None,
             'stockline': 'STOCKLINECHART',
-            'html': 'HTML'
+            'html': 'HTML',
+            'MULTIFILTER': 'MULTIFILTER',
         }
         if component_type in type_map.keys():
             component_type = type_map[component_type]
@@ -456,59 +457,76 @@ class PlotApi(PlotAux):
 
             yield df_temp, filter_element
 
-# TODO WiP
     def _update_filter_report(
             self, filter_row: int,
             filter_column: int,
             filter_elements: List,
             menu_path: str,
+            update_type: str = 'concat',
     ) -> None:
         """"""
-# TODO
-        filter_report: Dict = self.get_report_data()  # TODO
-        filter_report_data: Dict = filter_report['chartData']
-
-        # Check the filter_report is in the right position
-        try:
-            assert filter_row == int(
-                filter_report['grid'].split(',')[0].strip()
+        filter_reports: List[Dict] = (
+            self._find_target_reports(
+                menu_path=menu_path,
+                row=filter_row, column=filter_column,
+                component_type='MULTIFILTER',
+                by_component_type=True,
             )
-        except AssertionError:
-            raise ValueError()
+        )
 
         try:
-            assert filter_column == int(
-                filter_report['grid'].split(',')[1].strip()
-            )
+            assert len(filter_reports) == 1
+            filter_report = filter_reports[0]
         except AssertionError:
-            raise ValueError()
+            raise ValueError(
+                f'The Filter you are defining does not exist in the specified position | '
+                f'{len(filter_reports)} | row {filter_row} | column {filter_column}'
+            )
+
+        filter_report_data: Dict = json.loads(
+            filter_report['chartData']
+        )
 
         # Here we append old and new reportId
         df_filter_report_data: pd.DataFrame = pd.DataFrame(filter_report_data)
         df_filter_elements: pd.DataFrame = pd.DataFrame(filter_elements)
-        df_chart_data: pd.DataFrame = pd.merge(
-            df_filter_report_data, df_filter_elements,
-            how='left', on=[
-                c
-                for c in df_filter_report_data.columns
-                if 'Select' in c
-            ], suffixes=('_old', '_new')
-        )
-        df_chart_data['reportId'] = (
-            df_chart_data['reportId_old']
-            +
-            df_chart_data['reportId_new']
-        )
-        df_chart_data.drop(
-            columns=['reportId_old', 'reportId_new'],
-            axis=1, inplace=True,
-        )
+
+        if update_type == 'concat':
+            df_chart_data: pd.DataFrame = pd.concat([
+                df_filter_report_data,
+                df_filter_elements,
+            ])
+        elif update_type == 'append':
+            df_chart_data: pd.DataFrame = pd.merge(
+                df_filter_report_data, df_filter_elements,
+                how='left', on=[
+                    c
+                    for c in df_filter_report_data.columns
+                    if 'Select' in c
+                ], suffixes=('_old', '_new')
+            )
+            df_chart_data['reportId'] = (
+                df_chart_data['reportId_old']
+                +
+                df_chart_data['reportId_new']
+            )
+            df_chart_data.drop(
+                columns=['reportId_old', 'reportId_new'],
+                axis=1, inplace=True,
+            )
+        else:
+            raise ValueError(
+                f'update_type can only be "concat" or "append" | '
+                f'Value provided is {update_type}'
+            )
+
         chart_data: List[Dict] = df_chart_data.to_dict(orient='records')
         del df_chart_data
 
         report_metadata: Dict = {
             'reportType': 'MULTIFILTER',
             'grid': f'{filter_row}, {filter_column}',
+            'title': '',
         }
 
         self._create_chart(
@@ -545,17 +563,26 @@ class PlotApi(PlotAux):
             filter_element['reportId'] = [report_id]
             filter_elements.append(filter_element)
 
-        filter_exists: bool = filters['exists']
+        update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: int = filters['row']
         filter_column: int = filters['column']
 
-        # TODO
-        if filter_exists:
+        if update_filter_type:
+            # concat is to add new filter options
+            # append is to add new reports to existing filter options
+            try:
+                assert update_filter_type in ['concat', 'append']
+            except AssertionError:
+                raise ValueError(
+                    f'update_filter_type must be one of both: "concat" or "append" | '
+                    f'Value provided: {update_filter_type}'
+                )
             self._update_filter_report(
                 filter_row=filter_row,
                 filter_column=filter_column,
                 filter_elements=filter_elements,
                 menu_path=kwargs['menu_path'],
+                update_type=update_filter_type,
             )
         else:
             report_metadata: Dict = {

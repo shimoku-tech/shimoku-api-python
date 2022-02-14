@@ -1166,12 +1166,12 @@ def test_predictive_line():
         x='date', y=['x', 'y'],
         min_value_mark=dt.date(2021, 1, 4).isoformat(),
         max_value_mark=dt.date(2021, 1, 5).isoformat(),
-        menu_path='test/line-test',
+        menu_path='test/predictive-line-test',
         row=1, column=1,
     )
 
     s.plt.delete(
-        menu_path='test/line-test',
+        menu_path='test/predictive-line-test',
         row=1, column=1,
     )
 
@@ -1377,6 +1377,7 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_predictive_line()
 test_bar_with_filters()
 test_table()
 test_speed_gauge()
@@ -1395,7 +1396,6 @@ test_horizontal_barchart()
 test_zero_centered_barchart()
 test_stockline()
 test_line()
-test_predictive_line()
 test_scatter()
 test_funnel()
 test_radar()

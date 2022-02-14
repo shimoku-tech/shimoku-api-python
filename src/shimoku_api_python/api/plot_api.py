@@ -577,7 +577,7 @@ class PlotApi(PlotAux):
 
     def _create_trend_charts(
             self, data: Union[str, DataFrame, List[Dict]],
-            filters: List, **kwargs,
+            filters: Optional[Dict], **kwargs,
     ):
         """
         Example
@@ -1295,25 +1295,27 @@ class PlotApi(PlotAux):
         :param filters:
         """
         option_modifications = {
-            'series': {
-                'smooth': True,
-                'markArea': {
-                    'itemStyle': {
-                        'color': color_mark
-                    },
-                    'data': [
-                        [
-                            {
-                                'name': 'Prediction',
-                                'xAxis': min_value_mark
-                            },
-                            {
-                                'xAxis': max_value_mark
-                            }
+            'optionModifications': {
+                'series': {
+                    'smooth': True,
+                    'markArea': {
+                        'itemStyle': {
+                            'color': color_mark
+                        },
+                        'data': [
+                            [
+                                {
+                                    'name': 'Prediction',
+                                    'xAxis': min_value_mark
+                                },
+                                {
+                                    'xAxis': max_value_mark
+                                }
+                            ],
                         ],
-                    ],
-                }
-            },
+                    }
+                },
+            }
         }
 
         return self._create_trend_chart(

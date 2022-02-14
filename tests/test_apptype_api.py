@@ -11,6 +11,7 @@ from shimoku_api_python.exceptions import ApiClientError
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 app_type_id: str = getenv('APP_TYPE_ID')
+environment: str = getenv('ENVIRONMENT')
 
 
 config = {
@@ -20,7 +21,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 
 
@@ -203,8 +204,25 @@ def test_rename_apps_types():
     }
 
 
+def test_rename_app_type_by_old_name():
+    app_type: Dict = s.app_type.create_app_type(name='testrenameapptypebyoldname')
+    new_name: str = 'testrenameapptypebyoldname2'
+    new_app_type: Dict = s.app_type.rename_app_type_by_old_name(
+        old_name='testrenameapptypebyoldname',
+        new_name=new_name,
+    )
+    app_types = s.universe.get_universe_app_types()
+    assert [
+        app_type_
+        for app_type_ in app_types
+        if app_type_['name'] == new_name
+    ]
+    s.app_type.delete_app_type(app_type_id=app_type['id'])
+
+
 test_get_app_type()
 test_cannot_create_duplicated_app_type()
 test_create_and_delete_app_type()
 test_update_app_type()
 test_rename_apps_types()
+test_rename_app_type_by_old_name()

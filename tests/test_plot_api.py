@@ -4,6 +4,7 @@ from typing import Dict, List
 import unittest
 
 import datetime as dt
+import pandas as pd
 
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
@@ -12,6 +13,7 @@ from shimoku_api_python.exceptions import ApiClientError
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
+environment: str = getenv('ENVIRONMENT')
 
 
 config = {
@@ -21,7 +23,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 s.plt.set_business(business_id=business_id)
 
@@ -55,7 +57,6 @@ def test_ux():
         value='value',
         header='title',
         footer='description',
-        align='center',
     )
 
     data_ = [
@@ -320,15 +321,6 @@ def test_append_data_to_trend_chart():
         component_type='line',
     )
 
-    # Check it does not exists anymore
-    class MyTestCase(unittest.TestCase):
-        def check_reports_not_exists(self):
-            with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
-
-    t = MyTestCase()
-    t.check_reports_not_exists()
-
 
 def test_update():
     menu_path = 'test/update-test'
@@ -425,6 +417,21 @@ def test_table():
         {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
     ]
     filter_columns: List[str] = ['filtA', 'filtB']
+
+    s.plt.table(
+        data=data_,
+        menu_path='test/sorted-table-test',
+        row=1, column=1,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+    )
+
+    s.plt.delete(
+        menu_path='test/sorted-table-test',
+        component_type='table',
+        row=1, column=1,
+    )
+
     s.plt.table(
         data=data_,
         menu_path='test/table-test',
@@ -437,6 +444,73 @@ def test_table():
         component_type='table',
         row=1, column=1,
     )
+
+
+def test_bar_with_filters():
+    menu_path: str = 'test/multifilter-bar-test'
+    data_ = pd.read_csv('../data/test_multifilter.csv')
+    y: List[str] = [
+        'Acné', 'Adeslas', 'Asisa',
+        'Aspy', 'Caser', 'Clínica Navarra', 'Cualtis', 'Cáncer', 'DKV',
+        'Depresión', 'Dermatólogo', 'Dermatólogo Adeslas', 'Diabetes',
+        'Fundación Jiménez Díaz', 'Ginecólogo', 'Ginecólogo Adeslas',
+        'HM Hospitales', 'Hemorroides', 'IMQ', 'Preving', 'Psicólogo',
+        'Psiquiatra', 'Quirón', 'Quirón Prevención + quirónprevención',
+        'Quirón+Quirónsalud', 'Quirónsalud', 'Ruber', 'Ruber Internacional',
+        'Ruber Juan Bravo', 'Sanitas', 'Teknon', 'Traumatólogo', 'Vithas'
+    ]
+    filters: Dict = {
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
+
+    s.plt.bar(
+        data=data_1,
+        x='fecha', y=y,
+        menu_path=menu_path,
+        row=2, column=1,
+        filters=filters,
+    )
+
+    data_2 = data_[data_['seccion'].isin(['Enfermedades'])]
+    filters: Dict = {
+        'update_filter_type': 'concat',
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    s.plt.bar(
+        data=data_2,
+        x='fecha', y=y,
+        menu_path=menu_path,
+        row=2, column=1,
+        filters=filters,
+    )
+
+    filters: Dict = {
+        'update_filter_type': 'append',
+        'row': 1, 'column': 1,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+
+    data_3 = pd.concat([data_1, data_2])
+    s.plt.bar(
+        data=data_3,
+        x='fecha', y=y,
+        menu_path=menu_path,
+        row=2, column=2,
+        filters=filters,
+    )
+
+    s.plt.delete_path(menu_path)
 
 
 def test_bar():
@@ -465,7 +539,7 @@ def test_zero_centered_barchart():
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x=['y'], y='Name',
+        x='y', y=['Name'],
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -489,7 +563,7 @@ def test_horizontal_barchart():
 
     s.plt.horizontal_barchart(
         data=data_,
-        x=['y', 'z'], y='Name',
+        x='Name', y=['y', 'z'],
         menu_path=menu_path,
         row=1, column=1,
     )
@@ -532,14 +606,12 @@ def test_stockline():
 
 
 def test_scatter():
-    r = s.plt.scatter(
+    s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/scatter-test',
         row=1, column=1,
     )
-
-    assert r
 
     s.plt.delete(
         menu_path='test/line-test',
@@ -764,7 +836,7 @@ def test_heatmap():
         }
     ]
     s.plt.heatmap(
-        data=data_, x='xAxis', y=['yAxis'], value='value',
+        data=data_, x='xAxis', y='yAxis', value='value',
         menu_path='test/heatmap-test',
         row=1, column=1,
     )
@@ -775,7 +847,28 @@ def test_heatmap():
     )
 
 
-def test_gauge():
+def test_speed_gauge():
+    data_ = [
+        {
+            "value": 60,
+            "name": "Third"
+        },
+    ]
+    s.plt.speed_gauge(
+        data=data_, name='name', value='value',
+        menu_path='test/speed-gauge-test',
+        row=1, column=1,
+        min=0, max=70,
+    )
+
+    s.plt.delete(
+        menu_path='test/speed-gauge-test',
+        component_type='speed_gauge',
+        row=1, column=1,
+    )
+
+
+def test_ring_gauge():
     data_ = [
         {
             "value": 60,
@@ -798,15 +891,15 @@ def test_gauge():
             "name": "First"
         }
     ]
-    s.plt.gauge(
+    s.plt.ring_gauge(
         data=data_, name='name', value='value',
-        menu_path='test/gauge-test',
+        menu_path='test/ring-gauge-test',
         row=1, column=1,
     )
 
     s.plt.delete(
-        menu_path='test/gauge-test',
-        component_type='gauge',
+        menu_path='test/ring-gauge-test',
+        component_type='ring_gauge',
         row=1, column=1,
     )
 
@@ -826,7 +919,7 @@ def test_sunburst():
                    "value": 2
                   },
                   {
-                   "name": "Chidren AA1",
+                   "name": "Children AA1",
                    "value": 5,
                    "children": [
                     {
@@ -864,11 +957,11 @@ def test_sunburst():
                  "name": "Children A1",
                  "children": [
                   {
-                   "name": "Chidren AA1",
+                   "name": "Children AA1",
                    "value": 1
                   },
                   {
-                   "name": "Chidren AA2",
+                   "name": "Children AA2",
                    "value": 2
                   }
                  ]
@@ -1091,12 +1184,12 @@ def test_predictive_line():
         x='date', y=['x', 'y'],
         min_value_mark=dt.date(2021, 1, 4).isoformat(),
         max_value_mark=dt.date(2021, 1, 5).isoformat(),
-        menu_path='test/line-test',
+        menu_path='test/predictive-line-test',
         row=1, column=1,
     )
 
     s.plt.delete(
-        menu_path='test/line-test',
+        menu_path='test/predictive-line-test',
         row=1, column=1,
     )
 
@@ -1302,37 +1395,40 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_radar()
+test_ring_gauge()
+test_indicator()
+test_alert_indicator()
+test_sunburst()
+test_tree()
+test_treemap()
+test_ux()
+test_append_data_to_trend_chart()
+test_heatmap()
+test_sankey()
+test_pie()
+test_iframe()
+test_html()
+test_horizontal_barchart()
+test_bar_with_filters()
+test_predictive_line()
+test_table()
+test_speed_gauge()
 test_bar()
-# test_delete_path()
+test_delete_path()
 # test_delete()
-# test_append_data_to_trend_chart()
-# test_ux()
 test_indicator()
 test_alert_indicator()
 # test_set_path_orders()
 # test_update()
 # test_set_new_business()
 
-test_table()
-test_horizontal_barchart()
 test_zero_centered_barchart()
 test_stockline()
 test_line()
-test_predictive_line()
 test_scatter()
 test_funnel()
-test_radar()
-test_gauge()
-test_indicator()
-test_alert_indicator()
-test_heatmap()
-test_sunburst()
-test_tree()
-test_treemap()
-test_sankey()
-test_pie()
-test_iframe()
-test_html()
+
 
 # TODO
 # test_cohorts()

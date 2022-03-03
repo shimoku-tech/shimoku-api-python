@@ -30,6 +30,7 @@ universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 app_id: str = getenv('APP_ID')
 report_id: str = getenv('REPORT_ID')
+environment: str = getenv('ENVIRONMENT')
 report_element: Dict[str, str] = dict(
     business_id=business_id,
     app_id=app_id,
@@ -44,7 +45,7 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    environment=environment,
 )
 
 

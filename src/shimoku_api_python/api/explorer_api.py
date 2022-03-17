@@ -570,6 +570,7 @@ class CreateExplorerAPI(object):
 
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
+        real_time: bool = False,
     ) -> Dict:
         """Create new Report associated to an AppId
 
@@ -595,6 +596,9 @@ class CreateExplorerAPI(object):
         path: str = report_metadata.get('path')
         if path:
             item['path'] = path
+
+        if real_time:
+            item['subscribe'] = True
 
         report_type: str = report_metadata.get('reportType')
         if report_type:

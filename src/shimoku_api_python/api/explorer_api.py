@@ -444,11 +444,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
         # could have several reports with the same name
         result: Any = {}
         for app in apps:
-            app_type: Dict = self.get_app_by_type(
-                business_id=business_id,
+            app_type: Dict = self.get_app_type(
+                # business_id=business_id,
                 app_type_id=app['type']['id'],
             )
-            if app_type.get('name') == name:
+            if app_type['name'] == name:
                 if result:
                     if len(result) == 1:
                         result: List[Dict] = result + [app]
@@ -1297,6 +1297,7 @@ class AppExplorerApi:
     get_app_path_names = CascadeExplorerAPI.get_app_path_names
     get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
 
     delete_app = DeleteExplorerApi.delete_app

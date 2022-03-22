@@ -1618,7 +1618,7 @@ class PlotApi(PlotAux):
         self._validate_table_data(data, elements=[x] + y)
         df: DataFrame = self._validate_data_is_pandarable(data)
         data_fields: Dict = {
-            "key": x_axis_name,
+            "key": x,
             "labels": {
                 "key": x_axis_name,
                 "value": y_axis_name,

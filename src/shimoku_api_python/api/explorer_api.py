@@ -444,8 +444,8 @@ class CascadeExplorerAPI(GetExplorerAPI):
         # could have several reports with the same name
         result: Any = {}
         for app in apps:
-            app_type: Dict = self.get_app_by_type(
-                business_id=business_id,
+            app_type: Dict = self.get_app_type(
+                # business_id=business_id,
                 app_type_id=app['type']['id'],
             )
             if app_type['name'] == name:
@@ -570,6 +570,7 @@ class CreateExplorerAPI(object):
 
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
+        real_time: bool = False,
     ) -> Dict:
         """Create new Report associated to an AppId
 
@@ -595,6 +596,9 @@ class CreateExplorerAPI(object):
         path: str = report_metadata.get('path')
         if path:
             item['path'] = path
+
+        if real_time:
+            item['subscribe'] = True
 
         report_type: str = report_metadata.get('reportType')
         if report_type:
@@ -1293,6 +1297,7 @@ class AppExplorerApi:
     get_app_path_names = CascadeExplorerAPI.get_app_path_names
     get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
 
     delete_app = DeleteExplorerApi.delete_app

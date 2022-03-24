@@ -228,6 +228,7 @@ class PlotApi(PlotAux):
             row: Optional[int] = None,
             column: Optional[int] = None,
             overwrite: bool = True,
+            real_time: bool = False,
     ) -> str:
         """
         :param data:
@@ -276,6 +277,7 @@ class PlotApi(PlotAux):
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
+            real_time=real_time,
         )
         report_id: str = report['id']
 
@@ -1616,7 +1618,7 @@ class PlotApi(PlotAux):
         self._validate_table_data(data, elements=[x] + y)
         df: DataFrame = self._validate_data_is_pandarable(data)
         data_fields: Dict = {
-            "key": x_axis_name,
+            "key": x,
             "labels": {
                 "key": x_axis_name,
                 "value": y_axis_name,
@@ -1707,6 +1709,7 @@ class PlotApi(PlotAux):
             color: Optional[str] = None,
             align: Optional[str] = None,
             multi_column: int = 4,
+            real_time: bool = False,
     ):
         """
         :param data:
@@ -1785,6 +1788,7 @@ class PlotApi(PlotAux):
             menu_path=menu_path,
             row=row, column=column,
             report_metadata=report_metadata,
+            real_time=real_time,
         )
 
     def alert_indicator(
@@ -2033,9 +2037,51 @@ class PlotApi(PlotAux):
             )
         )
 
-    def cohort(self):
+    def cohort(
+            self, data: Union[str, DataFrame, List[Dict]],
+            x: str, y: str, value: str,
+            menu_path: str, row: int, column: int,  # report creation
+            title: Optional[str] = None,  # second layer
+            subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            filters: Optional[Dict] = None,
+    ):
         """"""
-        raise NotImplementedError
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[x, y, value]]  # keep only x and y
+        df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
+
+        option_modifications: Dict = {
+            "toolbox": {"orient": "horizontal", "top": 0},
+            "xAxis": {"axisLabel": {"margin": '10%'}},
+            'optionModifications': {
+                'grid': {
+                    'bottom': '20%',
+                    # 'top': '10%'
+                },
+                "visualMap": {
+                    'calculable': True,
+                    "inRange": {
+                        "color": ['#cfb1ff', '#0000ff']
+                    },
+                },
+            },
+        }
+
+        return self._create_trend_charts(
+            data=data, filters=filters,
+            **dict(
+                x=x, y=[y, value],
+                menu_path=menu_path,
+                row=row, column=column,
+                title=title, subtitle=subtitle,
+                x_axis_name=x_axis_name,
+                y_axis_name=y_axis_name,
+                option_modifications=option_modifications,
+                echart_type='heatmap',
+            )
+        )
 
     def predictive_cohort(self):
         """"""

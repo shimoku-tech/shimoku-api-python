@@ -2,7 +2,6 @@ from typing import Dict
 from os import getenv
 import json
 
-import datetime as dt
 
 import shimoku_api_python as shimoku
 
@@ -23,9 +22,10 @@ s = shimoku.Client(
 )
 s.plt.set_business(business_id=business_id)
 
+# disappear = s.plt.delete_path(menu_path='realtime-test')
 
 def test_real_time_feed():
-    from random import randint
+
     from time import sleep
 
     menu_path: str = 'realtime-test'
@@ -34,7 +34,8 @@ def test_real_time_feed():
         {
             "description": "",
             "title": "Estado",
-            "value": "31",
+            "value": "3",
+            'targetPath': "audrey",
         },
     ]
     report_id: str = s.plt.indicator(
@@ -46,33 +47,37 @@ def test_real_time_feed():
         footer='description',
         real_time=True,
     )
-    # app: Dict = s.app.get_app_by_name(name=menu_path)
-    app_id = 'b688ed4c-2dec-4f36-ba57-be6ef110357d'
+
+    app: Dict = s.app.get_app_by_name(
+        business_id=business_id, name=menu_path,
+    )
+    app_id = app['id']
     
-    count = 30
+    count = 5
     while True:
-         count -= 1
-         print(count)
+        count -= 1
+        print(count)   #  action
 
-         data_ = json.dumps([{
-             "description": "",
-             "title": "Estado",
-             "value": count,
-         }])
+        data_ = json.dumps([{
+            "description": "Indicator",
+            "title": "State:",
+            "value": count,
 
-         s.report.update_report(
-             business_id=business_id,
-             app_id=app_id,
-             report_id=report_id,
-             report_metadata={
-                 'chartData': data_
-             }
-         )
+        }])
 
-         sleep(1)
+        s.report.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+            report_metadata={
+                'chartData': data_
+            }
+        )
+
+        sleep(1)
     
-         if count <= 0:
-             break
+        if count <= 0:
+            break
 
 
 test_real_time_feed()

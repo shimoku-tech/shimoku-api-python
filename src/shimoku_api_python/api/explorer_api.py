@@ -448,7 +448,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 # business_id=business_id,
                 app_type_id=app['type']['id'],
             )
-            if app_type['name'] == name:
+            if app_type['normalizedName'] == name:
                 if result:
                     if len(result) == 1:
                         result: List[Dict] = result + [app]

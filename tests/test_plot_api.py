@@ -521,6 +521,7 @@ def test_bar():
         # row=1, column=1,
         order=0, rows_length=1,
         cols_length=12,
+        # padding='1, 1, 4, 1',
     )
 
     s.plt.bar(
@@ -536,9 +537,9 @@ def test_bar():
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
         # row=1, column=1,
-        order=1, rows_length=2,
+        order=2, rows_length=2,
         cols_length=4,
-        padding=[2, 0, 0, 0]
+        padding="2, 2, 2, 2"
     )
 
     s.plt.delete(

@@ -1247,7 +1247,7 @@ class PlotApi(PlotAux):
             **dict(
                 x=x, y=y,
                 menu_path=menu_path,
-                order=order, rows_length=rows_length, cols_length=rows_length, padding=padding,
+                order=order, rows_length=rows_length, cols_length=cols_length, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,

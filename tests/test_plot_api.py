@@ -518,7 +518,27 @@ def test_bar():
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
-        row=1, column=1,
+        # row=1, column=1,
+        order=0, rows_length=1,
+        cols_length=12,
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/bar-test',
+        # row=1, column=1,
+        order=1, rows_length=2,
+        cols_length=6,
+    )
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/bar-test',
+        # row=1, column=1,
+        order=1, rows_length=2,
+        cols_length=4,
+        padding=[2, 0, 0, 0]
     )
 
     s.plt.delete(
@@ -1395,6 +1415,7 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_bar()
 test_radar()
 test_ring_gauge()
 test_indicator()
@@ -1414,7 +1435,6 @@ test_bar_with_filters()
 test_predictive_line()
 test_table()
 test_speed_gauge()
-test_bar()
 test_delete_path()
 test_delete()
 test_indicator()

@@ -106,7 +106,10 @@ class PlotApi(PlotAux):
             )
 
     def _find_target_reports(
-            self, menu_path: str, row: int, column: int,
+            self, menu_path: str,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
+            order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
     ) -> List[Dict]:
@@ -123,7 +126,17 @@ class PlotApi(PlotAux):
         else:
             component_type = 'ECHARTS'
 
-        grid: str = f'{row}, {column}'
+        by_grid: bool = False
+        if row and column:
+            grid: str = f'{row}, {column}'
+            by_grid = True
+        elif order is not None:
+            pass
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified'
+            )
+
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         app_type: Dict = self._get_app_type_by_name(name=app_type_name)
 
@@ -149,13 +162,22 @@ class PlotApi(PlotAux):
                         and report['reportType'] == component_type
                 )
             ]
-        else:  # Whatever is the reportType delete it
+        elif by_grid:  # Whatever is the reportType delete it
             target_reports: List[Dict] = [
                 report
                 for report in reports
                 if (
                         report['path'] == path_name
                         and report['grid'] == grid
+                )
+            ]
+        else:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['order'] == order
                 )
             ]
 
@@ -227,6 +249,7 @@ class PlotApi(PlotAux):
             menu_path: str, report_metadata: Dict,
             row: Optional[int] = None,
             column: Optional[int] = None,
+            order: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
     ) -> str:
@@ -249,12 +272,17 @@ class PlotApi(PlotAux):
         app: Dict = d['app']
         app_id: str = app['id']
 
-        order: int = self._get_component_order(
-            app_id=app_id, path_name=path_name,
-        )
+        if row and column:
+            kwargs = {'row': row, 'column': column}
+        elif order is not None:  # elif order fails when order = 0!
+            kwargs = {'order': order}
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified to overwrite a report'
+            )
 
         report_metadata.update({'path': path_name})
-        report_metadata.update({'order': order})
+        report_metadata.update(kwargs)
 
         if report_metadata.get('dataFields'):
             report_metadata['dataFields'] = (
@@ -262,15 +290,10 @@ class PlotApi(PlotAux):
             )
 
         if overwrite:
-            if not row or not column:
-                raise ValueError(
-                    'Row and Column must be specified to overwrite a report'
-                )
-
             self.delete(
                 menu_path=menu_path,
-                row=row, column=column,
                 by_component_type=False,
+                **kwargs
             )
 
         report: Dict = self._create_report(
@@ -304,7 +327,13 @@ class PlotApi(PlotAux):
             self, echart_type: str,
             data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
+            order: Optional[int] = None,
+            rows_length: Optional[int] = None,
+            cols_length: Optional[int] = None,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -402,8 +431,18 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
+
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
+        if order is not None and rows_length and cols_length:
+            report_metadata['order'] = order
+            report_metadata['sizeRows'] = rows_length
+            report_metadata['sizeColumns'] = cols_length
+
+        if padding:
+            report_metadata['sizePadding'] = padding
 
         if filters:
             raise NotImplementedError
@@ -412,7 +451,7 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            row=row, column=column,
+            row=row, column=column, order=order,
             overwrite=overwrite,
         )
 
@@ -760,18 +799,29 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-            self, menu_path: str, row: int, column: int,
+            self, menu_path: str,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
+            order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
         """
+        if row and column:
+            kwargs = {'row': row, 'column': column}
+        elif order is not None:
+            kwargs = {'order': order}
+        else:
+            raise ValueError('Either Row and Column or Order must be specified')
+
         target_reports: List[Dict] = (
             self._find_target_reports(
-                menu_path=menu_path, row=row, column=column,
+                menu_path=menu_path,
                 component_type=component_type,
-                by_component_type=by_component_type
+                by_component_type=by_component_type,
+                **kwargs,
             )
         )
 
@@ -1150,7 +1200,9 @@ class PlotApi(PlotAux):
     def bar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, order: int, rows_length: int,
+            cols_length: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1195,7 +1247,7 @@ class PlotApi(PlotAux):
             **dict(
                 x=x, y=y,
                 menu_path=menu_path,
-                row=row, column=column,
+                order=order, rows_length=rows_length, cols_length=rows_length, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,

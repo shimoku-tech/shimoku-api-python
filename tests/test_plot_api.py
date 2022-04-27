@@ -519,8 +519,8 @@ def test_bar():
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
         # row=1, column=1,
-        order=0, rows_length=1,
-        cols_length=12,
+        order=0, rows_size=2,
+        cols_size=12,
         # padding='1, 1, 4, 1',
     )
 
@@ -529,16 +529,16 @@ def test_bar():
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
         # row=1, column=1,
-        order=1, rows_length=2,
-        cols_length=6,
+        order=1, rows_size=2,
+        cols_size=6,
     )
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/bar-test',
         # row=1, column=1,
-        order=2, rows_length=2,
-        cols_length=4,
+        order=2, rows_size=2,
+        cols_size=4,
         padding="2, 2, 2, 2"
     )
 

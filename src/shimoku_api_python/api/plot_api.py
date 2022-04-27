@@ -328,11 +328,11 @@ class PlotApi(PlotAux):
             data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
+            row: Optional[int] = None,  # TODO to deprecate
+            column: Optional[int] = None,    # TODO to deprecate
             order: Optional[int] = None,
-            rows_length: Optional[int] = None,
-            cols_length: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
             padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
@@ -436,10 +436,10 @@ class PlotApi(PlotAux):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        if order is not None and rows_length and cols_length:
+        if order is not None and rows_size and cols_size:
             report_metadata['order'] = order
-            report_metadata['sizeRows'] = rows_length
-            report_metadata['sizeColumns'] = cols_length
+            report_metadata['sizeRows'] = rows_size
+            report_metadata['sizeColumns'] = cols_size
 
         if padding:
             report_metadata['sizePadding'] = padding
@@ -499,8 +499,9 @@ class PlotApi(PlotAux):
             yield df_temp, filter_element
 
     def _update_filter_report(
-            self, filter_row: int,
-            filter_column: int,
+            self, filter_row: Optional[int],
+            filter_column: Optional[int],
+            filter_order: Optional[int],
             filter_elements: List,
             menu_path: str,
             update_type: str = 'concat',
@@ -509,7 +510,7 @@ class PlotApi(PlotAux):
         filter_reports: List[Dict] = (
             self._find_target_reports(
                 menu_path=menu_path,
-                row=filter_row, column=filter_column,
+                row=filter_row, column=filter_column, order=filter_order,
                 component_type='MULTIFILTER',
                 by_component_type=True,
             )
@@ -605,8 +606,9 @@ class PlotApi(PlotAux):
             filter_elements.append(filter_element)
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
-        filter_row: int = filters['row']
-        filter_column: int = filters['column']
+        filter_row: Optional[int] = filters.get('row')
+        filter_column: Optional[int] = filters.get('column')
+        filter_order: Optional[int] = filters.get('order')
 
         if update_filter_type:
             # concat is to add new filter options
@@ -621,6 +623,7 @@ class PlotApi(PlotAux):
             self._update_filter_report(
                 filter_row=filter_row,
                 filter_column=filter_column,
+                filter_order=filter_order,
                 filter_elements=filter_elements,
                 menu_path=kwargs['menu_path'],
                 update_type=update_filter_type,
@@ -628,15 +631,21 @@ class PlotApi(PlotAux):
         else:
             report_metadata: Dict = {
                 'reportType': 'MULTIFILTER',
-                'grid': f'{filter_row}, {filter_column}',
                 'title': '',
             }
+
+            if filter_row and filter_column:
+                report_metadata['grid'] = f'{filter_row}, {filter_column}'
+            elif filter_order:
+                report_metadata['order'] = filter_order
+            else:
+                raise ValueError('Either row and column or order must be provided')
 
             self._create_chart(
                 data=filter_elements,
                 menu_path=kwargs['menu_path'],
                 report_metadata=report_metadata,
-                row=filter_row, column=filter_column,
+                row=filter_row, column=filter_column, order=filter_order,
                 overwrite=True,
             )
 
@@ -1200,8 +1209,8 @@ class PlotApi(PlotAux):
     def bar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, order: int, rows_length: int,
-            cols_length: int = 12,
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
@@ -1246,8 +1255,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                order=order, rows_length=rows_length, cols_length=cols_length, padding=padding,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,

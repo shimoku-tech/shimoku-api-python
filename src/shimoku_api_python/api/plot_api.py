@@ -93,11 +93,15 @@ class PlotApi(PlotAux):
         try:
             if filters.get('update_filter_type'):
                 cols: List[str] = ['row', 'column', 'filter_cols', 'update_filter_type']
+                assert sorted(list(filters.keys())) == sorted(cols)
             else:
-                cols: List[str] = ['row', 'column', 'filter_cols']
-            assert (
-                sorted(list(filters.keys())) == sorted(cols)
-            )
+                old_cols: List[str] = ['row', 'column', 'filter_cols']
+                new_cols: List[str] = ['order', 'filter_cols']
+                assert (
+                    sorted(list(filters.keys())) == sorted(old_cols)
+                    or
+                    sorted(list(filters.keys())) == sorted(new_cols)
+                )
         except AssertionError:
             raise KeyError(
                 f'filters object must contain the keys'
@@ -106,7 +110,9 @@ class PlotApi(PlotAux):
             )
 
     def _find_target_reports(
-            self, menu_path: str, row: int, column: int,
+            self, menu_path: str,
+            grid: Optional[str] = None,
+            order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
     ) -> List[Dict]:
@@ -123,7 +129,16 @@ class PlotApi(PlotAux):
         else:
             component_type = 'ECHARTS'
 
-        grid: str = f'{row}, {column}'
+        by_grid: bool = False
+        if grid:
+            by_grid = True
+        elif order is not None:
+            pass
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified'
+            )
+
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         app_type: Dict = self._get_app_type_by_name(name=app_type_name)
 
@@ -149,13 +164,22 @@ class PlotApi(PlotAux):
                         and report['reportType'] == component_type
                 )
             ]
-        else:  # Whatever is the reportType delete it
+        elif by_grid:  # Whatever is the reportType delete it
             target_reports: List[Dict] = [
                 report
                 for report in reports
                 if (
                         report['path'] == path_name
                         and report['grid'] == grid
+                )
+            ]
+        else:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
+                        and report['order'] == order
                 )
             ]
 
@@ -225,8 +249,10 @@ class PlotApi(PlotAux):
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
     ) -> str:
@@ -240,6 +266,14 @@ class PlotApi(PlotAux):
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
+        if order is not None and rows_size and cols_size:
+            report_metadata['order'] = order
+            report_metadata['sizeRows'] = rows_size
+            report_metadata['sizeColumns'] = cols_size
+
+        if padding:
+            report_metadata['sizePadding'] = padding
+
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
             business_id=self.business_id,
@@ -249,12 +283,17 @@ class PlotApi(PlotAux):
         app: Dict = d['app']
         app_id: str = app['id']
 
-        order: int = self._get_component_order(
-            app_id=app_id, path_name=path_name,
-        )
+        if order is not None:  # elif order fails when order = 0!
+            kwargs = {'order': order}
+        elif report_metadata.get('grid'):
+            kwargs = {'grid': report_metadata.get('grid'), 'order': 0}
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified to overwrite a report'
+            )
 
         report_metadata.update({'path': path_name})
-        report_metadata.update({'order': order})
+        report_metadata.update(kwargs)
 
         if report_metadata.get('dataFields'):
             report_metadata['dataFields'] = (
@@ -262,15 +301,10 @@ class PlotApi(PlotAux):
             )
 
         if overwrite:
-            if not row or not column:
-                raise ValueError(
-                    'Row and Column must be specified to overwrite a report'
-                )
-
             self.delete(
                 menu_path=menu_path,
-                row=row, column=column,
                 by_component_type=False,
+                **kwargs
             )
 
         report: Dict = self._create_report(
@@ -304,7 +338,13 @@ class PlotApi(PlotAux):
             self, echart_type: str,
             data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str,
+            row: Optional[int] = None,  # TODO to deprecate
+            column: Optional[int] = None,    # TODO to deprecate
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -402,18 +442,19 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
+
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
 
         if filters:
             raise NotImplementedError
 
         return self._create_chart(
             data=df,
-            menu_path=menu_path,
-            report_metadata=report_metadata,
-            row=row, column=column,
-            overwrite=overwrite,
+            menu_path=menu_path, overwrite=overwrite,
+            report_metadata=report_metadata, order=order,
+            rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
     def _create_multifilter_reports(
@@ -460,8 +501,9 @@ class PlotApi(PlotAux):
             yield df_temp, filter_element
 
     def _update_filter_report(
-            self, filter_row: int,
-            filter_column: int,
+            self, filter_row: Optional[int],
+            filter_column: Optional[int],
+            filter_order: Optional[int],
             filter_elements: List,
             menu_path: str,
             update_type: str = 'concat',
@@ -470,7 +512,8 @@ class PlotApi(PlotAux):
         filter_reports: List[Dict] = (
             self._find_target_reports(
                 menu_path=menu_path,
-                row=filter_row, column=filter_column,
+                grid=f'{filter_row}, {filter_column}',
+                order=filter_order,
                 component_type='MULTIFILTER',
                 by_component_type=True,
             )
@@ -535,7 +578,6 @@ class PlotApi(PlotAux):
             data=chart_data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            row=filter_row, column=filter_column,
             overwrite=True,
         )
 
@@ -566,8 +608,9 @@ class PlotApi(PlotAux):
             filter_elements.append(filter_element)
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
-        filter_row: int = filters['row']
-        filter_column: int = filters['column']
+        filter_row: Optional[int] = filters.get('row')
+        filter_column: Optional[int] = filters.get('column')
+        filter_order: Optional[int] = filters.get('order')
 
         if update_filter_type:
             # concat is to add new filter options
@@ -582,6 +625,7 @@ class PlotApi(PlotAux):
             self._update_filter_report(
                 filter_row=filter_row,
                 filter_column=filter_column,
+                filter_order=filter_order,
                 filter_elements=filter_elements,
                 menu_path=kwargs['menu_path'],
                 update_type=update_filter_type,
@@ -589,15 +633,21 @@ class PlotApi(PlotAux):
         else:
             report_metadata: Dict = {
                 'reportType': 'MULTIFILTER',
-                'grid': f'{filter_row}, {filter_column}',
                 'title': '',
             }
+
+            if filter_row and filter_column:
+                report_metadata['grid'] = f'{filter_row}, {filter_column}'
+            elif filter_order is not None:
+                report_metadata['order'] = filter_order
+            else:
+                raise ValueError('Either row and column or order must be provided')
 
             self._create_chart(
                 data=filter_elements,
                 menu_path=kwargs['menu_path'],
                 report_metadata=report_metadata,
-                row=filter_row, column=filter_column,
+                order=filter_order,
                 overwrite=True,
             )
 
@@ -720,7 +770,10 @@ class PlotApi(PlotAux):
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],
-            menu_path: str, row: int, column: int, component_type: str,
+            component_type: str,
+            menu_path: str,
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None,
     ) -> None:
         """Append new data"""
         allowed_components_type: List[str] = [
@@ -740,12 +793,20 @@ class PlotApi(PlotAux):
 
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
-        target_reports: List[Dict] = (
-            self._find_target_reports(
-                menu_path=menu_path, row=row, column=column,
-                component_type=component_type,
+        if row and column:
+            target_reports: List[Dict] = (
+                self._find_target_reports(
+                    menu_path=menu_path, grid=f'{row}, {column}',
+                    component_type=component_type,
+                )
             )
-        )
+        else:
+            target_reports: List[Dict] = (
+                self._find_target_reports(
+                    menu_path=menu_path, order=order,
+                    component_type=component_type,
+                )
+            )
 
         # TODO for multifilter we will need to iterate on this
         assert len(target_reports) == 1
@@ -760,18 +821,32 @@ class PlotApi(PlotAux):
 
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
-            self, menu_path: str, row: int, column: int,
+            self, menu_path: str,
+            grid: Optional[str] = None,
+            order: Optional[int] = None,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
         """
+        if grid:
+            kwargs = {'grid': grid}
+        elif order is not None:
+            kwargs = {'order': order}
+        elif row and column:
+            kwargs = {'grid': f'{row}, {column}'}
+        else:
+            raise ValueError('Either Row and Column or Order must be specified')
+
         target_reports: List[Dict] = (
             self._find_target_reports(
-                menu_path=menu_path, row=row, column=column,
+                menu_path=menu_path,
                 component_type=component_type,
-                by_component_type=by_component_type
+                by_component_type=by_component_type,
+                **kwargs,
             )
         )
 
@@ -826,42 +901,10 @@ class PlotApi(PlotAux):
                     app_id=app_id,
                 )
 
-    # TODO to be deprecated
-    def update(
-            self, data: Union[str, DataFrame, List[Dict]],
-            x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,
-            component_type: str,
-            by_component_type: bool = True,
-            **kwargs,
-    ):
-        """"""
-        logger.warning('To be deprecated')
-        if by_component_type:
-            self.delete(
-                menu_path=menu_path,
-                component_type=component_type,
-                row=row, column=column,
-            )
-        else:
-            self.delete(
-                menu_path=menu_path,
-                row=row, column=column,
-                by_component_type=False,
-            )
-
-        m = getattr(self, component_type)
-        return m(
-            data=data,
-            x=x, y=y,
-            menu_path=menu_path,
-            row=1, column=1,
-            **kwargs
-        )
-
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             sort_table_by_col: Optional[Dict] = None,
@@ -1055,23 +1098,32 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict[str, Any] = {
             'title': title,
-            'grid': f'{row}, {column}',
             'path': path_name,
             'order': order,
             'dataFields': _calculate_table_data_fields(),
         }
 
+        if row and column:
+            report_metadata['grid']: str = f'{row}, {column}'
+
         if overwrite:
-            if not row or not column:
+            if not row and not column and not order:
                 raise ValueError(
-                    'Row and Column must be specified to overwrite a report'
+                    'Row, Column or Order must be specified to overwrite a report'
                 )
 
-            self.delete(
-                menu_path=menu_path,
-                row=row, column=column,
-                by_component_type=False,
-            )
+            if report_metadata.get('grid'):
+                self.delete(
+                    menu_path=menu_path,
+                    grid=report_metadata.get('grid'),
+                    by_component_type=False,
+                )
+            else:
+                self.delete(
+                    menu_path=menu_path,
+                    order=order,
+                    by_component_type=False,
+                )
 
         report: Dict = self._create_report(
             business_id=self.business_id,
@@ -1105,30 +1157,33 @@ class PlotApi(PlotAux):
     def html(
             self, html: str, menu_path: str,
             title: Optional[str] = None,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
-            order: Optional[int] = None,
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[str] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
             'order': order if order else 1,
             'title': title if title else '',
-            'grid': f'{row}, {column}' if row else '1, 1',
         }
+
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
             data=[{'value': html}],
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def iframe(
             self, menu_path: str, url: str,
-            row: int, column: int,
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
-            order: Optional[int] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -1138,19 +1193,24 @@ class PlotApi(PlotAux):
             },
             'order': order if order else 1,
             'title': title if title else '',
-            'grid': f'{row}, {column}',
         }
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=[], menu_path=menu_path,
-            row=row, column=column,
+            data=[],
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def bar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1194,8 +1254,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1207,7 +1267,9 @@ class PlotApi(PlotAux):
     def horizontal_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1228,8 +1290,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1241,7 +1303,9 @@ class PlotApi(PlotAux):
     def zero_centered_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1274,8 +1338,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1287,7 +1351,9 @@ class PlotApi(PlotAux):
     def line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1300,8 +1366,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1313,9 +1379,12 @@ class PlotApi(PlotAux):
     def predictive_line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str,
             min_value_mark: Any, max_value_mark: Any,
             color_mark: str = 'rgba(255, 173, 177, 0.4)',
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1365,8 +1434,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1378,7 +1447,9 @@ class PlotApi(PlotAux):
     def line_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1481,8 +1552,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=[y],
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1494,7 +1565,9 @@ class PlotApi(PlotAux):
     def scatter_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1607,7 +1680,9 @@ class PlotApi(PlotAux):
     def stockline(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
@@ -1633,22 +1708,26 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'reportType': 'STOCKLINECHART',
-            'grid': f'{row}, {column}',
             'title': title if title else '',
             'dataFields': data_fields,
         }
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def scatter(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1666,8 +1745,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -1679,7 +1758,9 @@ class PlotApi(PlotAux):
     def bubble_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str], z: str,  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1701,7 +1782,9 @@ class PlotApi(PlotAux):
 
     def indicator(
             self, data: Union[str, DataFrame, List[Dict]], value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             target_path: Optional[str] = None,
             set_title: Optional[str] = None,
             header: Optional[str] = None,
@@ -1717,6 +1800,10 @@ class PlotApi(PlotAux):
         :param menu_path:
         :param row:
         :param column:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
         :param target_path:
         :param set_title: the title of the set of indicators
         :param header:
@@ -1724,6 +1811,7 @@ class PlotApi(PlotAux):
         :param color:
         :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
+        :param real_time:
         """
         mandatory_elements: List[str] = [
             header, value, target_path,
@@ -1765,7 +1853,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'reportType': 'INDICATORS',
-            'grid': f'{row}, {column}',
             'title': set_title if set_title else ''
         }
 
@@ -1783,10 +1870,13 @@ class PlotApi(PlotAux):
         data_fields: Dict = {'dataFields': {'columns': columns}}
         report_metadata.update(data_fields)
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             real_time=real_time,
         )
@@ -1794,7 +1884,9 @@ class PlotApi(PlotAux):
     def alert_indicator(
             self, data: Union[str, DataFrame, List[Dict]],
             value: str, target_path: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             set_title: Optional[str] = None,
             header: Optional[str] = None,
             footer: Optional[str] = None,
@@ -1808,6 +1900,7 @@ class PlotApi(PlotAux):
         return self.indicator(
             data=data, value=value,
             menu_path=menu_path, row=row, column=column,
+            order=order, cols_size=cols_size, rows_size=rows_size, padding=padding,
             target_path=target_path,
             set_title=set_title,
             header=header,
@@ -1818,7 +1911,9 @@ class PlotApi(PlotAux):
     def pie(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -1835,23 +1930,27 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'pie'},
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def radar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -1874,22 +1973,26 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def tree(
             self, data: Union[str, List[Dict]],
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -1903,22 +2006,26 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'tree'},
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def treemap(
             self, data: Union[str, List[Dict]],
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -1930,7 +2037,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'title': title,
-            'grid': f'{row}, {column}',
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'treemap'},
         }
@@ -1938,17 +2044,22 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def sunburst(
             self, data: List[Dict],
             name: str, children: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -1961,24 +2072,28 @@ class PlotApi(PlotAux):
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
             'title': title,
-            'grid': f'{row}, {column}',
             'dataFields': {'type': 'sunburst'},
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def candlestick(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1993,8 +2108,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -2006,7 +2121,9 @@ class PlotApi(PlotAux):
     def heatmap(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2027,8 +2144,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=[y, value],
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -2040,7 +2157,9 @@ class PlotApi(PlotAux):
     def cohort(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2073,8 +2192,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=x, y=[y, value],
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -2090,7 +2209,9 @@ class PlotApi(PlotAux):
     def sankey(
             self, data: Union[str, DataFrame, List[Dict]],
             source: str, target: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2112,7 +2233,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'title': title,
-            'grid': f'{row}, {column}',
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'sankey'},
         }
@@ -2120,16 +2240,22 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df, menu_path=menu_path,
-            row=row, column=column,
+            data=data,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def funnel(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2152,8 +2278,8 @@ class PlotApi(PlotAux):
             data=data, filters=filters,
             **dict(
                 x=name, y=[value],
-                menu_path=menu_path,
-                row=row, column=column,
+                menu_path=menu_path, row=row, column=column,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
@@ -2165,8 +2291,11 @@ class PlotApi(PlotAux):
     def speed_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str,
             min: int, max: int,
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2319,23 +2448,27 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def ring_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2365,23 +2498,27 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=data,
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
     def themeriver(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, name: str,  # first layer
-            menu_path: str, row: int, column: int,  # report creation
+            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,

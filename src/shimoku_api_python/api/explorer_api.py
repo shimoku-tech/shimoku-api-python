@@ -578,36 +578,44 @@ class CreateExplorerAPI(object):
         :param app_id:
         :param report_metadata: A dict with all the values required to create a report
         """
+        def append_fields(item: Dict, field_name: str) -> Dict:
+            """Equivalent to
+            grid: Optional[str] = report_metadata.get('grid')
+            if grid:
+                item['grid'] = grid
+            """
+            field_value: Optional[str] = report_metadata.get(field_name)
+            if field_value is not None:
+                item[field_name] = field_value
+            return item
+
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
         title: str = report_metadata['title']
-        order: int = report_metadata['order']
-        grid: bool = report_metadata['grid']
 
         # These are the mandatory fields
         item: Dict = {
             'appId': app_id,
             'title': title,
-            'order': order,
-            'grid': grid,
         }
 
-        path: str = report_metadata.get('path')
-        if path:
-            item['path'] = path
+        item: Dict = append_fields(item=item, field_name='path')
+        item: Dict = append_fields(item=item, field_name='grid')
+        item: Dict = append_fields(item=item, field_name='reportType')
+        item: Dict = append_fields(item=item, field_name='order')
+        item: Dict = append_fields(item=item, field_name='sizeColumns')
+        item: Dict = append_fields(item=item, field_name='sizeRows')
+        item: Dict = append_fields(item=item, field_name='padding')
 
         if real_time:
             item['subscribe'] = True
-
-        report_type: str = report_metadata.get('reportType')
-        if report_type:
-            report_metadata.pop('reportType')
 
         # Update items with kwargs
         item.update(report_metadata)
 
         # Optional values
+        report_type: str = report_metadata.get('reportType')
         if report_type:
             if report_type != 'Table':  # Tables have reportType as None
                 item['reportType'] = report_type
@@ -829,6 +837,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         target_report_grid: str = target_report.get('grid')
 
+        # TO BE deprecated with row, column and grid!
         # TODO this looks like a different method
         if target_report_grid:
             target_report_row: int = int(target_report_grid.split(',')[0])

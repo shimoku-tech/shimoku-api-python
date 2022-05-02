@@ -816,6 +816,8 @@ class PlotApi(PlotAux):
             self, menu_path: str,
             grid: Optional[str] = None,
             order: Optional[int] = None,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
     ) -> None:
@@ -826,6 +828,8 @@ class PlotApi(PlotAux):
             kwargs = {'grid': grid}
         elif order is not None:
             kwargs = {'order': order}
+        elif row and column:
+            kwargs = {'grid': f'{row}, {column}'}
         else:
             raise ValueError('Either Row and Column or Order must be specified')
 
@@ -1152,13 +1156,15 @@ class PlotApi(PlotAux):
             'reportType': 'HTML',
             'order': order if order else 1,
             'title': title if title else '',
-            'grid': f'{row}, {column}' if row else '1, 1',
         }
+
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
             data=[{'value': html}],
             menu_path=menu_path,
-            row=row, column=column,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -1177,12 +1183,15 @@ class PlotApi(PlotAux):
             },
             'order': order if order else 1,
             'title': title if title else '',
-            'grid': f'{row}, {column}',
         }
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=[], menu_path=menu_path,
-            row=row, column=column,
+            data=[],
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -1689,15 +1698,17 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'reportType': 'STOCKLINECHART',
-            'grid': f'{row}, {column}',
             'title': title if title else '',
             'dataFields': data_fields,
         }
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            data=[],
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -1827,7 +1838,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'reportType': 'INDICATORS',
-            'grid': f'{row}, {column}',
             'title': set_title if set_title else ''
         }
 
@@ -1845,10 +1855,13 @@ class PlotApi(PlotAux):
         data_fields: Dict = {'dataFields': {'columns': columns}}
         report_metadata.update(data_fields)
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            data=[],
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             real_time=real_time,
         )
@@ -1901,16 +1914,18 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'pie'},
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            data=[],
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -1942,14 +1957,16 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
+            data=[],
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
@@ -1973,16 +1990,18 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'tree'},
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -2002,7 +2021,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'title': title,
-            'grid': f'{row}, {column}',
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'treemap'},
         }
@@ -2010,10 +2028,13 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -2035,17 +2056,19 @@ class PlotApi(PlotAux):
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
             'title': title,
-            'grid': f'{row}, {column}',
             'dataFields': {'type': 'sunburst'},
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
             data=data,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -2194,7 +2217,6 @@ class PlotApi(PlotAux):
 
         report_metadata: Dict = {
             'title': title,
-            'grid': f'{row}, {column}',
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'sankey'},
         }
@@ -2202,9 +2224,13 @@ class PlotApi(PlotAux):
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df, menu_path=menu_path,
-            row=row, column=column,
+            data=data,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 
@@ -2406,15 +2432,17 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
-            menu_path=menu_path, row=row, column=column,
+            data=data,
+            menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
@@ -2454,15 +2482,17 @@ class PlotApi(PlotAux):
             'reportType': 'ECHARTS',
             'dataFields': data_fields,
             'title': title,
-            'grid': f'{row}, {column}',
         }
 
         if filters:
             raise NotImplementedError
 
+        if row and column:
+            report_metadata['grid'] = f'{row}, {column}'
+
         return self._create_chart(
-            data=df,
-            menu_path=menu_path, row=row, column=column,
+            data=data,
+            menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )

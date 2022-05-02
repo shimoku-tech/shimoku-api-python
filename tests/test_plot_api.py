@@ -579,6 +579,7 @@ def test_bar_with_filters():
     )
 
     s.plt.delete_path(menu_path)
+    s.plt.delete_path(menu_path=f'{menu_path}-bysize')
 
 
 def test_bar():
@@ -1788,10 +1789,8 @@ def test_cohorts():
 
 
 print(f'Start time {dt.datetime.now()}')
-# TODO descomentar
-# test_bar_with_filters()
-# test_bar()
-
+test_bar_with_filters()
+test_bar()
 test_radar()
 test_ring_gauge()
 test_indicator()

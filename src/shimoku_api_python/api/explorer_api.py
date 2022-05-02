@@ -837,6 +837,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         target_report_grid: str = target_report.get('grid')
 
+        # TO BE deprecated with row, column and grid!
         # TODO this looks like a different method
         if target_report_grid:
             target_report_row: int = int(target_report_grid.split(',')[0])

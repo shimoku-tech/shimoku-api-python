@@ -444,11 +444,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
         # could have several reports with the same name
         result: Any = {}
         for app in apps:
-            app_type: Dict = self.get_app_by_type(
-                business_id=business_id,
+            app_type: Dict = self.get_app_type(
+                # business_id=business_id,
                 app_type_id=app['type']['id'],
             )
-            if app_type['name'] == name:
+            if app_type['normalizedName'] == name:
                 if result:
                     if len(result) == 1:
                         result: List[Dict] = result + [app]
@@ -525,9 +525,9 @@ class CreateExplorerAPI(object):
         if app_metadata:
             hide_title: bool = app_metadata.get('hideTitle')
             if hide_title:
-                item['hideTitle'] = True
+                item['hideTitle'] = 'true' if hide_title else 'false'
             else:
-                item['hideTitle'] = False
+                item['hideTitle'] = 'true'
 
             # These are the optional fields (previous were the mandatory ones)
             allowed_columns: List[str] = [
@@ -538,6 +538,8 @@ class CreateExplorerAPI(object):
             assert all([key in allowed_columns for key in app_metadata.keys()])
             # Update items with kwargs
             item.update(app_metadata)
+        else:
+            item['hideTitle'] = 'true'
 
         return self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
@@ -570,6 +572,7 @@ class CreateExplorerAPI(object):
 
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
+        real_time: bool = False,
     ) -> Dict:
         """Create new Report associated to an AppId
 
@@ -577,33 +580,44 @@ class CreateExplorerAPI(object):
         :param app_id:
         :param report_metadata: A dict with all the values required to create a report
         """
+        def append_fields(item: Dict, field_name: str) -> Dict:
+            """Equivalent to
+            grid: Optional[str] = report_metadata.get('grid')
+            if grid:
+                item['grid'] = grid
+            """
+            field_value: Optional[str] = report_metadata.get(field_name)
+            if field_value is not None:
+                item[field_name] = field_value
+            return item
+
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
         title: str = report_metadata['title']
-        order: int = report_metadata['order']
-        grid: bool = report_metadata['grid']
 
         # These are the mandatory fields
         item: Dict = {
             'appId': app_id,
             'title': title,
-            'order': order,
-            'grid': grid,
         }
 
-        path: str = report_metadata.get('path')
-        if path:
-            item['path'] = path
+        item: Dict = append_fields(item=item, field_name='path')
+        item: Dict = append_fields(item=item, field_name='grid')
+        item: Dict = append_fields(item=item, field_name='reportType')
+        item: Dict = append_fields(item=item, field_name='order')
+        item: Dict = append_fields(item=item, field_name='sizeColumns')
+        item: Dict = append_fields(item=item, field_name='sizeRows')
+        item: Dict = append_fields(item=item, field_name='padding')
 
-        report_type: str = report_metadata.get('reportType')
-        if report_type:
-            report_metadata.pop('reportType')
+        if real_time:
+            item['subscribe'] = True
 
         # Update items with kwargs
         item.update(report_metadata)
 
         # Optional values
+        report_type: str = report_metadata.get('reportType')
         if report_type:
             if report_type != 'Table':  # Tables have reportType as None
                 item['reportType'] = report_type
@@ -825,6 +839,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         target_report_grid: str = target_report.get('grid')
 
+        # TO BE deprecated with row, column and grid!
         # TODO this looks like a different method
         if target_report_grid:
             target_report_row: int = int(target_report_grid.split(',')[0])
@@ -1293,6 +1308,7 @@ class AppExplorerApi:
     get_app_path_names = CascadeExplorerAPI.get_app_path_names
     get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
 
     delete_app = DeleteExplorerApi.delete_app

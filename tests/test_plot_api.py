@@ -514,7 +514,7 @@ def test_bar_with_filters():
 
 
 def test_bar():
-    s.plt.line(
+    s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
         menu_path='test/line-test-rowcol',
@@ -528,7 +528,6 @@ def test_bar():
         # row=1, column=1,
         order=0, rows_size=2,
         cols_size=12,
-        # padding='1, 1, 4, 1',
     )
 
     s.plt.bar(
@@ -1439,6 +1438,7 @@ def test_cohorts():
     raise NotImplementedError
 
 
+test_bar_with_filters()
 test_bar()
 test_radar()
 test_ring_gauge()
@@ -1455,7 +1455,6 @@ test_pie()
 test_iframe()
 test_html()
 test_horizontal_barchart()
-test_bar_with_filters()
 test_predictive_line()
 test_table()
 test_speed_gauge()

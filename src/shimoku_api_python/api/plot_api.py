@@ -639,7 +639,7 @@ class PlotApi(PlotAux):
                 data=filter_elements,
                 menu_path=kwargs['menu_path'],
                 report_metadata=report_metadata,
-                row=filter_row, column=filter_column, order=filter_order,
+                order=filter_order,
                 overwrite=True,
             )
 

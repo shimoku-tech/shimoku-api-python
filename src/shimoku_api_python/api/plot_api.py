@@ -93,14 +93,15 @@ class PlotApi(PlotAux):
         try:
             if filters.get('update_filter_type'):
                 cols: List[str] = ['row', 'column', 'filter_cols', 'update_filter_type']
+                assert sorted(list(filters.keys())) == sorted(cols)
             else:
                 old_cols: List[str] = ['row', 'column', 'filter_cols']
                 new_cols: List[str] = ['order', 'filter_cols']
-            assert (
-                sorted(list(filters.keys())) == sorted(old_cols)
-                or
-                sorted(list(filters.keys())) == sorted(new_cols)
-            )
+                assert (
+                    sorted(list(filters.keys())) == sorted(old_cols)
+                    or
+                    sorted(list(filters.keys())) == sorted(new_cols)
+                )
         except AssertionError:
             raise KeyError(
                 f'filters object must contain the keys'
@@ -507,7 +508,8 @@ class PlotApi(PlotAux):
         filter_reports: List[Dict] = (
             self._find_target_reports(
                 menu_path=menu_path,
-                row=filter_row, column=filter_column, order=filter_order,
+                grid=f'{filter_row}, {filter_column}',
+                order=filter_order,
                 component_type='MULTIFILTER',
                 by_component_type=True,
             )
@@ -572,7 +574,6 @@ class PlotApi(PlotAux):
             data=chart_data,
             menu_path=menu_path,
             report_metadata=report_metadata,
-            row=filter_row, column=filter_column,
             overwrite=True,
         )
 
@@ -1355,11 +1356,12 @@ class PlotApi(PlotAux):
     def predictive_line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
-            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            menu_path: str,
             min_value_mark: Any, max_value_mark: Any,
             color_mark: str = 'rgba(255, 173, 177, 0.4)',
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2243,10 +2245,11 @@ class PlotApi(PlotAux):
     def speed_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
-            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+            menu_path: str,
+            min: int, max: int,
+            row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[List[int]] = None,
-            min: int, max: int,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,

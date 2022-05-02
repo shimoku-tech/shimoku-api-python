@@ -42,6 +42,7 @@ def test_ux():
     1. Create single indicator centered
     2. Create single indicator with chart in another column
     """
+    print('test_ux')
     menu_path: str = 'test/UX-test'
     data_ = [
         {
@@ -236,10 +237,12 @@ def test_ux():
 
 
 def test_set_path_orders():
+    print('test_set_path_orders')
     s.plt.set_path_orders(path_order={'test': 1})
 
 
 def test_set_new_business():
+    print('test_set_new_business')
     name: str = 'new-business-test'
     s.plt.set_new_business(name)
     bs = s.universe.get_universe_businesses()
@@ -249,6 +252,7 @@ def test_set_new_business():
 
 
 def test_delete_path():
+    print('test_delete_path')
     app_path: str = 'test-path'
     menu_path: str = f'{app_path}/line-test'
     menu_path_2: str = f'{app_path}/line-test-2'
@@ -325,6 +329,7 @@ def test_delete_path():
 
 
 def test_delete():
+    print('test_delete')
     app_path: str = 'test-delete'
     menu_path: str = f'{app_path}/line-test'
 
@@ -388,6 +393,7 @@ def test_delete():
 
 
 def test_append_data_to_trend_chart():
+    print('test_append_data_to_trend_chart')
     app_path: str = 'test'
     menu_path: str = f'{app_path}/append-test'
 
@@ -440,6 +446,7 @@ def test_append_data_to_trend_chart():
 
 
 def test_table():
+    print('test_table')
     data_ = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
         {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z'},
@@ -492,6 +499,7 @@ def test_table():
 
 
 def test_bar_with_filters():
+    print('test_bar_with_filters')
     menu_path: str = 'test/multifilter-bar-test'
     data_ = pd.read_csv('../data/test_multifilter.csv')
     y: List[str] = [
@@ -574,42 +582,48 @@ def test_bar_with_filters():
 
 
 def test_bar():
+    print('test_bar')
+    menu_path = 'test/bar-test'
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/line-test-rowcol',
-        row=1, column=1,
-    )
-
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path=menu_path,
         # row=1, column=1,
         order=0, rows_size=2,
         cols_size=12,
     )
+    s.plt.delete_path(menu_path=menu_path)
 
+    menu_path = 'test/bar-test-rowcol'
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test-rowcol',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test-rowcol',
+        menu_path=menu_path,
+        row=1, column=1,
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
         row=1, column=1,
         order=0, rows_size=2,
         cols_size=12,
     )
+    s.plt.delete_path(menu_path=menu_path)
 
+    menu_path = 'test/bar-test'
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path=menu_path,
         # row=1, column=1,
         order=1, rows_size=2,
         cols_size=6,
@@ -617,21 +631,18 @@ def test_bar():
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/bar-test',
+        menu_path=menu_path,
         # row=1, column=1,
         order=2, rows_size=2,
         cols_size=4,
         padding="2, 2, 2, 2"
     )
 
-    s.plt.delete(
-        menu_path='test/bar-test',
-        component_type='bar',
-        row=1, column=1,
-    )
+    s.plt.delete_path(menu_path=menu_path)
 
 
 def test_zero_centered_barchart():
+    print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
     data_ = [
         {'Name': 'a', 'y': 5},
@@ -668,6 +679,7 @@ def test_zero_centered_barchart():
 
 
 def test_horizontal_barchart():
+    print('test_horizontal_barchart')
     menu_path: str = 'test/horizontal-bar-test'
 
     data_ = [
@@ -705,6 +717,7 @@ def test_horizontal_barchart():
 
 
 def test_line():
+    print('test_line')
     menu_path: str = 'test/line-test'
     s.plt.line(
         data=data,
@@ -734,6 +747,7 @@ def test_line():
 
 
 def test_stockline():
+    print('test_stockline')
     menu_path: str = 'test/stockline-test'
     s.plt.stockline(
         data=data,
@@ -763,6 +777,7 @@ def test_stockline():
 
 
 def test_scatter():
+    print('test_scatter')
     menu_path: str = 'test/scatter-test'
     s.plt.scatter(
         data=data,
@@ -791,30 +806,8 @@ def test_scatter():
     s.plt.delete_path(menu_path)
 
 
-# TODO WiP
-def test_scatter_with_confidence_area():
-    r = s.plt.scatter_with_confidence_area(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path='test/scatter-confidence-test',
-        row=1, column=1,
-    )
-
-    assert r
-
-    s.plt.delete(
-        menu_path='test/scatter-confidence-test',
-        row=1, column=1,
-        component_type='scatter_with_confidence_area',
-    )
-
-
-def test_bubble_chart():
-    # s.plt.bubble_chart()
-    raise NotImplementedError
-
-
 def test_candlestick():
+    print('test_candlestick')
     data_: List[Dict] = [
         {
             "date": "2021-01-24",
@@ -888,6 +881,7 @@ def test_candlestick():
 
 
 def test_funnel():
+    print('test_funnel')
     menu_path = 'test/funnel-test'
     data_ = [
         {
@@ -937,6 +931,7 @@ def test_funnel():
 
 
 def test_heatmap():
+    print('test_heatmap')
     menu_path: str = 'test/heatmap-test'
     data_ = [
         {
@@ -1046,6 +1041,7 @@ def test_heatmap():
 
 
 def test_speed_gauge():
+    print('test_speed_gauge')
     menu_path: str = 'test/speed-gauge-test'
     data_ = [
         {
@@ -1080,6 +1076,7 @@ def test_speed_gauge():
 
 
 def test_ring_gauge():
+    print('test_ring_gauge')
     menu_path: str = 'test/ring-gauge-test'
     data_ = [
         {
@@ -1129,6 +1126,7 @@ def test_ring_gauge():
 
 
 def test_sunburst():
+    print('test_sunburst')
     menu_path: str = 'test/sunburst-test'
     data_ = [
         {
@@ -1221,6 +1219,7 @@ def test_sunburst():
 
 
 def test_tree():
+    print('test_tree')
     menu_path: str = 'test/tree-test'
     data_ = [{
         'name': 'root',
@@ -1281,6 +1280,7 @@ def test_tree():
 
 
 def test_treemap():
+    print('test_treemap')
     menu_path: str = 'test/treemap-test'
     data_ = [{
         'name': 'root',
@@ -1341,6 +1341,7 @@ def test_treemap():
 
 
 def test_radar():
+    print('test_radar')
     menu_path: str = 'test/radar-test'
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
@@ -1376,6 +1377,7 @@ def test_radar():
 
 
 def test_indicator():
+    print('test_indicator')
     menu_path: str = 'test/indicator-test'
     data_ = [
         {
@@ -1437,6 +1439,7 @@ def test_indicator():
 
 
 def test_alert_indicator():
+    print('test_alert_indicator')
     menu_path: str = 'test/indicator-path-test'
     data_ = [
         {
@@ -1489,12 +1492,8 @@ def test_alert_indicator():
     s.plt.delete_path(menu_path)
 
 
-def test_line_with_confidence_area():
-    # s.plt.line_with_confidence_area()
-    raise NotImplementedError
-
-
 def test_predictive_line():
+    print('test_predictive_line')
     menu_path: str = 'test/predictive-line-test'
     s.plt.predictive_line(
         data=data,
@@ -1528,6 +1527,7 @@ def test_predictive_line():
 
 
 def test_themeriver():
+    print('test_themeriver')
     data_ = [
         {
             "date": "2021/11/08",
@@ -1620,6 +1620,7 @@ def test_themeriver():
 
 
 def test_sankey():
+    print('test_sankey')
     menu_path: str = 'test/sankey-test'
     data_ = [
         {
@@ -1681,6 +1682,7 @@ def test_sankey():
 
 
 def test_pie():
+    print('test_pie')
     menu_path: str = 'test/pie-test'
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
@@ -1717,6 +1719,7 @@ def test_pie():
 
 
 def test_iframe():
+    print('test_iframe')
     menu_path: str = 'test/iframe-test'
     url = 'https://www.marca.com/'
     s.plt.iframe(
@@ -1745,6 +1748,7 @@ def test_iframe():
 
 
 def test_html():
+    print('test_html')
     menu_path: str = 'test/html-test'
     html = (
         "<p style='background-color: #daf4f0';>"
@@ -1778,11 +1782,14 @@ def test_html():
 
 
 def test_cohorts():
+    print('test_cohorts')
     # s.plt.cohort()
     raise NotImplementedError
 
 
-test_bar_with_filters()
+print(f'Start time {dt.datetime.now()}')
+# TODO descomentar
+# test_bar_with_filters()
 test_bar()
 test_radar()
 test_ring_gauge()
@@ -1823,3 +1830,4 @@ test_funnel()
 # test_scatter_with_confidence_area()
 # test_bubble_chart()
 # test_line_with_confidence_area()
+print(f'End time {dt.datetime.now()}')

@@ -514,6 +514,13 @@ def test_bar_with_filters():
 
 
 def test_bar():
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/line-test-rowcol',
+        row=1, column=1,
+    )
+
     s.plt.bar(
         data=data,
         x='date', y=['x', 'y'],
@@ -522,6 +529,22 @@ def test_bar():
         order=0, rows_size=2,
         cols_size=12,
         # padding='1, 1, 4, 1',
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/bar-test-rowcol',
+        row=1, column=1,
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path='test/bar-test-rowcol',
+        row=1, column=1,
+        order=0, rows_size=2,
+        cols_size=12,
     )
 
     s.plt.bar(

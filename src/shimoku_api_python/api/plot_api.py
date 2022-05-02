@@ -107,8 +107,7 @@ class PlotApi(PlotAux):
 
     def _find_target_reports(
             self, menu_path: str,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
+            grid: Optional[str] = None,
             order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
@@ -127,8 +126,7 @@ class PlotApi(PlotAux):
             component_type = 'ECHARTS'
 
         by_grid: bool = False
-        if row and column:
-            grid: str = f'{row}, {column}'
+        if grid:
             by_grid = True
         elif order is not None:
             pass
@@ -247,8 +245,6 @@ class PlotApi(PlotAux):
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
             order: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
@@ -272,10 +268,10 @@ class PlotApi(PlotAux):
         app: Dict = d['app']
         app_id: str = app['id']
 
-        if row and column:
-            kwargs = {'row': row, 'column': column}
-        elif order is not None:  # elif order fails when order = 0!
+        if order is not None:  # elif order fails when order = 0!
             kwargs = {'order': order}
+        elif report_metadata.get('grid'):
+            kwargs = {'grid': report_metadata.get('grid')}
         else:
             raise ValueError(
                 'Row and Column or Order must be specified to overwrite a report'
@@ -449,10 +445,8 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=df,
-            menu_path=menu_path,
-            report_metadata=report_metadata,
-            row=row, column=column, order=order,
-            overwrite=overwrite,
+            menu_path=menu_path, overwrite=overwrite,
+            report_metadata=report_metadata, order=order,
         )
 
     def _create_multifilter_reports(
@@ -809,8 +803,7 @@ class PlotApi(PlotAux):
     # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
             self, menu_path: str,
-            row: Optional[int] = None,
-            column: Optional[int] = None,
+            grid: Optional[str] = None,
             order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
@@ -818,8 +811,8 @@ class PlotApi(PlotAux):
         """In cascade find the reports that match the query
         and delete them all
         """
-        if row and column:
-            kwargs = {'row': row, 'column': column}
+        if grid:
+            kwargs = {'grid': grid}
         elif order is not None:
             kwargs = {'order': order}
         else:

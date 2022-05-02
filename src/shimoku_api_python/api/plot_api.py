@@ -250,6 +250,9 @@ class PlotApi(PlotAux):
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
             order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
     ) -> str:
@@ -263,6 +266,14 @@ class PlotApi(PlotAux):
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
+        if order is not None and rows_size and cols_size:
+            report_metadata['order'] = order
+            report_metadata['sizeRows'] = rows_size
+            report_metadata['sizeColumns'] = cols_size
+
+        if padding:
+            report_metadata['sizePadding'] = padding
+
         app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
         d: Dict[str, Dict] = self._create_app_type_and_app(
             business_id=self.business_id,
@@ -436,14 +447,6 @@ class PlotApi(PlotAux):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        if order is not None and rows_size and cols_size:
-            report_metadata['order'] = order
-            report_metadata['sizeRows'] = rows_size
-            report_metadata['sizeColumns'] = cols_size
-
-        if padding:
-            report_metadata['sizePadding'] = padding
-
         if filters:
             raise NotImplementedError
 
@@ -451,6 +454,7 @@ class PlotApi(PlotAux):
             data=df,
             menu_path=menu_path, overwrite=overwrite,
             report_metadata=report_metadata, order=order,
+            rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
     def _create_multifilter_reports(
@@ -1946,8 +1950,8 @@ class PlotApi(PlotAux):
 
         return self._create_chart(
             data=df,
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
         )
 

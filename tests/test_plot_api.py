@@ -138,6 +138,102 @@ def test_ux():
         row=4, column=2,
     )
 
+    menu_path: str = 'test/UX-test-bysize'
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=0,
+        value='value',
+        header='title',
+        footer='description',
+    )
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+        {
+            "description": "",
+            "title": "Price ($)",
+            "value": "455"
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1,
+        value='value',
+        header='title',
+        footer='description',
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=2, rows_size=1, cols_size=6,
+    )
+
+    ###################
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "target_path": 'www.shimoku.com',
+        },
+    ]
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=3, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        target_path='target_path',
+    )
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "target_path": 'www.shimoku.com',
+        },
+        {
+            "description": "",
+            "title": "Price ($)",
+            "value": "455",
+            "target_path": 'www.shimoku.com',
+        },
+    ]
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=4,
+        value='value',
+        header='title',
+        footer='description',
+        target_path='target_path',
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=5, rows_size=1, cols_size=4,
+    )
+
 
 def test_set_path_orders():
     s.plt.set_path_orders(path_order={'test': 1})
@@ -162,13 +258,13 @@ def test_delete_path():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
     )
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        row=2, column=1,
+        order=1,
     )
     app_types: List[Dict] = s.universe.get_universe_app_types()
     app_type_id = max([
@@ -195,19 +291,19 @@ def test_delete_path():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        row=1, column=1,
+        order=0
     )
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path_2,
-        row=1, column=1,
+        order=0,
     )
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path_3,
-        row=1, column=1,
+        order=0,
     )
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
@@ -219,7 +315,7 @@ def test_delete_path():
 
     s.plt.delete_path(menu_path=app_path)
 
-    # Check it does not exists anymore
+    # Check it does not exist anymore
     class MyTestCase(unittest.TestCase):
         def check_reports_not_exists(self):
             with self.assertRaises(ApiClientError):
@@ -250,12 +346,12 @@ def test_delete():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
     )
 
     s.plt.delete(
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         component_type='line',
     )
 
@@ -272,16 +368,16 @@ def test_delete():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
     )
 
     s.plt.delete(
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         by_component_type=False,
     )
 
-    # Check it does not exists anymore
+    # Check it does not exist anymore
     class MyTestCase(unittest.TestCase):
         def check_reports_not_exists(self):
             with self.assertRaises(ApiClientError):
@@ -302,6 +398,13 @@ def test_append_data_to_trend_chart():
         row=1, column=1,
     )
 
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=f'{menu_path}-bysize',
+        order=0, rows_size=2, cols_size=6,
+    )
+
     data_ = [
         {'date': dt.date(2021, 1, 6), 'x': 5, 'y': 5},
         {'date': dt.date(2021, 1, 7), 'x': 6, 'y': 5},
@@ -315,96 +418,24 @@ def test_append_data_to_trend_chart():
         x='date', y=['x', 'y'],
     )
 
+    s.plt.append_data_to_trend_chart(
+        menu_path=f'{menu_path}-bysize',
+        order=0,
+        component_type='line',
+        data=data_,
+        x='date', y=['x', 'y'],
+    )
+
     s.plt.delete(
         menu_path=menu_path,
         row=1, column=1,
         component_type='line',
     )
 
-
-def test_update():
-    menu_path = 'test/update-test'
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-
-    data_: List[Dict] = [
-        {
-            "date": "2021-01-24",
-            "open": 78,
-            "close": 85,
-            "highest": 94,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-25",
-            "open": 17,
-            "close": 13,
-            "highest": 7,
-            "lowest": 18
-        },
-        {
-            "date": "2021-01-26",
-            "open": 18,
-            "close": 38,
-            "highest": 33,
-            "lowest": 39
-        },
-        {
-            "date": "2021-01-27",
-            "open": 9,
-            "close": 27,
-            "highest": 46,
-            "lowest": 93
-        },
-        {
-            "date": "2021-01-28",
-            "open": 59,
-            "close": 45,
-            "highest": 90,
-            "lowest": 75
-        },
-        {
-            "date": "2021-01-29",
-            "open": 45,
-            "close": 18,
-            "highest": 0,
-            "lowest": 68
-        },
-        {
-            "date": "2021-01-30",
-            "open": 48,
-            "close": 57,
-            "highest": 13,
-            "lowest": 6
-        },
-        {
-            "date": "2021-01-31",
-            "open": 79,
-            "close": 84,
-            "highest": 58,
-            "lowest": 14
-        }
-    ]
-    s.plt.update(
-        data=data_,
-        x='date', y=['open', 'close', 'highest', 'lowest'],
-        menu_path=menu_path,
-        row=1, column=1,
-        component_type='bar',
-    )
-
-    # Change to linechart
-    s.plt.update(
-        data=data_,
-        x='date', y=['open', 'close', 'highest', 'lowest'],
-        menu_path=menu_path,
-        row=1, column=1,
+    s.plt.delete(
+        menu_path=f'{menu_path}-bysize',
+        order=0,
         component_type='line',
-        by_component_type=False,
     )
 
 
@@ -445,6 +476,20 @@ def test_table():
         row=1, column=1,
     )
 
+    s.plt.table(
+        data=data_,
+        menu_path='test/table-test',
+        order=1, rows_size=2, cols_size=6,
+    )
+
+    s.plt.delete(
+        menu_path='test/table-test',
+        component_type='table',
+        row=1, column=1,
+    )
+    s.plt.delete_path('test/table-test')
+    s.plt.delete_path('test/sorted-table-test')
+
 
 def test_bar_with_filters():
     menu_path: str = 'test/multifilter-bar-test'
@@ -459,15 +504,30 @@ def test_bar_with_filters():
         'Quirón+Quirónsalud', 'Quirónsalud', 'Ruber', 'Ruber Internacional',
         'Ruber Juan Bravo', 'Sanitas', 'Teknon', 'Traumatólogo', 'Vithas'
     ]
+
+    data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
+
+    filters: Dict = {
+        'order': 0,
+        'filter_cols': [
+            'seccion', 'frecuencia', 'region',
+        ],
+    }
+    s.plt.bar(
+        data=data_1,
+        x='fecha', y=y,
+        menu_path=f'{menu_path}-bysize',
+        order=1, rows_size=2,
+        cols_size=12,
+        filters=filters,
+    )
+
     filters: Dict = {
         'row': 1, 'column': 1,
         'filter_cols': [
             'seccion', 'frecuencia', 'region',
         ],
     }
-
-    data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
-
     s.plt.bar(
         data=data_1,
         x='fecha', y=y,
@@ -587,11 +647,24 @@ def test_zero_centered_barchart():
         row=1, column=1,
     )
 
+    s.plt.zero_centered_barchart(
+        data=data_,
+        x='y', y=['Name'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
         menu_path=menu_path,
         component_type='zero_centered_barchart',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='zero_centered_barchart',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_horizontal_barchart():
@@ -611,56 +684,111 @@ def test_horizontal_barchart():
         row=1, column=1,
     )
 
+    s.plt.horizontal_barchart(
+        data=data_,
+        x='Name', y=['y', 'z'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
         menu_path=menu_path,
         component_type='horizontal_barchart',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='horizontal_barchart',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_line():
+    menu_path: str = 'test/line-test'
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/line-test',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
-    s.plt.delete(
-        menu_path='test/line-test',
-        row=1, column=1,
-        component_type='line',
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='line',
+        row=1, column=1,
+    )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='line',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_stockline():
+    menu_path: str = 'test/stockline-test'
     s.plt.stockline(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/stockline-test',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
+    s.plt.stockline(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/stockline-test',
+        menu_path=menu_path,
         component_type='stockline',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='stockline',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_scatter():
+    menu_path: str = 'test/scatter-test'
     s.plt.scatter(
         data=data,
         x='date', y=['x', 'y'],
-        menu_path='test/scatter-test',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
-    s.plt.delete(
-        menu_path='test/line-test',
-        row=1, column=1,
-        component_type='scatter',
+    s.plt.scatter(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='scatter',
+        row=1, column=1,
+    )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='scatter',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 # TODO WiP
@@ -760,6 +888,7 @@ def test_candlestick():
 
 
 def test_funnel():
+    menu_path = 'test/funnel-test'
     data_ = [
         {
             "value": 60,
@@ -784,18 +913,31 @@ def test_funnel():
     ]
     s.plt.funnel(
         data=data_, name='name', value='value',
-        menu_path='test/funnel-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.funnel(
+        data=data_, name='name', value='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/funnel-test',
-        row=1, column=1,
+        menu_path=menu_path,
         component_type='funnel',
+        row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='funnel',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_heatmap():
+    menu_path: str = 'test/heatmap-test'
     data_ = [
         {
             "xAxis": "Lunes",
@@ -880,17 +1022,31 @@ def test_heatmap():
     ]
     s.plt.heatmap(
         data=data_, x='xAxis', y='yAxis', value='value',
-        menu_path='test/heatmap-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/heatmap-test',
+        menu_path=menu_path,
+        component_type='heatmap',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='heatmap',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_speed_gauge():
+    menu_path: str = 'test/speed-gauge-test'
     data_ = [
         {
             "value": 60,
@@ -899,19 +1055,32 @@ def test_speed_gauge():
     ]
     s.plt.speed_gauge(
         data=data_, name='name', value='value',
-        menu_path='test/speed-gauge-test',
+        menu_path=menu_path,
         row=1, column=1,
         min=0, max=70,
     )
 
+    s.plt.speed_gauge(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/speed-gauge-test',
+        menu_path=menu_path,
         component_type='speed_gauge',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='speed_gauge',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_ring_gauge():
+    menu_path: str = 'test/ring-gauge-test'
     data_ = [
         {
             "value": 60,
@@ -936,19 +1105,31 @@ def test_ring_gauge():
     ]
     s.plt.ring_gauge(
         data=data_, name='name', value='value',
-        menu_path='test/ring-gauge-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.ring_gauge(
+        data=data_, name='name', value='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/ring-gauge-test',
+        menu_path=menu_path,
         component_type='ring_gauge',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='ring_gauge',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
-# TODO WiP
 def test_sunburst():
+    menu_path: str = 'test/sunburst-test'
     data_ = [
         {
             "name": "Root 1",
@@ -1015,17 +1196,32 @@ def test_sunburst():
     s.plt.sunburst(
         data=data_,
         name='xAxis', children='children', value='value',
-        menu_path='test/sunburst-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.sunburst(
+        data=data_,
+        name='xAxis', children='children', value='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/sunburst-test',
+        menu_path=menu_path,
+        component_type='sunburst',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='sunburst',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_tree():
+    menu_path: str = 'test/tree-test'
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -1061,17 +1257,31 @@ def test_tree():
     }]
     s.plt.tree(
         data=data_,
-        menu_path='test/tree-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.tree(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/tree-test',
+        menu_path=menu_path,
+        component_type='tree',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='tree',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_treemap():
+    menu_path: str = 'test/treemap-test'
     data_ = [{
         'name': 'root',
         'value': 35,
@@ -1107,17 +1317,31 @@ def test_treemap():
     }]
     s.plt.treemap(
         data=data_,
-        menu_path='test/treemap-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.treemap(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/treemap-test',
+        menu_path=menu_path,
+        component_type='treemap',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='treemap',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_radar():
+    menu_path: str = 'test/radar-test'
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
         {'name': 'Milk Tea', 'value1': 17, 'value2': 10, 'value3': 63},
@@ -1127,18 +1351,32 @@ def test_radar():
     s.plt.radar(
         data=data_,
         x='name', y=['value1', 'value2', 'value3'],
-        menu_path='test/radar-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.radar(
+        data=data_,
+        x='name', y=['value1', 'value2', 'value3'],
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/radar-test',
+        menu_path=menu_path,
         component_type='radar',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='radar',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_indicator():
+    menu_path: str = 'test/indicator-test'
     data_ = [
         {
             "description": "",
@@ -1165,7 +1403,7 @@ def test_indicator():
     ]
     s.plt.indicator(
         data=data_,
-        menu_path='test/indicator-test',
+        menu_path=menu_path,
         row=1, column=1,
         value='value',
         header='title',
@@ -1174,14 +1412,32 @@ def test_indicator():
         color='color'
     )
 
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color'
+    )
+
     s.plt.delete(
-        menu_path='test/indicator-test',
+        menu_path=menu_path,
         component_type='indicator',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='indicator',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_alert_indicator():
+    menu_path: str = 'test/indicator-path-test'
     data_ = [
         {
             "description": "",
@@ -1200,7 +1456,7 @@ def test_alert_indicator():
     ]
     s.plt.alert_indicator(
         data=data_,
-        menu_path='test/indicator-path-test',
+        menu_path=menu_path,
         row=1, column=1,
         value='value',
         header='title',
@@ -1209,11 +1465,28 @@ def test_alert_indicator():
         target_path='targetPath',
     )
 
-    s.plt.delete(
-        menu_path='test/indicator-test',
-        row=1, column=1,
-        component_type='alert_indicator',
+    s.plt.alert_indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        color='color',
+        target_path='targetPath',
     )
+
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='indicator',
+        row=1, column=1,
+    )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='indicator',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_line_with_confidence_area():
@@ -1222,6 +1495,7 @@ def test_line_with_confidence_area():
 
 
 def test_predictive_line():
+    menu_path: str = 'test/predictive-line-test'
     s.plt.predictive_line(
         data=data,
         x='date', y=['x', 'y'],
@@ -1231,10 +1505,26 @@ def test_predictive_line():
         row=1, column=1,
     )
 
+    s.plt.predictive_line(
+        data=data,
+        x='date', y=['x', 'y'],
+        min_value_mark=dt.date(2021, 1, 4).isoformat(),
+        max_value_mark=dt.date(2021, 1, 5).isoformat(),
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/predictive-line-test',
+        menu_path=menu_path,
+        component_type='predictive_line',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='predictive_line',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_themeriver():
@@ -1330,6 +1620,7 @@ def test_themeriver():
 
 
 def test_sankey():
+    menu_path: str = 'test/sankey-test'
     data_ = [
         {
             "source": "a",
@@ -1365,18 +1656,32 @@ def test_sankey():
     s.plt.sankey(
         data=data_,
         source='source', target='target', value='value',
-        menu_path='test/sankey-test',
+        menu_path=menu_path,
         row=1, column=1,
+    )
+
+    s.plt.sankey(
+        data=data_,
+        source='source', target='target', value='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
     )
 
     s.plt.delete(
-        menu_path='test/sankey-test',
+        menu_path=menu_path,
         component_type='sankey',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='sankey',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_pie():
+    menu_path: str = 'test/pie-test'
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
         {'name': 'Milk Tea', 'value': 17},
@@ -1387,33 +1692,60 @@ def test_pie():
     s.plt.pie(
         data=data_,
         x='name', y='value',
-        menu_path='test/pie-test',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
+    s.plt.pie(
+        data=data_,
+        x='name', y='value',
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/pie-test',
+        menu_path=menu_path,
         component_type='pie',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='pie',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_iframe():
+    menu_path: str = 'test/iframe-test'
     url = 'https://www.marca.com/'
     s.plt.iframe(
         url=url,
-        menu_path='test/iframe-test',
+        menu_path=menu_path,
         row=1, column=1, order=0,
     )
 
+    s.plt.iframe(
+        url=url,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/iframe-test',
+        menu_path=menu_path,
         component_type='iframe',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='iframe',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_html():
+    menu_path: str = 'test/html-test'
     html = (
         "<p style='background-color: #daf4f0';>"
         "Comparing the results of predictions that happened previous "
@@ -1422,15 +1754,27 @@ def test_html():
     )
     s.plt.html(
         html=html,
-        menu_path='test/html-test',
+        menu_path=menu_path,
         row=1, column=1,
     )
 
+    s.plt.html(
+        html=html,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+    )
+
     s.plt.delete(
-        menu_path='test/html-test',
+        menu_path=menu_path,
         component_type='html',
         row=1, column=1,
     )
+    s.plt.delete(
+        menu_path=menu_path,
+        component_type='html',
+        order=1
+    )
+    s.plt.delete_path(menu_path)
 
 
 def test_cohorts():
@@ -1463,7 +1807,6 @@ test_delete()
 test_indicator()
 test_alert_indicator()
 test_set_path_orders()
-test_update()
 # test_set_new_business()
 
 test_zero_centered_barchart()

@@ -26,7 +26,7 @@ s = shimoku.Client(
     environment=environment,
 )
 s.plt.set_business(business_id=business_id)
-delete_paths: bool = True
+delete_paths: bool = False
 
 
 data = [
@@ -647,14 +647,14 @@ def test_zero_centered_barchart():
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x='y', y=['Name'],
+        x='Name', y=['y'],
         menu_path=menu_path,
         row=1, column=1,
     )
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x='y', y=['Name'],
+        x='Name', y=['y'],
         menu_path=menu_path,
         order=1, rows_size=2, cols_size=12,
     )
@@ -1802,27 +1802,29 @@ def test_cohorts():
 
 
 print(f'Start time {dt.datetime.now()}')
-test_bar_with_filters()
-test_bar()
-test_radar()
-test_ring_gauge()
+if delete_paths:
+    s.plt.delete_path('test')
+test_zero_centered_barchart()
 test_indicator()
 test_alert_indicator()
+test_stockline()
+test_radar()
+test_pie()
+test_ux()
+test_bar_with_filters()
+test_bar()
+test_ring_gauge()
 test_sunburst()
 test_tree()
 test_treemap()
-test_ux()
 test_heatmap()
 test_sankey()
-test_pie()
 test_horizontal_barchart()
 test_predictive_line()
 test_speed_gauge()
-test_zero_centered_barchart()
 test_line()
 test_scatter()
 test_funnel()
-test_stockline()
 test_delete_path()
 test_delete()
 test_append_data_to_trend_chart()

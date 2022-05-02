@@ -1716,7 +1716,7 @@ class PlotApi(PlotAux):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=[],
+            data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
@@ -1800,6 +1800,10 @@ class PlotApi(PlotAux):
         :param menu_path:
         :param row:
         :param column:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
         :param target_path:
         :param set_title: the title of the set of indicators
         :param header:
@@ -1807,6 +1811,7 @@ class PlotApi(PlotAux):
         :param color:
         :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
+        :param real_time:
         """
         mandatory_elements: List[str] = [
             header, value, target_path,
@@ -1869,7 +1874,7 @@ class PlotApi(PlotAux):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=[],
+            data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
@@ -1934,7 +1939,7 @@ class PlotApi(PlotAux):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=[],
+            data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
@@ -1977,7 +1982,7 @@ class PlotApi(PlotAux):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=[],
+            data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,

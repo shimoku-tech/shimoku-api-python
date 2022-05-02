@@ -525,9 +525,9 @@ class CreateExplorerAPI(object):
         if app_metadata:
             hide_title: bool = app_metadata.get('hideTitle')
             if hide_title:
-                item['hideTitle'] = True
+                item['hideTitle'] = 'true' if hide_title else 'false'
             else:
-                item['hideTitle'] = False
+                item['hideTitle'] = 'true'
 
             # These are the optional fields (previous were the mandatory ones)
             allowed_columns: List[str] = [
@@ -538,6 +538,8 @@ class CreateExplorerAPI(object):
             assert all([key in allowed_columns for key in app_metadata.keys()])
             # Update items with kwargs
             item.update(app_metadata)
+        else:
+            item['hideTitle'] = 'true'
 
         return self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},

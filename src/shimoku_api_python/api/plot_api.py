@@ -271,7 +271,7 @@ class PlotApi(PlotAux):
         if order is not None:  # elif order fails when order = 0!
             kwargs = {'order': order}
         elif report_metadata.get('grid'):
-            kwargs = {'grid': report_metadata.get('grid')}
+            kwargs = {'grid': report_metadata.get('grid'), 'order': 0}
         else:
             raise ValueError(
                 'Row and Column or Order must be specified to overwrite a report'

@@ -444,6 +444,20 @@ def test_table():
 
     s.plt.table(
         data=data_,
+        menu_path='test/table-test',
+        order=1, rows_size=2, cols_size=6,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+    )
+
+    s.plt.delete(
+        menu_path='test/table-test',
+        component_type='table',
+        row=1, column=1,
+    )
+
+    s.plt.table(
+        data=data_,
         menu_path='test/sorted-table-test',
         row=1, column=1,
         filter_columns=filter_columns,
@@ -469,17 +483,6 @@ def test_table():
         row=1, column=1,
     )
 
-    s.plt.table(
-        data=data_,
-        menu_path='test/table-test',
-        order=1, rows_size=2, cols_size=6,
-    )
-
-    s.plt.delete(
-        menu_path='test/table-test',
-        component_type='table',
-        row=1, column=1,
-    )
     s.plt.delete_path('test/table-test')
     s.plt.delete_path('test/sorted-table-test')
 
@@ -1775,34 +1778,33 @@ def test_cohorts():
 
 
 print(f'Start time {dt.datetime.now()}')
-# TODO descomentar!!
-# test_bar_with_filters()
-# # test_bar()
-# test_radar()
-# test_ring_gauge()
-# test_indicator()
-# test_alert_indicator()
-# test_sunburst()
-# test_tree()
-# test_treemap()
-# test_ux()
-# test_heatmap()
-# test_sankey()
-# test_pie()
-# test_horizontal_barchart()
-# test_predictive_line()
-# test_speed_gauge()
-# # test_zero_centered_barchart()
-# test_line()
-# # test_scatter()
-# test_funnel()
-# test_stockline()
-# test_delete_path()
-# test_delete()
+test_bar_with_filters()
+test_bar()
+test_radar()
+test_ring_gauge()
+test_indicator()
+test_alert_indicator()
+test_sunburst()
+test_tree()
+test_treemap()
+test_ux()
+test_heatmap()
+test_sankey()
+test_pie()
+test_horizontal_barchart()
+test_predictive_line()
+test_speed_gauge()
+test_zero_centered_barchart()
+test_line()
+test_scatter()
+test_funnel()
+test_stockline()
+test_delete_path()
+test_delete()
 test_append_data_to_trend_chart()
-test_table()
 test_iframe()
 test_html()
+test_table()
 # TODO descomentar despues del refactor
 # test_set_path_orders()
 # test_set_new_business()

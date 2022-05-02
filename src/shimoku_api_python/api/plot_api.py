@@ -1107,7 +1107,7 @@ class PlotApi(PlotAux):
             report_metadata['grid']: str = f'{row}, {column}'
 
         if overwrite:
-            if not row or not column or not order:
+            if not row and not column and not order:
                 raise ValueError(
                     'Row, Column or Order must be specified to overwrite a report'
                 )
@@ -1159,6 +1159,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[str] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
@@ -1180,6 +1181,7 @@ class PlotApi(PlotAux):
             self, menu_path: str, url: str,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
     ):

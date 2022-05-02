@@ -26,6 +26,7 @@ s = shimoku.Client(
     environment=environment,
 )
 s.plt.set_business(business_id=business_id)
+delete_paths: bool = True
 
 
 data = [
@@ -450,12 +451,6 @@ def test_table():
         sort_table_by_col={'date': 'asc'},
     )
 
-    s.plt.delete(
-        menu_path='test/table-test',
-        component_type='table',
-        row=1, column=1,
-    )
-
     s.plt.table(
         data=data_,
         menu_path='test/sorted-table-test',
@@ -464,12 +459,6 @@ def test_table():
         sort_table_by_col={'date': 'asc'},
     )
 
-    s.plt.delete(
-        menu_path='test/sorted-table-test',
-        component_type='table',
-        row=1, column=1,
-    )
-
     s.plt.table(
         data=data_,
         menu_path='test/table-test',
@@ -477,14 +466,27 @@ def test_table():
         filter_columns=filter_columns,
     )
 
-    s.plt.delete(
-        menu_path='test/table-test',
-        component_type='table',
-        row=1, column=1,
-    )
+    if delete_paths:
+        s.plt.delete(
+            menu_path='test/table-test',
+            component_type='table',
+            row=1, column=1,
+        )
 
-    s.plt.delete_path('test/table-test')
-    s.plt.delete_path('test/sorted-table-test')
+        s.plt.delete(
+            menu_path='test/sorted-table-test',
+            component_type='table',
+            row=1, column=1,
+        )
+
+        s.plt.delete(
+            menu_path='test/table-test',
+            component_type='table',
+            row=1, column=1,
+        )
+
+        s.plt.delete_path('test/table-test')
+        s.plt.delete_path('test/sorted-table-test')
 
 
 def test_bar_with_filters():
@@ -567,8 +569,9 @@ def test_bar_with_filters():
         filters=filters,
     )
 
-    s.plt.delete_path(menu_path)
-    s.plt.delete_path(menu_path=f'{menu_path}-bysize')
+    if delete_paths:
+        s.plt.delete_path(menu_path)
+        s.plt.delete_path(menu_path=f'{menu_path}-bysize')
 
 
 def test_bar():
@@ -628,7 +631,8 @@ def test_bar():
         padding="2, 2, 2, 2"
     )
 
-    s.plt.delete_path(menu_path=menu_path)
+    if delete_paths:
+        s.plt.delete_path(menu_path=menu_path)
 
 
 def test_zero_centered_barchart():
@@ -655,17 +659,18 @@ def test_zero_centered_barchart():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='zero_centered_barchart',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='zero_centered_barchart',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='zero_centered_barchart',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='zero_centered_barchart',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_horizontal_barchart():
@@ -693,17 +698,18 @@ def test_horizontal_barchart():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='horizontal_barchart',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='horizontal_barchart',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='horizontal_barchart',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='horizontal_barchart',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_line():
@@ -723,17 +729,18 @@ def test_line():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='line',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='line',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='line',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='line',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_stockline():
@@ -753,17 +760,18 @@ def test_stockline():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='stockline',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='stockline',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='stockline',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='stockline',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_scatter():
@@ -783,17 +791,18 @@ def test_scatter():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='scatter',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='scatter',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='scatter',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='scatter',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_candlestick():
@@ -907,17 +916,18 @@ def test_funnel():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='funnel',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='funnel',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='funnel',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='funnel',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_heatmap():
@@ -1017,17 +1027,18 @@ def test_heatmap():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='heatmap',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='heatmap',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_speed_gauge():
@@ -1052,17 +1063,18 @@ def test_speed_gauge():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='speed_gauge',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='speed_gauge',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='speed_gauge',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='speed_gauge',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_ring_gauge():
@@ -1102,17 +1114,18 @@ def test_ring_gauge():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='ring_gauge',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='ring_gauge',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='ring_gauge',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='ring_gauge',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_sunburst():
@@ -1195,17 +1208,18 @@ def test_sunburst():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='sunburst',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='sunburst',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='sunburst',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='sunburst',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_tree():
@@ -1256,17 +1270,18 @@ def test_tree():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='tree',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='tree',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='tree',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='tree',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_treemap():
@@ -1317,17 +1332,18 @@ def test_treemap():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='treemap',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='treemap',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='treemap',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='treemap',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_radar():
@@ -1353,17 +1369,18 @@ def test_radar():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='radar',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='radar',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='radar',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='radar',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_indicator():
@@ -1415,17 +1432,18 @@ def test_indicator():
         color='color'
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='indicator',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='indicator',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_alert_indicator():
@@ -1469,17 +1487,18 @@ def test_alert_indicator():
         target_path='targetPath',
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='indicator',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='indicator',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_predictive_line():
@@ -1503,17 +1522,18 @@ def test_predictive_line():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='predictive_line',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='predictive_line',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='predictive_line',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='predictive_line',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_themeriver():
@@ -1658,17 +1678,18 @@ def test_sankey():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='sankey',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='sankey',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='sankey',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='sankey',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_pie():
@@ -1695,17 +1716,18 @@ def test_pie():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='pie',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='pie',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='pie',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='pie',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_iframe():
@@ -1724,17 +1746,18 @@ def test_iframe():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='iframe',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='iframe',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='iframe',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='iframe',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_html():
@@ -1758,17 +1781,18 @@ def test_html():
         order=1, rows_size=2, cols_size=12,
     )
 
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='html',
-        row=1, column=1,
-    )
-    s.plt.delete(
-        menu_path=menu_path,
-        component_type='html',
-        order=1
-    )
-    s.plt.delete_path(menu_path)
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='html',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='html',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
 
 
 def test_cohorts():

@@ -793,12 +793,20 @@ class PlotApi(PlotAux):
 
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
-        target_reports: List[Dict] = (
-            self._find_target_reports(
-                menu_path=menu_path, grid=f'{row}, {column}',
-                order=order, component_type=component_type,
+        if row and column:
+            target_reports: List[Dict] = (
+                self._find_target_reports(
+                    menu_path=menu_path, grid=f'{row}, {column}',
+                    component_type=component_type,
+                )
             )
-        )
+        else:
+            target_reports: List[Dict] = (
+                self._find_target_reports(
+                    menu_path=menu_path, order=order,
+                    component_type=component_type,
+                )
+            )
 
         # TODO for multifilter we will need to iterate on this
         assert len(target_reports) == 1

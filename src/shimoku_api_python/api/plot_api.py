@@ -1885,6 +1885,7 @@ class PlotApi(PlotAux):
         return self.indicator(
             data=data, value=value,
             menu_path=menu_path, row=row, column=column,
+            order=order, cols_size=cols_size, rows_size=rows_size, padding=padding,
             target_path=target_path,
             set_title=set_title,
             header=header,

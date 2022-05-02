@@ -75,17 +75,10 @@ class PlotAux:
     _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
-class PlotApi(PlotAux):
-    """
-    """
+class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
-
-        if kwargs.get('business_id'):
-            self.business_id: Optional[str] = kwargs['business_id']
-        else:
-            self.business_id: Optional[str] = None
 
     @staticmethod
     def _validate_filters(filters: Dict) -> None:
@@ -728,7 +721,6 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    # TODO to be tried
     def set_path_orders(
             self, app_name: str, path_order: Dict[str, int],
     ) -> None:
@@ -900,6 +892,34 @@ class PlotApi(PlotAux):
                     business_id=self.business_id,
                     app_id=app_id,
                 )
+
+    def free_echarts(
+            self, data: Union[str, DataFrame, List[Dict]],
+            options: Dict, menu_path: str,
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            overwrite: bool = True,
+    ):
+        """"""
+        return self._create_chart(
+            data=data,
+            report_metadata={'options': options},  # TODO
+            menu_path=menu_path, overwrite=overwrite,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+        )
+
+
+class PlotApi(BasePlot):
+    """
+    """
+
+    def __init__(self, api_client, **kwargs):
+        self.api_client = api_client
+
+        if kwargs.get('business_id'):
+            self.business_id: Optional[str] = kwargs['business_id']
+        else:
+            self.business_id: Optional[str] = None
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -2548,6 +2568,3 @@ class PlotApi(PlotAux):
             echart_type='themeriver',
             filters=filters,
         )
-
-    def stacked_barchart(self):
-        raise NotImplementedError

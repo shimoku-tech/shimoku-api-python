@@ -1801,9 +1801,62 @@ def test_cohorts():
     raise NotImplementedError
 
 
+def test_free_echarts():
+    # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
+    options = {
+        'title': {
+            'left': 'center',
+            'text': 'Large Ara Chart'
+        },
+        'toolbox': {
+            'feature': {
+                'dataZoom': {'yAxisIndex': None},
+              'restore': {},
+              'saveAsImage': {}
+            }
+        },
+        'xAxis': {
+            'type': 'time',
+            'boundaryGap': False
+        },
+        'yAxis': {
+            'type': 'value',
+            'boundaryGap': ['0', '100%']
+        },
+        'dataZoom': [
+            {
+                'type': 'inside',
+                'start': 0,
+                'end': 20
+            },
+            {
+                'start': 0,
+                'end': 20
+            }
+        ],
+        'series': [
+            {
+              'name': 'Fake Data',
+              'type': 'line',
+              'smooth': True,
+              'symbol': None,
+              'areaStyle': {},
+            }
+        ]
+    }
+    s.plt.free_echarts(
+        data=data,
+        options=options,
+        menu_path='test/free-echarts',
+        order=0, rows_size=2, cols_size=12,
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
+
+test_free_echarts()
 test_zero_centered_barchart()
 test_indicator()
 test_alert_indicator()

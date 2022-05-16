@@ -5,11 +5,10 @@ import logging
 import json
 from itertools import product
 
-import datetime as dt
-
 import pandas as pd
 from pandas import DataFrame
 
+from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
@@ -17,6 +16,7 @@ from .explorer_api import (
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -49,6 +49,7 @@ class PlotAux:
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
     _create_report = CreateExplorerAPI.create_report
@@ -140,12 +141,11 @@ class PlotApi(PlotAux):
                 'Row and Column or Order must be specified'
             )
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = self._get_app_by_type(
+        app: Dict = self._get_app_by_name(
             business_id=self.business_id,
-            app_type_id=app_type['id']
+            name=name,
         )
         app_id: str = app['id']
 
@@ -215,8 +215,8 @@ class PlotApi(PlotAux):
             return order_temp + 1
 
     def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
-        """Break the menu path in the app type normalized name
-        and the path normalized name if any"""
+        """Break the menu path in the apptype or app normalizedName
+        and the path normalizedName if any"""
         # remove empty spaces
         menu_path: str = menu_path.strip()
         # replace "_" for www protocol it is not good
@@ -256,7 +256,6 @@ class PlotApi(PlotAux):
             padding: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
-            by_app_type: bool = False,
     ) -> str:
         """
         :param data:
@@ -278,17 +277,17 @@ class PlotApi(PlotAux):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        if by_app_type:
+        try:
             d: Dict[str, Dict] = self._create_app_type_and_app(
                 business_id=self.business_id,
                 app_type_metadata={'name': name},
                 app_metadata={},
             )
             app: Dict = d['app']
-        else:  # by App
-            app: Dict[str, Dict] = self._create_app(
+        except ApiClientError:  # Business admin user
+            app: Dict = self._create_app(
                 business_id=self.business_id,
-                app_metadata={'name': name},
+                app_name=name,
             )
 
         app_id: str = app['id']
@@ -738,7 +737,6 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    # TODO to be tried
     def set_path_orders(
             self, app_name: str, path_order: Dict[str, int],
     ) -> None:
@@ -746,36 +744,29 @@ class PlotApi(PlotAux):
         :param app_name: the App name
         :param path_order: example {'test': 0, 'more-test': 1}
         """
-        apps: List[Dict] = self._get_business_apps(self.business_id)
-        app_types: List[Dict] = self.get_universe_app_types()
-        for app in apps:
-            app_id: str = app['id']
-            app_type_id: str = app['type']['id']
+        app: Dict = self._get_app_by_name(
+            business_id=self.business_id,
+            name=app_name,
+        )
+        app_id = app['id']
 
-            # Check that it is of the target app_name
-            if not any([
-                True
-                if app_type['id'] == app_type_id and app_type['name'] == app_name
-                else False
-                for app_type in app_types
-            ]):
-                continue
+        reports = self._get_app_reports(
+            business_id=self.business_id,
+            app_id=app_id,
+        )
 
-            reports = self._get_app_reports(
-                business_id=self.business_id,
-                app_id=app_id,
-            )
-
-            for report in reports:
-                path: str = report['path']
-                order: int = path_order.get(path)
-                if order:
-                    self.update_report(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                        report_id=report['id'],
-                        report_metadata={'order': order},
-                    )
+        for report in reports:
+            path: str = report['path']
+            # TODO we need to use something else besides `order`
+            order: int = path_order.get(path)
+            if order:
+                self.update_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report['id'],
+                    # TODO this needs to be replaced
+                    report_metadata={'order': order},
+                )
 
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -873,12 +864,10 @@ class PlotApi(PlotAux):
         If menu_path contains an "{App}/{Path}" then it removes the path
         otherwise it removes the whole app
         """
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
-
-        app: Dict = self._get_app_by_type(
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app: Dict = self._get_app_by_name(
             business_id=self.business_id,
-            app_type_id=app_type['id']
+            name=name,
         )
         if not app:
             return
@@ -1093,13 +1082,19 @@ class PlotApi(PlotAux):
         extra_map: Dict[str, str] = _calculate_table_extra_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        d: Dict[str, Dict] = self._create_app_type_and_app(
-            business_id=self.business_id,
-            app_type_metadata={'name': app_type_name},
-            app_metadata={},
-        )
-        app: Dict = d['app']
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+        try:
+            d: Dict[str, Dict] = self._create_app_type_and_app(
+                business_id=self.business_id,
+                app_type_metadata={'name': name},
+                app_metadata={},
+            )
+            app: Dict = d['app']
+        except ApiClientError:  # Business admin user
+            app: Dict = self._create_app(
+                business_id=self.business_id,
+                app_name=name,
+            )
         app_id: str = app['id']
 
         order: int = self._get_component_order(

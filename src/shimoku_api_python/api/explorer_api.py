@@ -1,6 +1,6 @@
 """"""
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -235,7 +235,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             app_types: List[Dict] = [
                 app_type
                 for app_type in app_types
-                if app_type['normalizedName'] == app_type_name
+                if app_type['normalizedName'] == normalized_name
             ]
 
         if not app_types:
@@ -273,6 +273,33 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )
         return [app['id'] for app in apps]
+
+    def find_app_by_name_filter(
+        self, business_id: str, name: Optional[str] = None,
+        normalized_name: Optional[str] = None,
+    ) -> Dict:
+        """"""
+        apps_list: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        if name:
+            apps: List[Dict] = [
+                app
+                for app in apps_list
+                if app['name'] == name
+            ]
+        elif normalized_name:
+            apps: List[Dict] = [
+                app
+                for app in apps_list
+                if app['normalizedName'] == normalized_name
+            ]
+
+        if not apps:
+            return {}
+
+        assert len(apps) == 1
+        apps: Dict = apps[0]
+        return apps
 
     def get_app_path_names(self, business_id: str, app_id: str) -> List[str]:
         """Given a Path that belongs to an AppId retrieve all reportId
@@ -431,12 +458,10 @@ class CascadeExplorerAPI(GetExplorerAPI):
         else:
             return {}
 
-    def get_app_by_name(
-        self, business_id: str, name: str,
-    ) -> Dict:
+    def get_app_by_name(self, business_id: str, name: str) -> Dict:
         """
         :param business_id: business UUID
-        :param app_type_id: appType UUID
+        :param name: app or apptype name
         """
         apps: List[Dict] = self.get_business_apps(business_id=business_id)
 
@@ -444,18 +469,36 @@ class CascadeExplorerAPI(GetExplorerAPI):
         # could have several reports with the same name
         result: Any = {}
         for app in apps:
-            app_type: Dict = self.get_app_type(
-                # business_id=business_id,
-                app_type_id=app['type']['id'],
-            )
-            if app_type['normalizedName'] == name:
-                if result:
-                    if len(result) == 1:
-                        result: List[Dict] = result + [app]
-                    else:
-                        result: List[Dict] = result + [app]
+            # if App name does not match check the AppType,
+            # if it does not match the AppType Name then pass to the following App
+            if app.get('name'):
+                if not app['name'] == name:
+                    continue
+            else:
+                if not app.get('type'):
+                    continue
+                try:
+                    app_type: Dict = self.get_app_type(
+                        app_type_id=app['type']['id'],
+                    )
+                except ApiClientError:  # Business admin user
+                    continue
+
+                if (
+                    not app_type['normalizedName'] == name
+                    and
+                    not app_type['name'] == name
+                ):
+                    continue
+
+            if result:
+                if len(result) == 1:
+                    result: List[Dict] = result + [app]
                 else:
-                    result: List[Dict] = [app]
+                    result: List[Dict] = result + [app]
+            else:
+                result: List[Dict] = [app]
+
         if result:
             assert len(result) == 1
             return result[0]
@@ -510,17 +553,23 @@ class CreateExplorerAPI(object):
 
     def create_app(
         self, business_id: str,
-        app_type_id: Optional[str],
+        app_name: Optional[str] = None,
+        app_type_id: Optional[str] = None,
         app_metadata: Optional[Dict] = None,
     ) -> Dict:
         """
         """
         endpoint: str = f'business/{business_id}/app'
+        item: Dict = {}
 
-        item: Dict = {  # These are the mandatory fields
-            # 'appBusinessId': business_id,  # Not necessary its taken from the URL
-            'appTypeId': app_type_id,
-        }
+        if not app_type_id and not app_name:
+            raise ValueError('Either the AppType must be provided or an app.name')
+
+        if app_type_id:
+            item['appTypeId'] = app_type_id
+
+        if app_name:
+            item['name'] = app_name
 
         if app_metadata:
             hide_title: bool = app_metadata.get('hideTitle')
@@ -1303,6 +1352,7 @@ class AppExplorerApi:
 
     _get_business_apps = CascadeExplorerAPI.get_business_apps
     get_business_apps = CascadeExplorerAPI.get_business_apps
+    find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
     get_app_reports = CascadeExplorerAPI.get_app_reports
     get_app_report_ids = CascadeExplorerAPI.get_app_report_ids
     get_app_path_names = CascadeExplorerAPI.get_app_path_names

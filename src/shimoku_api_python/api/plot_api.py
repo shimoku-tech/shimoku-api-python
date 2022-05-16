@@ -285,10 +285,12 @@ class PlotApi(PlotAux):
             )
             app: Dict = d['app']
         except ApiClientError:  # Business admin user
-            app: Dict = self._create_app(
-                business_id=self.business_id,
-                app_name=name,
-            )
+            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
+            if not app:
+                app: Dict = self._create_app(
+                    business_id=self.business_id,
+                    app_name=name,
+                )
 
         app_id: str = app['id']
 
@@ -1091,10 +1093,13 @@ class PlotApi(PlotAux):
             )
             app: Dict = d['app']
         except ApiClientError:  # Business admin user
-            app: Dict = self._create_app(
-                business_id=self.business_id,
-                app_name=name,
-            )
+            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
+            if not app:
+                app: Dict = self._create_app(
+                    business_id=self.business_id,
+                    app_name=name,
+                )
+
         app_id: str = app['id']
 
         order: int = self._get_component_order(

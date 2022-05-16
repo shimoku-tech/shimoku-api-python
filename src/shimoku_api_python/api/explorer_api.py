@@ -274,6 +274,33 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [app['id'] for app in apps]
 
+    def find_app_by_name_filter(
+        self, business_id: str, name: Optional[str] = None,
+        normalized_name: Optional[str] = None,
+    ) -> Dict:
+        """"""
+        apps_list: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        if name:
+            apps: List[Dict] = [
+                app
+                for app in apps_list
+                if app['name'] == name
+            ]
+        elif normalized_name:
+            apps: List[Dict] = [
+                app
+                for app in apps_list
+                if app['normalizedName'] == normalized_name
+            ]
+
+        if not apps:
+            return {}
+
+        assert len(apps) == 1
+        apps: Dict = apps[0]
+        return apps
+
     def get_app_path_names(self, business_id: str, app_id: str) -> List[str]:
         """Given a Path that belongs to an AppId retrieve all reportId
 
@@ -1303,6 +1330,7 @@ class AppExplorerApi:
 
     _get_business_apps = CascadeExplorerAPI.get_business_apps
     get_business_apps = CascadeExplorerAPI.get_business_apps
+    find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
     get_app_reports = CascadeExplorerAPI.get_app_reports
     get_app_report_ids = CascadeExplorerAPI.get_app_report_ids
     get_app_path_names = CascadeExplorerAPI.get_app_path_names

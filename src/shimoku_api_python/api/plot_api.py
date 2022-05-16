@@ -40,6 +40,7 @@ class PlotAux:
     update_report = ReportExplorerApi.update_report
     get_report_data = ReportExplorerApi.get_report_data
 
+    _find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
@@ -230,10 +231,10 @@ class PlotApi(PlotAux):
                 f'{"/".join(menu_path.split("/")[:1])}'
             )
 
-        # Split AppType Normalized Name
-        app_type_normalized_name: str = menu_path.split('/')[0]
-        app_type_name: str = (
-            ' '.join(app_type_normalized_name.split('-'))
+        # Split AppType or App Normalized Name
+        normalized_name: str = menu_path.split('/')[0]
+        name: str = (
+            ' '.join(normalized_name.split('-'))
         )
 
         try:
@@ -244,7 +245,7 @@ class PlotApi(PlotAux):
         except IndexError:
             path_name = None
 
-        return app_type_name, path_name
+        return name, path_name
 
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -255,6 +256,7 @@ class PlotApi(PlotAux):
             padding: Optional[int] = None,
             overwrite: bool = True,
             real_time: bool = False,
+            by_app_type: bool = False,
     ) -> str:
         """
         :param data:
@@ -274,13 +276,21 @@ class PlotApi(PlotAux):
         if padding:
             report_metadata['sizePadding'] = padding
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        d: Dict[str, Dict] = self._create_app_type_and_app(
-            business_id=self.business_id,
-            app_type_metadata={'name': app_type_name},
-            app_metadata={},
-        )
-        app: Dict = d['app']
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+
+        if by_app_type:
+            d: Dict[str, Dict] = self._create_app_type_and_app(
+                business_id=self.business_id,
+                app_type_metadata={'name': name},
+                app_metadata={},
+            )
+            app: Dict = d['app']
+        else:  # by App
+            app: Dict[str, Dict] = self._create_app(
+                business_id=self.business_id,
+                app_metadata={'name': name},
+            )
+
         app_id: str = app['id']
 
         if order is not None:  # elif order fails when order = 0!

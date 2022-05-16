@@ -345,6 +345,7 @@ class BasePlot(PlotAux):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             overwrite: bool = True,
+            report_metadata: Optional[Dict] = None
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -431,11 +432,19 @@ class BasePlot(PlotAux):
         )
         data_fields['type'] = echart_type
 
-        report_metadata: Dict = {
-            'reportType': 'ECHARTS',
-            'dataFields': data_fields,
-            'title': title,
-        }
+        if report_metadata:
+            if not report_metadata.get('reportType'):
+                report_metadata['reportType'] = 'ECHARTS'
+            if not report_metadata.get('reportType'):
+                report_metadata['dataFields'] = data_fields
+            if not report_metadata.get('title'):
+                report_metadata['title'] = 'title'
+        else:
+            report_metadata: Dict = {
+                'reportType': 'ECHARTS',
+                'dataFields': data_fields,
+                'title': title,
+            }
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -913,11 +922,15 @@ class BasePlot(PlotAux):
         :param overwrite:
         :param filters:
         """
+        report_metadata: Dict = {
+            'reportType': 'ECHARTS2',
+            'options': options,
+        }
         return self._create_trend_charts(
             data=data,
             filters=filters,
             **dict(
-                report_metadata=options,
+                report_metadata=report_metadata,
                 menu_path=menu_path, overwrite=overwrite,
                 order=order, rows_size=rows_size, cols_size=cols_size,
                 padding=padding,

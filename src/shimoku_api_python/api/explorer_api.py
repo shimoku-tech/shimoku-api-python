@@ -1,6 +1,6 @@
 """"""
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 import json
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -543,31 +543,6 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
-    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
-        """Create AppType and App if required and return the App component
-        """
-        try:
-            app_type: Dict = self._create_app_type(name=app_type_name)
-        except ValueError:  # It already exists then
-            app_type: Dict = (
-                self._find_app_type_by_name_filter(name=app_type_name)
-            )
-
-        app_type_id: str = app_type['id']
-        apps: Dict = self._get_business_apps(business_id=self.business_id)
-        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
-
-        if not apps:
-            app: Dict = (
-                self._create_app(
-                    business_id=self.business_id,
-                    app_type_id=app_type_id,
-                )
-            )
-        else:
-            app: Dict = target_apps[0]
-        return app
-
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
         real_time: bool = False,
@@ -577,6 +552,7 @@ class CreateExplorerAPI(object):
         :param business_id:
         :param app_id:
         :param report_metadata: A dict with all the values required to create a report
+        :param real_time: Whether it is real time or not
         """
         def append_fields(item: Dict, field_name: str) -> Dict:
             """Equivalent to
@@ -636,6 +612,81 @@ class CreateExplorerAPI(object):
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
 
+    def create_dataset(self, business_id: str) -> Dict:
+        """Create new DataSet associated to a business
+
+        :param business_id:
+        :param items:
+        """
+        endpoint: str = f'business/{business_id}/dataSet'
+
+        # TODO
+        item: Dict = {
+            'reportId': report_id,
+            'key': key,
+            'normalizedName': normalized_name,
+        }
+
+        return self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_report_dataset(
+            self, business_id: str, app_id: str, report_id: str, dataset_id: str,
+    ) -> Dict:
+        """Create new reportEntry associated to a Report
+
+        :param business_id:
+        :param app_id:
+        :param report_id:
+        :param dataset_id:
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'reportDataSet'
+        )
+
+        # TODO
+        item: Dict = {
+            'reportId': report_id,
+            'key': key,
+            'normalizedName': normalized_name,
+        }
+
+        return self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_data_points(
+            self, business_id: str, dataset_id: str,
+            items: List[Dict],
+    ) -> List[Dict]:
+        """Create new row in Data
+
+        :param business_id:
+        :param dataset_id:
+        :param items:
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'dataSet/{dataset_id}/'
+            f'data'
+        )
+
+        data: List[Dict] = []
+        for item in items:
+            datum: Dict = (
+                self.api_client.query_element(
+                    method='POST', endpoint=endpoint,
+                    **{'body_params': item},
+                )
+            )
+            data = data + [datum]
+
+        return data
+
     def _create_report_entries(
         self, business_id: str, app_id: str, report_id: str,
         items: List[Dict],
@@ -665,6 +716,79 @@ class CreateExplorerAPI(object):
             report_entries = report_entries + [report_entry]
 
         return report_entries
+
+
+class CascadeCreateExplorerAPI(CreateExplorerAPI):
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
+        """Create AppType and App if required and return the App component
+        """
+        try:
+            app_type: Dict = self._create_app_type(name=app_type_name)
+        except ValueError:  # It already exists then
+            app_type: Dict = (
+                self._find_app_type_by_name_filter(name=app_type_name)
+            )
+
+        app_type_id: str = app_type['id']
+        apps: Dict = self._get_business_apps(business_id=self.business_id)
+        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
+
+        if not apps:
+            app: Dict = (
+                self._create_app(
+                    business_id=self.business_id,
+                    app_type_id=app_type_id,
+                )
+            )
+        else:
+            app: Dict = target_apps[0]
+        return app
+
+    def create_report_and_dataset(
+        self, business_id: str, app_id: str,
+        report_metadata: Dict,
+        items: List[Dict],
+        real_time: bool = False,
+    ) -> Dict[str, Union[Dict, List[Dict]]]:
+        """
+        1. Create a report
+        2. Create a dataset
+        3. Create data associated to a dataset
+        4. Associate dataset and report through reportDataSet
+        """
+        report: Dict = self.create_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+            real_time=real_time,
+        )
+
+        dataset: Dict = self.create_dataset(business_id=business_id)
+        dataset_id: str = dataset['id']
+
+        report_dataset: Dict = self.create_report_dataset(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report['id'],
+            dataset_id=dataset_id
+        )
+
+        data: List[Dict] = self.create_data_points(
+            business_id=business_id,
+            dataset_id=dataset_id,
+            items=items,
+        )
+
+        return {
+            'report': report,
+            'dataset': dataset,
+            'report_dataset': report_dataset,
+            'data': data,
+        }
 
 
 class UpdateExplorerAPI(CascadeExplorerAPI):

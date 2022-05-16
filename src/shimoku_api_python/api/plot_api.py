@@ -811,7 +811,6 @@ class BasePlot(PlotAux):
                 report_data=df,
             )
 
-    # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
             self, menu_path: str,
             grid: Optional[str] = None,
@@ -896,16 +895,33 @@ class BasePlot(PlotAux):
     def free_echarts(
             self, data: Union[str, DataFrame, List[Dict]],
             options: Dict, menu_path: str,
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: int = 12,
             padding: Optional[List[int]] = None,
             overwrite: bool = True,
+            filters: Optional[Dict] = None,
     ):
-        """"""
-        return self._create_chart(
+        """
+        :param data:
+        :param options: eCharts options of the type {'options': options}
+        :param menu_path:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
+        :param overwrite:
+        :param filters:
+        """
+        return self._create_trend_charts(
             data=data,
-            report_metadata={'options': options},  # TODO
-            menu_path=menu_path, overwrite=overwrite,
-            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            filters=filters,
+            **dict(
+                report_metadata=options,
+                menu_path=menu_path, overwrite=overwrite,
+                order=order, rows_size=rows_size, cols_size=cols_size,
+                padding=padding,
+            ),
         )
 
 

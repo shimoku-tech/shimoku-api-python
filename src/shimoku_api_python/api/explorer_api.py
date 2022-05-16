@@ -1,6 +1,6 @@
 """"""
 
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -235,7 +235,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             app_types: List[Dict] = [
                 app_type
                 for app_type in app_types
-                if app_type['normalizedName'] == app_type_name
+                if app_type['normalizedName'] == name
             ]
 
         if not app_types:
@@ -448,7 +448,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 # business_id=business_id,
                 app_type_id=app['type']['id'],
             )
-            if app_type['normalizedName'] == name:
+            if app_type['normalizedName'] == name or app_type['name'] == name:
                 if result:
                     if len(result) == 1:
                         result: List[Dict] = result + [app]

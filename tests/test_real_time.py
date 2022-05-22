@@ -24,11 +24,12 @@ s.plt.set_business(business_id=business_id)
 
 # disappear = s.plt.delete_path(menu_path='realtime-test')
 
+
 def test_real_time_feed():
 
     from time import sleep
 
-    menu_path: str = 'realtime-test'
+    menu_path: str = 'Realtime test'
 
     data_ = [
         {
@@ -48,9 +49,7 @@ def test_real_time_feed():
         real_time=True,
     )
 
-    app: Dict = s.app.get_app_by_name(
-        business_id=business_id, name=menu_path,
-    )
+    app: Dict = s.app.get_app_by_name(business_id=business_id, name=menu_path)
     app_id = app['id']
     
     count = 5

@@ -30,12 +30,12 @@ class GetExplorerAPI(object):
         :param app_type_id: app type UUID
         """
         endpoint: str = f'apptype/{app_type_id}'
-        app_data: Dict = (
+        app_type_data: Dict = (
             self.api_client.query_element(
                 method='GET', endpoint=endpoint, **kwargs
             )
         )
-        return app_data
+        return app_type_data
 
     def get_app(self, business_id: str, app_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
@@ -513,6 +513,26 @@ class CreateExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    def _create_normalized_name(self, name: str) -> str:
+        """Having a name create a normalizedName
+
+        Example
+        ----------------------
+        # "name": "Test Borrar"
+        # "normalizedName": "test-borrar"
+        """
+        return '-'.join(name.split(' ')).lower()
+
+    def _create_key_name(self, name: str) -> str:
+        """Having a name create a key
+
+        Example
+        ----------------------
+        # "name": "Test Borrar"
+        # "key": "TEST_BORRAR"
+        """
+        return '_'.join(name.split(' ')).upper()
+
     def create_business(self, name: str) -> Dict:
         """"""
         business: Dict = self._find_business_by_name_filter(name=name)
@@ -538,8 +558,8 @@ class CreateExplorerAPI(object):
         # "name": "Test Borrar"
         # "key": "TEST_BORRAR"
         # "normalizedName": "test-borrar"
-        key: str = '_'.join(name.split(' ')).upper()
-        normalized_name: str = '-'.join(name.split(' ')).lower()
+        normalized_name: str = self._create_normalized_name(name)
+        key: str = self._create_key_name(name)
 
         item: Dict = {
             'name': name,
@@ -553,7 +573,7 @@ class CreateExplorerAPI(object):
 
     def create_app(
         self, business_id: str,
-        app_name: Optional[str] = None,
+        name: Optional[str],
         app_type_id: Optional[str] = None,
         app_metadata: Optional[Dict] = None,
     ) -> Dict:
@@ -562,14 +582,12 @@ class CreateExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app'
         item: Dict = {}
 
-        if not app_type_id and not app_name:
-            raise ValueError('Either the AppType must be provided or an app.name')
-
         if app_type_id:
             item['appTypeId'] = app_type_id
 
-        if app_name:
-            item['name'] = app_name
+        normalized_name: str = self._create_normalized_name(name)
+        item['name'] = name
+        item['normalizedName'] = normalized_name
 
         if app_metadata:
             hide_title: bool = app_metadata.get('hideTitle')
@@ -1113,7 +1131,11 @@ class MultiCreateApi(MultiDeleteApi):
             app_type_id=app_type_id,
         )
         if not app:
-            app: Dict = self._create_app(**app_metadata)
+            if app_metadata.get('name'):
+                app: Dict = self._create_app(**app_metadata)
+            else:  # get the AppType name and use it
+                app_metadata.update({'name': app_type_metadata['name']})
+                app: Dict = self._create_app(**app_metadata)
 
         return {
             'app_type': app_type,
@@ -1335,6 +1357,9 @@ class BusinessExplorerApi:
 
 class AppTypeExplorerApi:
     """"""
+    _create_normalized_name = CreateExplorerAPI._create_normalized_name
+    _create_key_name = CreateExplorerAPI._create_key_name
+
     get_app_type = GetExplorerAPI.get_app_type
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
@@ -1345,6 +1370,8 @@ class AppTypeExplorerApi:
 
 
 class AppExplorerApi:
+    _create_normalized_name = CreateExplorerAPI._create_normalized_name
+    _create_key_name = CreateExplorerAPI._create_key_name
 
     get_app = GetExplorerAPI.get_app
     create_app = CreateExplorerAPI.create_app

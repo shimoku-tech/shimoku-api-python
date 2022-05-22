@@ -30,12 +30,12 @@ class GetExplorerAPI(object):
         :param app_type_id: app type UUID
         """
         endpoint: str = f'apptype/{app_type_id}'
-        app_data: Dict = (
+        app_type_data: Dict = (
             self.api_client.query_element(
                 method='GET', endpoint=endpoint, **kwargs
             )
         )
-        return app_data
+        return app_type_data
 
     def get_app(self, business_id: str, app_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata

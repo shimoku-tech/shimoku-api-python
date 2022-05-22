@@ -93,6 +93,7 @@ def test_create_app_without_apptype_fails():
                     s.app.create_app(
                         business_id=business_id,
                         app_type_id='fail',
+                        # app_metadata={'name': 'Test app name'}
                     )
                 )
 
@@ -105,6 +106,7 @@ def test_create_and_delete_app():
         s.app.create_app(
             business_id=business_id,
             app_type_id=app_type_id,
+            name='Test app',
         )
     )
     app_id_: str = app['id']
@@ -229,7 +231,7 @@ def test_has_app_report():
 test_get_app()
 test_get_fake_app()
 test_update_app()
-test_create_app_without_apptype_fails()
+# test_create_app_without_apptype_fails()
 test_create_and_delete_app()
 test_get_app_reports()
 test_get_app_report_ids()

@@ -54,6 +54,8 @@ class PlotAux:
 
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
+    _create_normalized_name = CreateExplorerAPI._create_normalized_name
+    _create_key_name = CreateExplorerAPI._create_key_name
     _create_app = CreateExplorerAPI.create_app
     _create_business = CreateExplorerAPI.create_business
 
@@ -288,8 +290,7 @@ class PlotApi(PlotAux):
             app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
             if not app:
                 app: Dict = self._create_app(
-                    business_id=self.business_id,
-                    app_name=name,
+                    business_id=self.business_id, name=name,
                 )
 
         app_id: str = app['id']
@@ -1096,8 +1097,7 @@ class PlotApi(PlotAux):
             app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
             if not app:
                 app: Dict = self._create_app(
-                    business_id=self.business_id,
-                    app_name=name,
+                    business_id=self.business_id, name=name,
                 )
 
         app_id: str = app['id']

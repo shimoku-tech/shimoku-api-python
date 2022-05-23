@@ -50,6 +50,7 @@ class PlotAux:
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
     _create_report = CreateExplorerAPI.create_report
@@ -740,34 +741,37 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    def set_path_orders(
-            self, app_name: str, path_order: Dict[str, int],
-    ) -> None:
+    def set_path_orders(self, path_orders: Dict[str, int]) -> None:
         """
-        :param app_name: the App name
-        :param path_order: example {'test': 0, 'more-test': 1}
+        :param path_orders: example {'test': 0, 'more-test': 1}
         """
-        app: Dict = self._get_app_by_name(
-            business_id=self.business_id,
-            name=app_name,
-        )
-        app_id = app['id']
+        for menu_path, order in path_orders.items():
+            app_normalized_name, app_path_name = self._clean_menu_path(menu_path=menu_path)
+            app: Dict = self._get_app_by_url(
+                business_id=self.business_id,
+                url=app_normalized_name,
+            )
+            app_id: str = app['id']
 
-        reports = self._get_app_reports(
-            business_id=self.business_id,
-            app_id=app_id,
-        )
+            reports: List[Dict] = self._get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
 
-        for report in reports:
-            path_name: str = report.get('path')
-            new_path_order: int = int(path_order.get(path_name))
-            if new_path_order:
-                self.update_report(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                    report_id=report['id'],
-                    report_metadata={'pathOrder': new_path_order},
-                )
+            for report in reports:
+                path_name: str = report.get('path')
+                if app_path_name and path_name:
+                    menu_path_: str = f'{app_normalized_name}/{path_name}'
+                else:
+                    menu_path_: str = app_normalized_name
+                new_path_order: Union[str, int] = path_orders.get(menu_path_)
+                if new_path_order:
+                    self.update_report(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                        report_id=report['id'],
+                        report_metadata={'pathOrder': int(new_path_order)},
+                    )
 
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],

@@ -239,7 +239,7 @@ def test_ux():
 
 def test_set_path_orders():
     print('test_set_path_orders')
-    s.plt.set_path_orders(path_order={'test': 1})
+    s.plt.set_path_orders(path_orders={'test': 1})
 
 
 def test_set_new_business():

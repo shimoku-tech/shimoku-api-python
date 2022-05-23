@@ -505,6 +505,54 @@ class CascadeExplorerAPI(GetExplorerAPI):
         else:
             return {}
 
+    def get_app_by_url(self, business_id: str, url: str) -> Dict:
+        """Internally known as normalizedName
+        :param business_id: business UUID
+        :param url: app url
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Any = {}
+        for app in apps:
+            # if App normalizedName does not match check the AppType,
+            # if it does not match the AppType normalizedName then
+            # pass to the following App
+            if app.get('normalizedName'):
+                if not app['normalizedName'] == url:
+                    continue
+            else:
+                if not app.get('type'):
+                    continue
+                try:
+                    app_type: Dict = self.get_app_type(
+                        app_type_id=app['type']['id'],
+                    )
+                except ApiClientError:  # Business admin user
+                    continue
+
+                if (
+                    not app_type['normalizedName'] == url
+                    and
+                    not app_type['name'] == url
+                ):
+                    continue
+
+            if result:
+                if len(result) == 1:
+                    result: List[Dict] = result + [app]
+                else:
+                    result: List[Dict] = result + [app]
+            else:
+                result: List[Dict] = [app]
+
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
+
 
 class CreateExplorerAPI(object):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -1388,6 +1436,7 @@ class AppExplorerApi:
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
     get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    get_app_by_url = CascadeExplorerAPI.get_app_by_url
 
     delete_app = DeleteExplorerApi.delete_app
 

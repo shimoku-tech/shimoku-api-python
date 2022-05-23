@@ -670,6 +670,7 @@ class CreateExplorerAPI(object):
         }
 
         item: Dict = append_fields(item=item, field_name='path')
+        item: Dict = append_fields(item=item, field_name='pathOrder')
         item: Dict = append_fields(item=item, field_name='grid')
         item: Dict = append_fields(item=item, field_name='reportType')
         item: Dict = append_fields(item=item, field_name='order')

@@ -1804,6 +1804,10 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
+# TODO to test
+test_set_path_orders()
+test_set_new_business()
+#
 test_zero_centered_barchart()
 test_indicator()
 test_alert_indicator()
@@ -1831,9 +1835,6 @@ test_append_data_to_trend_chart()
 test_iframe()
 test_html()
 test_table()
-# TODO descomentar despues del refactor
-# test_set_path_orders()
-# test_set_new_business()
 
 
 # TODO

@@ -189,11 +189,11 @@ class PlotApi(PlotAux):
         return target_reports
 
     def _get_component_order(self, app_id: str, path_name: str) -> int:
-        """Set an ascending report.Order to new path created
+        """Set an ascending report.pathOrder to new path created
 
-        If a report in the same path exists take its order
-        otherwise find the higher report.Order and set it +1
-        as the report.Order of the new path
+        If a report in the same path exists take its path order
+        otherwise find the higher report.pathOrder and set it +1
+        as the report.pathOrder of the new path
         """
         reports_ = self._get_app_reports(
             business_id=self.business_id,
@@ -201,12 +201,12 @@ class PlotApi(PlotAux):
         )
 
         try:
-            order_temp = max([report['order'] for report in reports_])
+            order_temp = max([report['pathOrder'] for report in reports_])
         except ValueError:
             order_temp = 0
 
         path_order: List[int] = [
-            report['order']
+            report['pathOrder']
             for report in reports_
             if report['path'] == path_name
         ]
@@ -759,16 +759,14 @@ class PlotApi(PlotAux):
         )
 
         for report in reports:
-            path: str = report['path']
-            # TODO we need to use something else besides `order`
-            order: int = path_order.get(path)
-            if order:
+            path_name: str = report.get('path')
+            new_path_order: int = int(path_order.get(path_name))
+            if new_path_order:
                 self.update_report(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report['id'],
-                    # TODO this needs to be replaced
-                    report_metadata={'order': order},
+                    report_metadata={'pathOrder': new_path_order},
                 )
 
     def append_data_to_trend_chart(
@@ -906,7 +904,9 @@ class PlotApi(PlotAux):
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None,
+            # TODO
+            #  rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             sort_table_by_col: Optional[Dict] = None,

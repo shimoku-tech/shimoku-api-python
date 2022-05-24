@@ -1037,7 +1037,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
                 f'report/{report_id}/'
                 f'reportEntry/{report_entry_id}'
             )
-            result: Dict = self.api_client.query_element(
+            _: Dict = self.api_client.query_element(
                 method='DELETE', endpoint=endpoint
             )
 

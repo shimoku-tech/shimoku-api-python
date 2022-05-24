@@ -12,7 +12,8 @@ from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, ReportExplorerApi, DeleteExplorerApi, UniverseExplorerApi
+    MultiCreateApi, AppExplorerApi, ReportExplorerApi,
+    DeleteExplorerApi, UniverseExplorerApi,
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
@@ -36,6 +37,7 @@ class PlotAux:
 
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
+    _update_app = AppExplorerApi.update_app
     _update_report = ReportExplorerApi.update_report
     update_report = ReportExplorerApi.update_report
     get_report_data = ReportExplorerApi.get_report_data
@@ -741,12 +743,37 @@ class PlotApi(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    def set_path_orders(self, path_orders: Dict[str, int]) -> None:
+    def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
         """
-        :param path_orders: example {'test': 0, 'more-test': 1}
+        :param apps_order: example {'test': 0, 'more-test': 1}
         """
-        for menu_path, order in path_orders.items():
+        apps: List[Dict] = self.get_business_apps(business_id=self.business_id)
+
+        for app in apps:
+            app_id: str = app['id']
+            app_normalized_name_: str = app.get('normalizedName')
+            new_app_order: Union[str, int] = apps_order.get(app_normalized_name_)
+            if new_app_order:
+                self._update_app(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    app_metadata={'order': int(new_app_order)},
+                )
+
+    def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
+        """
+        :param paths_order: example {
+            'test/sub-path': 0,
+            'test/sub-path-2': 1,
+            'app2/sub-path-x': 0,
+        }
+        """
+        for menu_path, order in paths_order.items():
             app_normalized_name, app_path_name = self._clean_menu_path(menu_path=menu_path)
+
+            if not app_path_name:
+                raise ValueError('To order Apps use set_apps_order() instead!')
+
             app: Dict = self._get_app_by_url(
                 business_id=self.business_id,
                 url=app_normalized_name,
@@ -759,12 +786,12 @@ class PlotApi(PlotAux):
             )
 
             for report in reports:
-                path_name: str = report.get('path')
-                if app_path_name and path_name:
-                    menu_path_: str = f'{app_normalized_name}/{path_name}'
-                else:
-                    menu_path_: str = app_normalized_name
-                new_path_order: Union[str, int] = path_orders.get(menu_path_)
+                raw_path_name: str = report.get('path')
+                if not raw_path_name:
+                    continue
+                path_name: str = '-'.join(report.get('path').split(' '))
+                menu_path_: str = f'{app_normalized_name}/{path_name}'
+                new_path_order: Union[str, int] = paths_order.get(menu_path_)
                 if new_path_order:
                     self.update_report(
                         business_id=self.business_id,

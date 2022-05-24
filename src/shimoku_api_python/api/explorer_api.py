@@ -184,53 +184,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
     def __init__(self, api_client):
         super().__init__(api_client)
 
-# TODO WiP
-    def _filter_by_name_or_normalized_name(self, element: Dict, filter_by: str) -> Dict:
-        """
-        :param element: either App or AppType
-        :param filter_by: To pick the name or normalizedName
-        """
-        if filter_by not in ['name', 'normalizedName']:
-            raise ValueError(
-                f'filter by must be by either "name" or "normalizedName" '
-                f'{filter_by} provided'
-            )
-
-        # Is expected to be a single item (Dict) but an App
-        # could have several reports with the same name
-        result: Any = {}
-        # if App name does not match check the AppType,
-        # if it does not match the AppType Name then pass to the following App
-        if element.get('name'):
-            if not app['name'] == name:
-                return
-        else:
-            if not app.get('type'):
-                continue
-            try:
-                app_type: Dict = self.get_app_type(
-                    app_type_id=app['type']['id'],
-                )
-            except ApiClientError:  # Business admin user
-                continue
-
-            if (
-                    not app_type['normalizedName'] == name
-                    and
-                    not app_type['name'] == name
-            ):
-                return
-
-        if result:
-            if len(result) == 1:
-                result: List[Dict] = result + [element]
-            else:
-                result: List[Dict] = result + [element]
-        else:
-            result: List[Dict] = [element]
-
-        return result
-
     def get_universe_businesses(self) -> List[Dict]:
         endpoint: str = f'businesses'
         return (
@@ -477,18 +430,28 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     reports.append(report)
             return reports
 
-    def get_app_type_by_name(self, business_id: str, name: str) -> Dict:
+    def get_app_type_by_name(
+            self, name: Optional[str] = None,
+            normalized_name: Optional[str] = None,
+    ) -> Dict:
         """
         :param business_id: business UUID
-        :param name: app or apptype name
+        :param name: appType name
+        :param normalized_name: appType normalizedName
         """
-        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        if not name and not normalized_name:
+            raise ValueError('You must provide either "name" or "normalized_name"')
 
-        for app in apps:
-            result: Dict = self._filter_by_name_or_normalized_name(
-                element=app,
-                filter_by=by='name',
+        app_types: List[Dict] = self.get_universe_app_types()
+
+        result: List[Dict] = [
+            app_type
+            for app_type in app_types
+            if (
+                    app_type['name'] == name
+                    or app_type['normalizedName'] == normalized_name
             )
+        ]
 
         if result:
             assert len(result) == 1
@@ -1243,7 +1206,6 @@ class MultiCreateApi(MultiDeleteApi):
             app_type: Dict = self._create_app_type(**app_type_metadata)
         except ValueError:
             app_type_name: str = app_type_metadata['name']
-            # TODO esto parece que no existe!!
             app_type: Dict = self._get_app_type_by_name(app_type_name)
 
         app_type_id: str = app_type['id']

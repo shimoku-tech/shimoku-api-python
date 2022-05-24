@@ -237,9 +237,19 @@ def test_ux():
     )
 
 
-def test_set_path_orders():
-    print('test_set_path_orders')
-    s.plt.set_path_orders(path_order={'test': 1})
+def test_set_apps_orders():
+    print('test_set_apps_orders')
+    s.plt.set_apps_orders(apps_order={'test': 1, 'caetsu': 2})
+
+
+def test_set_sub_path_orders():
+    print('test_set_sub_path_orders')
+    s.plt.set_sub_path_orders(
+        paths_order={
+            'test/funnel-test': 1,
+            'test/tree-test': 2,
+        }
+    )
 
 
 def test_set_new_business():
@@ -1804,6 +1814,9 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_set_new_business()
 test_zero_centered_barchart()
 test_indicator()
 test_alert_indicator()
@@ -1831,9 +1844,6 @@ test_append_data_to_trend_chart()
 test_iframe()
 test_html()
 test_table()
-# TODO descomentar despues del refactor
-# test_set_path_orders()
-# test_set_new_business()
 
 
 # TODO

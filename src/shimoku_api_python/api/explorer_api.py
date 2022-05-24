@@ -171,7 +171,7 @@ class GetExplorerAPI(object):
                 f'app/{app_id}/'
                 f'report/{report_id}/reportEntries'
             )
-            report_entries: Dict = [
+            report_entries: List = [
                 self.api_client.query_element(
                     method='GET', endpoint=endpoint,
                 )
@@ -394,15 +394,14 @@ class CascadeExplorerAPI(GetExplorerAPI):
     ) -> List[Dict]:
         """
         """
-        app_ids: List[str] = (
+        apps: List[Dict] = (
             self.get_business_apps(
                 business_id=business_id,
             )
         )
 
         apps: List[Dict] = []
-        for app_id in app_ids:
-            app: Dict = self.get_app(app_id)
+        for app in apps:
             for filter_key, filter_value in app_filter.items():
                 if app[filter_key] == filter_value:
                     apps.append(app)
@@ -430,6 +429,35 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 if report[filter_key] == filter_value:
                     reports.append(report)
             return reports
+
+    def get_app_type_by_name(
+            self, name: Optional[str] = None,
+            normalized_name: Optional[str] = None,
+    ) -> Dict:
+        """
+        :param business_id: business UUID
+        :param name: appType name
+        :param normalized_name: appType normalizedName
+        """
+        if not name and not normalized_name:
+            raise ValueError('You must provide either "name" or "normalized_name"')
+
+        app_types: List[Dict] = self.get_universe_app_types()
+
+        result: List[Dict] = [
+            app_type
+            for app_type in app_types
+            if (
+                    app_type['name'] == name
+                    or app_type['normalizedName'] == normalized_name
+            )
+        ]
+
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
 
     def get_app_by_type(
         self, business_id: str, app_type_id: str,
@@ -488,6 +516,54 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     not app_type['normalizedName'] == name
                     and
                     not app_type['name'] == name
+                ):
+                    continue
+
+            if result:
+                if len(result) == 1:
+                    result: List[Dict] = result + [app]
+                else:
+                    result: List[Dict] = result + [app]
+            else:
+                result: List[Dict] = [app]
+
+        if result:
+            assert len(result) == 1
+            return result[0]
+        else:
+            return {}
+
+    def get_app_by_url(self, business_id: str, url: str) -> Dict:
+        """Internally known as normalizedName
+        :param business_id: business UUID
+        :param url: app url
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+
+        # Is expected to be a single item (Dict) but an App
+        # could have several reports with the same name
+        result: Any = {}
+        for app in apps:
+            # if App normalizedName does not match check the AppType,
+            # if it does not match the AppType normalizedName then
+            # pass to the following App
+            if app.get('normalizedName'):
+                if not app['normalizedName'] == url:
+                    continue
+            else:
+                if not app.get('type'):
+                    continue
+                try:
+                    app_type: Dict = self.get_app_type(
+                        app_type_id=app['type']['id'],
+                    )
+                except ApiClientError:  # Business admin user
+                    continue
+
+                if (
+                    not app_type['normalizedName'] == url
+                    and
+                    not app_type['name'] == url
                 ):
                     continue
 
@@ -670,6 +746,7 @@ class CreateExplorerAPI(object):
         }
 
         item: Dict = append_fields(item=item, field_name='path')
+        item: Dict = append_fields(item=item, field_name='pathOrder')
         item: Dict = append_fields(item=item, field_name='grid')
         item: Dict = append_fields(item=item, field_name='reportType')
         item: Dict = append_fields(item=item, field_name='order')
@@ -714,7 +791,7 @@ class CreateExplorerAPI(object):
         :param business_id:
         :param app_id:
         :param report_id:
-        :param report_entry_metadata: A dict with all the values required to create a reportEntry
+        :param items: A dict with all the values required to create a reportEntry
         """
         endpoint: str = (
             f'business/{business_id}/'
@@ -779,7 +856,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
         """
         :param business_id:
         :param app_id:
-        :param app_data: contain the elements to update key
+        :param app_metadata: contain the elements to update key
             is the col name and value the value to overwrite
         """
         endpoint: str = f'business/{business_id}/app/{app_id}'
@@ -811,9 +888,10 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
 
         :param business_id: business UUID
         """
-        app_ids: List[str] = self.get_business_apps(business_id=business_id)
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
         paths: List[str] = []
-        for app_id in app_ids:
+        for app in apps:
+            app_id: str = app['id']
             app_paths: List[str] = self.get_app_paths(app_id=app_id)
             paths = paths + app_paths
         return paths
@@ -824,11 +902,18 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
 
         :param business_id: business UUID
         """
-        app_ids: List[str] = self.get_business_apps(business_id=business_id)
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
         report_ids: List[str] = []
-        for app_id in app_ids:
-            app_report_ids: List[str] = self.get_app_reports(app_id=app_id)
-            report_ids = report_ids + app_report_ids
+        for app in apps:
+            app_id: str = app['id']
+            app_reports: List[Dict] = self.get_app_reports(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
+            report_ids = report_ids + [
+                app_report['id']
+                for app_report in app_reports
+            ]
         return report_ids
 
     # TODO paginate
@@ -877,20 +962,21 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
     def delete_path(self, business_id: str, app_id: str, path_name: str):
         """Delete all Reports in a path
         All data associated with that report is removed by the API"""
-        report_ids: List[str] = (
+        reports: List[Dict] = (
             self.get_path_reports(
                 business_id=business_id,
                 app_id=app_id,
                 path_name=path_name,
             )
         )
-        for report_id in report_ids:
+        for report in reports:
+            report_id: str = report['id']
             self.delete_report_and_entries(report_id)
 
     def delete_report(
         self, business_id: str, app_id: str, report_id: str,
         relocating: bool = True, delete_data: bool = True,
-    ) -> None:
+    ) -> Dict:
         """Delete a Report, relocating reports underneath to avoid errors
         """
         reports: List[Dict] = (
@@ -951,7 +1037,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
                 f'report/{report_id}/'
                 f'reportEntry/{report_entry_id}'
             )
-            result: Dict = self.api_client.query_element(
+            _: Dict = self.api_client.query_element(
                 method='DELETE', endpoint=endpoint
             )
 
@@ -1209,7 +1295,7 @@ class MultiCreateApi(MultiDeleteApi):
         except Exception as e:
             try:
                 self._delete_business_and_app_type(
-                    business_id=business_id,
+                    business_id=self.business_id,
                     app_type_id=app_type_id,
                 )
             except ApiClientError:
@@ -1316,8 +1402,8 @@ class MultiCreateApi(MultiDeleteApi):
                     f'{e} | {e_} | Report was not created'
                 )
 
+            app_type_id: str = d['app_type']['id']
             try:
-                app_type_id: str = d['app_type']['id']
                 self.delete_app_type(app_type_id)
             except Exception as e_:
                 raise ValueError(
@@ -1387,6 +1473,7 @@ class AppExplorerApi:
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
     get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    get_app_by_url = CascadeExplorerAPI.get_app_by_url
 
     delete_app = DeleteExplorerApi.delete_app
 

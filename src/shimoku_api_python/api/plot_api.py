@@ -976,7 +976,10 @@ class PlotApi(PlotAux):
             filters_map: Dict[str, str] = {}
             key_prefix_name: str = 'stringField'
             if sort_table_by_col:
-                field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+                if filter_columns:
+                    field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+                else:
+                    field_cols: List[str] = list(sort_table_by_col.keys())
             else:
                 field_cols: List[str] = filter_columns
 

@@ -445,20 +445,22 @@ def test_append_data_to_trend_chart():
 def test_table():
     print('test_table')
     data_ = [
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
     ]
     filter_columns: List[str] = ['filtA', 'filtB']
+    search_columns: List[str] = ['name']
 
     s.plt.table(
         data=data_,
         menu_path='test/table-test',
-        order=1, rows_size=2, cols_size=6,
+        order=1, # rows_size=2, cols_size=6,
         filter_columns=filter_columns,
         sort_table_by_col={'date': 'asc'},
+        search_columns=search_columns,
     )
 
     s.plt.table(
@@ -1814,6 +1816,7 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
+test_table()
 test_set_apps_orders()
 test_set_sub_path_orders()
 test_set_new_business()
@@ -1843,7 +1846,6 @@ test_delete()
 test_append_data_to_trend_chart()
 test_iframe()
 test_html()
-test_table()
 
 
 # TODO

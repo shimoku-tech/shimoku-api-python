@@ -204,7 +204,7 @@ class PlotApi(PlotAux):
         )
 
         try:
-            order_temp = max([report['pathOrder'] for report in reports_])
+            order_temp = max([report['pathOrder'] for report in reports_ if report['pathOrder'] ])
         except ValueError:
             order_temp = 0
 
@@ -941,7 +941,7 @@ class PlotApi(PlotAux):
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
-            sort_table_by_col: Optional[Dict] = None,
+            sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
     ):
@@ -1111,25 +1111,26 @@ class PlotApi(PlotAux):
                             "defaultOrder": sort_table_by_col[col],
                         }
 
-                if col in search_columns:
-                    if data_fields:
-                        if data_fields[col]:
-                            raise ValueError(
-                                f'Column {col} | '
-                                f'You cannot assign the same column '
-                                f'to "search_columns" and '
-                                f'"filter_columns" simultaneously'
-                            )
+                if search_columns:
+                    if col in search_columns:
+                        if data_fields:
+                            if data_fields[col]:
+                                raise ValueError(
+                                    f'Column {col} | '
+                                    f'You cannot assign the same column '
+                                    f'to "search_columns" and '
+                                    f'"filter_columns" simultaneously'
+                                )
+                            else:
+                                data_fields[col] = {
+                                    'field': extra_map[col],
+                                    "type": "search",
+                                }
                         else:
                             data_fields[col] = {
                                 'field': extra_map[col],
                                 "type": "search",
                             }
-                    else:
-                        data_fields[col] = {
-                            'field': extra_map[col],
-                            "type": "search",
-                        }
 
             return json.dumps(data_fields)
 

@@ -204,7 +204,7 @@ class PlotApi(PlotAux):
         )
 
         try:
-            order_temp = max([report['pathOrder'] for report in reports_])
+            order_temp = max([report['pathOrder'] for report in reports_ if report['pathOrder'] ])
         except ValueError:
             order_temp = 0
 
@@ -940,7 +940,8 @@ class PlotApi(PlotAux):
             #  rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
-            sort_table_by_col: Optional[Dict] = None,
+            search_columns: Optional[List[str]] = None,
+            sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
     ):
@@ -956,6 +957,10 @@ class PlotApi(PlotAux):
                 "field": "stringField3",
                 "filterBy": ["Yes", "No"]
             },
+            {
+                "field": "stringField4",
+                "type": "search",
+            },
         }
         """
 
@@ -966,11 +971,13 @@ class PlotApi(PlotAux):
             input
                 filter_columns = ["Monetary importance"]
                 sort_table_by_col = {'date': 'asc'}
+                search_columns = ['name']
 
             output
                 filters_map = {
                     'stringField1': 'Monetary importance',
                     'stringField2': 'date',
+                    'stringField3': 'name',
                 }
             """
             filters_map: Dict[str, str] = {}
@@ -982,6 +989,9 @@ class PlotApi(PlotAux):
                     field_cols: List[str] = list(sort_table_by_col.keys())
             else:
                 field_cols: List[str] = filter_columns
+
+            if search_columns:
+                field_cols = field_cols + search_columns
 
             if field_cols:
                 for index, filter_column in enumerate(field_cols):
@@ -1034,20 +1044,23 @@ class PlotApi(PlotAux):
             -------------
             input
                 df
-                    x, y, Monetary importance,
-                    1, 2,                high,
-                    2, 2,                high,
-                   10, 9,                 low,
-                    2, 1,                high,
-                    4, 6,              medium,
+                    x, y, Monetary importance,   name,
+                    1, 2,                high,   jose,
+                    2, 2,                high,  laura,
+                   10, 9,                 low, audrey,
+                    2, 1,                high,    ana,
+                    4, 6,              medium,  jorge,
 
                 filters_map = {
                     'stringField1': 'Monetary importance',
+                    'stringField2': 'name'
                 }
 
                 filter_fields = {
                     'Monetary importance': ['high', 'medium', 'low'],
                 }
+
+                search_columns = ['name']
 
             output
                 {
@@ -1056,6 +1069,10 @@ class PlotApi(PlotAux):
                         "field": "stringField1",
                         "filterBy": ["high", "medium", "low"]
                     },
+                    "name": {
+                        "field": "stringField2",
+                        "type": "search",
+                    }
                 }
             """
             data_fields: Dict = {}
@@ -1093,6 +1110,27 @@ class PlotApi(PlotAux):
                             'field': extra_map[col],
                             "defaultOrder": sort_table_by_col[col],
                         }
+
+                if search_columns:
+                    if col in search_columns:
+                        if data_fields:
+                            if data_fields[col]:
+                                raise ValueError(
+                                    f'Column {col} | '
+                                    f'You cannot assign the same column '
+                                    f'to "search_columns" and '
+                                    f'"filter_columns" simultaneously'
+                                )
+                            else:
+                                data_fields[col] = {
+                                    'field': extra_map[col],
+                                    "type": "search",
+                                }
+                        else:
+                            data_fields[col] = {
+                                'field': extra_map[col],
+                                "type": "search",
+                            }
 
             return json.dumps(data_fields)
 

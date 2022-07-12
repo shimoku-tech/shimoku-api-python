@@ -212,6 +212,7 @@ class PlotApi(PlotAux):
             report['pathOrder']
             for report in reports_
             if report['path'] == path_name
+            if report['pathOrder']
         ]
 
         if path_order:

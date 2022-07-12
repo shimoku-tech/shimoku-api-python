@@ -17,6 +17,6 @@ shimoku = Shimoku.Client(
 )
 ```
 
-See the [docs](https://shimoku.atlassian.net/wiki/spaces/SHIM/pages/442466511/Quickstart)
+See the [docs](https://docs.shimoku.com/)
 
 Reach us at contact@shimoku.com or at shimoku.com

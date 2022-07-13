@@ -167,7 +167,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         self, df: DataFrame,
         filter_map: Optional[Dict[str, str]] = None,
         filter_fields: Optional[Dict[str, List[str]]] = None,
-        sort_table_by_col: Optional[Dict[str, List[str]]] = None,
+        search_columns: Optional[List[str]] = None,
     ) -> List[Dict]:
         """
         :param df:
@@ -176,9 +176,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 'stringField1': ['high', 'medium', 'low'],
                 'stringField2': ['probable', 'improbable'],
             }
-        :param sort_table_by_col: Example : {
-            'date': 'asc'
-        }
+        :param search_columns:
         """
         cols: List[str] = df.columns.tolist()
 
@@ -194,6 +192,12 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
             df_ = df.rename(columns=filter_map)
             metadata_entries: Dict = df_[list(filter_map.values())].to_dict(orient='records')
+        elif search_columns:
+            df_ = df.rename(columns=filter_map)
+            filter_search_map: List = [
+                v for k, v in filter_map.items() if k in search_columns
+            ]
+            metadata_entries: Dict = df_[filter_search_map].to_dict(orient='records')
         else:
             data_columns: List[str] = cols
             metadata_entries: List[Dict] = []

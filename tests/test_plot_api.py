@@ -462,6 +462,15 @@ def test_table():
     filter_columns: List[str] = ['filtA', 'filtB']
     search_columns: List[str] = ['name']
 
+    # Test search columns isolated work
+    s.plt.table(
+        data=data_,
+        menu_path='test/table-test',
+        order=1,
+        search_columns=search_columns,
+    )
+
+    # Test search columns with filters and sorting works
     s.plt.table(
         data=data_,
         menu_path='test/table-test',
@@ -1832,9 +1841,9 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
+test_table()
 test_delete()
 test_bar_with_filters()
-test_table()
 test_set_apps_orders()
 test_set_sub_path_orders()
 test_zero_centered_barchart()

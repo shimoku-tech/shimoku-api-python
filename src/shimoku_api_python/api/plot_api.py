@@ -1228,8 +1228,8 @@ class PlotApi(PlotAux):
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df, filter_map=extra_map,
-                sort_table_by_col=sort_table_by_col,
-                filter_fields=report_entry_filter_fields
+                filter_fields=report_entry_filter_fields,
+                search_columns=search_columns,
             )
         )
 

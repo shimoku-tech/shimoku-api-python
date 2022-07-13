@@ -992,7 +992,10 @@ class PlotApi(PlotAux):
                 field_cols: List[str] = filter_columns
 
             if search_columns:
-                field_cols = field_cols + search_columns
+                if field_cols:
+                    field_cols = field_cols + search_columns
+                else:
+                    field_cols = search_columns
 
             if field_cols:
                 for index, filter_column in enumerate(field_cols):
@@ -1225,8 +1228,8 @@ class PlotApi(PlotAux):
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df, filter_map=extra_map,
-                sort_table_by_col=sort_table_by_col,
-                filter_fields=report_entry_filter_fields
+                filter_fields=report_entry_filter_fields,
+                search_columns=search_columns,
             )
         )
 

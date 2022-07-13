@@ -992,7 +992,10 @@ class PlotApi(PlotAux):
                 field_cols: List[str] = filter_columns
 
             if search_columns:
-                field_cols = field_cols + search_columns
+                if field_cols:
+                    field_cols = field_cols + search_columns
+                else:
+                    field_cols = search_columns
 
             if field_cols:
                 for index, filter_column in enumerate(field_cols):

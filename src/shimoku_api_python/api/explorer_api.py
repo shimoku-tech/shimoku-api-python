@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Optional, Any
 import json
+from time import sleep
 
 from shimoku_api_python.exceptions import ApiClientError
 
@@ -808,6 +809,7 @@ class CreateExplorerAPI(object):
                     **{'body_params': item},
                 )
             )
+            sleep(.25)
             report_entries = report_entries + [report_entry]
 
         return report_entries

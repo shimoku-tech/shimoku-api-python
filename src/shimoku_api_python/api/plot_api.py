@@ -191,7 +191,8 @@ class PlotApi(PlotAux):
 
         return target_reports
 
-    def _get_component_order(self, app_id: str, path_name: str) -> int:
+    # TODO unused - deprecate it?
+    def _get_component_path_order(self, app_id: str, path_name: str) -> int:
         """Set an ascending report.pathOrder to new path created
 
         If a report in the same path exists take its path order
@@ -1177,10 +1178,6 @@ class PlotApi(PlotAux):
                 )
 
         app_id: str = app['id']
-
-        order: int = self._get_component_order(
-            app_id=app_id, path_name=path_name,
-        )
 
         report_metadata: Dict[str, Any] = {
             'title': title,

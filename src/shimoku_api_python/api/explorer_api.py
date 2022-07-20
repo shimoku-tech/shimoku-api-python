@@ -1480,19 +1480,6 @@ class AppExplorerApi:
     delete_app = DeleteExplorerApi.delete_app
 
 
-class PathExplorerApi:
-
-    _get_report = GetExplorerAPI.get_report
-
-    _update_report = UpdateExplorerAPI.update_report
-
-    _get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_path_names = CascadeExplorerAPI.get_app_path_names
-
-    get_path_reports = MultiCascadeExplorerAPI.get_path_reports
-    get_path_report_ids = MultiCascadeExplorerAPI.get_path_report_ids
-
-
 class ReportExplorerApi:
 
     get_report = GetExplorerAPI.get_report

@@ -754,6 +754,7 @@ class CreateExplorerAPI(object):
         item: Dict = append_fields(item=item, field_name='sizeColumns')
         item: Dict = append_fields(item=item, field_name='sizeRows')
         item: Dict = append_fields(item=item, field_name='padding')
+        item: Dict = append_fields(item=item, field_name='bentobox')
 
         if real_time:
             item['subscribe'] = True

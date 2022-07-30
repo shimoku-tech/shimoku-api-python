@@ -1832,6 +1832,48 @@ def test_html():
         s.plt.delete_path(menu_path)
 
 
+def test_bentobox():
+    print('test_bentobox')
+    menu_path: str = 'test/bentobox-test'
+
+    bentobox_data: Dict = {
+        'bentoboxId': 'test20220101',
+        'bentoboxOrder': 0,
+        'bentoboxSizeColumns': 8,
+        'bentoBoxSizeRows': 2,
+    }
+
+    html = (
+        "<p style='background-color: #daf4f0';>"
+        "Comparing the results of predictions that happened previous "
+        "periods vs reality, so that you can measure the accuracy of our predictor"
+        "</p>"
+    )
+    s.plt.html(
+        html=html,
+        menu_path=menu_path,
+        order=0,
+        rows_size=2, cols_size=6,
+        bentobox_data=bentobox_data,
+    )
+
+    s.plt.html(
+        html=html,
+        menu_path=menu_path,
+        order=1,
+        rows_size=1, cols_size=2,
+        bentobox_data=bentobox_data,
+    )
+
+    s.plt.html(
+        html=html,
+        menu_path=menu_path,
+        order=2,
+        rows_size=2, cols_size=2,
+        bentobox_data=bentobox_data,
+    )
+
+
 def test_cohorts():
     print('test_cohorts')
     # s.plt.cohort()
@@ -1841,7 +1883,9 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
-test_table()
+
+test_bentobox()
+# test_table()
 test_delete()
 test_bar_with_filters()
 test_set_apps_orders()

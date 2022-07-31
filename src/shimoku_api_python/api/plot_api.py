@@ -122,12 +122,13 @@ class BasePlot(PlotAux):
             assert bentobox_data['bentoboxId']
         except AssertionError:
             raise KeyError('bentbox_data must include a "bentoboxId" key')
-        try:
-            assert bentobox_data['bentoboxOrder'] >= 0
-        except AssertionError:
-            raise KeyError('bentbox_data must include a "bentoboxOrder" key')
 
         # Optional fields
+        if bentobox_data.get('bentoboxOrder'):
+            try:
+                assert bentobox_data['bentoboxOrder'] >= 0
+            except AssertionError:
+                raise KeyError('bentbox_data must include a "bentoboxOrder" key')
         if bentobox_data.get('bentoboxSizeColumns'):
             try:
                 assert bentobox_data['bentoboxSizeColumns'] > 0
@@ -1395,6 +1396,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )

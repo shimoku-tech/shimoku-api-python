@@ -1836,41 +1836,54 @@ def test_bentobox():
     print('test_bentobox')
     menu_path: str = 'test/bentobox-test'
 
+    bentobox_id: Dict = {'bentoboxId': 'test20220101'}
     bentobox_data: Dict = {
-        'bentoboxId': 'test20220101',
         'bentoboxOrder': 0,
         'bentoboxSizeColumns': 8,
-        'bentoBoxSizeRows': 2,
+        'bentoboxSizeRows': 20,
     }
+    bentobox_data.update(bentobox_id)
 
-    html = (
-        "<p style='background-color: #daf4f0';>"
-        "Comparing the results of predictions that happened previous "
-        "periods vs reality, so that you can measure the accuracy of our predictor"
-        "</p>"
-    )
-    s.plt.html(
-        html=html,
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
         menu_path=menu_path,
-        order=0,
-        rows_size=2, cols_size=6,
+        order=0, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
         bentobox_data=bentobox_data,
     )
 
-    s.plt.html(
-        html=html,
+    s.plt.indicator(
+        data=data_,
         menu_path=menu_path,
-        order=1,
-        rows_size=1, cols_size=2,
-        bentobox_data=bentobox_data,
+        order=1, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        bentobox_data=bentobox_id,
     )
 
-    s.plt.html(
-        html=html,
+    data = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
+    ]
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=2,
-        rows_size=2, cols_size=2,
-        bentobox_data=bentobox_data,
+        order=2, rows_size=14, cols_size=24,
+        bentobox_data=bentobox_id,
     )
 
 

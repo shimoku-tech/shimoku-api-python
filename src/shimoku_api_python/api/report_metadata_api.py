@@ -501,19 +501,19 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         )
 
     def hide_report(self, business_id: str, app_id: str, report_id: str):
-        report_data: Dict = {'isDisabled': True}
+        report_metadata: Dict = {'isDisabled': True}
         self.update_report(
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,
-            report_data=report_data,
+            report_metadata=report_metadata,
         )
 
     def unhide_report(self, business_id: str, app_id: str, report_id: str):
-        report_data: Dict = {'isDisabled': False}
+        report_metadata: Dict = {'isDisabled': False}
         self.update_report(
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,
-            report_data=report_data,
+            report_data=report_metadata,
         )

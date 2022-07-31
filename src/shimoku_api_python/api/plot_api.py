@@ -82,9 +82,7 @@ class PlotAux:
     _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
-class PlotApi(PlotAux):
-    """
-    """
+class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
@@ -115,6 +113,32 @@ class PlotApi(PlotAux):
                 f'"exists", "row", "column", "filter_cols" | '
                 f'Provided keys are: {list(filters.keys())}'
             )
+
+    @staticmethod
+    def _validate_bentobox(bentobox_data: Dict) -> None:
+        """"""
+        # Mandatory fields
+        try:
+            assert bentobox_data['bentoboxId']
+        except AssertionError:
+            raise KeyError('bentbox_data must include a "bentoboxId" key')
+
+        # Optional fields
+        if bentobox_data.get('bentoboxOrder'):
+            try:
+                assert bentobox_data['bentoboxOrder'] >= 0
+            except AssertionError:
+                raise KeyError('bentbox_data must include a "bentoboxOrder" key')
+        if bentobox_data.get('bentoboxSizeColumns'):
+            try:
+                assert bentobox_data['bentoboxSizeColumns'] > 0
+            except AssertionError:
+                raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
+        if bentobox_data.get('bentoboxSizeRows'):
+            try:
+                assert bentobox_data['bentoboxSizeRows'] > 0
+            except AssertionError:
+                raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
 
     def _find_target_reports(
             self, menu_path: str,
@@ -191,7 +215,8 @@ class PlotApi(PlotAux):
 
         return target_reports
 
-    def _get_component_order(self, app_id: str, path_name: str) -> int:
+    # TODO unused - deprecate it?
+    def _get_component_path_order(self, app_id: str, path_name: str) -> int:
         """Set an ascending report.pathOrder to new path created
 
         If a report in the same path exists take its path order
@@ -368,6 +393,7 @@ class PlotApi(PlotAux):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             overwrite: bool = True,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -459,6 +485,10 @@ class PlotApi(PlotAux):
             'dataFields': data_fields,
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -933,6 +963,19 @@ class PlotApi(PlotAux):
                     app_id=app_id,
                 )
 
+
+class PlotApi(BasePlot):
+    """
+    """
+
+    def __init__(self, api_client, **kwargs):
+        self.api_client = api_client
+
+        if kwargs.get('business_id'):
+            self.business_id: Optional[str] = kwargs['business_id']
+        else:
+            self.business_id: Optional[str] = None
+
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -1178,10 +1221,6 @@ class PlotApi(PlotAux):
 
         app_id: str = app['id']
 
-        order: int = self._get_component_order(
-            app_id=app_id, path_name=path_name,
-        )
-
         report_metadata: Dict[str, Any] = {
             'title': title,
             'path': path_name,
@@ -1246,12 +1285,17 @@ class PlotApi(PlotAux):
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
             'order': order if order else 1,
             'title': title if title else '',
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -1270,6 +1314,7 @@ class PlotApi(PlotAux):
             padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -1280,6 +1325,10 @@ class PlotApi(PlotAux):
             'order': order if order else 1,
             'title': title if title else '',
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -1303,6 +1352,7 @@ class PlotApi(PlotAux):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a barchart
         """
@@ -1346,6 +1396,7 @@ class PlotApi(PlotAux):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1879,6 +1930,7 @@ class PlotApi(PlotAux):
             align: Optional[str] = None,
             multi_column: int = 4,
             real_time: bool = False,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -1898,6 +1950,7 @@ class PlotApi(PlotAux):
         :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
         :param real_time:
+        :param bentobox_data:
         """
         mandatory_elements: List[str] = [
             header, value, target_path,
@@ -1955,6 +2008,10 @@ class PlotApi(PlotAux):
 
         data_fields: Dict = {'dataFields': {'columns': columns}}
         report_metadata.update(data_fields)
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'

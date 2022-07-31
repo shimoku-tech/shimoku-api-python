@@ -1832,6 +1832,61 @@ def test_html():
         s.plt.delete_path(menu_path)
 
 
+def test_bentobox():
+    print('test_bentobox')
+    menu_path: str = 'test/bentobox-test'
+
+    bentobox_id: Dict = {'bentoboxId': 'test20220101'}
+    bentobox_data: Dict = {
+        'bentoboxOrder': 0,
+        'bentoboxSizeColumns': 8,
+        'bentoboxSizeRows': 20,
+    }
+    bentobox_data.update(bentobox_id)
+
+    data_ = [
+        {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+        },
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=0, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        bentobox_data=bentobox_data,
+    )
+
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        bentobox_data=bentobox_id,
+    )
+
+    data = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
+    ]
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=2, rows_size=14, cols_size=24,
+        bentobox_data=bentobox_id,
+    )
+
+
 def test_cohorts():
     print('test_cohorts')
     # s.plt.cohort()
@@ -1841,7 +1896,9 @@ def test_cohorts():
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
-test_table()
+
+test_bentobox()
+# test_table()
 test_delete()
 test_bar_with_filters()
 test_set_apps_orders()

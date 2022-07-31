@@ -2,6 +2,7 @@
 
 from typing import List, Dict, Optional, Any
 import json
+from time import sleep
 
 from shimoku_api_python.exceptions import ApiClientError
 
@@ -753,6 +754,7 @@ class CreateExplorerAPI(object):
         item: Dict = append_fields(item=item, field_name='sizeColumns')
         item: Dict = append_fields(item=item, field_name='sizeRows')
         item: Dict = append_fields(item=item, field_name='padding')
+        item: Dict = append_fields(item=item, field_name='bentobox')
 
         if real_time:
             item['subscribe'] = True
@@ -808,6 +810,7 @@ class CreateExplorerAPI(object):
                     **{'body_params': item},
                 )
             )
+            sleep(.25)
             report_entries = report_entries + [report_entry]
 
         return report_entries
@@ -1476,19 +1479,6 @@ class AppExplorerApi:
     get_app_by_url = CascadeExplorerAPI.get_app_by_url
 
     delete_app = DeleteExplorerApi.delete_app
-
-
-class PathExplorerApi:
-
-    _get_report = GetExplorerAPI.get_report
-
-    _update_report = UpdateExplorerAPI.update_report
-
-    _get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_path_names = CascadeExplorerAPI.get_app_path_names
-
-    get_path_reports = MultiCascadeExplorerAPI.get_path_reports
-    get_path_report_ids = MultiCascadeExplorerAPI.get_path_report_ids
 
 
 class ReportExplorerApi:

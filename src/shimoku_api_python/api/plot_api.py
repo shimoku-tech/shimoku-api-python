@@ -1413,6 +1413,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1433,6 +1434,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1449,6 +1451,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1481,6 +1484,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1496,7 +1500,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # thid layer
-            filters: Optional[Dict] = None,  # thid layer
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         return self._create_trend_charts(
@@ -1509,6 +1514,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1527,6 +1533,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -1577,6 +1584,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1592,6 +1600,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1695,6 +1704,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1710,6 +1720,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1811,6 +1822,7 @@ class PlotApi(BasePlot):
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
             echart_type='scatter',
+            bentobox_data=bentobox_data,
             filters=filters,
         )
 
@@ -1871,6 +1883,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         try:
@@ -1888,6 +1901,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='scatter',
             )
         )
@@ -1904,9 +1918,10 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,  # to create filters
+            bentobox_data: Optional[Dict] = None,
     ):
-        """"""
-        return self._create_trend_chart(
+        """
+        self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
@@ -1916,6 +1931,8 @@ class PlotApi(BasePlot):
             echart_type='scatter',
             filters=filters,
         )
+        """
+        raise NotImplementedError
 
     def indicator(
             self, data: Union[str, DataFrame, List[Dict]], value: str,
@@ -2035,6 +2052,7 @@ class PlotApi(BasePlot):
             footer: Optional[str] = None,
             color: Optional[str] = None,
             multi_column: int = 4,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
@@ -2049,6 +2067,7 @@ class PlotApi(BasePlot):
             header=header,
             footer=footer, color=color,
             multi_column=multi_column,
+            bentobox_data=bentobox_data,
         )
 
     def pie(
@@ -2061,6 +2080,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Piechart
         """
@@ -2074,6 +2094,10 @@ class PlotApi(BasePlot):
             'dataFields': {'type': 'pie'},
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2098,6 +2122,7 @@ class PlotApi(BasePlot):
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a RADAR
         """
@@ -2117,6 +2142,10 @@ class PlotApi(BasePlot):
             'dataFields': data_fields,
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2140,6 +2169,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Tree
         """
@@ -2150,6 +2180,10 @@ class PlotApi(BasePlot):
             'dataFields': {'type': 'tree'},
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2173,6 +2207,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Treemap
         """
@@ -2183,6 +2218,10 @@ class PlotApi(BasePlot):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'treemap'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2207,6 +2246,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Sunburst
         """
@@ -2217,6 +2257,10 @@ class PlotApi(BasePlot):
             'title': title,
             'dataFields': {'type': 'sunburst'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2243,6 +2287,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -2257,6 +2302,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='candlestick',
             )
         )
@@ -2273,6 +2319,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2293,6 +2340,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='heatmap',
             )
         )
@@ -2308,6 +2356,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2341,6 +2390,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='heatmap',
             )
         )
@@ -2361,6 +2411,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2379,6 +2430,10 @@ class PlotApi(BasePlot):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'sankey'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2405,6 +2460,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2427,6 +2483,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='funnel',
             )
         )
@@ -2445,6 +2502,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """
         option = {
@@ -2593,6 +2651,10 @@ class PlotApi(BasePlot):
             'title': title,
         }
 
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+
         if filters:
             raise NotImplementedError
 
@@ -2618,6 +2680,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -2642,6 +2705,10 @@ class PlotApi(BasePlot):
             'dataFields': data_fields,
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2668,10 +2735,10 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
-        """Create a barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+                df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[[x, y, name]]  # keep only x and y
         df.rename(
             columns={
@@ -2691,6 +2758,8 @@ class PlotApi(BasePlot):
             echart_type='themeriver',
             filters=filters,
         )
+        """
+        raise NotImplementedError
 
     def stacked_barchart(self):
         raise NotImplementedError

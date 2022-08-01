@@ -5,18 +5,19 @@ import logging
 import json
 from itertools import product
 
-import datetime as dt
-
 import pandas as pd
 from pandas import DataFrame
 
+from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, ReportExplorerApi, DeleteExplorerApi, UniverseExplorerApi
+    MultiCreateApi, AppExplorerApi, ReportExplorerApi,
+    DeleteExplorerApi, UniverseExplorerApi,
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -36,10 +37,12 @@ class PlotAux:
 
     get_report = ReportExplorerApi.get_report
     _get_report_with_data = ReportExplorerApi._get_report_with_data
+    _update_app = AppExplorerApi.update_app
     _update_report = ReportExplorerApi.update_report
     update_report = ReportExplorerApi.update_report
     get_report_data = ReportExplorerApi.get_report_data
 
+    _find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
@@ -48,10 +51,14 @@ class PlotAux:
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
+    _create_normalized_name = CreateExplorerAPI._create_normalized_name
+    _create_key_name = CreateExplorerAPI._create_key_name
     _create_app = CreateExplorerAPI.create_app
     _create_business = CreateExplorerAPI.create_business
 
@@ -102,6 +109,32 @@ class BasePlot(PlotAux):
                 f'Provided keys are: {list(filters.keys())}'
             )
 
+    @staticmethod
+    def _validate_bentobox(bentobox_data: Dict) -> None:
+        """"""
+        # Mandatory fields
+        try:
+            assert bentobox_data['bentoboxId']
+        except AssertionError:
+            raise KeyError('bentbox_data must include a "bentoboxId" key')
+
+        # Optional fields
+        if bentobox_data.get('bentoboxOrder'):
+            try:
+                assert bentobox_data['bentoboxOrder'] >= 0
+            except AssertionError:
+                raise KeyError('bentbox_data must include a "bentoboxOrder" key')
+        if bentobox_data.get('bentoboxSizeColumns'):
+            try:
+                assert bentobox_data['bentoboxSizeColumns'] > 0
+            except AssertionError:
+                raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
+        if bentobox_data.get('bentoboxSizeRows'):
+            try:
+                assert bentobox_data['bentoboxSizeRows'] > 0
+            except AssertionError:
+                raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
+
     def _find_target_reports(
             self, menu_path: str,
             grid: Optional[str] = None,
@@ -132,12 +165,11 @@ class BasePlot(PlotAux):
                 'Row and Column or Order must be specified'
             )
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = self._get_app_by_type(
+        app: Dict = self._get_app_by_name(
             business_id=self.business_id,
-            app_type_id=app_type['id']
+            name=name,
         )
         app_id: str = app['id']
 
@@ -178,12 +210,13 @@ class BasePlot(PlotAux):
 
         return target_reports
 
-    def _get_component_order(self, app_id: str, path_name: str) -> int:
-        """Set an ascending report.Order to new path created
+    # TODO unused - deprecate it?
+    def _get_component_path_order(self, app_id: str, path_name: str) -> int:
+        """Set an ascending report.pathOrder to new path created
 
-        If a report in the same path exists take its order
-        otherwise find the higher report.Order and set it +1
-        as the report.Order of the new path
+        If a report in the same path exists take its path order
+        otherwise find the higher report.pathOrder and set it +1
+        as the report.pathOrder of the new path
         """
         reports_ = self._get_app_reports(
             business_id=self.business_id,
@@ -191,14 +224,15 @@ class BasePlot(PlotAux):
         )
 
         try:
-            order_temp = max([report['order'] for report in reports_])
+            order_temp = max([report['pathOrder'] for report in reports_ if report['pathOrder'] ])
         except ValueError:
             order_temp = 0
 
         path_order: List[int] = [
-            report['order']
+            report['pathOrder']
             for report in reports_
             if report['path'] == path_name
+            if report['pathOrder']
         ]
 
         if path_order:
@@ -207,8 +241,8 @@ class BasePlot(PlotAux):
             return order_temp + 1
 
     def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
-        """Break the menu path in the app type normalized name
-        and the path normalized name if any"""
+        """Break the menu path in the apptype or app normalizedName
+        and the path normalizedName if any"""
         # remove empty spaces
         menu_path: str = menu_path.strip()
         # replace "_" for www protocol it is not good
@@ -223,10 +257,10 @@ class BasePlot(PlotAux):
                 f'{"/".join(menu_path.split("/")[:1])}'
             )
 
-        # Split AppType Normalized Name
-        app_type_normalized_name: str = menu_path.split('/')[0]
-        app_type_name: str = (
-            ' '.join(app_type_normalized_name.split('-'))
+        # Split AppType or App Normalized Name
+        normalized_name: str = menu_path.split('/')[0]
+        name: str = (
+            ' '.join(normalized_name.split('-'))
         )
 
         try:
@@ -237,7 +271,7 @@ class BasePlot(PlotAux):
         except IndexError:
             path_name = None
 
-        return app_type_name, path_name
+        return name, path_name
 
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -267,13 +301,22 @@ class BasePlot(PlotAux):
         if padding:
             report_metadata['sizePadding'] = padding
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        d: Dict[str, Dict] = self._create_app_type_and_app(
-            business_id=self.business_id,
-            app_type_metadata={'name': app_type_name},
-            app_metadata={},
-        )
-        app: Dict = d['app']
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+
+        try:
+            d: Dict[str, Dict] = self._create_app_type_and_app(
+                business_id=self.business_id,
+                app_type_metadata={'name': name},
+                app_metadata={},
+            )
+            app: Dict = d['app']
+        except ApiClientError:  # Business admin user
+            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
+            if not app:
+                app: Dict = self._create_app(
+                    business_id=self.business_id, name=name,
+                )
+
         app_id: str = app['id']
 
         if order is not None:  # elif order fails when order = 0!
@@ -345,7 +388,8 @@ class BasePlot(PlotAux):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             overwrite: bool = True,
-            report_metadata: Optional[Dict] = None
+            report_metadata: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -445,6 +489,10 @@ class BasePlot(PlotAux):
                 'dataFields': data_fields,
                 'title': title,
             }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -730,42 +778,61 @@ class BasePlot(PlotAux):
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
-    def set_path_orders(
-            self, app_name: str, path_order: Dict[str, int],
-    ) -> None:
+    def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
         """
-        :param app_name: the App name
-        :param path_order: example {'test': 0, 'more-test': 1}
+        :param apps_order: example {'test': 0, 'more-test': 1}
         """
-        apps: List[Dict] = self._get_business_apps(self.business_id)
-        app_types: List[Dict] = self.get_universe_app_types()
+        apps: List[Dict] = self.get_business_apps(business_id=self.business_id)
+
         for app in apps:
             app_id: str = app['id']
-            app_type_id: str = app['type']['id']
+            app_normalized_name_: str = app.get('normalizedName')
+            new_app_order: Union[str, int] = apps_order.get(app_normalized_name_)
+            if new_app_order:
+                self._update_app(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    app_metadata={'order': int(new_app_order)},
+                )
 
-            # Check that it is of the target app_name
-            if not any([
-                True
-                if app_type['id'] == app_type_id and app_type['name'] == app_name
-                else False
-                for app_type in app_types
-            ]):
-                continue
+    def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
+        """
+        :param paths_order: example {
+            'test/sub-path': 0,
+            'test/sub-path-2': 1,
+            'app2/sub-path-x': 0,
+        }
+        """
+        for menu_path, order in paths_order.items():
+            app_normalized_name, app_path_name = self._clean_menu_path(menu_path=menu_path)
 
-            reports = self._get_app_reports(
+            if not app_path_name:
+                raise ValueError('To order Apps use set_apps_order() instead!')
+
+            app: Dict = self._get_app_by_url(
+                business_id=self.business_id,
+                url=app_normalized_name,
+            )
+            app_id: str = app['id']
+
+            reports: List[Dict] = self._get_app_reports(
                 business_id=self.business_id,
                 app_id=app_id,
             )
 
             for report in reports:
-                path: str = report['path']
-                order: int = path_order.get(path)
-                if order:
+                raw_path_name: str = report.get('path')
+                if not raw_path_name:
+                    continue
+                path_name: str = '-'.join(report.get('path').split(' '))
+                menu_path_: str = f'{app_normalized_name}/{path_name}'
+                new_path_order: Union[str, int] = paths_order.get(menu_path_)
+                if new_path_order:
                     self.update_report(
                         business_id=self.business_id,
                         app_id=app_id,
                         report_id=report['id'],
-                        report_metadata={'order': order},
+                        report_metadata={'pathOrder': int(new_path_order)},
                     )
 
     def append_data_to_trend_chart(
@@ -863,12 +930,10 @@ class BasePlot(PlotAux):
         If menu_path contains an "{App}/{Path}" then it removes the path
         otherwise it removes the whole app
         """
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app_type: Dict = self._get_app_type_by_name(name=app_type_name)
-
-        app: Dict = self._get_app_by_type(
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+        app: Dict = self._get_app_by_name(
             business_id=self.business_id,
-            app_type_id=app_type['id']
+            name=name,
         )
         if not app:
             return
@@ -937,7 +1002,6 @@ class BasePlot(PlotAux):
             ),
         )
 
-
 class PlotApi(BasePlot):
     """
     """
@@ -953,10 +1017,13 @@ class PlotApi(BasePlot):
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None,
+            # TODO
+            #  rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
-            sort_table_by_col: Optional[Dict] = None,
+            search_columns: Optional[List[str]] = None,
+            sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
     ):
@@ -972,6 +1039,10 @@ class PlotApi(BasePlot):
                 "field": "stringField3",
                 "filterBy": ["Yes", "No"]
             },
+            {
+                "field": "stringField4",
+                "type": "search",
+            },
         }
         """
 
@@ -982,19 +1053,30 @@ class PlotApi(BasePlot):
             input
                 filter_columns = ["Monetary importance"]
                 sort_table_by_col = {'date': 'asc'}
+                search_columns = ['name']
 
             output
                 filters_map = {
                     'stringField1': 'Monetary importance',
                     'stringField2': 'date',
+                    'stringField3': 'name',
                 }
             """
             filters_map: Dict[str, str] = {}
             key_prefix_name: str = 'stringField'
             if sort_table_by_col:
-                field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+                if filter_columns:
+                    field_cols: List[str] = filter_columns + list(sort_table_by_col.keys())
+                else:
+                    field_cols: List[str] = list(sort_table_by_col.keys())
             else:
                 field_cols: List[str] = filter_columns
+
+            if search_columns:
+                if field_cols:
+                    field_cols = field_cols + search_columns
+                else:
+                    field_cols = search_columns
 
             if field_cols:
                 for index, filter_column in enumerate(field_cols):
@@ -1047,20 +1129,23 @@ class PlotApi(BasePlot):
             -------------
             input
                 df
-                    x, y, Monetary importance,
-                    1, 2,                high,
-                    2, 2,                high,
-                   10, 9,                 low,
-                    2, 1,                high,
-                    4, 6,              medium,
+                    x, y, Monetary importance,   name,
+                    1, 2,                high,   jose,
+                    2, 2,                high,  laura,
+                   10, 9,                 low, audrey,
+                    2, 1,                high,    ana,
+                    4, 6,              medium,  jorge,
 
                 filters_map = {
                     'stringField1': 'Monetary importance',
+                    'stringField2': 'name'
                 }
 
                 filter_fields = {
                     'Monetary importance': ['high', 'medium', 'low'],
                 }
+
+                search_columns = ['name']
 
             output
                 {
@@ -1069,6 +1154,10 @@ class PlotApi(BasePlot):
                         "field": "stringField1",
                         "filterBy": ["high", "medium", "low"]
                     },
+                    "name": {
+                        "field": "stringField2",
+                        "type": "search",
+                    }
                 }
             """
             data_fields: Dict = {}
@@ -1107,6 +1196,27 @@ class PlotApi(BasePlot):
                             "defaultOrder": sort_table_by_col[col],
                         }
 
+                if search_columns:
+                    if col in search_columns:
+                        if data_fields:
+                            if data_fields[col]:
+                                raise ValueError(
+                                    f'Column {col} | '
+                                    f'You cannot assign the same column '
+                                    f'to "search_columns" and '
+                                    f'"filter_columns" simultaneously'
+                                )
+                            else:
+                                data_fields[col] = {
+                                    'field': extra_map[col],
+                                    "type": "search",
+                                }
+                        else:
+                            data_fields[col] = {
+                                'field': extra_map[col],
+                                "type": "search",
+                            }
+
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1132,18 +1242,22 @@ class PlotApi(BasePlot):
         extra_map: Dict[str, str] = _calculate_table_extra_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
-        app_type_name, path_name = self._clean_menu_path(menu_path=menu_path)
-        d: Dict[str, Dict] = self._create_app_type_and_app(
-            business_id=self.business_id,
-            app_type_metadata={'name': app_type_name},
-            app_metadata={},
-        )
-        app: Dict = d['app']
-        app_id: str = app['id']
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+        try:
+            d: Dict[str, Dict] = self._create_app_type_and_app(
+                business_id=self.business_id,
+                app_type_metadata={'name': name},
+                app_metadata={},
+            )
+            app: Dict = d['app']
+        except ApiClientError:  # Business admin user
+            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
+            if not app:
+                app: Dict = self._create_app(
+                    business_id=self.business_id, name=name,
+                )
 
-        order: int = self._get_component_order(
-            app_id=app_id, path_name=path_name,
-        )
+        app_id: str = app['id']
 
         report_metadata: Dict[str, Any] = {
             'title': title,
@@ -1191,8 +1305,8 @@ class PlotApi(BasePlot):
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
                 df=df, filter_map=extra_map,
-                sort_table_by_col=sort_table_by_col,
-                filter_fields=report_entry_filter_fields
+                filter_fields=report_entry_filter_fields,
+                search_columns=search_columns,
             )
         )
 
@@ -1209,12 +1323,17 @@ class PlotApi(BasePlot):
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
             'order': order if order else 1,
             'title': title if title else '',
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -1233,6 +1352,7 @@ class PlotApi(BasePlot):
             padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -1243,6 +1363,10 @@ class PlotApi(BasePlot):
             'order': order if order else 1,
             'title': title if title else '',
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
@@ -1266,6 +1390,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a barchart
         """
@@ -1309,6 +1434,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1325,6 +1451,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1345,6 +1472,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1361,6 +1489,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1393,6 +1522,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='bar',
             )
         )
@@ -1408,7 +1538,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # thid layer
-            filters: Optional[Dict] = None,  # thid layer
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         return self._create_trend_charts(
@@ -1421,6 +1552,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1439,6 +1571,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -1489,6 +1622,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1504,6 +1638,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1607,6 +1742,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='line',
             )
         )
@@ -1622,6 +1758,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -1723,6 +1860,7 @@ class PlotApi(BasePlot):
             y_axis_name=y_axis_name,
             option_modifications=option_modifications,
             echart_type='scatter',
+            bentobox_data=bentobox_data,
             filters=filters,
         )
 
@@ -1783,6 +1921,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         try:
@@ -1800,6 +1939,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='scatter',
             )
         )
@@ -1816,9 +1956,10 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,  # to create filters
+            bentobox_data: Optional[Dict] = None,
     ):
-        """"""
-        return self._create_trend_chart(
+        """
+        self._create_trend_chart(
             data=data, x=x, y=y, menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
@@ -1828,6 +1969,8 @@ class PlotApi(BasePlot):
             echart_type='scatter',
             filters=filters,
         )
+        """
+        raise NotImplementedError
 
     def indicator(
             self, data: Union[str, DataFrame, List[Dict]], value: str,
@@ -1842,6 +1985,7 @@ class PlotApi(BasePlot):
             align: Optional[str] = None,
             multi_column: int = 4,
             real_time: bool = False,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -1861,6 +2005,7 @@ class PlotApi(BasePlot):
         :param align: to align center, left or right a component
         :param multi_column: how many indicators are allowed by column
         :param real_time:
+        :param bentobox_data:
         """
         mandatory_elements: List[str] = [
             header, value, target_path,
@@ -1919,6 +2064,10 @@ class PlotApi(BasePlot):
         data_fields: Dict = {'dataFields': {'columns': columns}}
         report_metadata.update(data_fields)
 
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
@@ -1941,6 +2090,7 @@ class PlotApi(BasePlot):
             footer: Optional[str] = None,
             color: Optional[str] = None,
             multi_column: int = 4,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
@@ -1955,6 +2105,7 @@ class PlotApi(BasePlot):
             header=header,
             footer=footer, color=color,
             multi_column=multi_column,
+            bentobox_data=bentobox_data,
         )
 
     def pie(
@@ -1967,6 +2118,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Piechart
         """
@@ -1980,6 +2132,10 @@ class PlotApi(BasePlot):
             'dataFields': {'type': 'pie'},
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2004,6 +2160,7 @@ class PlotApi(BasePlot):
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a RADAR
         """
@@ -2023,6 +2180,10 @@ class PlotApi(BasePlot):
             'dataFields': data_fields,
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2046,6 +2207,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Tree
         """
@@ -2056,6 +2218,10 @@ class PlotApi(BasePlot):
             'dataFields': {'type': 'tree'},
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2079,6 +2245,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Treemap
         """
@@ -2089,6 +2256,10 @@ class PlotApi(BasePlot):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'treemap'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2113,6 +2284,7 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """Create a Sunburst
         """
@@ -2123,6 +2295,10 @@ class PlotApi(BasePlot):
             'title': title,
             'dataFields': {'type': 'sunburst'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2149,6 +2325,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -2163,6 +2340,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='candlestick',
             )
         )
@@ -2179,6 +2357,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2199,6 +2378,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='heatmap',
             )
         )
@@ -2214,6 +2394,7 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2247,6 +2428,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='heatmap',
             )
         )
@@ -2267,6 +2449,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2285,6 +2468,10 @@ class PlotApi(BasePlot):
             'reportType': 'ECHARTS',
             'dataFields': {'type': 'sankey'},
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2311,6 +2498,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2333,6 +2521,7 @@ class PlotApi(BasePlot):
                 x_axis_name=x_axis_name,
                 y_axis_name=y_axis_name,
                 option_modifications=option_modifications,
+                bentobox_data=bentobox_data,
                 echart_type='funnel',
             )
         )
@@ -2351,6 +2540,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """
         option = {
@@ -2499,6 +2689,10 @@ class PlotApi(BasePlot):
             'title': title,
         }
 
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+
         if filters:
             raise NotImplementedError
 
@@ -2524,6 +2718,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -2548,6 +2743,10 @@ class PlotApi(BasePlot):
             'dataFields': data_fields,
             'title': title,
         }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
 
         if filters:
             raise NotImplementedError
@@ -2574,10 +2773,10 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
-        """Create a barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+                df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[[x, y, name]]  # keep only x and y
         df.rename(
             columns={
@@ -2597,3 +2796,8 @@ class PlotApi(BasePlot):
             echart_type='themeriver',
             filters=filters,
         )
+        """
+        raise NotImplementedError
+
+    def stacked_barchart(self):
+        raise NotImplementedError

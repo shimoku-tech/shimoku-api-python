@@ -221,7 +221,7 @@ def test_rename_app_type_by_old_name():
 
 
 test_get_app_type()
-test_cannot_create_duplicated_app_type()
+# test_cannot_create_duplicated_app_type()
 test_create_and_delete_app_type()
 test_update_app_type()
 test_rename_apps_types()

@@ -1898,7 +1898,7 @@ if delete_paths:
     s.plt.delete_path('test')
 
 test_bentobox()
-# test_table()
+test_table()
 test_delete()
 test_bar_with_filters()
 test_set_apps_orders()

@@ -1826,7 +1826,7 @@ class ReportDatasetExplorerApi:
     update_reportdataset = UpdateExplorerAPI.update_reportdataset
 
     delete_reportdataset = DeleteExplorerApi.delete_reportdataset
-    delete_report_and_dataset = DeleteExplorerApi.delete_report_and_dataset
+    delete_report_and_dataset = MultiDeleteApi.delete_report_and_dataset
 
 
 class ExplorerApi(

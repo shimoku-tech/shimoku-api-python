@@ -281,10 +281,10 @@ test_get_report_by_chart_type()
 test_get_report_by_grid_position()
 
 # TODO
+"""
 test_hide_report()
 test_unhide_report()
 
-"""
 test_change_report_grid_position()
 test_get_report_by_external_id()
 test_get_filter_report()

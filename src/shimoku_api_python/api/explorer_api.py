@@ -437,10 +437,29 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 endpoint=endpoint, method='GET',
             )
         )
-        datas = reports_raw.get('items')
+        datas = datas_raw.get('items')
         if not datas:
             return []
         return datas
+
+    def get_report_dataset_data(
+            self, business_id: str, app_id: str, report_id: str,
+    ) -> List[Dict]:
+        """"""
+        report_datasets: List[Dict] = self.get_report_datasets(
+            business_id=business_id, app_id=app_id, report_id=report_id,
+        )
+        data: List = []
+        for report_dataset in report_datasets:
+            dataset_id: str = report_dataset['id']
+            datum: List[Dict] = (
+                self.get_dataset_data(
+                    business_id=business_id,
+                    dataset_id=dataset_id,
+                )
+            )
+            data = data + datum
+        return data
 
     # TODO pending
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
@@ -822,6 +841,7 @@ class CreateExplorerAPI(object):
         item: Dict = append_fields(item=item, field_name='sizeRows')
         item: Dict = append_fields(item=item, field_name='padding')
         item: Dict = append_fields(item=item, field_name='bentobox')
+        item: Dict = append_fields(item=item, field_name='properties')
 
         if real_time:
             item['subscribe'] = True
@@ -855,30 +875,24 @@ class CreateExplorerAPI(object):
         """Create new DataSet associated to a business
 
         :param business_id:
-        :param items:
         """
         endpoint: str = f'business/{business_id}/dataSet'
 
-        # TODO
-        item: Dict = {
-            'reportId': report_id,
-            'key': key,
-            'normalizedName': normalized_name,
-        }
-
         return self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'body_params': item},
+            method='POST', endpoint=endpoint, **{'body_params': {}},
         )
 
     def create_reportdataset(
-            self, business_id: str, app_id: str, report_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, report_id: str,
+            dataset_id: str, dataset_properties: Dict,
     ) -> Dict:
-        """Create new reportEntry associated to a Report
+        """Create new dataset associated to a Report
 
         :param business_id:
         :param app_id:
         :param report_id:
         :param dataset_id:
+        :param dataset_properties:
         """
         endpoint: str = (
             f'business/{business_id}/'
@@ -887,12 +901,13 @@ class CreateExplorerAPI(object):
             f'reportDataSet'
         )
 
-        # TODO
         item: Dict = {
             'reportId': report_id,
-            'key': key,
-            'normalizedName': normalized_name,
+            'dataSetId': dataset_id,
         }
+
+        if dataset_properties:
+            item['properties'] = dataset_properties
 
         return self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
@@ -902,7 +917,7 @@ class CreateExplorerAPI(object):
             self, business_id: str, dataset_id: str,
             items: List[Dict],
     ) -> List[Dict]:
-        """Create new row in Data
+        """Create new row in Data (equivalent to reportEntry)
 
         :param business_id:
         :param dataset_id:
@@ -922,6 +937,7 @@ class CreateExplorerAPI(object):
                     **{'body_params': item},
                 )
             )
+            sleep(.25)
             data = data + [datum]
 
         return data
@@ -992,6 +1008,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
         self, business_id: str, app_id: str,
         report_metadata: Dict,
         items: List[Dict],
+        dataset_properties: Dict = {},
         real_time: bool = False,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         """
@@ -1014,7 +1031,8 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             business_id=business_id,
             app_id=app_id,
             report_id=report['id'],
-            dataset_id=dataset_id
+            dataset_id=dataset_id,
+            dataset_properties=dataset_properties,  # TODO
         )
 
         data: List[Dict] = self.create_data_points(
@@ -1328,6 +1346,7 @@ class MultiDeleteApi:
     _delete_app = DeleteExplorerApi.delete_app
     _delete_app_type = DeleteExplorerApi.delete_app_type
     _delete_report = DeleteExplorerApi.delete_report
+    _delete_dataset = DeleteExplorerApi.delete_dataset
 
     def __init__(self):
         return
@@ -1416,6 +1435,16 @@ class MultiDeleteApi:
                 f'{e_atg} | App was not deleted | '
                 f'app_id: {app_id}'
             )
+
+    def delete_report_and_dataset(
+            self, business_id: str, app_id: str, report_id: str, dataset_id: str,
+    ):
+        self._delete_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id
+        )
+        self._delete_dataset(business_id=business_id, dataset_id=dataset_id)
 
 
 class MultiCreateApi(MultiDeleteApi):
@@ -1774,10 +1803,10 @@ class ReportExplorerApi:
 class DatasetExplorerApi:
 
     get_dataset = GetExplorerAPI.get_dataset
-    # TODO pendings
-    get_dataset_data = GetExplorerAPI.get_dataset_data
-    get_report_datasets = CascadeExplorerAPI.get_report_datasets
 
+    get_dataset_data = CascadeExplorerAPI.get_dataset_data
+
+    create_data_points = CreateExplorerAPI.create_data_points
     create_dataset = CascadeCreateExplorerAPI.create_dataset
 
     update_dataset = UpdateExplorerAPI.update_dataset
@@ -1788,14 +1817,16 @@ class DatasetExplorerApi:
 class ReportDatasetExplorerApi:
 
     get_reportdataset = GetExplorerAPI.get_reportdataset
-    # TODO pendings
-    get_report_datasets = CascadeExplorerAPI.get_report_reportdatasets
+    get_report_datasets = CascadeExplorerAPI.get_report_datasets
+    get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
 
     create_reportdataset = CascadeCreateExplorerAPI.create_reportdataset
+    create_report_and_dataset = CascadeCreateExplorerAPI.create_report_and_dataset
 
     update_reportdataset = UpdateExplorerAPI.update_reportdataset
 
-    update_reportdataset = DeleteExplorerApi.delete_reportdataset
+    delete_reportdataset = DeleteExplorerApi.delete_reportdataset
+    delete_report_and_dataset = DeleteExplorerApi.delete_report_and_dataset
 
 
 class ExplorerApi(

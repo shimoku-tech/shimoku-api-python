@@ -7,7 +7,9 @@ import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
-from .explorer_api import GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI
+from .explorer_api import (
+    GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI, DatasetExplorerApi,
+)
 from .report_metadata_api import ReportMetadataApi
 
 
@@ -19,6 +21,7 @@ class DataExplorerApi:
 
     _create_report_entries = CreateExplorerAPI._create_report_entries
     _delete_report_entries = DeleteExplorerApi.delete_report_entries
+    _create_data_points = DatasetExplorerApi.create_data_points
 
     _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
 
@@ -110,14 +113,6 @@ class DataValidation:
         except AssertionError:
             raise ValueError('data keys must be "name", "value" and "children"')
 
-
-class DataManagingApi(DataExplorerApi, DataValidation):
-    """
-    """
-
-    def __init__(self, api_client):
-        self.api_client = api_client
-
     def _is_report_data_empty(
         self, report_data: Union[List[Dict], str, DataFrame, Dict, List],
     ) -> bool:
@@ -142,6 +137,18 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 f'Data must be a Dictionary, JSON or pandas DataFrame '
                 f'Provided: {type(report_data)}'
             )
+
+
+class DataManagingApi(DataExplorerApi, DataValidation):
+    """This is used for
+    - report.chartData
+    - reportEntry
+
+    For DataSet / Data see: DataSetManagingApi()
+    """
+
+    def __init__(self, api_client):
+        self.api_client = api_client
 
     def _transform_report_data_to_chart_data(
         self, report_data: Union[List[Dict], str, DataFrame, Dict],
@@ -349,12 +356,191 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         )
 
-        if report.get('reportType'):
+        report_type: Optional[str] = report.get('reportType')
+        if report_type:
+            if report_type == 'ECHARTS2':
+                self._create_data_points()
+            else:  # 'ECHARTS' or 'STOCKLINE' or 'INDICATOR', ...
+                chart_data_new: List[Dict] = (
+                    self._transform_report_data_to_chart_data(report_data)
+                )
+
+                chart_data: Dict = report.get('chartData')
+                if chart_data:
+                    chart_data = chart_data + chart_data_new
+                else:
+                    chart_data = chart_data_new
+
+                try:
+                    report_data_ = {
+                        'chartData': json.dumps(chart_data),
+                    }
+                except TypeError:
+                    # If we have date or datetime values
+                    # then we need to convert them to isoformat
+                    for datum in chart_data:
+                        for k, v in datum.items():
+                            if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                                datum[k] = v.isoformat()
+
+                    report_data_ = {
+                        'chartData': json.dumps(chart_data),
+                    }
+
+                self._update_report(
+                    business_id=business_id,
+                    app_id=app_id,
+                    report_id=report_id,
+                    report_metadata=report_data_,
+                )
+        else:  # Then it is a table
+            self._delete_report_entries(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+            )
+
+            self._create_report_entries(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                items=report_data,
+            )
+
+
+class DataSetManagingApi(DataExplorerApi, DataValidation):
+    """
+    """
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+# TODO
+    def _convert_dataframe_to_dataset_data(
+        self, df: DataFrame,
+        filter_map: Optional[Dict[str, str]] = None,
+        filter_fields: Optional[Dict[str, List[str]]] = None,
+        search_columns: Optional[List[str]] = None,
+    ) -> List[Dict]:
+        """
+        :param df:
+        :param report_id:
+        :param filter_fields: Example: {
+                'stringField1': ['high', 'medium', 'low'],
+                'stringField2': ['probable', 'improbable'],
+            }
+        :param search_columns:
+        """
+        cols: List[str] = df.columns.tolist()
+
+        if filter_fields:
+            try:
+                assert len(filter_fields) <= 4
+            except AssertionError:
+                raise ValueError(
+                    f'At maximum a table may have 4 different filters | '
+                    f'You provided {len(filter_fields)} | '
+                    f'You provided {filter_fields}'
+                )
+
+            df_ = df.rename(columns=filter_map)
+            metadata_entries: Dict = df_[list(filter_map.values())].to_dict(orient='records')
+        elif search_columns:
+            df_ = df.rename(columns=filter_map)
+            filter_search_map: List = [
+                v for k, v in filter_map.items() if k in search_columns
+            ]
+            metadata_entries: Dict = df_[filter_search_map].to_dict(orient='records')
+        else:
+            data_columns: List[str] = cols
+            metadata_entries: List[Dict] = []
+
+        records: List[Dict] = df.to_dict(orient='records')
+        try:
+            data_entries: List[Dict] = [
+                {'data': json.dumps(d)}
+                for d in records
+            ]
+        except TypeError:
+            # If we have date or datetime values
+            # then we need to convert them to isoformat
+            for datum in records:
+                for k, v in datum.items():
+                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                        datum[k] = v.isoformat()
+
+            data_entries: List[Dict] = [
+                {'data': json.dumps(d)}
+                for d in records
+            ]
+
+        if metadata_entries:
+            try:
+                _ = json.dumps(metadata_entries)
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in metadata_entries:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
+
+            # Generate the list of single entries with all
+            # necessary information to be posted
+            return [
+                {**data_entry, **metadata_entry}
+                for data_entry, metadata_entry in zip(data_entries, metadata_entries)
+            ]
+        else:
+            return data_entries
+
+# TODO
+    def append_dataset_data(
+        self, business_id: str, app_id: str,
+        report_data: Union[List[Dict], str, DataFrame, Dict],
+        report_id: Optional[str] = None,
+        external_id: Optional[str] = None,
+    ) -> None:
+        """Having a dataframe of Report
+
+        It is an aggregation, meaning we preserve all previous
+        data and just concatenate the new ones
+        """
+        _ = self._validate_data_is_pandarable(report_data)
+
+        if self._is_report_data_empty(report_data):
+            return
+
+        report: Dict = (
+            self._get_report_with_data(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                external_id=external_id,
+            )
+        )
+
+        if report.get('reportType'):  # For non-table chart
             chart_data_new: List[Dict] = (
                 self._transform_report_data_to_chart_data(report_data)
             )
 
             chart_data: Dict = report.get('chartData')
+
+            # Data resistance
+            #  check that the column names are the
+            #  same in the data we try to append
+            all_keys: Set[str] = set(chain.from_iterable(chart_data))
+            for d in chart_data_new:
+                try:
+                    assert set(sorted((d.keys()))) == all_keys
+                except AssertionError:
+                    KeyError(
+                        f'The provided data has not the same keys'
+                        f' that the data it tries to append | '
+                        f'Required keys: {all_keys}'
+                    )
+
             if chart_data:
                 chart_data = chart_data + chart_data_new
             else:
@@ -383,15 +569,15 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            self._delete_report_entries(
-                business_id=business_id,
-                app_id=app_id,
-                report_id=report_id,
+            item: Dict = {'reportId': report_id}
+
+            data: List[Dict] = (
+                self.convert_dataframe_to_report_entry(
+                    report_id=report_id, df=report_data,
+                )
             )
 
-            self._create_report_entries(
-                business_id=business_id,
-                app_id=app_id,
-                report_id=report_id,
-                items=report_data,
-            )
+            # TODO we can store batches and go faster than one by one
+            for datum in data:
+                item.update(datum)
+                self.post_report_entry(item)

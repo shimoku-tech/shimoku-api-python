@@ -12,8 +12,10 @@ from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, AppExplorerApi, ReportExplorerApi,
+    CascadeCreateExplorerAPI, MultiCreateApi,
+    AppExplorerApi, ReportExplorerApi,
     DeleteExplorerApi, UniverseExplorerApi,
+    ReportDatasetExplorerApi,
 )
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
@@ -46,7 +48,7 @@ class PlotAux:
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
-    # TODO this shit has to be fixed
+    # TODO this shit (methods with underscore _* and *) has to be fixed
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
@@ -61,6 +63,8 @@ class PlotAux:
     _create_key_name = CreateExplorerAPI._create_key_name
     _create_app = CreateExplorerAPI.create_app
     _create_business = CreateExplorerAPI.create_business
+    _create_dataset = CascadeCreateExplorerAPI.create_dataset
+    _create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
 
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
 
@@ -351,6 +355,7 @@ class BasePlot(PlotAux):
         )
         report_id: str = report['id']
 
+# TODO que pasa aqui con data / dataset
         try:
             if data:
                 self._update_report_data(
@@ -968,13 +973,15 @@ class BasePlot(PlotAux):
 
     def free_echarts(
             self, data: Union[str, DataFrame, List[Dict]],
-            options: Dict, menu_path: str,
+            options: Dict,
+            menu_path: str,
             order: Optional[int] = None,
             rows_size: Optional[int] = None,
             cols_size: int = 12,
             padding: Optional[List[int]] = None,
             overwrite: bool = True,
             filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
     ):
         """
         :param data:
@@ -986,21 +993,102 @@ class BasePlot(PlotAux):
         :param padding:
         :param overwrite:
         :param filters:
+        :param bentobox_data:
         """
-        report_metadata: Dict = {
-            'reportType': 'ECHARTS2',
-            'options': options,
-        }
-        return self._create_trend_charts(
-            data=data,
-            filters=filters,
-            **dict(
-                report_metadata=report_metadata,
+        def _create_free_echarts(data_: Union[str, DataFrame, List[Dict]]) -> str:
+            df: pd.DataFrame = self._validate_data_is_pandarable(data_)
+
+# TODO falta asignar dataset_id a report!!
+            dataset: Dict = self._create_dataset(business_id=self.business_id)
+            dataset_id: str = dataset['id']
+
+            # Syntax to be accepted by the FrontEnd
+            options_dataset_id: str = '#{' + f'{dataset_id}' + '}'
+            options['dataset'] = {'source':  options_dataset_id}
+            report_metadata: Dict = {
+                'reportType': 'ECHARTS2',
+                'properties': {'option': options},
+            }
+
+            if bentobox_data:
+                self._validate_bentobox(bentobox_data)
+                report_metadata['bentobox'] = json.dumps(bentobox_data)
+
+            if filters:
+                raise NotImplementedError
+
+            return self._create_chart(
+                data=df,
                 menu_path=menu_path, overwrite=overwrite,
-                order=order, rows_size=rows_size, cols_size=cols_size,
-                padding=padding,
-            ),
-        )
+                report_metadata=report_metadata, order=order,
+                rows_size=rows_size, cols_size=cols_size, padding=padding,
+            )
+
+        # TODO many things in common with _create_trend_charts_with_filters() unify!!
+        def _create_free_echarts_with_filters():
+            """"""
+            filter_elements: List[Dict] = []
+            self._validate_filters(filters=filters)
+
+            # We are going to save all the reports one by one
+            for df_temp, filter_element in (
+                    self._create_multifilter_reports(
+                        data=data, filters=filters,
+                    )
+            ):
+                report_id = _create_free_echarts(data_=df_temp)
+                filter_element['reportId'] = [report_id]
+                filter_elements.append(filter_element)
+
+            update_filter_type: Optional[str] = filters.get('update_filter_type')
+            filter_row: Optional[int] = filters.get('row')
+            filter_column: Optional[int] = filters.get('column')
+            filter_order: Optional[int] = filters.get('order')
+
+            if update_filter_type:
+                # concat is to add new filter options
+                # append is to add new reports to existing filter options
+                try:
+                    assert update_filter_type in ['concat', 'append']
+                except AssertionError:
+                    raise ValueError(
+                        f'update_filter_type must be one of both: "concat" or "append" | '
+                        f'Value provided: {update_filter_type}'
+                    )
+                self._update_filter_report(
+                    filter_row=filter_row,
+                    filter_column=filter_column,
+                    filter_order=filter_order,
+                    filter_elements=filter_elements,
+                    menu_path=kwargs['menu_path'],
+                    update_type=update_filter_type,
+                )
+            else:
+                report_metadata: Dict = {
+                    'reportType': 'MULTIFILTER',
+                    'title': '',
+                }
+
+                if filter_row and filter_column:
+                    report_metadata['grid'] = f'{filter_row}, {filter_column}'
+                elif filter_order is not None:
+                    report_metadata['order'] = filter_order
+                else:
+                    raise ValueError('Either row and column or order must be provided')
+
+                self._create_chart(
+                    data=filter_elements,
+                    menu_path=menu_path,
+                    report_metadata=report_metadata,
+                    order=filter_order,
+                    overwrite=True,
+                )
+
+        if filters:
+            _create_free_echarts_with_filters()
+        else:
+            _create_free_echarts(data)
+
 
 class PlotApi(BasePlot):
     """

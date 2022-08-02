@@ -200,6 +200,12 @@ class AiAPI(PlotApi):
 
         return pd.DataFrame(results), pd.DataFrame(results_error)
 
+    def train_model(self) -> str:
+        """
+        returns the model endpoint
+        """
+        raise NotImplementedError
+
     def predictive_table(
             self, df_test: pd.DataFrame, model_endpoint: str,
             target_column: str, column_to_predict: str,

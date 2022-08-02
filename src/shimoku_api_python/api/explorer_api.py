@@ -824,14 +824,12 @@ class CreateExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
-        title: str = report_metadata['title']
+        # title: str = report_metadata['title']
 
         # These are the mandatory fields
-        item: Dict = {
-            'appId': app_id,
-            'title': title,
-        }
+        item: Dict = {'appId': app_id}
 
+        item: Dict = append_fields(item=item, field_name='title')
         item: Dict = append_fields(item=item, field_name='path')
         item: Dict = append_fields(item=item, field_name='pathOrder')
         item: Dict = append_fields(item=item, field_name='grid')
@@ -884,7 +882,7 @@ class CreateExplorerAPI(object):
 
     def create_reportdataset(
             self, business_id: str, app_id: str, report_id: str,
-            dataset_id: str, dataset_properties: Dict,
+            dataset_id: str, dataset_properties: str,
     ) -> Dict:
         """Create new dataset associated to a Report
 
@@ -892,7 +890,7 @@ class CreateExplorerAPI(object):
         :param app_id:
         :param report_id:
         :param dataset_id:
-        :param dataset_properties:
+        :param dataset_properties: a json with the properties
         """
         endpoint: str = (
             f'business/{business_id}/'
@@ -915,7 +913,7 @@ class CreateExplorerAPI(object):
 
     def create_data_points(
             self, business_id: str, dataset_id: str,
-            items: List[Dict],
+            items: List[str],
     ) -> List[Dict]:
         """Create new row in Data (equivalent to reportEntry)
 
@@ -1007,8 +1005,8 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
     def create_report_and_dataset(
         self, business_id: str, app_id: str,
         report_metadata: Dict,
-        items: List[Dict],
-        dataset_properties: Dict = {},
+        items: List[str],
+        dataset_options: Dict,
         real_time: bool = False,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         """
@@ -1027,12 +1025,15 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
         dataset: Dict = self.create_dataset(business_id=business_id)
         dataset_id: str = dataset['id']
 
+        dataset_properties: Dict = dataset_options.copy()
+        options_dataset_id: str = '#{' + f'{dataset_id}' + '}'
+        dataset_properties['dataset'] = {'source': options_dataset_id}
         report_dataset: Dict = self.create_reportdataset(
             business_id=business_id,
             app_id=app_id,
             report_id=report['id'],
             dataset_id=dataset_id,
-            dataset_properties=dataset_properties,  # TODO
+            dataset_properties=json.dumps(dataset_properties),
         )
 
         data: List[Dict] = self.create_data_points(

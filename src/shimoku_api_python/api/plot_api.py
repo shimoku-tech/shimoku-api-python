@@ -5,6 +5,7 @@ import logging
 import json
 from itertools import product
 
+import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
@@ -15,9 +16,10 @@ from .explorer_api import (
     CascadeCreateExplorerAPI, MultiCreateApi,
     AppExplorerApi, ReportExplorerApi,
     DeleteExplorerApi, UniverseExplorerApi,
-    ReportDatasetExplorerApi,
+    ReportDatasetExplorerApi, DatasetExplorerApi,
 )
 from .data_managing_api import DataManagingApi
+from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 
 
@@ -57,16 +59,20 @@ class PlotAux:
     _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
+    create_report = CreateExplorerAPI.create_report
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_normalized_name = CreateExplorerAPI._create_normalized_name
     _create_key_name = CreateExplorerAPI._create_key_name
     _create_app = CreateExplorerAPI.create_app
     _create_business = CreateExplorerAPI.create_business
-    _create_dataset = CascadeCreateExplorerAPI.create_dataset
-    _create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
+    create_dataset = CascadeCreateExplorerAPI.create_dataset
+    create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
+    _create_report_and_dataset = ReportDatasetExplorerApi.create_report_and_dataset
+    create_data_points = DatasetExplorerApi.create_data_points
 
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
+    _get_or_create_app_and_apptype = AppMetadataApi.get_or_create_app_and_apptype
 
     _update_report_data = DataManagingApi.update_report_data
     _append_report_data = DataManagingApi.append_report_data
@@ -90,6 +96,22 @@ class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
+
+    # TODO this method goes somewhere else (scripting tools?)
+    @staticmethod
+    def _convert_to_json(items: List[Dict]) -> str:
+        try:
+            items_str: str = json.dumps(items)
+        except TypeError:
+            # If we have date or datetime values
+            # then we need to convert them to isoformat
+            for datum in items:
+                for k, v in datum.items():
+                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                        datum[k] = v.isoformat()
+
+            items_str: str = json.dumps(items)
+        return items_str
 
     @staticmethod
     def _validate_filters(filters: Dict) -> None:
@@ -138,6 +160,74 @@ class BasePlot(PlotAux):
                 assert bentobox_data['bentoboxSizeRows'] > 0
             except AssertionError:
                 raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
+
+    @staticmethod
+    def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
+        """Break the menu path in the apptype or app normalizedName
+        and the path normalizedName if any"""
+        # remove empty spaces
+        menu_path: str = menu_path.strip()
+        # replace "_" for www protocol it is not good
+        menu_path = menu_path.replace('_', '-')
+
+        try:
+            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
+        except AssertionError:
+            raise ValueError(
+                f'We only allow one subpath in your request | '
+                f'you introduced {menu_path} it should be maximum '
+                f'{"/".join(menu_path.split("/")[:1])}'
+            )
+
+        # Split AppType or App Normalized Name
+        normalized_name: str = menu_path.split('/')[0]
+        name: str = (
+            ' '.join(normalized_name.split('-'))
+        )
+
+        try:
+            path_normalized_name: str = menu_path.split('/')[1]
+            path_name: str = (
+                ' '.join(path_normalized_name.split('-'))
+            )
+        except IndexError:
+            path_name = None
+
+        return name, path_name
+
+    @staticmethod
+    def _fill_report_metadata(
+            path_name: str, report_metadata: Dict,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[str] = None,
+    ) -> Dict:
+        if order is not None and rows_size and cols_size:
+            report_metadata['order'] = order
+            report_metadata['sizeRows'] = rows_size
+            report_metadata['sizeColumns'] = cols_size
+
+        if padding:
+            report_metadata['sizePadding'] = padding
+
+        if order is not None:  # elif order fails when order = 0!
+            report_metadata['order'] = order
+        elif report_metadata.get('grid'):
+            report_metadata['order'] = 0
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified to overwrite a report'
+            )
+
+        report_metadata.update({'path': path_name})
+
+        if report_metadata.get('dataFields'):
+            report_metadata['dataFields'] = (
+                json.dumps(report_metadata['dataFields'])
+            )
+
+        return report_metadata
 
     def _find_target_reports(
             self, menu_path: str,
@@ -244,39 +334,6 @@ class BasePlot(PlotAux):
         else:
             return order_temp + 1
 
-    def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
-        """Break the menu path in the apptype or app normalizedName
-        and the path normalizedName if any"""
-        # remove empty spaces
-        menu_path: str = menu_path.strip()
-        # replace "_" for www protocol it is not good
-        menu_path = menu_path.replace('_', '-')
-
-        try:
-            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
-        except AssertionError:
-            raise ValueError(
-                f'We only allow one subpath in your request | '
-                f'you introduced {menu_path} it should be maximum '
-                f'{"/".join(menu_path.split("/")[:1])}'
-            )
-
-        # Split AppType or App Normalized Name
-        normalized_name: str = menu_path.split('/')[0]
-        name: str = (
-            ' '.join(normalized_name.split('-'))
-        )
-
-        try:
-            path_normalized_name: str = menu_path.split('/')[1]
-            path_name: str = (
-                ' '.join(path_normalized_name.split('-'))
-            )
-        except IndexError:
-            path_name = None
-
-        return name, path_name
-
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
@@ -297,54 +354,22 @@ class BasePlot(PlotAux):
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
-        if order is not None and rows_size and cols_size:
-            report_metadata['order'] = order
-            report_metadata['sizeRows'] = rows_size
-            report_metadata['sizeColumns'] = cols_size
-
-        if padding:
-            report_metadata['sizePadding'] = padding
-
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        try:
-            d: Dict[str, Dict] = self._create_app_type_and_app(
-                business_id=self.business_id,
-                app_type_metadata={'name': name},
-                app_metadata={},
-            )
-            app: Dict = d['app']
-        except ApiClientError:  # Business admin user
-            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
-            if not app:
-                app: Dict = self._create_app(
-                    business_id=self.business_id, name=name,
-                )
+        report_metadata: Dict = self._fill_report_metadata(
+            report_metadata=report_metadata, path_name=path_name,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+        )
 
+        app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
         app_id: str = app['id']
-
-        if order is not None:  # elif order fails when order = 0!
-            kwargs = {'order': order}
-        elif report_metadata.get('grid'):
-            kwargs = {'grid': report_metadata.get('grid'), 'order': 0}
-        else:
-            raise ValueError(
-                'Row and Column or Order must be specified to overwrite a report'
-            )
-
-        report_metadata.update({'path': path_name})
-        report_metadata.update(kwargs)
-
-        if report_metadata.get('dataFields'):
-            report_metadata['dataFields'] = (
-                json.dumps(report_metadata['dataFields'])
-            )
 
         if overwrite:
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
-                **kwargs
+                order=report_metadata['order'],
+                grid=report_metadata['grid'],
             )
 
         report: Dict = self._create_report(
@@ -355,7 +380,6 @@ class BasePlot(PlotAux):
         )
         report_id: str = report['id']
 
-# TODO que pasa aqui con data / dataset
         try:
             if data:
                 self._update_report_data(
@@ -971,6 +995,7 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                 )
 
+# TODO pending add append_report_data to free Echarts
     def free_echarts(
             self, data: Union[str, DataFrame, List[Dict]],
             options: Dict,
@@ -982,6 +1007,7 @@ class BasePlot(PlotAux):
             overwrite: bool = True,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
+            real_time: bool = False,
     ):
         """
         :param data:
@@ -994,21 +1020,20 @@ class BasePlot(PlotAux):
         :param overwrite:
         :param filters:
         :param bentobox_data:
+        :param real_time:
         """
-        def _create_free_echarts(data_: Union[str, DataFrame, List[Dict]]) -> str:
+        def _create_free_echarts(
+                data_: Union[str, DataFrame, List[Dict]],
+        ) -> Dict[str, Union[Dict, List[Dict]]]:
             df: pd.DataFrame = self._validate_data_is_pandarable(data_)
 
-# TODO falta asignar dataset_id a report!!
-            dataset: Dict = self._create_dataset(business_id=self.business_id)
+            dataset: Dict = self.create_dataset(business_id=self.business_id)
             dataset_id: str = dataset['id']
 
             # Syntax to be accepted by the FrontEnd
             options_dataset_id: str = '#{' + f'{dataset_id}' + '}'
             options['dataset'] = {'source':  options_dataset_id}
-            report_metadata: Dict = {
-                'reportType': 'ECHARTS2',
-                'properties': {'option': options},
-            }
+            report_metadata: Dict = {'reportType': 'ECHARTS2'}
 
             if bentobox_data:
                 self._validate_bentobox(bentobox_data)
@@ -1017,11 +1042,34 @@ class BasePlot(PlotAux):
             if filters:
                 raise NotImplementedError
 
-            return self._create_chart(
-                data=df,
-                menu_path=menu_path, overwrite=overwrite,
-                report_metadata=report_metadata, order=order,
-                rows_size=rows_size, cols_size=cols_size, padding=padding,
+            name, path_name = self._clean_menu_path(menu_path=menu_path)
+
+            report_metadata: Dict = self._fill_report_metadata(
+                report_metadata=report_metadata, path_name=path_name,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            )
+
+            app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
+            app_id: str = app['id']
+
+            # TODO quitarlo
+            overwrite = False  # TODO quitarlo
+            if overwrite:
+                self.delete(
+                    menu_path=menu_path,
+                    by_component_type=False,
+                    order=report_metadata.get('order'),
+                    grid=report_metadata.get('grid'),
+                )
+
+            items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
+            items: List[str] = [self._convert_to_json(item) for item in items]
+            return self._create_report_and_dataset(
+                business_id=self.business_id, app_id=app_id,
+                report_metadata=report_metadata,
+                items=items,
+                dataset_options=options,
+                real_time=real_time,
             )
 
         # TODO many things in common with _create_trend_charts_with_filters() unify!!

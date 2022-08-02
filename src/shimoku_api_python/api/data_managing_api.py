@@ -8,7 +8,8 @@ import pandas as pd
 from pandas import DataFrame
 
 from .explorer_api import (
-    GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI, DatasetExplorerApi,
+    GetExplorerAPI, DeleteExplorerApi, CreateExplorerAPI,
+    DatasetExplorerApi, ReportDatasetExplorerApi,
 )
 from .report_metadata_api import ReportMetadataApi
 
@@ -18,12 +19,14 @@ class DataExplorerApi:
     _get_report_with_data = GetExplorerAPI._get_report_with_data
     get_report_data = ReportMetadataApi.get_report_data
     _update_report = ReportMetadataApi.update_report
+    _get_report_datasets = ReportDatasetExplorerApi.get_report_datasets
 
     _create_report_entries = CreateExplorerAPI._create_report_entries
-    _delete_report_entries = DeleteExplorerApi.delete_report_entries
     _create_data_points = DatasetExplorerApi.create_data_points
+    _create_dataset = DatasetExplorerApi.create_dataset
+    _create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
 
-    _get_report_by_external_id = ReportMetadataApi.get_reports_by_external_id
+    _delete_report_entries = DeleteExplorerApi.delete_report_entries
 
 
 class DataValidation:
@@ -248,6 +251,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         else:
             return data_entries
 
+# TODO pending add append_report_data to free Echarts
     def append_report_data(
         self, business_id: str, app_id: str,
         report_data: Union[List[Dict], str, DataFrame, Dict],
@@ -358,41 +362,38 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
         report_type: Optional[str] = report.get('reportType')
         if report_type:
-            if report_type == 'ECHARTS2':
-                self._create_data_points()
-            else:  # 'ECHARTS' or 'STOCKLINE' or 'INDICATOR', ...
-                chart_data_new: List[Dict] = (
-                    self._transform_report_data_to_chart_data(report_data)
-                )
+            chart_data_new: List[Dict] = (
+                self._transform_report_data_to_chart_data(report_data)
+            )
 
-                chart_data: Dict = report.get('chartData')
-                if chart_data:
-                    chart_data = chart_data + chart_data_new
-                else:
-                    chart_data = chart_data_new
+            chart_data: Dict = report.get('chartData')
+            if chart_data:
+                chart_data = chart_data + chart_data_new
+            else:
+                chart_data = chart_data_new
 
-                try:
-                    report_data_ = {
-                        'chartData': json.dumps(chart_data),
-                    }
-                except TypeError:
-                    # If we have date or datetime values
-                    # then we need to convert them to isoformat
-                    for datum in chart_data:
-                        for k, v in datum.items():
-                            if isinstance(v, dt.date) or isinstance(v, dt.datetime):
-                                datum[k] = v.isoformat()
+            try:
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in chart_data:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
 
-                    report_data_ = {
-                        'chartData': json.dumps(chart_data),
-                    }
+                report_data_ = {
+                    'chartData': json.dumps(chart_data),
+                }
 
-                self._update_report(
-                    business_id=business_id,
-                    app_id=app_id,
-                    report_id=report_id,
-                    report_metadata=report_data_,
-                )
+            self._update_report(
+                business_id=business_id,
+                app_id=app_id,
+                report_id=report_id,
+                report_metadata=report_data_,
+            )
         else:  # Then it is a table
             self._delete_report_entries(
                 business_id=business_id,

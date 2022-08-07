@@ -77,6 +77,7 @@ class PlotAux:
     _update_report_data = DataManagingApi.update_report_data
     _append_report_data = DataManagingApi.append_report_data
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
+    _convert_input_data_to_db_items = DataManagingApi._convert_input_data_to_db_items
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
     _create_report_entries = DataManagingApi._create_report_entries
@@ -368,8 +369,8 @@ class BasePlot(PlotAux):
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
-                order=report_metadata['order'],
-                grid=report_metadata['grid'],
+                order=report_metadata.get('order'),
+                grid=report_metadata.get('grid'),
             )
 
         report: Dict = self._create_report(
@@ -508,7 +509,7 @@ class BasePlot(PlotAux):
         if report_metadata:
             if not report_metadata.get('reportType'):
                 report_metadata['reportType'] = 'ECHARTS'
-            if not report_metadata.get('reportType'):
+            if not report_metadata.get('dataFields'):
                 report_metadata['dataFields'] = data_fields
             if not report_metadata.get('title'):
                 report_metadata['title'] = 'title'
@@ -1000,6 +1001,7 @@ class BasePlot(PlotAux):
             self, data: Union[str, DataFrame, List[Dict]],
             options: Dict,
             menu_path: str,
+            sort: Optional[Dict] = None,
             order: Optional[int] = None,
             rows_size: Optional[int] = None,
             cols_size: int = 12,
@@ -1010,9 +1012,17 @@ class BasePlot(PlotAux):
             real_time: bool = False,
     ):
         """
+        Example
+        -------------
+        sort = {
+            'field': 'date'
+            'direction': 'asc',
+        }
+
         :param data:
         :param options: eCharts options of the type {'options': options}
         :param menu_path:
+        :param sort:
         :param order:
         :param rows_size:
         :param cols_size:
@@ -1025,14 +1035,9 @@ class BasePlot(PlotAux):
         def _create_free_echarts(
                 data_: Union[str, DataFrame, List[Dict]],
         ) -> Dict[str, Union[Dict, List[Dict]]]:
+# TODO ojo debería no ser solo data tabular!!
             df: pd.DataFrame = self._validate_data_is_pandarable(data_)
 
-            dataset: Dict = self.create_dataset(business_id=self.business_id)
-            dataset_id: str = dataset['id']
-
-            # Syntax to be accepted by the FrontEnd
-            options_dataset_id: str = '#{' + f'{dataset_id}' + '}'
-            options['dataset'] = {'source':  options_dataset_id}
             report_metadata: Dict = {'reportType': 'ECHARTS2'}
 
             if bentobox_data:
@@ -1052,8 +1057,6 @@ class BasePlot(PlotAux):
             app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
             app_id: str = app['id']
 
-            # TODO quitarlo
-            overwrite = False  # TODO quitarlo
             if overwrite:
                 self.delete(
                     menu_path=menu_path,
@@ -1062,13 +1065,15 @@ class BasePlot(PlotAux):
                     grid=report_metadata.get('grid'),
                 )
 
+# TODO ojo que no todo sera data tabular
             items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
-            items: List[str] = [self._convert_to_json(item) for item in items]
+            items: List[str] = self._convert_input_data_to_db_items(items)
             return self._create_report_and_dataset(
                 business_id=self.business_id, app_id=app_id,
                 report_metadata=report_metadata,
                 items=items,
-                dataset_options=options,
+                report_properties=options,
+                sort=sort,
                 real_time=real_time,
             )
 

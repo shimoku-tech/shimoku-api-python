@@ -1895,46 +1895,18 @@ def test_cohorts():
 
 def test_free_echarts():
     # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
+    data = [
+        {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
+        {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
+        {'product': 'Cheese Cocoa', '2015': 86.4, '2016': 65.2, '2017': 82.5},
+        {'product': 'Walnut Brownie', '2015': 72.4, '2016': 53.9, '2017': 39.1}
+    ]
     options = {
-        'title': {
-            'left': 'center',
-            'text': 'Large Ara Chart'
-        },
-        'toolbox': {
-            'feature': {
-                'dataZoom': {'yAxisIndex': None},
-              'restore': {},
-              'saveAsImage': {}
-            }
-        },
-        'xAxis': {
-            'type': 'time',
-            'boundaryGap': False
-        },
-        'yAxis': {
-            'type': 'value',
-            'boundaryGap': ['0', '100%']
-        },
-        'dataZoom': [
-            {
-                'type': 'inside',
-                'start': 0,
-                'end': 20
-            },
-            {
-                'start': 0,
-                'end': 20
-            }
-        ],
-        'series': [
-            {
-              'name': 'Fake Data',
-              'type': 'line',
-              'smooth': True,
-              'symbol': None,
-              'areaStyle': {},
-            }
-        ]
+        'legend': {},
+        'tooltip': {},
+        'xAxis': {'type': 'category'},
+        'yAxis': {},
+        'series': [{'type': 'bar'}, {'type': 'bar'}, {'type': 'bar'}]
     }
     s.plt.free_echarts(
         data=data,

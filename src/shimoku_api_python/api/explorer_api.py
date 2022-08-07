@@ -972,84 +972,6 @@ class CreateExplorerAPI(object):
         return report_entries
 
 
-class CascadeCreateExplorerAPI(CreateExplorerAPI):
-
-    def __init__(self, api_client):
-        self.api_client = api_client
-
-    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
-        """Create AppType and App if required and return the App component
-        """
-        try:
-            app_type: Dict = self._create_app_type(name=app_type_name)
-        except ValueError:  # It already exists then
-            app_type: Dict = (
-                self._find_app_type_by_name_filter(name=app_type_name)
-            )
-
-        app_type_id: str = app_type['id']
-        apps: Dict = self._get_business_apps(business_id=self.business_id)
-        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
-
-        if not apps:
-            app: Dict = (
-                self._create_app(
-                    business_id=self.business_id,
-                    app_type_id=app_type_id,
-                )
-            )
-        else:
-            app: Dict = target_apps[0]
-        return app
-
-    def create_report_and_dataset(
-        self, business_id: str, app_id: str,
-        report_metadata: Dict,
-        items: List[str],
-        dataset_options: Dict,
-        real_time: bool = False,
-    ) -> Dict[str, Union[Dict, List[Dict]]]:
-        """
-        1. Create a report
-        2. Create a dataset
-        3. Create data associated to a dataset
-        4. Associate dataset and report through reportDataSet
-        """
-        report: Dict = self.create_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_metadata=report_metadata,
-            real_time=real_time,
-        )
-
-        dataset: Dict = self.create_dataset(business_id=business_id)
-        dataset_id: str = dataset['id']
-
-        dataset_properties: Dict = dataset_options.copy()
-        options_dataset_id: str = '#{' + f'{dataset_id}' + '}'
-        dataset_properties['dataset'] = {'source': options_dataset_id}
-        report_dataset: Dict = self.create_reportdataset(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report['id'],
-            dataset_id=dataset_id,
-            dataset_properties=json.dumps(dataset_properties),
-        )
-
-        data: List[Dict] = self.create_data_points(
-            business_id=business_id,
-            dataset_id=dataset_id,
-            items=items,
-        )
-
-        return {
-            'report': report,
-            'dataset': dataset,
-            'report_dataset': report_dataset,
-            'data': data,
-        }
-
-
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
     _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
@@ -1188,6 +1110,110 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
         app_id: str = self.get_app_id_by_report(report_id=report_id, **kwargs)
         business_id: str = self.get_business_id_by_app(app_id=app_id, **kwargs)
         return business_id
+
+
+class CascadeCreateExplorerAPI(CreateExplorerAPI):
+    update_report = UpdateExplorerAPI.update_report
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
+        """Create AppType and App if required and return the App component
+        """
+        try:
+            app_type: Dict = self._create_app_type(name=app_type_name)
+        except ValueError:  # It already exists then
+            app_type: Dict = (
+                self._find_app_type_by_name_filter(name=app_type_name)
+            )
+
+        app_type_id: str = app_type['id']
+        apps: Dict = self._get_business_apps(business_id=self.business_id)
+        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
+
+        if not apps:
+            app: Dict = (
+                self._create_app(
+                    business_id=self.business_id,
+                    app_type_id=app_type_id,
+                )
+            )
+        else:
+            app: Dict = target_apps[0]
+        return app
+
+    def create_report_and_dataset(
+        self, business_id: str, app_id: str,
+        report_metadata: Dict,
+        items: List[str],
+        report_properties: Dict,
+        sort: Optional[Dict] = None,
+        real_time: bool = False,
+    ) -> Dict[str, Union[Dict, List[Dict]]]:
+        """
+        Example
+        -------
+        sort = {
+            'field': 'date'
+            'direction': 'asc',
+        }
+
+        1. Create a report
+        2. Create a dataset
+        3. Create data associated to a dataset
+        4. Associate dataset and report through reportDataSet
+        """
+        items_keys: List[str] = list(items[0].keys())
+
+        report: Dict = self.create_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+            real_time=real_time,
+        )
+
+        dataset: Dict = self.create_dataset(business_id=business_id)
+        dataset_id: str = dataset['id']
+
+        dataset_properties = {'mapping': items_keys}
+        if sort:
+            dataset_properties.update(sort)
+        report_dataset: Dict = self.create_reportdataset(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report['id'],
+            dataset_id=dataset_id,
+            dataset_properties=json.dumps(dataset_properties),
+        )
+
+        data: List[Dict] = self.create_data_points(
+            business_id=business_id,
+            dataset_id=dataset_id,
+            items=items,
+        )
+
+        # Syntax to be accepted by the FrontEnd
+        options_dataset_id: str = '#{' + f'{report_dataset["id"]}' + '}'
+        report_properties['dataset'] = {
+            'dimensions': items_keys,
+            'source': options_dataset_id
+        }
+        report_properties = {'properties': json.dumps({'option': report_properties})}
+
+        report: Dict = self.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report['id'],
+            report_metadata=report_properties,
+        )
+
+        return {
+            'report': report,
+            'dataset': dataset,
+            'report_dataset': report_dataset,
+            'data': data,
+        }
 
 
 class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):

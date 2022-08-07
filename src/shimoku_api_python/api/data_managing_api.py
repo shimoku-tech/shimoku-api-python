@@ -173,6 +173,89 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
+    def _convert_input_data_to_db_items(self, data: Union[List[Dict], Dict]) -> List[Dict]:
+        """Given an input data, for all the keys of the data convert it to
+         a Shimoku body parameter for Data table
+
+          stringField1: String
+          stringField2: String
+          stringField3: String
+          stringField4: String
+          intField1: Float
+          intField2: Float
+          intField3: Float
+          intField4: Float
+          dateField1: AWSDateTime
+          customField1: AWSJSON
+
+        Example
+        ------------
+        input
+            data = [
+             {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
+             {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
+             {'product': 'Cheese Cocoa', '2015': 86.4, '2016': 65.2, '2017': 82.5},
+             {'product': 'Walnut Brownie', '2015': 72.4, '2016': 53.9, '2017': 39.1}
+            ]
+
+        intermediate output
+            d = {
+                'product': 'stringField1',
+                '2015': 'intField1',
+                '2016': 'intField2',
+                '2017': 'intField3'
+            }
+
+        output
+            [
+                {'stringField1': 'Matcha Latte',
+                 'intField1': 43.3,
+                 'intField2': 85.8,
+                 'intField3': 93.7
+                 },
+                {'stringField1': 'Milk Tea',
+                 'intField1': 83.1,
+                 'intField2': 73.4,
+                 'intField3': 55.1
+                 },
+                {'stringField1': 'Cheese Cocoa',
+                 'intField1': 86.4,
+                 'intField2': 65.2,
+                 'intField3': 82.5
+                 },
+                {'stringField1': 'Walnut Brownie',
+                 'intField1': 72.4,
+                 'intField2': 53.9,
+                 'intField3': 39.1
+                 }
+            ]
+        """
+        if type(data) == dict:
+            return [{'customField1': data}]
+        elif type(data) == list:
+            d = {}
+            str_counter = 0
+            float_counter = 0
+            date_counter = 0
+            for k, v in data[0].items():
+                type_v = type(v)
+                if type_v == str:
+                    str_counter += 1
+                    d.update({k: f'stringField{str_counter}'})
+                elif type_v == float:
+                    float_counter += 1
+                    d.update({k: f'intField{float_counter}'})
+                elif type_v == dt.date or type_v == dt.datetime or type_v == pd.Timestamp:
+                    date_counter += 1
+                    d.update({k: f'dateField{date_counter}'})
+                elif type_v == dict:
+                    d.update({k: f'customField1'})
+                else:
+                    raise ValueError(f'Unknown value type {v} | Type {type_v}')
+            return [{d[k]: v for k, v in datum.items()} for datum in data]
+        else:
+            assert type(data) == list or type(data) == dict
+
     def _convert_dataframe_to_report_entry(
         self, df: DataFrame,
         filter_map: Optional[Dict[str, str]] = None,

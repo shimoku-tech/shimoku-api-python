@@ -242,7 +242,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 if type_v == str:
                     str_counter += 1
                     d.update({k: f'stringField{str_counter}'})
-                elif type_v == float:
+                elif type_v == float or type_v == int:
                     float_counter += 1
                     d.update({k: f'intField{float_counter}'})
                 elif type_v == dt.date or type_v == dt.datetime or type_v == pd.Timestamp:

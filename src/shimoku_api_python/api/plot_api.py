@@ -5,6 +5,7 @@ import logging
 import json
 from itertools import product
 
+import json5
 import datetime as dt
 import pandas as pd
 from pandas import DataFrame
@@ -996,11 +997,12 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                 )
 
-# TODO pending add append_report_data to free Echarts
+    # TODO pending add append_report_data to free Echarts
     def free_echarts(
-            self, data: Union[str, DataFrame, List[Dict]],
-            options: Dict,
-            menu_path: str,
+            self, menu_path: str,
+            data: Optional[Union[str, DataFrame, List[Dict]]] = None,
+            options: Optional[Dict] = None,
+            raw_options: Optional[Dict] = None,
             sort: Optional[Dict] = None,
             order: Optional[int] = None,
             rows_size: Optional[int] = None,
@@ -1021,6 +1023,7 @@ class BasePlot(PlotAux):
 
         :param data:
         :param options: eCharts options of the type {'options': options}
+        :param raw_options: eCharts copy paste options of the type {'options': options}
         :param menu_path:
         :param sort:
         :param order:
@@ -1033,15 +1036,12 @@ class BasePlot(PlotAux):
         :param real_time:
         """
 
-# TODO to be used
         def transform_dict_js_to_py(options_str: str):
             """https://discuss.dizzycoding.com/how-to-convert-raw-javascript-object-to-python-dictionary/"""
-            import json5
             options_str = options_str.replace('\n', '')
             options_str = options_str.replace(';', '')
             return json5.loads(options_str)
 
-# TODO to be used
         def retrieve_data_from_options(options_: Dict) -> Union[Dict, List]:
             """Retrieve data from eCharts options
 
@@ -1133,30 +1133,65 @@ class BasePlot(PlotAux):
                 }
             ]
             """
+            rows = []
+            data = []
+            cols = []
+            if 'xAxis' in options:
+                if type(options['xAxis']) == list:
+                    if len(options['xAxis']) == 1:
+                        if 'data' in options['xAxis'][0]:
+                            rows = options['xAxis'][0]['data']
+                elif type(options['xAxis']) == dict:
+                    if 'data' in options['xAxis']:
+                        rows = options['xAxis']['data']
+                    elif type(options['xAxis']) == dict:
+                        if 'data' in options['yAxis']:
+                            rows = options['yAxis']['data']
+                else:
+                    raise ValueError('xAxis has multiple values only 1 allowed')
+            elif 'radar' in options:
+                if 'indicator' in options['radar']:
+                    rows = [element['name'] for element in options['radar']['indicator']]
+                elif type(options['radar']) == dict:
+                    raise NotImplementedError('Multi-radar not implemented')
+
             if 'data' in options_:
-                return options_['data']
-            elif 'series' in options_:
-                try:
-                    if 'data' in options_['series']:
-                        return options_['series']['data']
-                    elif 'data' in options_['series'][0]:
-                        data: Union[Dict, List] = []
-                        try:
-                            cols: List[str] = options_['xAxis'][0]['data']
-                        except IndexError:
-                            cols = []
-                        except KeyError:
-                            cols = []
-                        for serie_ in options_['series']:
-                            if 'data' in serie_:
-                                data.append(serie_['data'])
-                        df = pd.DataFrame(data)
-                        df.columns = cols
-                        return df.to_dict(orient='records')
-                except IndexError as e:
-                    raise e
+                data = options_['data']
+            if 'series' in options:
+                if 'data' in options['series']:
+                    pass
+                else:
+                    for serie in options['series']:
+                        if 'data' in serie:
+                            if serie.get('type') in ['pie', 'gauge']:
+                                for datum in serie['data']:
+                                    data.append(datum)
+                            elif serie.get('type') == 'radar':
+                                for datum in serie['data']:
+                                    data.append(datum['value'])
+                                    cols.append(datum['name'])
+                                break
+                            else:
+                                data.append(serie['data'])
+
+                        if 'name' in serie:
+                            cols.append(serie['name'])
+                        elif 'type' in serie:
+                            cols.append(serie['type'])
             else:
                 return {}
+
+            df = pd.DataFrame(data)
+            if not rows and not cols:
+                return df.reset_index().to_dict(orient='records')
+            if not rows:
+                return df.to_dict(orient='records')
+
+            if rows:
+                df.columns = rows
+            df_ = df.T
+            df_.columns = cols
+            return df_.reset_index().to_dict(orient='records')
 
         def _create_free_echarts(
                 data_: Union[str, DataFrame, List[Dict]],
@@ -1262,6 +1297,17 @@ class BasePlot(PlotAux):
                     order=filter_order,
                     overwrite=True,
                 )
+
+        if options is None:
+            if raw_options is None:
+                raise ValueError('Either "options" or "raw_options" must be provided')
+            else:
+                options = transform_dict_js_to_py(raw_options)
+                data = retrieve_data_from_options(options)
+                sort = {
+                    'field': 'index',
+                    'direction': 'asc',
+                }
 
         if filters:
             _create_free_echarts_with_filters()

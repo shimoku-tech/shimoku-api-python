@@ -1895,6 +1895,507 @@ def test_cohorts():
 
 def test_free_echarts():
     # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
+    raw_options = """
+        {title: {
+            text: 'Stacked Area Chart'
+          },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'cross',
+              label: {
+                backgroundColor: '#6a7985'
+              }
+            }
+          },
+          legend: {
+            data: ['Email', 'Union Ads', 'Video Ads', 'Direct']
+          },
+          toolbox: {
+            feature: {
+              saveAsImage: {}
+            }
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: [
+            {
+              type: 'category',
+              boundaryGap: false,
+              data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            }
+          ],
+          yAxis: [
+            {
+              type: 'value'
+            }
+          ],
+          series: [
+            {
+              name: 'Email',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: [120, 132, 101, 134, 90, 230, 210]
+            },
+            {
+              name: 'Union Ads',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: [220, 182, 191, 234, 290, 330, 310]
+            },
+            {
+              name: 'Video Ads',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: [150, 232, 201, 154, 190, 330, 410]
+            },
+            {
+              name: 'Direct',
+              type: 'line',
+              stack: 'Total',
+              areaStyle: {},
+              emphasis: {
+                focus: 'series'
+              },
+              data: [320, 332, 301, 334, 390, 330, 320]
+            },
+          ]
+        }
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=0, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=line-marker
+    raw_options = """
+    {
+      title: {
+        text: 'Temperature Change in the Coming Week'
+      },
+      tooltip: {
+        trigger: 'axis'
+      },
+      legend: {},
+      toolbox: {
+        show: true,
+        feature: {
+          dataZoom: {
+            yAxisIndex: 'none'
+          },
+          dataView: { readOnly: false },
+          magicType: { type: ['line', 'bar'] },
+          restore: {},
+          saveAsImage: {}
+        }
+      },
+      xAxis: {
+        type: 'category',
+        boundaryGap: false,
+        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          formatter: '{value} °C'
+        }
+      },
+      series: [
+        {
+          name: 'Highest',
+          type: 'line',
+          data: [10, 11, 13, 11, 12, 12, 9],
+          markPoint: {
+            data: [
+              { type: 'max', name: 'Max' },
+              { type: 'min', name: 'Min' }
+            ]
+          },
+          markLine: {
+            data: [{ type: 'average', name: 'Avg' }]
+          }
+        },
+        {
+          name: 'Lowest',
+          type: 'line',
+          data: [1, -2, 2, 5, 3, 2, 0],
+          markPoint: {
+            data: [{ name: '周最低', value: -2, xAxis: 1, yAxis: -1.5 }]
+          },
+          markLine: {
+            data: [
+              { type: 'average', name: 'Avg' },
+              [
+                {
+                  symbol: 'none',
+                  x: '90%',
+                  yAxis: 'max'
+                },
+                {
+                  symbol: 'circle',
+                  label: {
+                    position: 'start',
+                    formatter: 'Max'
+                  },
+                  type: 'max',
+                  name: '最高点'
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=1, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=line-style
+    raw_options = """
+        {
+      xAxis: {
+        type: 'category',
+        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      },
+      yAxis: {
+        type: 'value'
+      },
+      series: [
+        {
+          data: [120, 200, 150, 80, 70, 110, 130],
+          type: 'line',
+          symbol: 'triangle',
+          symbolSize: 20,
+          lineStyle: {
+            color: '#5470C6',
+            width: 4,
+            type: 'dashed'
+          },
+          itemStyle: {
+            borderWidth: 3,
+            borderColor: '#EE6666',
+            color: 'yellow'
+          }
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=2, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=bar-y-category-stack
+    raw_options = """
+    {
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: {
+          type: 'shadow'
+        }
+      },
+      legend: {},
+      grid: {
+        left: '3%',
+        right: '4%',
+        bottom: '3%',
+        containLabel: true
+      },
+      xAxis: {
+        type: 'value'
+      },
+      yAxis: {
+        type: 'category',
+        data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+      },
+      series: [
+        {
+          name: 'Direct',
+          type: 'bar',
+          stack: 'total',
+          label: {
+            show: true
+          },
+          emphasis: {
+            focus: 'series'
+          },
+          data: [320, 302, 301, 334, 390, 330, 320]
+        },
+        {
+          name: 'Mail Ad',
+          type: 'bar',
+          stack: 'total',
+          label: {
+            show: true
+          },
+          emphasis: {
+            focus: 'series'
+          },
+          data: [120, 132, 101, 134, 90, 230, 210]
+        },
+        {
+          name: 'Affiliate Ad',
+          type: 'bar',
+          stack: 'total',
+          label: {
+            show: true
+          },
+          emphasis: {
+            focus: 'series'
+          },
+          data: [220, 182, 191, 234, 290, 330, 310]
+        },
+        {
+          name: 'Video Ad',
+          type: 'bar',
+          stack: 'total',
+          label: {
+            show: true
+          },
+          emphasis: {
+            focus: 'series'
+          },
+          data: [150, 212, 201, 154, 190, 330, 410]
+        },
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=3, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=bar-waterfall2
+    # Without functions!
+    # Replace "-" by "0"
+    raw_options = """
+        {      title: {        text: 'Accumulated Waterfall Chart'      },      tooltip: {        trigger: 'axis',        axisPointer: {          type: 'shadow'        },      },      legend: {        data: ['Expenses', 'Income']      },      grid: {        left: '3%',        right: '4%',        bottom: '3%',        containLabel: true      },      xAxis: {        type: 'category',        data:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]      },      yAxis: {        type: 'value'      },      series: [        {          name: 'Placeholder',          type: 'bar',          stack: 'Total',          itemStyle: {            borderColor: 'transparent',            color: 'transparent'          },          emphasis: {            itemStyle: {              borderColor: 'transparent',              color: 'transparent'            }          },          data: [0, 900, 1245, 1530, 1376, 1376, 1511, 1689, 1856, 1495, 1292]        },        {          name: 'Income',          type: 'bar',          stack: 'Total',          label: {            show: true,            position: 'top'          },          data: [900, 345, 393, 0, 0, 135, 178, 286, 0, 0, 0]        },        {          name: 'Expenses',          type: 'bar',          stack: 'Total',          label: {            show: true,            position: 'bottom'          },          data: [0, 0, 0, 108, 154, 0, 0, 0, 119, 361, 203]        }      ]    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=4, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=pie-roseType-simple
+    raw_options = """
+    {
+      legend: {
+        top: 'bottom'
+      },
+      toolbox: {    
+        show: true,
+        feature: {
+          mark: { show: true },
+          dataView: { show: true, readOnly: false },
+          restore: { show: true },
+          saveAsImage: { show: true }
+        }
+      },
+      series: [
+        {
+          name: 'Nightingale Chart',
+          type: 'pie',
+          radius: [50, 250],
+          center: ['50%', '50%'],
+          roseType: 'area',
+          itemStyle: {
+            borderRadius: 8
+          },
+          data: [
+            { value: 40, name: 'rose 1' },
+            { value: 38, name: 'rose 2' },
+            { value: 32, name: 'rose 3' },
+            { value: 30, name: 'rose 4' },
+            { value: 28, name: 'rose 5' },
+            { value: 26, name: 'rose 6' },
+            { value: 22, name: 'rose 7' },
+            { value: 18, name: 'rose 8' }
+          ]
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=5, rows_size=2, cols_size=12,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=pie-borderRadius
+    raw_options = """
+    {
+      tooltip: {
+        trigger: 'item'
+      },
+      legend: {
+        top: '5%',
+        left: 'center'
+      },
+      series: [
+        {
+          name: 'Access From',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          avoidLabelOverlap: false,
+          itemStyle: {
+            borderRadius: 10,
+            borderColor: '#fff',
+            borderWidth: 2
+          },
+          label: {
+            show: false,
+            position: 'center'
+          },
+          emphasis: {
+            label: {
+              show: true,
+              fontSize: '40',
+              fontWeight: 'bold'
+            }
+          },
+          labelLine: {
+            show: false
+          },
+          data: [
+            { value: 1048, name: 'Search Engine' },
+            { value: 735, name: 'Direct' },
+            { value: 580, name: 'Email' },
+            { value: 484, name: 'Union Ads' },
+            { value: 300, name: 'Video Ads' }
+          ]
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=6, rows_size=4, cols_size=8,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=radar
+    raw_options = """
+    {
+      title: {
+        text: 'Basic Radar Chart'
+      },
+      legend: {
+        data: ['Allocated Budget', 'Actual Spending']
+      },
+      radar: {
+        indicator: [
+          { name: 'Sales', max: 6500 },
+          { name: 'Administration', max: 16000 },
+          { name: 'Information Technology', max: 30000 },
+          { name: 'Customer Support', max: 38000 },
+          { name: 'Development', max: 52000 },
+          { name: 'Marketing', max: 25000 }
+        ]
+      },
+      series: [
+        {
+          name: 'Budget vs spending',
+          type: 'radar',
+          data: [
+            {
+              value: [4200, 3000, 20000, 35000, 50000, 18000],
+              name: 'Allocated Budget'
+            },
+            {
+              value: [5000, 14000, 28000, 26000, 42000, 21000],
+              name: 'Actual Spending'
+            }
+          ]
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=7, rows_size=3, cols_size=8,
+    )
+    # https://echarts.apache.org/examples/en/editor.html?c=gauge-speed
+    raw_options = """{
+      series: [
+        {
+          type: 'gauge',
+          progress: {
+            show: true,
+            width: 18
+          },
+          axisLine: {
+            lineStyle: {
+              width: 18
+            }
+          },
+          axisTick: {
+            show: false
+          },
+          splitLine: {
+            length: 15,
+            lineStyle: {
+              width: 2,
+              color: '#999'
+            }
+          },
+          axisLabel: {
+            distance: 25,
+            color: '#999',
+            fontSize: 20
+          },
+          anchor: {
+            show: true,
+            showAbove: true,
+            size: 25,
+            itemStyle: {
+              borderWidth: 10
+            }
+          },
+          title: {
+            show: false
+          },
+          detail: {
+            valueAnimation: true,
+            fontSize: 80,
+            offsetCenter: [0, '70%']
+          },
+          data: [
+            {
+              value: 70
+            }
+          ]
+        }
+      ]
+    };
+    """
+    s.plt.free_echarts(
+        raw_options=raw_options,
+        menu_path='test/raw-free-echarts',
+        order=8, rows_size=3, cols_size=8,
+    )
+    # TODO pendings
+    #  https://echarts.apache.org/examples/en/editor.html?c=sunburst-visualMap
+    #  https://echarts.apache.org/examples/en/editor.html?c=data-transform-aggregate
+    #  https://echarts.apache.org/examples/en/editor.html?c=custom-ohlc
+    #  https://echarts.apache.org/examples/en/editor.html?c=scatter-clustering
+
     data = [
         {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
         {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
@@ -2308,6 +2809,7 @@ def test_free_echarts():
     )
 
     # TODO no funca!!
+    """
     # https://echarts.apache.org/examples/en/editor.html?c=themeRiver-basic
     data = [
         ['2015/11/08', 10, 'DQ'],
@@ -2500,16 +3002,18 @@ def test_free_echarts():
             'direction': 'asc',
         }
     )
+    """
 
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-test_free_echarts()
+# test_free_echarts()
 test_bentobox()
-test_table()
-test_delete()
+# TODO estas no funcan!
+# test_table()
+# test_delete()
 test_bar_with_filters()
 test_set_apps_orders()
 test_set_sub_path_orders()

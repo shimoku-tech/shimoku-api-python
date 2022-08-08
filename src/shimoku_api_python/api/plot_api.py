@@ -5,6 +5,8 @@ import logging
 import json
 from itertools import product
 
+import json5
+import datetime as dt
 import pandas as pd
 from pandas import DataFrame
 
@@ -12,10 +14,13 @@ from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
-    MultiCreateApi, AppExplorerApi, ReportExplorerApi,
+    CascadeCreateExplorerAPI, MultiCreateApi,
+    AppExplorerApi, ReportExplorerApi,
     DeleteExplorerApi, UniverseExplorerApi,
+    ReportDatasetExplorerApi, DatasetExplorerApi,
 )
 from .data_managing_api import DataManagingApi
+from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 
 
@@ -46,7 +51,7 @@ class PlotAux:
     _find_app_type_by_name_filter = (
         CascadeExplorerAPI.find_app_type_by_name_filter
     )
-    # TODO this shit has to be fixed
+    # TODO this shit (methods with underscore _* and *) has to be fixed
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_reports = CascadeExplorerAPI.get_app_reports
@@ -55,18 +60,25 @@ class PlotAux:
     _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
 
+    create_report = CreateExplorerAPI.create_report
     _create_report = CreateExplorerAPI.create_report
     _create_app_type = CreateExplorerAPI.create_app_type
     _create_normalized_name = CreateExplorerAPI._create_normalized_name
     _create_key_name = CreateExplorerAPI._create_key_name
     _create_app = CreateExplorerAPI.create_app
     _create_business = CreateExplorerAPI.create_business
+    create_dataset = CascadeCreateExplorerAPI.create_dataset
+    create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
+    _create_report_and_dataset = ReportDatasetExplorerApi.create_report_and_dataset
+    create_data_points = DatasetExplorerApi.create_data_points
 
     _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
+    _get_or_create_app_and_apptype = AppMetadataApi.get_or_create_app_and_apptype
 
     _update_report_data = DataManagingApi.update_report_data
     _append_report_data = DataManagingApi.append_report_data
     _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
+    _convert_input_data_to_db_items = DataManagingApi._convert_input_data_to_db_items
     _is_report_data_empty = DataManagingApi._is_report_data_empty
     _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
     _create_report_entries = DataManagingApi._create_report_entries
@@ -87,10 +99,21 @@ class BasePlot(PlotAux):
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
 
-        if kwargs.get('business_id'):
-            self.business_id: Optional[str] = kwargs['business_id']
-        else:
-            self.business_id: Optional[str] = None
+    # TODO this method goes somewhere else (scripting tools?)
+    @staticmethod
+    def _convert_to_json(items: List[Dict]) -> str:
+        try:
+            items_str: str = json.dumps(items)
+        except TypeError:
+            # If we have date or datetime values
+            # then we need to convert them to isoformat
+            for datum in items:
+                for k, v in datum.items():
+                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                        datum[k] = v.isoformat()
+
+            items_str: str = json.dumps(items)
+        return items_str
 
     @staticmethod
     def _validate_filters(filters: Dict) -> None:
@@ -139,6 +162,74 @@ class BasePlot(PlotAux):
                 assert bentobox_data['bentoboxSizeRows'] > 0
             except AssertionError:
                 raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
+
+    @staticmethod
+    def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
+        """Break the menu path in the apptype or app normalizedName
+        and the path normalizedName if any"""
+        # remove empty spaces
+        menu_path: str = menu_path.strip()
+        # replace "_" for www protocol it is not good
+        menu_path = menu_path.replace('_', '-')
+
+        try:
+            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
+        except AssertionError:
+            raise ValueError(
+                f'We only allow one subpath in your request | '
+                f'you introduced {menu_path} it should be maximum '
+                f'{"/".join(menu_path.split("/")[:1])}'
+            )
+
+        # Split AppType or App Normalized Name
+        normalized_name: str = menu_path.split('/')[0]
+        name: str = (
+            ' '.join(normalized_name.split('-'))
+        )
+
+        try:
+            path_normalized_name: str = menu_path.split('/')[1]
+            path_name: str = (
+                ' '.join(path_normalized_name.split('-'))
+            )
+        except IndexError:
+            path_name = None
+
+        return name, path_name
+
+    @staticmethod
+    def _fill_report_metadata(
+            path_name: str, report_metadata: Dict,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[str] = None,
+    ) -> Dict:
+        if order is not None and rows_size and cols_size:
+            report_metadata['order'] = order
+            report_metadata['sizeRows'] = rows_size
+            report_metadata['sizeColumns'] = cols_size
+
+        if padding:
+            report_metadata['sizePadding'] = padding
+
+        if order is not None:  # elif order fails when order = 0!
+            report_metadata['order'] = order
+        elif report_metadata.get('grid'):
+            report_metadata['order'] = 0
+        else:
+            raise ValueError(
+                'Row and Column or Order must be specified to overwrite a report'
+            )
+
+        report_metadata.update({'path': path_name})
+
+        if report_metadata.get('dataFields'):
+            report_metadata['dataFields'] = (
+                json.dumps(report_metadata['dataFields'])
+            )
+
+        return report_metadata
 
     def _find_target_reports(
             self, menu_path: str,
@@ -245,39 +336,6 @@ class BasePlot(PlotAux):
         else:
             return order_temp + 1
 
-    def _clean_menu_path(self, menu_path: str) -> Tuple[str, str]:
-        """Break the menu path in the apptype or app normalizedName
-        and the path normalizedName if any"""
-        # remove empty spaces
-        menu_path: str = menu_path.strip()
-        # replace "_" for www protocol it is not good
-        menu_path = menu_path.replace('_', '-')
-
-        try:
-            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
-        except AssertionError:
-            raise ValueError(
-                f'We only allow one subpath in your request | '
-                f'you introduced {menu_path} it should be maximum '
-                f'{"/".join(menu_path.split("/")[:1])}'
-            )
-
-        # Split AppType or App Normalized Name
-        normalized_name: str = menu_path.split('/')[0]
-        name: str = (
-            ' '.join(normalized_name.split('-'))
-        )
-
-        try:
-            path_normalized_name: str = menu_path.split('/')[1]
-            path_name: str = (
-                ' '.join(path_normalized_name.split('-'))
-            )
-        except IndexError:
-            path_name = None
-
-        return name, path_name
-
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
@@ -298,54 +356,22 @@ class BasePlot(PlotAux):
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
-        if order is not None and rows_size and cols_size:
-            report_metadata['order'] = order
-            report_metadata['sizeRows'] = rows_size
-            report_metadata['sizeColumns'] = cols_size
-
-        if padding:
-            report_metadata['sizePadding'] = padding
-
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        try:
-            d: Dict[str, Dict] = self._create_app_type_and_app(
-                business_id=self.business_id,
-                app_type_metadata={'name': name},
-                app_metadata={},
-            )
-            app: Dict = d['app']
-        except ApiClientError:  # Business admin user
-            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
-            if not app:
-                app: Dict = self._create_app(
-                    business_id=self.business_id, name=name,
-                )
+        report_metadata: Dict = self._fill_report_metadata(
+            report_metadata=report_metadata, path_name=path_name,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+        )
 
+        app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
         app_id: str = app['id']
-
-        if order is not None:  # elif order fails when order = 0!
-            kwargs = {'order': order}
-        elif report_metadata.get('grid'):
-            kwargs = {'grid': report_metadata.get('grid'), 'order': 0}
-        else:
-            raise ValueError(
-                'Row and Column or Order must be specified to overwrite a report'
-            )
-
-        report_metadata.update({'path': path_name})
-        report_metadata.update(kwargs)
-
-        if report_metadata.get('dataFields'):
-            report_metadata['dataFields'] = (
-                json.dumps(report_metadata['dataFields'])
-            )
 
         if overwrite:
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
-                **kwargs
+                order=report_metadata.get('order'),
+                grid=report_metadata.get('grid'),
             )
 
         report: Dict = self._create_report(
@@ -393,6 +419,7 @@ class BasePlot(PlotAux):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             overwrite: bool = True,
+            report_metadata: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
@@ -480,11 +507,19 @@ class BasePlot(PlotAux):
         )
         data_fields['type'] = echart_type
 
-        report_metadata: Dict = {
-            'reportType': 'ECHARTS',
-            'dataFields': data_fields,
-            'title': title,
-        }
+        if report_metadata:
+            if not report_metadata.get('reportType'):
+                report_metadata['reportType'] = 'ECHARTS'
+            if not report_metadata.get('dataFields'):
+                report_metadata['dataFields'] = data_fields
+            if not report_metadata.get('title'):
+                report_metadata['title'] = 'title'
+        else:
+            report_metadata: Dict = {
+                'reportType': 'ECHARTS',
+                'dataFields': data_fields,
+                'title': title,
+            }
 
         if bentobox_data:
             self._validate_bentobox(bentobox_data)
@@ -883,7 +918,6 @@ class BasePlot(PlotAux):
                 report_data=df,
             )
 
-    # TODO move part of it to get_reports_by_path_grid_and_type() in report_metadata_api.py
     def delete(
             self, menu_path: str,
             grid: Optional[str] = None,
@@ -962,6 +996,323 @@ class BasePlot(PlotAux):
                     business_id=self.business_id,
                     app_id=app_id,
                 )
+
+    # TODO pending add append_report_data to free Echarts
+    def free_echarts(
+            self, menu_path: str,
+            data: Optional[Union[str, DataFrame, List[Dict]]] = None,
+            options: Optional[Dict] = None,
+            raw_options: Optional[Dict] = None,
+            sort: Optional[Dict] = None,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = None,
+            cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            overwrite: bool = True,
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
+            real_time: bool = False,
+    ):
+        """
+        Example
+        -------------
+        sort = {
+            'field': 'date'
+            'direction': 'asc',
+        }
+
+        :param data:
+        :param options: eCharts options of the type {'options': options}
+        :param raw_options: eCharts copy paste options of the type {'options': options}
+        :param menu_path:
+        :param sort:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
+        :param overwrite:
+        :param filters:
+        :param bentobox_data:
+        :param real_time:
+        """
+
+        def transform_dict_js_to_py(options_str: str):
+            """https://discuss.dizzycoding.com/how-to-convert-raw-javascript-object-to-python-dictionary/"""
+            options_str = options_str.replace('\n', '')
+            options_str = options_str.replace(';', '')
+            return json5.loads(options_str)
+
+        def retrieve_data_from_options(options_: Dict) -> Union[Dict, List]:
+            """Retrieve data from eCharts options
+
+            Example
+            -----------
+            input options = {'title': {'text': 'Stacked Area Chart'},
+                 'tooltip': {'trigger': 'axis',
+                  'axisPointer': {'type': 'cross', 'label': {'backgroundColor': '#6a7985'}}},
+                 'legend': {'data': ['Email',
+                   'Union Ads',
+                   'Video Ads',
+                   'Direct',
+                   'Search Engine']},
+                 'toolbox': {'feature': {'saveAsImage': {}}},
+                 'grid': {'left': '3%', 'right': '4%', 'bottom': '3%', 'containLabel': True},
+                 'xAxis': [{'type': 'category',
+                   'boundaryGap': False,
+                   'data': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}],
+                 'yAxis': [{'type': 'value'}],
+                 'series': [{'name': 'Email',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [120, 132, 101, 134, 90, 230, 210]},
+                  {'name': 'Union Ads',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [220, 182, 191, 234, 290, 330, 310]},
+                  {'name': 'Video Ads',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [150, 232, 201, 154, 190, 330, 410]},
+                  {'name': 'Direct',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [320, 332, 301, 334, 390, 330, 320]},
+                  {'name': 'Search Engine',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'label': {'show': True, 'position': 'top'},
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [820, 932, 901, 934, 1290, 1330, 1320]}]
+                }
+
+            output
+                [{'Mon': 120,
+                  'Tue': 132,
+                  'Wed': 101,
+                  'Thu': 134,
+                  'Fri': 90,
+                  'Sat': 230,
+                  'Sun': 210},
+                 {'Mon': 220,
+                  'Tue': 182,
+                  'Wed': 191,
+                  'Thu': 234,
+                  'Fri': 290,
+                  'Sat': 330,
+                  'Sun': 310},
+                 {'Mon': 150,
+                  'Tue': 232,
+                  'Wed': 201,
+                  'Thu': 154,
+                  'Fri': 190,
+                  'Sat': 330,
+                  'Sun': 410},
+                 {'Mon': 320,
+                  'Tue': 332,
+                  'Wed': 301,
+                  'Thu': 334,
+                  'Fri': 390,
+                  'Sat': 330,
+                  'Sun': 320},
+                 {'Mon': 820,
+                  'Tue': 932,
+                  'Wed': 901,
+                  'Thu': 934,
+                  'Fri': 1290,
+                  'Sat': 1330,
+                  'Sun': 1320
+                }
+            ]
+            """
+            rows = []
+            data = []
+            cols = []
+            if 'xAxis' in options:
+                if type(options['xAxis']) == list:
+                    if len(options['xAxis']) == 1:
+                        if 'data' in options['xAxis'][0]:
+                            rows = options['xAxis'][0]['data']
+                elif type(options['xAxis']) == dict:
+                    if 'data' in options['xAxis']:
+                        rows = options['xAxis']['data']
+                    elif type(options['xAxis']) == dict:
+                        if 'data' in options['yAxis']:
+                            rows = options['yAxis']['data']
+                else:
+                    raise ValueError('xAxis has multiple values only 1 allowed')
+            elif 'radar' in options:
+                if 'indicator' in options['radar']:
+                    rows = [element['name'] for element in options['radar']['indicator']]
+                elif type(options['radar']) == dict:
+                    raise NotImplementedError('Multi-radar not implemented')
+
+            if 'data' in options_:
+                data = options_['data']
+            if 'series' in options:
+                if 'data' in options['series']:
+                    pass
+                else:
+                    for serie in options['series']:
+                        if 'data' in serie:
+                            if serie.get('type') in ['pie', 'gauge']:
+                                for datum in serie['data']:
+                                    data.append(datum)
+                            elif serie.get('type') == 'radar':
+                                for datum in serie['data']:
+                                    data.append(datum['value'])
+                                    cols.append(datum['name'])
+                                break
+                            else:
+                                data.append(serie['data'])
+
+                        if 'name' in serie:
+                            cols.append(serie['name'])
+                        elif 'type' in serie:
+                            cols.append(serie['type'])
+            else:
+                return {}
+
+            df = pd.DataFrame(data)
+            if not rows and not cols:
+                return df.reset_index().to_dict(orient='records')
+            if not rows:
+                return df.to_dict(orient='records')
+
+            if rows:
+                df.columns = rows
+            df_ = df.T
+            df_.columns = cols
+            return df_.reset_index().to_dict(orient='records')
+
+        def _create_free_echarts(
+                data_: Union[str, DataFrame, List[Dict]],
+        ) -> Dict[str, Union[Dict, List[Dict]]]:
+            # TODO ojo debería no ser solo data tabular!!
+            df: pd.DataFrame = self._validate_data_is_pandarable(data_)
+
+            report_metadata: Dict = {'reportType': 'ECHARTS2'}
+
+            if bentobox_data:
+                self._validate_bentobox(bentobox_data)
+                report_metadata['bentobox'] = json.dumps(bentobox_data)
+
+            if filters:
+                raise NotImplementedError
+
+            name, path_name = self._clean_menu_path(menu_path=menu_path)
+
+            report_metadata: Dict = self._fill_report_metadata(
+                report_metadata=report_metadata, path_name=path_name,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            )
+
+            app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
+            app_id: str = app['id']
+
+            if overwrite:
+                self.delete(
+                    menu_path=menu_path,
+                    by_component_type=False,
+                    order=report_metadata.get('order'),
+                    grid=report_metadata.get('grid'),
+                )
+
+            # TODO ojo que no todo sera data tabular
+            items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
+            items: List[str] = self._convert_input_data_to_db_items(items)
+            return self._create_report_and_dataset(
+                business_id=self.business_id, app_id=app_id,
+                report_metadata=report_metadata,
+                items=items,
+                report_properties=options,
+                sort=sort,
+                real_time=real_time,
+            )
+
+        # TODO many things in common with _create_trend_charts_with_filters() unify!!
+        def _create_free_echarts_with_filters():
+            """"""
+            filter_elements: List[Dict] = []
+            self._validate_filters(filters=filters)
+
+            # We are going to save all the reports one by one
+            for df_temp, filter_element in (
+                    self._create_multifilter_reports(
+                        data=data, filters=filters,
+                    )
+            ):
+                report_id = _create_free_echarts(data_=df_temp)
+                filter_element['reportId'] = [report_id]
+                filter_elements.append(filter_element)
+
+            update_filter_type: Optional[str] = filters.get('update_filter_type')
+            filter_row: Optional[int] = filters.get('row')
+            filter_column: Optional[int] = filters.get('column')
+            filter_order: Optional[int] = filters.get('order')
+
+            if update_filter_type:
+                # concat is to add new filter options
+                # append is to add new reports to existing filter options
+                try:
+                    assert update_filter_type in ['concat', 'append']
+                except AssertionError:
+                    raise ValueError(
+                        f'update_filter_type must be one of both: "concat" or "append" | '
+                        f'Value provided: {update_filter_type}'
+                    )
+                self._update_filter_report(
+                    filter_row=filter_row,
+                    filter_column=filter_column,
+                    filter_order=filter_order,
+                    filter_elements=filter_elements,
+                    menu_path=kwargs['menu_path'],
+                    update_type=update_filter_type,
+                )
+            else:
+                report_metadata: Dict = {
+                    'reportType': 'MULTIFILTER',
+                    'title': '',
+                }
+
+                if filter_row and filter_column:
+                    report_metadata['grid'] = f'{filter_row}, {filter_column}'
+                elif filter_order is not None:
+                    report_metadata['order'] = filter_order
+                else:
+                    raise ValueError('Either row and column or order must be provided')
+
+                self._create_chart(
+                    data=filter_elements,
+                    menu_path=menu_path,
+                    report_metadata=report_metadata,
+                    order=filter_order,
+                    overwrite=True,
+                )
+
+        if options is None:
+            if raw_options is None:
+                raise ValueError('Either "options" or "raw_options" must be provided')
+            else:
+                options = transform_dict_js_to_py(raw_options)
+                data = retrieve_data_from_options(options)
+                sort = {
+                    'field': 'index',
+                    'direction': 'asc',
+                }
+
+        if filters:
+            _create_free_echarts_with_filters()
+        else:
+            _create_free_echarts(data)
 
 
 class PlotApi(BasePlot):

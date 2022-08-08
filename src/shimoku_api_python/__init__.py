@@ -8,6 +8,7 @@ from shimoku_api_python.api.app_type_metadata_api import AppTypeMetadataApi
 from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
 from shimoku_api_python.api.data_managing_api import DataManagingApi
 from shimoku_api_python.api.plot_api import PlotApi
+from shimoku_api_python.api.ai_api import AiAPI
 from shimoku_api_python.api.ping_api import PingApi
 
 from shimoku_api_python.client import ApiClient
@@ -31,6 +32,7 @@ class Client(object):
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.plt = PlotApi(self._api_client)
+        self.ai = AiAPI(self._api_client)
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

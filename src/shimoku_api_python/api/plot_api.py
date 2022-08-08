@@ -1032,10 +1032,136 @@ class BasePlot(PlotAux):
         :param bentobox_data:
         :param real_time:
         """
+
+# TODO to be used
+        def transform_dict_js_to_py(options_str: str):
+            """https://discuss.dizzycoding.com/how-to-convert-raw-javascript-object-to-python-dictionary/"""
+            import json5
+            options_str = options_str.replace('\n', '')
+            options_str = options_str.replace(';', '')
+            return json5.loads(options_str)
+
+# TODO to be used
+        def retrieve_data_from_options(options_: Dict) -> Union[Dict, List]:
+            """Retrieve data from eCharts options
+
+            Example
+            -----------
+            input options = {'title': {'text': 'Stacked Area Chart'},
+                 'tooltip': {'trigger': 'axis',
+                  'axisPointer': {'type': 'cross', 'label': {'backgroundColor': '#6a7985'}}},
+                 'legend': {'data': ['Email',
+                   'Union Ads',
+                   'Video Ads',
+                   'Direct',
+                   'Search Engine']},
+                 'toolbox': {'feature': {'saveAsImage': {}}},
+                 'grid': {'left': '3%', 'right': '4%', 'bottom': '3%', 'containLabel': True},
+                 'xAxis': [{'type': 'category',
+                   'boundaryGap': False,
+                   'data': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}],
+                 'yAxis': [{'type': 'value'}],
+                 'series': [{'name': 'Email',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [120, 132, 101, 134, 90, 230, 210]},
+                  {'name': 'Union Ads',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [220, 182, 191, 234, 290, 330, 310]},
+                  {'name': 'Video Ads',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [150, 232, 201, 154, 190, 330, 410]},
+                  {'name': 'Direct',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [320, 332, 301, 334, 390, 330, 320]},
+                  {'name': 'Search Engine',
+                   'type': 'line',
+                   'stack': 'Total',
+                   'label': {'show': True, 'position': 'top'},
+                   'areaStyle': {},
+                   'emphasis': {'focus': 'series'},
+                   'data': [820, 932, 901, 934, 1290, 1330, 1320]}]
+                }
+
+            output
+                [{'Mon': 120,
+                  'Tue': 132,
+                  'Wed': 101,
+                  'Thu': 134,
+                  'Fri': 90,
+                  'Sat': 230,
+                  'Sun': 210},
+                 {'Mon': 220,
+                  'Tue': 182,
+                  'Wed': 191,
+                  'Thu': 234,
+                  'Fri': 290,
+                  'Sat': 330,
+                  'Sun': 310},
+                 {'Mon': 150,
+                  'Tue': 232,
+                  'Wed': 201,
+                  'Thu': 154,
+                  'Fri': 190,
+                  'Sat': 330,
+                  'Sun': 410},
+                 {'Mon': 320,
+                  'Tue': 332,
+                  'Wed': 301,
+                  'Thu': 334,
+                  'Fri': 390,
+                  'Sat': 330,
+                  'Sun': 320},
+                 {'Mon': 820,
+                  'Tue': 932,
+                  'Wed': 901,
+                  'Thu': 934,
+                  'Fri': 1290,
+                  'Sat': 1330,
+                  'Sun': 1320
+                }
+            ]
+            """
+            if 'data' in options_:
+                return options_['data']
+            elif 'series' in options_:
+                try:
+                    if 'data' in options_['series']:
+                        return options_['series']['data']
+                    elif 'data' in options_['series'][0]:
+                        data: Union[Dict, List] = []
+                        try:
+                            cols: List[str] = options_['xAxis'][0]['data']
+                        except IndexError:
+                            cols = []
+                        except KeyError:
+                            cols = []
+                        for serie_ in options_['series']:
+                            if 'data' in serie_:
+                                data.append(serie_['data'])
+                        df = pd.DataFrame(data)
+                        df.columns = cols
+                        return df.to_dict(orient='records')
+                except IndexError as e:
+                    raise e
+            else:
+                return {}
+
         def _create_free_echarts(
                 data_: Union[str, DataFrame, List[Dict]],
         ) -> Dict[str, Union[Dict, List[Dict]]]:
-# TODO ojo debería no ser solo data tabular!!
+            # TODO ojo debería no ser solo data tabular!!
             df: pd.DataFrame = self._validate_data_is_pandarable(data_)
 
             report_metadata: Dict = {'reportType': 'ECHARTS2'}
@@ -1065,7 +1191,7 @@ class BasePlot(PlotAux):
                     grid=report_metadata.get('grid'),
                 )
 
-# TODO ojo que no todo sera data tabular
+            # TODO ojo que no todo sera data tabular
             items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
             items: List[str] = self._convert_input_data_to_db_items(items)
             return self._create_report_and_dataset(

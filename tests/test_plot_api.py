@@ -1922,6 +1922,15 @@ def test_free_echarts():
         {'Mon': 150, 'Tue': 232, 'Wed': 201, 'Thu': 154},  # , 'Fri': 190, 'Sat': 330, 'Sun': 410},
         {'Mon': 820, 'Tue': 932, 'Wed': 901, 'Thu': 934},  # , 'Fri': 1290, 'Sat': 1330, 'Sun': 1320}
     ]
+    data = [
+            {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+            {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+            {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+            {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
+            {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+            {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+            {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+    ]
     options = {
         'title': {'text': 'Stacked Area Chart'},
         'tooltip': {
@@ -1985,9 +1994,12 @@ def test_free_echarts():
         options=options,
         menu_path='test/free-echarts',
         order=1, rows_size=2, cols_size=12,
+        sort={
+            'field': 'Weekday',
+            'direction': 'asc',
+        }
     )
 
-# TODO no coge bien los ejes!
     # https://echarts.apache.org/examples/en/editor.html?c=bar-waterfall
     data = [
         ['Total', 'Rent', 'Utilities', 'Transportation', 'Meals', 'Other'],
@@ -1995,8 +2007,12 @@ def test_free_echarts():
         [2900, 1200, 300, 200, 900, 300],
     ]
     data = [
-        {'Total': 0, 'Rent': 1700, 'Utilities': 1400, 'Transportation': 1200},
-        {'Total': 2900, 'Rent': 1200, 'Utilities': 300, 'Transportation': 200}
+        {'Type': 'Total', 'Placeholder': 0, 'Life Cost': 2900},
+        {'Type': 'Rent', 'Placeholder': 1700, 'Life Cost': 1200},
+        {'Type': 'Utilities', 'Placeholder': 1400, 'Life Cost': 300},
+        {'Type': 'Transportation', 'Placeholder': 1200, 'Life Cost': 200},
+        {'Type': 'Meals', 'Placeholder': 300, 'Life Cost': 900},
+        {'Type': 'Other', 'Placeholder': 0, 'Life Cost': 300},
     ]
     options = {
         'title': {
@@ -2052,9 +2068,12 @@ def test_free_echarts():
         options=options,
         menu_path='test/free-echarts',
         order=2, rows_size=2, cols_size=6,
+        sort={
+            'field': 'Type',
+            'direction': 'desc',
+        }
     )
 
-    # TODO no coge bien los ejes!
     # https://echarts.apache.org/examples/en/editor.html?c=bar-polar-stack-radial
     data = [
         ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
@@ -2066,6 +2085,15 @@ def test_free_echarts():
         {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4},
         {'Mon': 2, 'Tue': 4, 'Wed': 6, 'Thu': 1},
         {'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4},
+    ]
+    data = [
+        {'Weekday': 'Mon', 'A': 1, 'B': 2, 'C': 1},
+        {'Weekday': 'Tue', 'A': 2, 'B': 4, 'C': 2},
+        {'Weekday': 'Wed', 'A': 3, 'B': 6, 'C': 3},
+        {'Weekday': 'Thu', 'A': 4, 'B': 1, 'C': 4},
+        {'Weekday': 'Fri', 'A': 4, 'B': 1, 'C': 4},
+        {'Weekday': 'Sat', 'A': 4, 'B': 1, 'C': 4},
+        {'Weekday': 'Sun', 'A': 4, 'B': 1, 'C': 4},
     ]
     options = {
         'angleAxis': {'type': 'category'},
@@ -2104,6 +2132,179 @@ def test_free_echarts():
         options=options,
         menu_path='test/free-echarts',
         order=3, rows_size=2, cols_size=6,
+        sort={
+            'field': 'Weekday',
+            'direction': 'asc',
+        }
+    )
+
+    # https://echarts.apache.org/examples/en/editor.html?c=pie-borderRadius
+    data = [
+        {'value': 1048, 'name': 'Search Engine'},
+        {'value': 735, 'name': 'Direct'},
+        {'value': 580, 'name': 'Email'},
+        {'value': 484, 'name': 'Union Ads'},
+        {'value': 300, 'name': 'Video Ads'}
+    ]
+    options = {
+        'tooltip': {'trigger': 'item'},
+        'legend': {
+            'top': '5%',
+            'left': 'center'
+        },
+        'series': [
+            {
+                'name': 'Access From',
+                'type': 'pie',
+                'radius': ['40%', '70%'],
+                'avoidLabelOverlap': False,
+                'itemStyle': {
+                    'borderRadius': 10,
+                    'borderColor': '#fff',
+                    'borderWidth': 2
+                },
+                'label': {
+                    'show': False,
+                    'position': 'center'
+                },
+                'emphasis': {
+                    'label': {
+                        'show': True,
+                        'fontSize': '40',
+                        'fontWeight': 'bold'
+                    }
+                },
+                'labelLine': {'show': False},
+            }]
+        }
+    s.plt.free_echarts(
+        data=data,
+        options=options,
+        menu_path='test/free-echarts',
+        order=4, rows_size=2, cols_size=6,
+    )
+
+    data = [
+        {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8},
+        {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4},
+        {'product': 'Cheese Cocoa', '2015': 86.4, '2016': 65.2},
+        {'product': 'Walnut Brownie', '2015': 72.4, '2016': 53.9},
+        {'product': 'Cold brew', '2015': 43.3, '2016': 85.8},
+        {'product': 'Espresso', '2015': 83.1, '2016': 73.4},
+        {'product': 'Kombucola', '2015': 86.4, '2016': 65.2},
+    ]
+    options = {
+        'legend': {},
+        'tooltip': {},
+        'xAxis': {'type': 'category'},
+        'yAxis': {},
+        'series': [{'type': 'bar'}, {'type': 'line'}]
+    }
+    s.plt.free_echarts(
+        data=data,
+        options=options,
+        menu_path='test/free-echarts',
+        order=5, rows_size=2, cols_size=6,
+    )
+
+    # TODO it is not showing the normal & outliers simultaneously
+    # https://echarts.apache.org/examples/en/editor.html?c=scatter-effect
+    data = [
+        # shining dots
+        [172.7, 105.2], [153.4, 42],
+        # the rest
+        [161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
+        [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
+        [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0],
+        [147.2, 49.8], [168.2, 49.2], [175.0, 73.2], [157.0, 47.8], [167.6, 68.8],
+        [159.5, 50.6], [175.0, 82.5], [166.8, 57.2], [176.5, 87.8], [170.2, 72.8],
+        [174.0, 54.5], [173.0, 59.8], [179.9, 67.3], [170.5, 67.8], [160.0, 47.0],
+    ]
+    data = [
+        {'x': 172.7, 'y': 105.2},
+        {'x': 153.4, 'y': 42.0},
+        {'x': 161.2, 'y': 51.6},
+        {'x': 167.5, 'y': 59.0},
+        {'x': 159.5, 'y': 49.2},
+        {'x': 157.0, 'y': 63.0},
+        {'x': 155.8, 'y': 53.6},
+        {'x': 170.0, 'y': 59.0},
+        {'x': 159.1, 'y': 47.6},
+        {'x': 166.0, 'y': 69.8},
+        {'x': 176.2, 'y': 66.8},
+        {'x': 160.2, 'y': 75.2},
+        {'x': 172.5, 'y': 55.2},
+        {'x': 170.9, 'y': 54.2},
+        {'x': 172.9, 'y': 62.5},
+        {'x': 153.4, 'y': 42.0},
+        {'x': 160.0, 'y': 50.0},
+        {'x': 147.2, 'y': 49.8},
+        {'x': 168.2, 'y': 49.2},
+        {'x': 175.0, 'y': 73.2},
+        {'x': 157.0, 'y': 47.8},
+        {'x': 167.6, 'y': 68.8},
+        {'x': 159.5, 'y': 50.6},
+        {'x': 175.0, 'y': 82.5},
+        {'x': 166.8, 'y': 57.2},
+        {'x': 176.5, 'y': 87.8},
+        {'x': 170.2, 'y': 72.8},
+        {'x': 174.0, 'y': 54.5},
+        {'x': 173.0, 'y': 59.8},
+        {'x': 179.9, 'y': 67.3},
+        {'x': 170.5, 'y': 67.8},
+        {'x': 160.0, 'y': 47.0}
+    ]
+    data = [
+        {'x': 172.7, 'y': 105.2, 'x2': 153.4, 'y2': 42.0},
+        {'x': 161.2, 'y': 51.6, 'x2': 167.5, 'y2': 59.0},
+        {'x': 161.2, 'y': 51.6, 'x2': 150, 'y2': 20},
+        {'x': 150, 'y': 20, 'x2': 157.0, 'y2': 63.0},
+        {'x': 150, 'y': 20, 'x2': 155.8, 'y2': 53.6},
+        {'x': 150, 'y': 20, 'x2': 170.0, 'y2': 59.0},
+        {'x': 150, 'y': 20, 'x2': 159.1, 'y2': 47.6},
+        {'x': 150, 'y': 20, 'x2': 166.0, 'y2': 69.8},
+        {'x': 150, 'y': 20, 'x2': 176.2, 'y2': 66.8},
+        {'x': 150, 'y': 20, 'x2': 160.2, 'y2': 75.2},
+        {'x': 150, 'y': 20, 'x2': 172.5, 'y2': 55.2},
+        {'x': 150, 'y': 20, 'x2': 170.9, 'y2': 54.2},
+        {'x': 150, 'y': 20, 'x2': 172.9, 'y2': 62.5},
+        {'x': 150, 'y': 20, 'x2': 153.4, 'y2': 42.0},
+        {'x': 150, 'y': 20, 'x2': 160.0, 'y2': 50.0},
+        {'x': 150, 'y': 20, 'x2': 147.2, 'y2': 49.8},
+    ]
+    options = {
+        'xAxis': {'scale': True},
+        'yAxis': {'scale': True},
+        'series': [
+            {'type': 'effectScatter', 'symbolSize': 20},
+            {'type': 'scatter'},
+        ]
+    }
+    s.plt.free_echarts(
+        data=data,
+        options=options,
+        menu_path='test/free-echarts',
+        order=6, rows_size=2, cols_size=7,
+    )
+
+    data = [
+        {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
+        {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
+        {'product': 'Cheese Cocoa', '2015': 86.4, '2016': 65.2, '2017': 82.5},
+        {'product': 'Walnut Brownie', '2015': 72.4, '2016': 53.9, '2017': 39.1}
+    ]
+    options = {
+        'legend': {},
+        'tooltip': {},
+        'xAxis': {'type': 'category'},
+        'yAxis': {},
+        'series': [{'type': 'bar'}, {'type': 'line'}, {'type': 'bar'}]
+    }
+    s.plt.free_echarts(
+        data=data,
+        options=options,
+        menu_path='test/free-echarts',
+        order=7, rows_size=2, cols_size=5,
     )
 
     # TODO no funca!!
@@ -2237,131 +2438,12 @@ def test_free_echarts():
         ['2015/11/28', 10, 'DD']
     ]
     data = [
-        {'date': '2015/11/09', 'value': 15, 'cat': 'DQ'},
-        {'date': '2015/11/10', 'value': 35, 'cat': 'DQ'},
-        {'date': '2015/11/11', 'value': 38, 'cat': 'DQ'},
-        {'date': '2015/11/12', 'value': 22, 'cat': 'DQ'},
-        {'date': '2015/11/13', 'value': 16, 'cat': 'DQ'},
-        {'date': '2015/11/14', 'value': 7, 'cat': 'DQ'},
-        {'date': '2015/11/15', 'value': 2, 'cat': 'DQ'},
-        {'date': '2015/11/16', 'value': 17, 'cat': 'DQ'},
-        {'date': '2015/11/17', 'value': 33, 'cat': 'DQ'},
-        {'date': '2015/11/18', 'value': 40, 'cat': 'DQ'},
-        {'date': '2015/11/19', 'value': 32, 'cat': 'DQ'},
-        {'date': '2015/11/20', 'value': 26, 'cat': 'DQ'},
-        {'date': '2015/11/21', 'value': 35, 'cat': 'DQ'},
-        {'date': '2015/11/22', 'value': 40, 'cat': 'DQ'},
-        {'date': '2015/11/23', 'value': 32, 'cat': 'DQ'},
-        {'date': '2015/11/24', 'value': 26, 'cat': 'DQ'},
-        {'date': '2015/11/25', 'value': 22, 'cat': 'DQ'},
-        {'date': '2015/11/26', 'value': 16, 'cat': 'DQ'},
-        {'date': '2015/11/27', 'value': 22, 'cat': 'DQ'},
-        {'date': '2015/11/28', 'value': 10, 'cat': 'DQ'},
-        {'date': '2015/11/08', 'value': 35, 'cat': 'TY'},
-        {'date': '2015/11/09', 'value': 36, 'cat': 'TY'},
-        {'date': '2015/11/10', 'value': 37, 'cat': 'TY'},
-        {'date': '2015/11/11', 'value': 22, 'cat': 'TY'},
-        {'date': '2015/11/12', 'value': 24, 'cat': 'TY'},
-        {'date': '2015/11/13', 'value': 26, 'cat': 'TY'},
-        {'date': '2015/11/14', 'value': 34, 'cat': 'TY'},
-        {'date': '2015/11/15', 'value': 21, 'cat': 'TY'},
-        {'date': '2015/11/16', 'value': 18, 'cat': 'TY'},
-        {'date': '2015/11/17', 'value': 45, 'cat': 'TY'},
-        {'date': '2015/11/18', 'value': 32, 'cat': 'TY'},
-        {'date': '2015/11/19', 'value': 35, 'cat': 'TY'},
-        {'date': '2015/11/20', 'value': 30, 'cat': 'TY'},
-        {'date': '2015/11/21', 'value': 28, 'cat': 'TY'},
-        {'date': '2015/11/22', 'value': 27, 'cat': 'TY'},
-        {'date': '2015/11/23', 'value': 26, 'cat': 'TY'},
-        {'date': '2015/11/24', 'value': 15, 'cat': 'TY'},
-        {'date': '2015/11/25', 'value': 30, 'cat': 'TY'},
-        {'date': '2015/11/26', 'value': 35, 'cat': 'TY'},
-        {'date': '2015/11/27', 'value': 42, 'cat': 'TY'},
-        {'date': '2015/11/28', 'value': 42, 'cat': 'TY'},
-        {'date': '2015/11/08', 'value': 21, 'cat': 'SS'},
-        {'date': '2015/11/09', 'value': 25, 'cat': 'SS'},
-        {'date': '2015/11/10', 'value': 27, 'cat': 'SS'},
-        {'date': '2015/11/11', 'value': 23, 'cat': 'SS'},
-        {'date': '2015/11/12', 'value': 24, 'cat': 'SS'},
-        {'date': '2015/11/13', 'value': 21, 'cat': 'SS'},
-        {'date': '2015/11/14', 'value': 35, 'cat': 'SS'},
-        {'date': '2015/11/15', 'value': 39, 'cat': 'SS'},
-        {'date': '2015/11/16', 'value': 40, 'cat': 'SS'},
-        {'date': '2015/11/17', 'value': 36, 'cat': 'SS'},
-        {'date': '2015/11/18', 'value': 33, 'cat': 'SS'},
-        {'date': '2015/11/19', 'value': 43, 'cat': 'SS'},
-        {'date': '2015/11/20', 'value': 40, 'cat': 'SS'},
-        {'date': '2015/11/21', 'value': 34, 'cat': 'SS'},
-        {'date': '2015/11/22', 'value': 28, 'cat': 'SS'},
-        {'date': '2015/11/23', 'value': 26, 'cat': 'SS'},
-        {'date': '2015/11/24', 'value': 37, 'cat': 'SS'},
-        {'date': '2015/11/25', 'value': 41, 'cat': 'SS'},
-        {'date': '2015/11/26', 'value': 46, 'cat': 'SS'},
-        {'date': '2015/11/27', 'value': 47, 'cat': 'SS'},
-        {'date': '2015/11/28', 'value': 41, 'cat': 'SS'},
-        {'date': '2015/11/08', 'value': 10, 'cat': 'QG'},
-        {'date': '2015/11/09', 'value': 15, 'cat': 'QG'},
-        {'date': '2015/11/10', 'value': 35, 'cat': 'QG'},
-        {'date': '2015/11/11', 'value': 38, 'cat': 'QG'},
-        {'date': '2015/11/12', 'value': 22, 'cat': 'QG'},
-        {'date': '2015/11/13', 'value': 16, 'cat': 'QG'},
-        {'date': '2015/11/14', 'value': 7, 'cat': 'QG'},
-        {'date': '2015/11/15', 'value': 2, 'cat': 'QG'},
-        {'date': '2015/11/16', 'value': 17, 'cat': 'QG'},
-        {'date': '2015/11/17', 'value': 33, 'cat': 'QG'},
-        {'date': '2015/11/18', 'value': 40, 'cat': 'QG'},
-        {'date': '2015/11/19', 'value': 32, 'cat': 'QG'},
-        {'date': '2015/11/20', 'value': 26, 'cat': 'QG'},
-        {'date': '2015/11/21', 'value': 35, 'cat': 'QG'},
-        {'date': '2015/11/22', 'value': 40, 'cat': 'QG'},
-        {'date': '2015/11/23', 'value': 32, 'cat': 'QG'},
-        {'date': '2015/11/24', 'value': 26, 'cat': 'QG'},
-        {'date': '2015/11/25', 'value': 22, 'cat': 'QG'},
-        {'date': '2015/11/26', 'value': 16, 'cat': 'QG'},
-        {'date': '2015/11/27', 'value': 22, 'cat': 'QG'},
-        {'date': '2015/11/28', 'value': 10, 'cat': 'QG'},
-        {'date': '2015/11/08', 'value': 10, 'cat': 'SY'},
-        {'date': '2015/11/09', 'value': 15, 'cat': 'SY'},
-        {'date': '2015/11/10', 'value': 35, 'cat': 'SY'},
-        {'date': '2015/11/11', 'value': 38, 'cat': 'SY'},
-        {'date': '2015/11/12', 'value': 22, 'cat': 'SY'},
-        {'date': '2015/11/13', 'value': 16, 'cat': 'SY'},
-        {'date': '2015/11/14', 'value': 7, 'cat': 'SY'},
-        {'date': '2015/11/15', 'value': 2, 'cat': 'SY'},
-        {'date': '2015/11/16', 'value': 17, 'cat': 'SY'},
-        {'date': '2015/11/17', 'value': 33, 'cat': 'SY'},
-        {'date': '2015/11/18', 'value': 40, 'cat': 'SY'},
-        {'date': '2015/11/19', 'value': 32, 'cat': 'SY'},
-        {'date': '2015/11/20', 'value': 26, 'cat': 'SY'},
-        {'date': '2015/11/21', 'value': 35, 'cat': 'SY'},
-        {'date': '2015/11/22', 'value': 4, 'cat': 'SY'},
-        {'date': '2015/11/23', 'value': 32, 'cat': 'SY'},
-        {'date': '2015/11/24', 'value': 26, 'cat': 'SY'},
-        {'date': '2015/11/25', 'value': 22, 'cat': 'SY'},
-        {'date': '2015/11/26', 'value': 16, 'cat': 'SY'},
-        {'date': '2015/11/27', 'value': 22, 'cat': 'SY'},
-        {'date': '2015/11/28', 'value': 10, 'cat': 'SY'},
-        {'date': '2015/11/08', 'value': 10, 'cat': 'DD'},
-        {'date': '2015/11/09', 'value': 15, 'cat': 'DD'},
-        {'date': '2015/11/10', 'value': 35, 'cat': 'DD'},
-        {'date': '2015/11/11', 'value': 38, 'cat': 'DD'},
-        {'date': '2015/11/12', 'value': 22, 'cat': 'DD'},
-        {'date': '2015/11/13', 'value': 16, 'cat': 'DD'},
-        {'date': '2015/11/14', 'value': 7, 'cat': 'DD'},
-        {'date': '2015/11/15', 'value': 2, 'cat': 'DD'},
-        {'date': '2015/11/16', 'value': 17, 'cat': 'DD'},
-        {'date': '2015/11/17', 'value': 33, 'cat': 'DD'},
-        {'date': '2015/11/18', 'value': 4, 'cat': 'DD'},
-        {'date': '2015/11/19', 'value': 32, 'cat': 'DD'},
-        {'date': '2015/11/20', 'value': 26, 'cat': 'DD'},
-        {'date': '2015/11/21', 'value': 35, 'cat': 'DD'},
-        {'date': '2015/11/22', 'value': 40, 'cat': 'DD'},
-        {'date': '2015/11/23', 'value': 32, 'cat': 'DD'},
-        {'date': '2015/11/24', 'value': 26, 'cat': 'DD'},
-        {'date': '2015/11/25', 'value': 22, 'cat': 'DD'},
-        {'date': '2015/11/26', 'value': 16, 'cat': 'DD'},
-        {'date': '2015/11/27', 'value': 22, 'cat': 'DD'},
-        {'date': '2015/11/28', 'value': 10, 'cat': 'DD'}
+        {'date': 1, 'DQ': 15, 'TY': 36, 'SS': 25},
+        {'date': 2, 'DQ': 15, 'TY': 36, 'SS': 25},
+        {'date': 3, 'DQ': 15, 'TY': 36, 'SS': 25},
+        {'date': 4, 'DQ': 15, 'TY': 36, 'SS': 25},
+        {'date': 5, 'DQ': 15, 'TY': 36, 'SS': 25},
+        {'date': 6, 'DQ': 15, 'TY': 36, 'SS': 25},
     ]
     options = {
         'tooltip': {
@@ -2376,7 +2458,7 @@ def test_free_echarts():
             }
         },
         'legend': {
-            'data': ['DQ', 'TY', 'SS', 'QG', 'SY', 'DD']
+            'data': ['DQ', 'TY', 'SS']
         },
         'singleAxis': {
             'top': 50,
@@ -2412,118 +2494,11 @@ def test_free_echarts():
         data=data,
         options=options,
         menu_path='test/free-echarts',
-        order=4, rows_size=2, cols_size=6,
-    )
-
-    # https://echarts.apache.org/examples/en/editor.html?c=pie-borderRadius
-    data = [
-        {'value': 1048, 'name': 'Search Engine'},
-        {'value': 735, 'name': 'Direct'},
-        {'value': 580, 'name': 'Email'},
-        {'value': 484, 'name': 'Union Ads'},
-        {'value': 300, 'name': 'Video Ads'}
-    ]
-    options = {
-        'tooltip': {'trigger': 'item'},
-        'legend': {
-            'top': '5%',
-            'left': 'center'
-        },
-        'series': [
-            {
-                'name': 'Access From',
-                'type': 'pie',
-                'radius': ['40%', '70%'],
-                'avoidLabelOverlap': False,
-                'itemStyle': {
-                    'borderRadius': 10,
-                    'borderColor': '#fff',
-                    'borderWidth': 2
-                },
-                'label': {
-                    'show': False,
-                    'position': 'center'
-                },
-                'emphasis': {
-                    'label': {
-                        'show': True,
-                        'fontSize': '40',
-                        'fontWeight': 'bold'
-                    }
-                },
-                'labelLine': {'show': False},
-            }]
+        order=8, rows_size=2, cols_size=6,
+        sort={
+            'field': 'date',
+            'direction': 'asc',
         }
-    s.plt.free_echarts(
-        data=data,
-        options=options,
-        menu_path='test/free-echarts',
-        order=5, rows_size=2, cols_size=6,
-    )
-
-    # TODO it is not showing the normal & outliers simultaneously
-    # https://echarts.apache.org/examples/en/editor.html?c=scatter-effect
-    data = [
-        # shining dots
-        [172.7, 105.2], [153.4, 42],
-        # the rest
-        [161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
-        [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
-        [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0],
-        [147.2, 49.8], [168.2, 49.2], [175.0, 73.2], [157.0, 47.8], [167.6, 68.8],
-        [159.5, 50.6], [175.0, 82.5], [166.8, 57.2], [176.5, 87.8], [170.2, 72.8],
-        [174.0, 54.5], [173.0, 59.8], [179.9, 67.3], [170.5, 67.8], [160.0, 47.0],
-    ]
-    data = [
-        {'x': 172.7, 'y': 105.2},
-        {'x': 153.4, 'y': 42.0},
-        {'x': 161.2, 'y': 51.6},
-        {'x': 167.5, 'y': 59.0},
-        {'x': 159.5, 'y': 49.2},
-        {'x': 157.0, 'y': 63.0},
-        {'x': 155.8, 'y': 53.6},
-        {'x': 170.0, 'y': 59.0},
-        {'x': 159.1, 'y': 47.6},
-        {'x': 166.0, 'y': 69.8},
-        {'x': 176.2, 'y': 66.8},
-        {'x': 160.2, 'y': 75.2},
-        {'x': 172.5, 'y': 55.2},
-        {'x': 170.9, 'y': 54.2},
-        {'x': 172.9, 'y': 62.5},
-        {'x': 153.4, 'y': 42.0},
-        {'x': 160.0, 'y': 50.0},
-        {'x': 147.2, 'y': 49.8},
-        {'x': 168.2, 'y': 49.2},
-        {'x': 175.0, 'y': 73.2},
-        {'x': 157.0, 'y': 47.8},
-        {'x': 167.6, 'y': 68.8},
-        {'x': 159.5, 'y': 50.6},
-        {'x': 175.0, 'y': 82.5},
-        {'x': 166.8, 'y': 57.2},
-        {'x': 176.5, 'y': 87.8},
-        {'x': 170.2, 'y': 72.8},
-        {'x': 174.0, 'y': 54.5},
-        {'x': 173.0, 'y': 59.8},
-        {'x': 179.9, 'y': 67.3},
-        {'x': 170.5, 'y': 67.8},
-        {'x': 160.0, 'y': 47.0}
-    ]
-    options = {
-        'xAxis': {'scale': True},
-        'yAxis': {'scale': True},
-        'series': [
-            {
-                'type': 'effectScatter',
-                'symbolSize': 20,
-            },
-            {'type': 'scatter'}
-        ]
-    }
-    s.plt.free_echarts(
-        data=data,
-        options=options,
-        menu_path='test/free-echarts',
-        order=6, rows_size=2, cols_size=9,
     )
 
 

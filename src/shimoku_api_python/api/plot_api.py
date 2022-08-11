@@ -84,6 +84,7 @@ class PlotAux:
     _create_report_entries = DataManagingApi._create_report_entries
 
     _validate_table_data = DataValidation._validate_table_data
+    _validate_input_form_data = DataValidation._validate_input_form_data
     _validate_tree_data = DataValidation._validate_tree_data
     _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
 
@@ -918,6 +919,64 @@ class BasePlot(PlotAux):
                 report_data=df,
             )
 
+    def _create_dataset_charts(
+            self, menu_path: str, order: int,
+            rows_size: int, cols_size: int,
+            force_custom_field: bool = False,
+            data: Optional[Union[str, DataFrame, List[Dict]]] = None,
+            padding: Optional[str] = None,
+            report_type: str = 'ECHARTS2',
+            overwrite: bool = True,
+            bentobox_data: Optional[Dict] = None,
+            options: Optional[Dict] = None,
+            report_dataset_properties: Optional[Dict] = None,
+            sort: Optional[Dict] = None,
+            real_time: bool = False,
+    ) -> Dict[str, Union[Dict, List[Dict]]]:
+        # TODO ojo debería no ser solo data tabular!!
+        df: pd.DataFrame = self._validate_data_is_pandarable(data)
+
+        report_metadata: Dict = {'reportType': report_type}
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+
+        name, path_name = self._clean_menu_path(menu_path=menu_path)
+
+        report_metadata: Dict = self._fill_report_metadata(
+            report_metadata=report_metadata, path_name=path_name,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+        )
+
+        app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
+        app_id: str = app['id']
+
+        if overwrite:
+            self.delete(
+                menu_path=menu_path,
+                by_component_type=False,
+                order=report_metadata.get('order'),
+                grid=report_metadata.get('grid'),
+            )
+
+        items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
+
+        if force_custom_field and len(items) == 1:  # 'FORM'
+            items: Dict = self._convert_input_data_to_db_items(items[0])
+        else:  # 'ECHARTS2'
+            items: List[str] = self._convert_input_data_to_db_items(items)
+
+        return self._create_report_and_dataset(
+            business_id=self.business_id, app_id=app_id,
+            report_metadata=report_metadata,
+            items=items,
+            report_properties=options,
+            report_dataset_properties=report_dataset_properties,
+            sort=sort,
+            real_time=real_time,
+        )
+
     def delete(
             self, menu_path: str,
             grid: Optional[str] = None,
@@ -1195,47 +1254,18 @@ class BasePlot(PlotAux):
 
         def _create_free_echarts(
                 data_: Union[str, DataFrame, List[Dict]],
+                sort: Dict,
         ) -> Dict[str, Union[Dict, List[Dict]]]:
-            # TODO ojo debería no ser solo data tabular!!
-            df: pd.DataFrame = self._validate_data_is_pandarable(data_)
-
-            report_metadata: Dict = {'reportType': 'ECHARTS2'}
-
-            if bentobox_data:
-                self._validate_bentobox(bentobox_data)
-                report_metadata['bentobox'] = json.dumps(bentobox_data)
-
             if filters:
                 raise NotImplementedError
 
-            name, path_name = self._clean_menu_path(menu_path=menu_path)
-
-            report_metadata: Dict = self._fill_report_metadata(
-                report_metadata=report_metadata, path_name=path_name,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
-            )
-
-            app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
-            app_id: str = app['id']
-
-            if overwrite:
-                self.delete(
-                    menu_path=menu_path,
-                    by_component_type=False,
-                    order=report_metadata.get('order'),
-                    grid=report_metadata.get('grid'),
-                )
-
-            # TODO ojo que no todo sera data tabular
-            items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
-            items: List[str] = self._convert_input_data_to_db_items(items)
-            return self._create_report_and_dataset(
-                business_id=self.business_id, app_id=app_id,
-                report_metadata=report_metadata,
-                items=items,
-                report_properties=options,
-                sort=sort,
-                real_time=real_time,
+            return self._create_dataset_charts(
+                options=options,
+                report_type='ECHARTS2',
+                menu_path=menu_path, order=order,
+                rows_size=rows_size, cols_size=cols_size, padding=padding,
+                data=data, bentobox_data=bentobox_data,
+                force_custom_field=False, sort=sort,
             )
 
         # TODO many things in common with _create_trend_charts_with_filters() unify!!
@@ -1308,11 +1338,13 @@ class BasePlot(PlotAux):
                     'field': 'index',
                     'direction': 'asc',
                 }
+        elif data is None:
+            raise ValueError('If "options" is provided "data" must be provided too')
 
         if filters:
             _create_free_echarts_with_filters()
         else:
-            _create_free_echarts(data)
+            _create_free_echarts(data, sort=sort)
 
 
 class PlotApi(BasePlot):
@@ -3114,3 +3146,77 @@ class PlotApi(BasePlot):
 
     def stacked_barchart(self):
         raise NotImplementedError
+
+    def input_form(
+            self, report_dataset_properties: Dict, menu_path: str,
+            data: Optional[Union[str, DataFrame, List[Dict]]] = None,
+            order: Optional[int] = None,
+            rows_size: Optional[int] = 3, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            bentobox_data: Optional[Dict] = None,
+    ):
+        """
+        :param data:
+        :param report_form_dataset_properties:
+        :param menu_path:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
+        :param bentobox_data:
+        """
+        self._validate_input_form_data(report_dataset_properties)
+
+        if data is None:
+            data = {}
+            for fields in report_dataset_properties['fields']:
+                for field in fields['fields']:
+                    field_name: str = field['fieldName']
+                    input_type: Optional[str] = field.get('inputType')
+                    if input_type == 'text':
+                        data[field_name] = ''
+                    if input_type == 'color':
+                        data[field_name] = '#000000'
+                    elif input_type == 'tel':
+                        data[field_name] = ''  # 633668396
+                    elif input_type == 'email':
+                        data[field_name] = ''  # 'ceo@acme.com'
+                    elif input_type == 'password':
+                        data[field_name] = ''  # '1234'
+                    elif input_type == 'date':
+                        data[field_name] = ''  # '1988-01-30',
+                    elif input_type == 'dateRange':
+                        data[field_name] = ''  # '2018-01-01,2020-01-01'
+                    elif input_type == 'datetimeLocal':
+                        data[field_name] = ''  # '2022-07-08T15:11'
+                    elif input_type == 'month':
+                        data[field_name] = ''  # '2019-11'
+                    elif input_type == 'week':
+                        data[field_name] = ''  # '2022W12'
+                    elif input_type == 'url':
+                        data[field_name] = ''  # 'www.shimoku.com'
+                    elif input_type == 'time':
+                        data[field_name] = ''  # '00:00'
+                    elif input_type == 'range':
+                        data[field_name] = ''  # data[options][0]
+                    elif input_type == 'select':
+                        data[field_name] = ''  # data['options'][0]
+                    elif input_type == 'checkbox':
+                        data[field_name] = ''  # data['options'][0]
+                    elif input_type == 'radio':
+                        data[field_name] = ''  # data['options'][0]
+                    elif input_type == 'number':
+                        data[field_name] = 0
+                    else:
+                        data[field_name] = ''  # default is text
+
+# TODO y esto tambien lo podría usar el método free_echarts!!
+        return self._create_dataset_charts(
+            report_dataset_properties=report_dataset_properties,
+            options={},
+            report_type='FORM',
+            menu_path=menu_path, order=order,
+            rows_size=rows_size, cols_size=cols_size, padding=padding,
+            data=data, bentobox_data=bentobox_data,
+            force_custom_field=True,
+        )

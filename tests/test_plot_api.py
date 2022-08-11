@@ -2396,6 +2396,8 @@ def test_free_echarts():
     #  https://echarts.apache.org/examples/en/editor.html?c=custom-ohlc
     #  https://echarts.apache.org/examples/en/editor.html?c=scatter-clustering
 
+    print('Raw free echarts finished')
+
     data = [
         {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
         {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
@@ -2808,6 +2810,8 @@ def test_free_echarts():
         order=7, rows_size=2, cols_size=5,
     )
 
+    print('Free echarts finished')
+
     # TODO no funca!!
     """
     # https://echarts.apache.org/examples/en/editor.html?c=themeRiver-basic
@@ -3005,11 +3009,93 @@ def test_free_echarts():
     """
 
 
+def test_input_form():
+    report_dataset_properties = {
+      'fields': [
+        {
+          'title': 'Personal information',
+          'fields': [
+            {
+                'mapping': 'name',
+                'fieldName': 'name',
+                'inputType': 'text',
+              },
+              {
+                'mapping': 'surname',
+                'fieldName': 'surname',
+                'inputType': 'text',
+              },
+            {
+              'mapping': 'age',
+              'fieldName': 'age',
+              'inputType': 'number',
+            },
+            {
+                'mapping': 'tel',
+                'fieldName': 'phone',
+                'inputType': 'tel',
+              },
+              {
+                'mapping': 'gender',
+                'fieldName': 'Gender',
+                'inputType': 'radio',
+                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+              },
+            {
+                'mapping': 'email',
+                'fieldName': 'email',
+                'inputType': 'email',
+              },
+
+          ],
+        },
+        {
+          'title': 'Other data',
+          'fields': [
+            {
+              'mapping': 'skills',
+              'fieldName': 'Skills',
+              'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+              'inputType': 'checkbox',
+            },
+            {
+                'mapping': 'birthDay',
+                'fieldName': 'Birthday',
+                'inputType': 'date',
+              },
+              {
+                'mapping': 'onCompany',
+                'fieldName': 'Time on Shimoku',
+                'inputType': 'dateRange',
+              },
+              {
+                'mapping': 'hobbies',
+                'fieldName': 'Hobbies',
+                'inputType': 'select',
+                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+              },
+              {
+                'mapping': 'textField2',
+                'fieldName': 'Test Text',
+                'inputType': 'text',
+              },
+          ],
+        },
+      ],
+    }
+    s.plt.input_form(
+        menu_path='test/input-form', order=0,
+        report_dataset_properties=report_dataset_properties
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-# test_free_echarts()
+
+test_free_echarts()
+test_input_form()
 test_bentobox()
 # TODO estas no funcan!
 # test_table()

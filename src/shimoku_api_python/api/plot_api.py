@@ -962,10 +962,11 @@ class BasePlot(PlotAux):
 
         items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
 
-        if force_custom_field and len(items) == 1:
+        if force_custom_field and len(items) == 1:  # 'FORM'
             items: Dict = self._convert_input_data_to_db_items(items[0])
-        else:
+        else:  # 'ECHARTS2'
             items: List[str] = self._convert_input_data_to_db_items(items)
+
         return self._create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
             report_metadata=report_metadata,
@@ -1253,47 +1254,18 @@ class BasePlot(PlotAux):
 
         def _create_free_echarts(
                 data_: Union[str, DataFrame, List[Dict]],
+                sort: Dict,
         ) -> Dict[str, Union[Dict, List[Dict]]]:
-            # TODO ojo debería no ser solo data tabular!!
-            df: pd.DataFrame = self._validate_data_is_pandarable(data_)
-
-            report_metadata: Dict = {'reportType': 'ECHARTS2'}
-
-            if bentobox_data:
-                self._validate_bentobox(bentobox_data)
-                report_metadata['bentobox'] = json.dumps(bentobox_data)
-
             if filters:
                 raise NotImplementedError
 
-            name, path_name = self._clean_menu_path(menu_path=menu_path)
-
-            report_metadata: Dict = self._fill_report_metadata(
-                report_metadata=report_metadata, path_name=path_name,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
-            )
-
-            app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
-            app_id: str = app['id']
-
-            if overwrite:
-                self.delete(
-                    menu_path=menu_path,
-                    by_component_type=False,
-                    order=report_metadata.get('order'),
-                    grid=report_metadata.get('grid'),
-                )
-
-            # TODO ojo que no todo sera data tabular
-            items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
-            items: List[str] = self._convert_input_data_to_db_items(items)
-            return self._create_report_and_dataset(
-                business_id=self.business_id, app_id=app_id,
-                report_metadata=report_metadata,
-                items=items,
-                report_properties=options,
-                sort=sort,
-                real_time=real_time,
+            return self._create_dataset_charts(
+                options=options,
+                report_type='ECHARTS2',
+                menu_path=menu_path, order=order,
+                rows_size=rows_size, cols_size=cols_size, padding=padding,
+                data=data, bentobox_data=bentobox_data,
+                force_custom_field=False, sort=sort,
             )
 
         # TODO many things in common with _create_trend_charts_with_filters() unify!!
@@ -1372,7 +1344,7 @@ class BasePlot(PlotAux):
         if filters:
             _create_free_echarts_with_filters()
         else:
-            _create_free_echarts(data)
+            _create_free_echarts(data, sort=sort)
 
 
 class PlotApi(BasePlot):

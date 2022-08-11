@@ -2396,6 +2396,8 @@ def test_free_echarts():
     #  https://echarts.apache.org/examples/en/editor.html?c=custom-ohlc
     #  https://echarts.apache.org/examples/en/editor.html?c=scatter-clustering
 
+    print('Raw free echarts finished')
+
     data = [
         {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
         {'product': 'Milk Tea', '2015': 83.1, '2016': 73.4, '2017': 55.1},
@@ -2808,6 +2810,8 @@ def test_free_echarts():
         order=7, rows_size=2, cols_size=5,
     )
 
+    print('Free echarts finished')
+
     # TODO no funca!!
     """
     # https://echarts.apache.org/examples/en/editor.html?c=themeRiver-basic
@@ -3090,8 +3094,8 @@ if delete_paths:
     s.plt.delete_path('test')
 
 
-test_input_form()
 test_free_echarts()
+test_input_form()
 test_bentobox()
 # TODO estas no funcan!
 # test_table()

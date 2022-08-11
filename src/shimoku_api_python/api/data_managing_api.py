@@ -52,10 +52,13 @@ class DataValidation:
             try:
                 df_ = DataFrame(data)
             except Exception:
-                raise ValueError(
-                    'The data you passed is a dict that must be '
-                    'able to be converted into a pandas dataframe'
-                )
+                try:
+                    df_ = DataFrame(data, index=[0])
+                except Exception:
+                    raise ValueError(
+                        'The data you passed is a dict that must be '
+                        'able to be converted into a pandas dataframe'
+                    )
         elif isinstance(data, str):
             try:
                 d: List[Dict] = json.loads(data)
@@ -116,6 +119,36 @@ class DataValidation:
         except AssertionError:
             raise ValueError('data keys must be "name", "value" and "children"')
 
+    def _validate_input_form_data(self, data: Dict):
+        try:
+            assert type(data) == dict
+        except AssertionError:
+            raise ValueError('data must be a dict')
+
+        try:
+            assert 'fields' in data
+        except AssertionError:
+            raise ValueError('"fields" is not a key in the input data')
+
+        try:
+            assert type(data['fields']) == list
+        except AssertionError:
+            raise ValueError('fields must be a list')
+
+        try:
+            assert all(['fields' in field_ for field_ in data['fields']])
+        except AssertionError:
+            raise ValueError('"fields" are not keys in the input data')
+
+        try:
+            assert all([
+                'fieldName' in field__ and 'mapping' in field__
+                for field_ in data['fields']
+                for field__ in field_['fields']
+            ])
+        except AssertionError:
+            raise ValueError('"fieldName" and "mapping" are not keys in the input data')
+
     def _is_report_data_empty(
         self, report_data: Union[List[Dict], str, DataFrame, Dict, List],
     ) -> bool:
@@ -173,7 +206,9 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
-    def _convert_input_data_to_db_items(self, data: Union[List[Dict], Dict]) -> List[Dict]:
+    def _convert_input_data_to_db_items(
+        self, data: Union[List[Dict], Dict]
+    ) -> Union[List[Dict], Dict]:
         """Given an input data, for all the keys of the data convert it to
          a Shimoku body parameter for Data table
 
@@ -231,7 +266,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             ]
         """
         if type(data) == dict:
-            return [{'customField1': data}]
+            return {'customField1': json.dumps(data)}
         elif type(data) == list:
             d = {}
             str_counter = 0

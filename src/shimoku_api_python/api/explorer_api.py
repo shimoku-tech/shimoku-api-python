@@ -1146,8 +1146,9 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
     def create_report_and_dataset(
         self, business_id: str, app_id: str,
         report_metadata: Dict,
-        items: List[str],
+        items: Union[List[str], Dict],
         report_properties: Dict,
+        report_dataset_properties: Optional[Dict] = None,
         sort: Optional[Dict] = None,
         real_time: bool = False,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
@@ -1164,8 +1165,6 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
         3. Create data associated to a dataset
         4. Associate dataset and report through reportDataSet
         """
-        items_keys: List[str] = list(items[0].keys())
-
         report: Dict = self.create_report(
             business_id=business_id,
             app_id=app_id,
@@ -1176,15 +1175,29 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
         dataset: Dict = self.create_dataset(business_id=business_id)
         dataset_id: str = dataset['id']
 
-        dataset_properties = {'mapping': items_keys}
-        if sort:
-            dataset_properties.update(sort)
+        if type(items) == list:  # ECHARTS2
+            items_keys: Optional[List[str]] = list(items[0].keys())
+            report_dataset_properties = {'mapping': items_keys}
+            if sort:
+                report_dataset_properties.update(sort)
+        elif type(items) == dict:  # FORM
+            items_keys: Optional[List[str]] = None
+            items = [items]
+            try:
+                assert report_dataset_properties is not None
+            except AssertionError:
+                raise ValueError(
+                    'report_dataset_properties is required if items is a dict'
+                )
+        else:
+            raise ValueError('items must be a list or dict')
+
         report_dataset: Dict = self.create_reportdataset(
             business_id=business_id,
             app_id=app_id,
             report_id=report['id'],
             dataset_id=dataset_id,
-            dataset_properties=json.dumps(dataset_properties),
+            dataset_properties=json.dumps(report_dataset_properties),
         )
 
         data: List[Dict] = self.create_data_points(
@@ -1195,10 +1208,9 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
         # Syntax to be accepted by the FrontEnd
         options_dataset_id: str = '#{' + f'{report_dataset["id"]}' + '}'
-        report_properties['dataset'] = {
-            'dimensions': items_keys,
-            'source': options_dataset_id
-        }
+        report_properties['dataset'] = {'source': options_dataset_id}
+        if items_keys is not None:  # ECHARTS2
+            report_properties['dimensions']: items_keys
         report_properties = {'properties': json.dumps({'option': report_properties})}
 
         report: Dict = self.update_report(

@@ -219,6 +219,35 @@ class GetExplorerAPI(object):
             ]
             return report_entries[0]['items']
 
+    def get_file(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+            file_id: Optional[str] = None,
+    ) -> bytes:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        :param file_id: Shimoku report UUID
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        url: str = self.api_client.query_element(method='GET', endpoint=endpoint)
+        file_object: bytes = self.api_client.query_element(method='GET', endpoint=url)
+        return file_object
+
+    def get_files(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/files'
+        files: List[Dict] = self.api_client.query_element(method='GET', endpoint=endpoint)
+        return files
+
 
 class CascadeExplorerAPI(GetExplorerAPI):
 
@@ -314,6 +343,15 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )
         return [app['id'] for app in apps]
+
+    def get_business_all_files(self, business_id) -> List[Dict]:
+        """Given a business retrieve all files metadata
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        files: List[Dict] = list
+        for app in apps:
+            files = files + self.get_files(business_id=business_id, app_id=app['id'])
+        return files
 
     def find_app_by_name_filter(
         self, business_id: str, name: Optional[str] = None,
@@ -971,6 +1009,34 @@ class CreateExplorerAPI(object):
 
         return report_entries
 
+    def create_file(
+            self, business_id: str, app_id: str,
+            file_metadata: Dict, file_object: bytes,
+    ) -> Dict:
+        """Create new Files associated to an AppId
+
+        Example
+        ------------
+            file_metadata= {
+                name: String
+                fileName: String (It should be normalized)
+                contentType: String (Content type of the file you want to upload. Ex: image/png)
+            }
+
+        :param business_id:
+        :param app_id:
+        :param file_metadata:
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file'
+
+        file: Dict = (
+            self.api_client.query_element(
+                method='POST', endpoint=endpoint,
+                **{'body_params': file_metadata},
+            )
+        )
+        return file
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -1366,6 +1432,15 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             _: Dict = self.api_client.query_element(
                 method='DELETE', endpoint=endpoint
             )
+
+    def delete_file(
+        self, business_id: str, app_id: str, file_id: str,
+    ) -> Dict:
+        """Delete a file
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        result: Dict = self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
 
 
 # TODO los siguientes puntos:
@@ -1866,6 +1941,15 @@ class ReportDatasetExplorerApi:
 
     delete_reportdataset = DeleteExplorerApi.delete_reportdataset
     delete_report_and_dataset = MultiDeleteApi.delete_report_and_dataset
+
+
+class FileExplorerApi:
+    get_file = GetExplorerAPI.get_file
+    get_files = GetExplorerAPI.get_files
+
+    create_file = CreateExplorerAPI.create_file
+
+    delete_file = DeleteExplorerApi.delete_file
 
 
 class ExplorerApi(

@@ -819,7 +819,12 @@ class BasePlot(PlotAux):
         for app in apps:
             app_id: str = app['id']
             app_normalized_name_: str = app.get('normalizedName')
+            app_name_: str = app.get('name')
             new_app_order: Union[str, int] = apps_order.get(app_normalized_name_)
+
+            if new_app_order is None:  # try with the non normalized name too
+                new_app_order: Union[str, int] = apps_order.get(app_name_)
+
             if new_app_order:
                 self._update_app(
                     business_id=self.business_id,
@@ -856,9 +861,16 @@ class BasePlot(PlotAux):
                 raw_path_name: str = report.get('path')
                 if not raw_path_name:
                     continue
-                path_name: str = '-'.join(report.get('path').split(' '))
+
+                original_path_name: str = report.get('path')
+                path_name: str = '-'.join(original_path_name.split(' ')).lower()
                 menu_path_: str = f'{app_normalized_name}/{path_name}'
                 new_path_order: Union[str, int] = paths_order.get(menu_path_)
+
+                if new_path_order is None:
+                    menu_path_: str = f'{app_normalized_name}/{original_path_name}'
+                    new_path_order: Union[str, int] = paths_order.get(menu_path_)
+
                 if new_path_order:
                     self.update_report(
                         business_id=self.business_id,

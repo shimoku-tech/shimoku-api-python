@@ -192,7 +192,7 @@ class FileMetadataApi(FileExplorerApi, ABC):
             bytes_size_df: int = bytes_size_df / 1024 / 1024
             if bytes_size_df > 5:
 # TODO split dataframe
-                chunk: int =
+                chunk: int = 0  # TODO
                 dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
                 final_file_name: str = self._encode_file_name(
                     file_name=file_name, date=dt.datetime.today()

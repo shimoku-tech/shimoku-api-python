@@ -118,11 +118,25 @@ def test_replace_file_name():
 
 
 def test_get_file_by_name():
-    s.file._get_file_by_name()
+    file = s.file.get_file_by_name(
+        business_id=business_id,
+        app_name='test',
+        file_name='test_file_metadata_api',
+        get_file_object=False,
+    )
+    assert file
+
+    file = s.file.get_file_by_name(
+        business_id=business_id,
+        app_name='test',
+        file_name='test_file_metadata_api',
+        get_file_object=True,
+    )
+    assert file
 
 
-def test_get_file_by_date():
-    s.file.get_file_by_date()
+def test_get_file_by_creation_date():
+    s.file.get_file_by_creation_date()
 
 
 def test_get_files_by_name_prefix():
@@ -130,7 +144,25 @@ def test_get_files_by_name_prefix():
 
 
 def test_get_files_by_string_matching():
-    s.file.get_files_by_string_matching()
+    files: List[Dict] = s.file._get_files_by_string_matching(
+        business_id=business_id, string_match='test',
+    )
+    assert files
+
+    files: List[Dict] = s.file._get_files_by_string_matching(
+        business_id=business_id, string_match='test', app_name='test',
+    )
+    assert files
+
+    files: List[Dict] = s.file._get_files_by_string_matching(
+        business_id=business_id, string_match='faile', app_name='test',
+    )
+    assert not files
+
+    files: List[Dict] = s.file._get_files_by_string_matching(
+        business_id=business_id, string_match='test', app_name='fail'
+    )
+    assert not files
 
 
 def test_post_dataframe():
@@ -141,7 +173,9 @@ def test_get_dataframe():
     s.file.get_dataframe()
 
 
+test_get_file_by_name()
+test_get_files_by_string_matching()
+test_create_file()
 test_get_file()
 test_get_files()
-test_create_file()
 test_delete_file()

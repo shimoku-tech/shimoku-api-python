@@ -20,13 +20,13 @@ class FileMetadataApi(FileExplorerApi, ABC):
             file_name: str, date: dt.datetime, chunk: Optional[int] = None
     ) -> str:
         """Append the date and chunk to the file name"""
-        return f'{file_name}_date:{date.strftime("%Y%m%d")}_chunk:{chunk}' if chunk else f'{file_name}_date:{date.strftime("%Y%m%d")}'
+        return f'{file_name}_createdAt:{date.strftime("%Y%m%d")}_chunk:{chunk}' if chunk else f'{file_name}_createdAt:{date.strftime("%Y%m%d")}'
 
     @staticmethod
     def _decode_file_name(file_name: str) -> str:
         """Decode the file name into its components
         """
-        file_name_date_parts: List[str] = file_name.split('_date:')
+        file_name_date_parts: List[str] = file_name.split('_createdAt:')
         file_name_chunk_parts: List[str] = file_name.split('_chunk:')
 
         if len(file_name_date_parts) == 1 and len(file_name_chunk_parts) == 1:
@@ -34,18 +34,18 @@ class FileMetadataApi(FileExplorerApi, ABC):
         elif len(file_name_date_parts) == 2 or len(file_name_chunk_parts) == 1:
             return file_name_date_parts[0]
         else:
-            raise ValueError('Invalid file name has multiple times "_date:"')
+            raise ValueError('Invalid file name has multiple times "_createdAt:" or "_chunk:"')
 
     def _get_files_by_string_matching(
             self, business_id: str, string_match: str,
             app_name: Optional[str] = None,
     ) -> List[Dict]:
-        if '_date:' in string_match or '_chunk:' in string_match:
+        if '_createdAt:' in string_match or '_chunk:' in string_match:
             raise ValueError(
-                'Reserved keywords "date:" and "chunk:" are not allowed in file name'
+                'Reserved keywords "_createdAt:" and "chunk:" are not allowed in file name'
             )
-# TODO pending importar
-        apps: List[Dict] = self.get_business_apps(business_id)
+
+        apps: List[Dict] = self._get_business_apps(business_id)
         target_files: List[Dict] = []
         for app in apps:
             app_id: str = app['id']
@@ -59,18 +59,18 @@ class FileMetadataApi(FileExplorerApi, ABC):
                 if string_match in file_metadata['name']:
                     target_files.append(file_metadata)
 
-        return files
+        return target_files
 
     def get_file_by_name(
             self, business_id: str, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
     ) -> Union[Dict, bytes]:
-        if '_date:' in file_name or '_chunk:' in file_name:
+        if '_createdAt:' in file_name or '_chunk:' in file_name:
             raise ValueError(
-                'Reserved keywords "date:" and "chunk:" are not allowed in file name'
+                'Reserved keywords "_createdAt:" and "chunk:" are not allowed in file name'
             )
-        apps: List[Dict] = self.get_business_apps(business_id)
+        apps: List[Dict] = self._get_business_apps(business_id)
         target_files: List[Dict] = []
         app_id = None
         for app in apps:
@@ -95,11 +95,11 @@ class FileMetadataApi(FileExplorerApi, ABC):
             )
         return file
 
-    def get_file_by_date(
+    def get_file_by_creation_date(
             self, business_id: str, datetime: dt.datetime,
             app_name: Optional[str] = None
     ):
-        datetime_str: str = datetime.isoformat()
+        datetime_str: str = datetime.dt.date().isoformat()
         return self._get_files_by_string_matching(
             business_id=business_id,
             string_match=datetime_str,

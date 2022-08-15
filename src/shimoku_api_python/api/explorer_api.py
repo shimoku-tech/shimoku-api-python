@@ -231,8 +231,14 @@ class GetExplorerAPI(object):
         :param file_id: Shimoku report UUID
         """
         endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
-        file_metadata: str = self.api_client.query_element(method='GET', endpoint=endpoint)
-        file_object: bytes = self.request('GET', file_metadata['url'])
+        file_data: str = self.api_client.query_element(method='GET', endpoint=endpoint)
+
+        try:
+            url: str = file_data['url']
+        except KeyError:
+            raise KeyError(f'Could not GET file')
+
+        file_object: bytes = self.request('GET', url)
         return file_object
 
     def get_files(
@@ -1038,7 +1044,7 @@ class CreateExplorerAPI(object):
         try:
             url: str = file_data['url']
         except KeyError:
-            raise KeyError(f'Could not POST data')
+            raise KeyError(f'Could not POST file')
 
         self.request('GET', url, data=file_object)
         return file_data
@@ -1956,6 +1962,8 @@ class FileExplorerApi:
     create_file = CreateExplorerAPI.create_file
 
     delete_file = DeleteExplorerApi.delete_file
+
+    _get_business_apps = CascadeExplorerAPI.get_business_apps
 
 
 class ExplorerApi(

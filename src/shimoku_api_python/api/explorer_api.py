@@ -1956,14 +1956,16 @@ class ReportDatasetExplorerApi:
 
 
 class FileExplorerApi:
-    get_file = GetExplorerAPI.get_file
+    _get_file = GetExplorerAPI.get_file
     get_files = GetExplorerAPI.get_files
 
-    create_file = CreateExplorerAPI.create_file
+    _create_file = CreateExplorerAPI.create_file
 
-    delete_file = DeleteExplorerApi.delete_file
+    _delete_file = DeleteExplorerApi.delete_file
 
     _get_business_apps = CascadeExplorerAPI.get_business_apps
+    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    get_business_apps = CascadeExplorerAPI.get_business_apps
 
 
 class ExplorerApi(

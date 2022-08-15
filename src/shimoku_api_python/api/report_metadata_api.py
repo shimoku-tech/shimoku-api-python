@@ -515,5 +515,5 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,
-            report_data=report_metadata,
+            report_metadata=report_metadata,
         )

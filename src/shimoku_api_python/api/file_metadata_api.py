@@ -184,11 +184,27 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         }
 
         if overwrite:
-            self.delete_files_by_name_prefix(
-                business_id=business_id,
-                file_name=file_name,
-                app_name=app_name,
-            )
+            try:
+                app: Dict = [
+                    app for app in self._get_business_apps(business_id)
+                    if app['name'] == app_name
+                ][0]
+            except IndexError:
+                raise ValueError(f'App not found | app_name: {app_name}')
+
+            files: List[Dict] = self.get_files(business_id=business_id, app_id=app_id)
+            try:
+                target_file: Dict = [
+                    file for file in files if file['name'] == file_metadata['name']
+                ][0]
+
+                self._delete_file(
+                    business_id=business_id,
+                    app_id=app['id'],
+                    file_id=target_file['id'],
+                )
+            except IndexError:
+                pass
 
         return self._create_file(
             business_id=business_id,
@@ -284,11 +300,18 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 return {}
         elif len_target_files == 1:
             if get_file_object:  # return Object
-                return self.get_file_by_name(
+                try:
+                    app: Dict = [
+                        app for app in self._get_business_apps(business_id)
+                        if app['name'] == app_name
+                    ][0]
+                except IndexError:
+                    raise ValueError(f'App not found | app_name: {app_name}')
+
+                return self._get_file(
                     business_id=business_id,
-                    file_name=target_files[0]['name'],
-                    app_name=app_name,
-                    get_file_object=True,
+                    app_id=app['id'],
+                    file_id=target_files[0]['id'],
                 )
             else:  # return Dict
                 return target_files[0]
@@ -318,10 +341,14 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 target_file = file
 
         if get_file_object:  # return Object
-            app: Dict = [
-                app for app in self._get_business_apps(business_id)
-                if app['name'] == app_name
-            ][0]
+            try:
+                app: Dict = [
+                    app for app in self._get_business_apps(business_id)
+                    if app['name'] == app_name
+                ][0]
+            except IndexError:
+                raise ValueError(f'App not found | app_name: {app_name}')
+
             return self._get_file(
                 business_id=business_id,
                 app_id=app['id'],

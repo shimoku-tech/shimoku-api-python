@@ -227,6 +227,7 @@ def test_get_all_files_by_date():
 
 
 def test_get_file_by_date():
+    today = dt.date.today()
     file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
@@ -239,15 +240,14 @@ def test_get_file_by_date():
 
     file: Dict = s.file.get_file_by_date(
         business_id=business_id,
-        date=dt.date.today(),
+        date=today,
         file_name='helloworld',
         app_name='test',
     )
 
     assert file
 
-    today = dt.date.today().isoformat()
-    file_object: List[Dict] = s.file.get_file_by_date(
+    file_object: bytes = s.file.get_file_by_date(
         business_id=business_id,
         date=today,
         file_name='helloworld',
@@ -357,12 +357,6 @@ def test_get_dataframe():
     s.file.get_dataframe()
 
 
-# TODO revisando estas
-test_get_all_files_by_date()
-test_get_file_with_max_date()
-test_get_file_by_date()
-
-
 test_create_file()
 test_delete_file()
 test_get_file()
@@ -379,6 +373,10 @@ test_get_files_by_name_prefix()
 test_get_file_by_name()
 test_delete_files_by_name_prefix()
 test_post_object()
+
+test_get_all_files_by_date()
+test_get_file_with_max_date()
+test_get_file_by_date()
 
 # TODO pending
 # test_replace_file_name()

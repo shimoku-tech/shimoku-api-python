@@ -1,6 +1,7 @@
 """"""
 from os import getenv
 from typing import Dict, List
+import unittest
 
 import pandas as pd
 import datetime as dt
@@ -28,7 +29,7 @@ def test_create_file():
     }
     df = pd.DataFrame(data)
     file_object = df.to_csv(index=False)
-    filename = 'test_file_metadata_api'
+    filename = 'helloworld'
     file_metadata = {
         'name': filename,
         'fileName': ''.join(filename.split('_')),
@@ -46,16 +47,21 @@ def test_create_file():
 
 
 def test_get_files():
+    test_create_file()
+
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
     files = s.file.get_files(business_id=business_id, app_id=app_id)
     assert files
 
+    test_delete_file()
+
 
 def test_get_file():
-    filename = 'test_file_metadata_api'
-    filename_normalized = ''.join(filename.split('_'))
+    test_create_file()
+
+    filename = 'helloworld'
 
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
@@ -68,6 +74,8 @@ def test_get_file():
             file_id=file['id'],
         )
         assert file_
+
+    test_delete_file()
 
 
 def test_delete_file():
@@ -86,40 +94,44 @@ def test_delete_file():
 
 
 def test_encode_file_name():
-    file_name = 'HelloWorld'
+    file_name = 'helloworld'
     today = dt.date.today()
     new_file_name = s.file._encode_file_name(file_name=file_name, date=today)
-    assert new_file_name == f'HelloWorld_date:{dt.date.today().isoformat()}'
+    assert new_file_name == f'helloworld_date:{dt.date.today().isoformat()}'
 
 
 def test_decode_file_name():
-    file_name = f'HelloWorld_date:{dt.date.today().isoformat()}'
+    file_name = f'helloworld_date:{dt.date.today().isoformat()}'
     new_file_name = s.file._decode_file_name(file_name)
-    assert new_file_name == 'HelloWorld'
+    assert new_file_name == 'helloworld'
 
 
 def test_get_file_date():
     today = dt.date.today()
-    file_name = f'HelloWorld_date:{today.isoformat()}'
+    file_name = f'helloworld_date:{today.isoformat()}'
     date = s.file._get_file_date(file_name)
     assert date == today
 
 
 def test_get_all_files_by_app_name():
+    test_create_file()
     files: List[Dict] = s.file.get_all_files_by_app_name(
         business_id=business_id, app_name='test',
     )
     assert files
+    test_delete_file()
 
 
 def test_get_files_by_string_matching():
+    test_create_file()
+
     files: List[Dict] = s.file._get_files_by_string_matching(
-        business_id=business_id, string_match='test',
+        business_id=business_id, string_match='hello',
     )
     assert files
 
     files: List[Dict] = s.file._get_files_by_string_matching(
-        business_id=business_id, string_match='test', app_name='test',
+        business_id=business_id, string_match='hello', app_name='test',
     )
     assert files
 
@@ -129,16 +141,20 @@ def test_get_files_by_string_matching():
     assert not files
 
     files: List[Dict] = s.file._get_files_by_string_matching(
-        business_id=business_id, string_match='test', app_name='fail'
+        business_id=business_id, string_match='hello', app_name='fail'
     )
     assert not files
 
+    test_delete_file()
+
 
 def test_get_file_by_name():
+    test_create_file()
+
     file = s.file.get_file_by_name(
         business_id=business_id,
         app_name='test',
-        file_name='test_file_metadata_api',
+        file_name='helloworld',
         get_file_object=False,
     )
     assert file
@@ -146,13 +162,17 @@ def test_get_file_by_name():
     file = s.file.get_file_by_name(
         business_id=business_id,
         app_name='test',
-        file_name='test_file_metadata_api',
+        file_name='helloworld',
         get_file_object=True,
     )
     assert file
 
+    test_delete_file()
+
 
 def test_get_all_files_by_date():
+    test_post_object()
+
     today = dt.date.today().isoformat()
     files: List[Dict] = s.file.get_files_by_date(
         business_id=business_id,
@@ -169,6 +189,8 @@ def test_get_all_files_by_date():
     )
     assert not files
 
+    test_delete_file()
+
 
 def test_get_all_files_by_creation_date():
     pass
@@ -183,75 +205,127 @@ def test_get_last_created_target_file():
 
 
 def test_get_all_files_by_date():
+    file_name = 'helloworld'
+    app_name = 'test'
+    object_data = b''
+    s.file.post_object(
+        business_id=business_id,
+        app_name=app_name,
+        file_name=file_name,
+        object_data=object_data
+    )
+
     today = dt.date.today()
     files: List[Dict] = s.file.get_all_files_by_date(
         business_id=business_id,
-        date=today,
         app_name='test',
+        date=today,
     )
     assert files
 
+    test_delete_file()
+
 
 def test_get_file_by_date():
-    today = dt.date.today()
+    file_name = 'helloworld'
+    app_name = 'test'
+    object_data = b''
+    s.file.post_object(
+        business_id=business_id,
+        app_name=app_name,
+        file_name=file_name,
+        object_data=object_data
+    )
+
     file: Dict = s.file.get_file_by_date(
         business_id=business_id,
-        date=today,
-        file_name='HelloWorld',
+        date=dt.date.today(),
+        file_name='helloworld',
         app_name='test',
     )
+
     assert file
 
     today = dt.date.today().isoformat()
     file_object: List[Dict] = s.file.get_file_by_date(
         business_id=business_id,
         date=today,
-        file_name='HelloWorld',
+        file_name='helloworld',
         app_name='test',
         get_file_object=True,
     )
-    assert file_object
+    assert file_object == object_data
 
     tomorrow = today + dt.timedelta(1)
     file: Dict = s.file.get_file_by_date(
         business_id=business_id,
         date=tomorrow,
         app_name='test',
-        file_name='HelloWorld',
+        file_name='helloworld',
     )
     assert not file
 
 
 def test_get_file_with_max_date():
+    file_name = 'helloworld'
+    app_name = 'test'
+    object_data = b''
+    s.file.post_object(
+        business_id=business_id,
+        app_name=app_name,
+        file_name=file_name,
+        object_data=object_data
+    )
+
     file = s.file.get_file_with_max_date(
         business_id=business_id,
         app_name='test',
-        file_name='test',
+        file_name='helloworld',
     )
-    assert file['name'] == f'HelloWorld_date:{dt.date.today().isoformat()}'
+    assert file['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
 
     file_object = s.file.get_file_with_max_date(
         business_id=business_id,
         app_name='test',
-        file_name='test',
+        file_name='helloworld',
         get_file_object=True,
     )
-    assert file_object
+    assert file_object == object_data
+
+    test_delete_file()
 
 
 def test_get_files_by_name_prefix():
+    test_create_file()
+
     files: List[Dict] = s.file.get_files_by_name_prefix(
-        business_id=business_id, name_prefix='test', app_name='test',
+        business_id=business_id, name_prefix='hello', app_name='test',
     )
     assert files
 
+    test_delete_file()
 
-def test_delete_file_by_name():
-    s.file.delete_file_by_name(
+
+def test_delete_files_by_name_prefix():
+    class MyTestCase(unittest.TestCase):
+        def test_fake_business(self):
+            with self.assertRaises(ValueError):
+                s.file.get_file_by_name(
+                    business_id=business_id,
+                    file_name='helloworld',
+                    app_name='test'
+                )
+
+    test_create_file()
+
+    s.file.delete_files_by_name_prefix(
         business_id=business_id,
-        file_name='HelloWorld',
+        file_name='helloworld',
         app_name='test',
     )
+
+    t = MyTestCase()
+    t.test_fake_business()
 
 
 def test_replace_file_name():
@@ -259,7 +333,7 @@ def test_replace_file_name():
 
 
 def test_post_object():
-    file_name = 'HelloWorld'
+    file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
 
@@ -272,6 +346,8 @@ def test_post_object():
     assert file
     assert file['name'] == f'{file_name}_date:{dt.date.today().isoformat()}'
 
+    test_delete_file()
+
 
 def test_post_dataframe():
     s.file.post_dataframe()
@@ -281,10 +357,16 @@ def test_get_dataframe():
     s.file.get_dataframe()
 
 
+# TODO revisando estas
+test_get_all_files_by_date()
+test_get_file_with_max_date()
+test_get_file_by_date()
+
+
 test_create_file()
+test_delete_file()
 test_get_file()
 test_get_files()
-test_delete_file()
 
 test_encode_file_name()
 test_decode_file_name()
@@ -293,20 +375,18 @@ test_get_file_date()
 test_get_all_files_by_app_name()
 test_get_files_by_string_matching()
 test_get_files_by_name_prefix()
-# TODO
-# test_get_file_by_name()
-# test_delete_file_by_name()
-# test_post_object()
 
-# test_get_all_files_by_creation_date()
-# test_get_file_by_creation_date()
-# test_get_last_created_target_file()
-test_get_all_files_by_date()
-# TODO
-# test_get_file_with_max_date()
-# test_get_file_by_date()
+test_get_file_by_name()
+test_delete_files_by_name_prefix()
+test_post_object()
 
 # TODO pending
 # test_replace_file_name()
 # test_post_dataframe()
 # test_get_dataframe()
+
+
+# TODO pending to have a createdAt
+# test_get_all_files_by_creation_date()
+# test_get_file_by_creation_date()
+# test_get_last_created_target_file()

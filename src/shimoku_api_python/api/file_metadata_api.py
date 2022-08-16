@@ -95,11 +95,13 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             self, business_id: str, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
+            reserved_words: bool = True
     ) -> Union[Dict, bytes]:
         if '_date:' in file_name or '_chunk:' in file_name:
             raise ValueError(
                 'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
             )
+
         apps: List[Dict] = self._get_business_apps(business_id)
         target_files: List[Dict] = []
         app_id = None
@@ -116,16 +118,20 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                     target_files.append(file_metadata)
                     break  # there must be only one file with the same name!
 
-        file: Dict = target_files[0]
+        try:
+            file: Dict = target_files[0]
+        except IndexError:
+            raise ValueError(f'File not found | file_name: {file_name}')
+
         if get_file_object:
             return self._get_file(
                 business_id=business_id,
                 app_id=app_id,
-                file_id=file,
+                file_id=file['id'],
             )
         return file
 
-    def delete_file_by_name(
+    def delete_files_by_name_prefix(
             self, business_id: str, file_name: str,
             app_name: Optional[str] = None,
     ):
@@ -154,6 +160,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             app_name: str,
             file_name: str,
             object_data: bytes,
+            overwrite: bool = True,
             force_name: bool = False,
             content_type: str = 'text/csv',
     ) -> Dict:
@@ -175,6 +182,13 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             'fileName': re.sub('[^0-9a-zA-Z]+', '-', final_file_name).lower(),
             'contentType': content_type,
         }
+
+        if overwrite:
+            self.delete_files_by_name_prefix(
+                business_id=business_id,
+                file_name=file_name,
+                app_name=app_name,
+            )
 
         return self._create_file(
             business_id=business_id,
@@ -294,7 +308,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             app_name=app_name,
         )
         target_file: Dict = {}
-        max_date: dt.date(2000, 1, 1)
+        max_date: dt.date = dt.date(2000, 1, 1)
         for file in files:
             new_date: Optional[dt.date] = self._get_file_date(file['name'])
             if new_date is None:
@@ -304,11 +318,14 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 target_file = file
 
         if get_file_object:  # return Object
-            return self.get_file_by_name(
+            app: Dict = [
+                app for app in self._get_business_apps(business_id)
+                if app['name'] == app_name
+            ][0]
+            return self._get_file(
                 business_id=business_id,
-                file_name=target_file['name'],
-                app_name=app_name,
-                get_file_object=True,
+                app_id=app['id'],
+                file_id=target_file['id'],
             )
         else:  # return Dict
             return target_file
@@ -343,7 +360,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             file_metadata=file_metadata,
         )
 
-        self.delete_file_by_name(
+        self.delete_files_by_name_prefix(
             business_id=business_id,
             app_name=app_name,
             file_name=old_name,

@@ -76,7 +76,7 @@ def test_delete_file():
 
     files = s.file.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        s.file.delete_file(
+        s.file._delete_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
@@ -103,6 +103,13 @@ def test_get_file_date():
     file_name = f'HelloWorld_date:{today.isoformat()}'
     date = s.file._get_file_date(file_name)
     assert date == today
+
+
+def test_get_all_files_by_app_name():
+    files: List[Dict] = s.file.get_all_files_by_app_name(
+        business_id=business_id, app_name='test',
+    )
+    assert files
 
 
 def test_get_files_by_string_matching():
@@ -277,12 +284,13 @@ def test_get_dataframe():
 test_create_file()
 test_get_file()
 test_get_files()
-# test_delete_file()
+test_delete_file()
 
 test_encode_file_name()
 test_decode_file_name()
 test_get_file_date()
 
+test_get_all_files_by_app_name()
 test_get_files_by_string_matching()
 test_get_files_by_name_prefix()
 # TODO

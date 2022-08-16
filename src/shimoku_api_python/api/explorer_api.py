@@ -239,9 +239,9 @@ class GetExplorerAPI(object):
             raise KeyError(f'Could not GET file')
 
         file_object = self.api_client.raw_request(
-            **dict(method='GET', url=url, headers={'Content-Type': 'text/csv'})
+            **dict(method='GET', url=url)
         )
-        return file_object
+        return file_object.content
 
     def get_files(
             self, business_id: Optional[str] = None,

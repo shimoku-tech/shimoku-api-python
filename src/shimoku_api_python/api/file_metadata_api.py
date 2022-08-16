@@ -190,6 +190,20 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    def get_all_files_by_app_name(self, business_id: str, app_name: str) -> List[Dict]:
+        """"""
+        apps: List[Dict] = self._get_business_apps(business_id)
+        files: List[Dict] = []
+        for app in apps:
+            app_id: str = app['id']
+
+            if app['name'] != app_name:
+                continue
+
+            files: List[Dict] = self.get_files(business_id=business_id, app_id=app_id)
+            break
+        return files
+
     def get_all_files_by_creation_date(
             self, business_id: str, datetime: dt.datetime,
             app_name: Optional[str] = None,

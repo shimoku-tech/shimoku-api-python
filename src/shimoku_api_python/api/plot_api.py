@@ -1625,6 +1625,7 @@ class PlotApi(BasePlot):
 
         if row and column:
             report_metadata['grid']: str = f'{row}, {column}'
+            report_metadata['order']: int = 0
 
         if overwrite:
             if not row and not column and not order:

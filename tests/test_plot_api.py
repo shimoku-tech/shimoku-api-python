@@ -3094,12 +3094,11 @@ if delete_paths:
     s.plt.delete_path('test')
 
 
+test_table()
 test_free_echarts()
 test_input_form()
 test_bentobox()
-# TODO estas no funcan!
-# test_table()
-# test_delete()
+test_delete()
 test_bar_with_filters()
 test_set_apps_orders()
 test_set_sub_path_orders()

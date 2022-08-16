@@ -3093,7 +3093,12 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-
+test_delete_path()
+# TODO falla esta
+test_append_data_to_trend_chart()
+test_iframe()
+test_html()
+test_set_new_business()
 test_table()
 test_free_echarts()
 test_input_form()
@@ -3122,12 +3127,6 @@ test_speed_gauge()
 test_line()
 test_scatter()
 test_funnel()
-test_delete_path()
-test_append_data_to_trend_chart()
-test_iframe()
-test_html()
-test_set_new_business()
-
 
 # TODO
 # test_cohorts()

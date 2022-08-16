@@ -238,7 +238,9 @@ class GetExplorerAPI(object):
         except KeyError:
             raise KeyError(f'Could not GET file')
 
-        file_object: bytes = self.request('GET', url)
+        file_object = self.api_client.raw_request(
+            **dict(method='GET', url=url, headers={'Content-Type': 'text/csv'})
+        )
         return file_object
 
     def get_files(
@@ -1046,7 +1048,19 @@ class CreateExplorerAPI(object):
         except KeyError:
             raise KeyError(f'Could not POST file')
 
-        self.request('GET', url, data=file_object)
+        r = self.api_client.raw_request(
+            **dict(
+                method='PUT', url=url, data=file_object,
+                headers={'Content-Type': 'text/csv'},
+            )
+        )
+        try:
+            assert all([r.status_code >= 200,  r.status_code < 300])
+            file_data['Success'] = True
+        except AssertionError:
+            file_data['Success'] = False
+        file_data['Status'] = r.status_code
+        file_data.pop('url')
         return file_data
 
 

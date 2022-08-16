@@ -38,10 +38,11 @@ def test_create_file():
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    s.file._create_file(
+    file = s.file._create_file(
         business_id=business_id, app_id=app_id,
         file_metadata=file_metadata, file_object=file_object,
     )
+    assert file
 
 
 def test_get_files():
@@ -273,7 +274,7 @@ def test_get_dataframe():
     s.file.get_dataframe()
 
 
-# test_create_file()
+test_create_file()
 test_get_file()
 test_get_files()
 # test_delete_file()

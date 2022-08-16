@@ -61,7 +61,7 @@ def test_get_file():
 
     files = s.file.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        file_ = s.file.get_file(
+        file_ = s.file._get_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
@@ -274,7 +274,7 @@ def test_get_dataframe():
 
 
 # test_create_file()
-# test_get_file()
+test_get_file()
 test_get_files()
 # test_delete_file()
 

@@ -10,6 +10,7 @@ r = {
         'grid': '1, 1',
         'path': 'test',
         'reportType': 'LINECHART',
+        'chartData': '[{"name": "Matcha Latte", "value": 78}, {"name": "Milk Tea", "value": 17}, {"name": "Cheese Cocoa", "value": 18}, {"name": "Walnut Brownie", "value": 9}]'
     }
 }
 s.report.create_report(**r)
@@ -114,13 +115,16 @@ def test_create_and_delete_report():
 
     assert new_report == {
         k: v
-        for k, v in new_report.items()
+        for k, v in report.items()
         if k in [
-            'id', 'appId', 'path', 'grid',
-            'createdAt', 'order', 'isDisabled',
-            'reportType', 'dataFields', 'title',
-            'description', 'chartDataAux',
-            'smartFilters', 'subscribe', '__typename',
+            'id', 'appId', 'reportDataSets',
+            'path', 'pathOrder', 'grid',
+            'createdAt', 'order', 'reportType',
+            'dataFields', 'title', 'sizeRows',
+            'sizeColumns', 'sizePadding', 'smartFilters',
+            'subscribe', 'updatedAt', 'bentobox',
+            'hidePath', 'isDisabled',
+            'properties', '__typename',
         ]
     }
 
@@ -192,19 +196,6 @@ def test_get_report_by_path():
     assert all([r['path'] == path for r in reports])
 
 
-def test_get_report_by_external_id():
-    external_id: str = ''  # TODO
-    report: Dict = (
-        s.report.get_reports_by_external_id(
-            business_id=business_id,
-            app_id=app_id,
-            external_id=external_id,
-        )
-    )
-    assert report
-    assert report['codeETLId'] == external_id
-
-
 def test_get_report_by_chart_type():
     report_type: str = 'LINECHART'
     reports: List[Dict] = (
@@ -260,16 +251,16 @@ def test_remove_filter_for_report():
 
 
 def test_hide_report():
-    # s.report.hide_report()
-    raise NotImplementedError
+    s.report.hide_report(**report_element)
+    assert s.report.get_report(**report_element)['isDisabled']
 
 
-def test_hide_report():
-    # s.report.unhide_report()
-    raise NotImplementedError
+def test_unhide_report():
+    s.report.unhide_report(**report_element)
+    assert not s.report.get_report(**report_element)['isDisabled']
 
 
-# test_get_report()
+test_get_report()
 test_create_and_delete_report()
 test_update_report()
 test_get_reports_in_same_path()
@@ -279,14 +270,12 @@ test_get_report_by_title()
 test_get_report_by_path()
 test_get_report_by_chart_type()
 test_get_report_by_grid_position()
-
-# TODO
-"""
 test_hide_report()
 test_unhide_report()
 
+# TODO
+"""
 test_change_report_grid_position()
-test_get_report_by_external_id()
 test_get_filter_report()
 test_add_report_to_filter()
 test_remove_filter_for_report()

@@ -48,6 +48,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             return None
         return dt.datetime.strptime(date_iso, '%Y-%m-%d').date()
 
+    # TODO applies only to dataframes
     def _get_file_chunk(self):
         raise NotImplementedError('Not implemented yet')
 
@@ -95,7 +96,6 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             self, business_id: str, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
-            reserved_words: bool = True
     ) -> Union[Dict, bytes]:
         if '_date:' in file_name or '_chunk:' in file_name:
             raise ValueError(
@@ -132,7 +132,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         return file
 
     def delete_files_by_name_prefix(
-            self, business_id: str, file_name: str,
+            self, business_id: str, name_prefix: str,
             app_name: Optional[str] = None,
     ):
         app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
@@ -145,7 +145,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         files_metadata: List[Dict] = self.get_files_by_name_prefix(
             business_id=business_id,
             app_name=app_name,
-            name_prefix=file_name,
+            name_prefix=name_prefix,
         )
 
         for file_metadata in files_metadata:
@@ -397,7 +397,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
     def post_dataframe(
             self, business_id: str, app_name: str, file_name: str, df: pd.DataFrame,
             force_name: bool = False, split_by_size: bool = True
-    ) -> Dict:
+    ) -> Union[Dict, List[Dict]]:
         """
         :param business_id:
         :param app_name:
@@ -411,40 +411,41 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             bytes_size_df: int = df.memory_usage(deep=True).sum()
             bytes_size_df: int = bytes_size_df / 1024 / 1024
             if bytes_size_df > 5:
-# TODO split dataframe
-                chunk: int = 0  # TODO
-                dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
-                final_file_name: str = self._encode_file_name(
-                    file_name=file_name, date=dt.datetime.today()
-                )
-                self._create_file(
-                    business_id=business_id,
-                    app_name=app_name,
-                    file_name=final_file_name,
-                    file_object=dataframe_binary,
-                )
-            else:
-                dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
-                final_file_name: str = self._encode_file_name(
-                    file_name=file_name, date=dt.datetime.today()
-                )
-                self._create_file(
-                    business_id=business_id,
-                    app_name=app_name,
-                    file_name=final_file_name,
-                    file_object=dataframe_binary,
-                )
+                objects: List[Dict] = []
+                total_chunks: int = int(bytes_size_df / 5) + 1
+                chunk_rows: int = int(len_df / total_chunks)
+                for chunk in range(total_chunks):
+                    df_temp: pd.DataFrame = df.iloc[chunk*chunk_rows:(chunk+1)*chunk_rows]
+                    dataframe_binary: bytes = df_temp.to_csv(index=False).encode('utf-8')
+
+                    if force_name:
+                        final_file_name: str = file_name
+                    else:
+                        final_file_name: str = self._encode_file_name(
+                            file_name=file_name, date=dt.datetime.today(), chunk=chunk
+                        )
+                    object = self.post_object(
+                        business_id=business_id,
+                        app_name=app_name,
+                        file_name=final_file_name,
+                        object_data=dataframe_binary,
+                    )
+                    objects = objects + object
+                return objects
+
+        dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
+        if force_name:
+            final_file_name: str = file_name
         else:
-            dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
             final_file_name: str = self._encode_file_name(
-                file_name=file_name, date=dt.datetime.today()
+                file_name=file_name, date=dt.datetime.today(),
             )
-            self._create_file(
-                business_id=business_id,
-                app_name=app_name,
-                file_name=final_file_name,
-                file_object=dataframe_binary,
-            )
+        return self.post_object(
+            business_id=business_id,
+            app_name=app_name,
+            file_name=final_file_name,
+            object_data=dataframe_binary,
+        )
 
     def get_dataframe(
             self, business_id: str, app_name: str, file_name: str,
@@ -467,6 +468,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
             df = pd.DataFrame()
             for dataset_name in dataset_names:
+# TODO voy por aqui
                 dataset_binary: bytes = self.get_file_by_name(
                     business_id=business_id,
                     app_name=app_name,

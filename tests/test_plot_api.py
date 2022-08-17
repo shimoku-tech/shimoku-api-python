@@ -255,11 +255,15 @@ def test_set_sub_path_orders():
 def test_set_new_business():
     print('test_set_new_business')
     name: str = 'new-business-test'
+    prev_business_id: str = s.plt.business_id
+
     s.plt.set_new_business(name)
     bs = s.universe.get_universe_businesses()
     for b in bs:
         if b['name'] == name:
             s.business.delete_business(b['id'])
+
+    s.plt.set_business(prev_business_id)
 
 
 def test_delete_path():

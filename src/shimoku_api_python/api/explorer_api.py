@@ -1,6 +1,6 @@
 """"""
 
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional, Any, Union
 import json
 from time import sleep
 
@@ -52,6 +52,7 @@ class GetExplorerAPI(object):
         )
         return app_data
 
+# TODO add new data & dataset logic!
     def _get_report_with_data(
         self,
         business_id: Optional[str] = None,
@@ -139,6 +140,45 @@ class GetExplorerAPI(object):
             report_data.pop('chartData')
         return report_data
 
+    def get_dataset(self, business_id: str, dataset_id: str, **kwargs) -> Dict:
+        """Retrieve an specific app_id metadata
+
+        :param business_id: business UUID
+        :param dataset_id: dataset UUID
+        """
+        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        dataset_data: Dict = (
+            self.api_client.query_element(
+                method='GET', endpoint=endpoint, **kwargs
+            )
+        )
+        return dataset_data
+
+    def get_reportdataset(
+            self, business_id: str, app_id: str, report_id: str,
+            reportdataset_id: str, **kwargs
+    ) -> Dict:
+        """Retrieve an specific app_id metadata
+
+        :param business_id: business UUID
+        :param app_id: app UUID
+        :param report_id: report UUID
+        :param reportdataset_id: reportDataSet UUID
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'{reportdataset_id}'
+        )
+        dataset_data: Dict = (
+            self.api_client.query_element(
+                method='GET', endpoint=endpoint, **kwargs
+            )
+        )
+        return dataset_data
+
+# TODO add new data & dataset logic!
     def get_report_data(
         self, business_id: str,
         app_id: Optional[str] = None,
@@ -178,6 +218,43 @@ class GetExplorerAPI(object):
                 )
             ]
             return report_entries[0]['items']
+
+    def get_file(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+            file_id: Optional[str] = None,
+    ) -> bytes:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        :param file_id: Shimoku report UUID
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        file_data: str = self.api_client.query_element(method='GET', endpoint=endpoint)
+
+        try:
+            url: str = file_data['url']
+        except KeyError:
+            raise KeyError(f'Could not GET file')
+
+        file_object = self.api_client.raw_request(
+            **dict(method='GET', url=url)
+        )
+        return file_object.content
+
+    def get_files(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/files'
+        files: List[Dict] = self.api_client.query_element(method='GET', endpoint=endpoint)
+        return files
 
 
 class CascadeExplorerAPI(GetExplorerAPI):
@@ -275,6 +352,15 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [app['id'] for app in apps]
 
+    def get_business_all_files(self, business_id) -> List[Dict]:
+        """Given a business retrieve all files metadata
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        files: List[Dict] = list
+        for app in apps:
+            files = files + self.get_files(business_id=business_id, app_id=app['id'])
+        return files
+
     def find_app_by_name_filter(
         self, business_id: str, name: Optional[str] = None,
         normalized_name: Optional[str] = None,
@@ -350,6 +436,76 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )
         return [report['id'] for report in reports]
+
+    def get_report_datasets(
+            self, business_id: str, app_id: str,  report_id: str,
+    ) -> List[Dict]:
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'reportDataSets'
+        )
+        reportdatasets: List[Dict] = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+        reportdatasets = reportdatasets.get('items')
+        if not reportdatasets:
+            return []
+
+        data_sets: List[Dict] = []
+        for reportdataset in reportdatasets:
+            endpoint: str = (
+                f'business/{business_id}/'
+                f'dataSet/{reportdataset["dataSetId"]}'
+            )
+            data_set: Dict = (
+                self.api_client.query_element(
+                    endpoint=endpoint, method='GET',
+                )
+            )
+            if data_set.get('item'):
+                data_sets = data_sets + [data_set]
+        return data_sets
+
+    def get_dataset_data(
+            self, business_id: str, dataset_id: str,
+    ) -> List[Dict]:
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'dataSet/{dataset_id}/'
+            f'datas'
+        )
+        datas_raw: List[Dict] = (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+        datas = datas_raw.get('items')
+        if not datas:
+            return []
+        return datas
+
+    def get_report_dataset_data(
+            self, business_id: str, app_id: str, report_id: str,
+    ) -> List[Dict]:
+        """"""
+        report_datasets: List[Dict] = self.get_report_datasets(
+            business_id=business_id, app_id=app_id, report_id=report_id,
+        )
+        data: List = []
+        for report_dataset in report_datasets:
+            dataset_id: str = report_dataset['id']
+            datum: List[Dict] = (
+                self.get_dataset_data(
+                    business_id=business_id,
+                    dataset_id=dataset_id,
+                )
+            )
+            data = data + datum
+        return data
 
     # TODO pending
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
@@ -689,31 +845,6 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
-    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
-        """Create AppType and App if required and return the App component
-        """
-        try:
-            app_type: Dict = self._create_app_type(name=app_type_name)
-        except ValueError:  # It already exists then
-            app_type: Dict = (
-                self._find_app_type_by_name_filter(name=app_type_name)
-            )
-
-        app_type_id: str = app_type['id']
-        apps: Dict = self._get_business_apps(business_id=self.business_id)
-        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
-
-        if not apps:
-            app: Dict = (
-                self._create_app(
-                    business_id=self.business_id,
-                    app_type_id=app_type_id,
-                )
-            )
-        else:
-            app: Dict = target_apps[0]
-        return app
-
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
         real_time: bool = False,
@@ -723,6 +854,7 @@ class CreateExplorerAPI(object):
         :param business_id:
         :param app_id:
         :param report_metadata: A dict with all the values required to create a report
+        :param real_time: Whether it is real time or not
         """
         def append_fields(item: Dict, field_name: str) -> Dict:
             """Equivalent to
@@ -738,14 +870,12 @@ class CreateExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app/{app_id}/report'
 
         # These are the mandatory fields
-        title: str = report_metadata['title']
+        # title: str = report_metadata['title']
 
         # These are the mandatory fields
-        item: Dict = {
-            'appId': app_id,
-            'title': title,
-        }
+        item: Dict = {'appId': app_id}
 
+        item: Dict = append_fields(item=item, field_name='title')
         item: Dict = append_fields(item=item, field_name='path')
         item: Dict = append_fields(item=item, field_name='pathOrder')
         item: Dict = append_fields(item=item, field_name='grid')
@@ -755,6 +885,7 @@ class CreateExplorerAPI(object):
         item: Dict = append_fields(item=item, field_name='sizeRows')
         item: Dict = append_fields(item=item, field_name='padding')
         item: Dict = append_fields(item=item, field_name='bentobox')
+        item: Dict = append_fields(item=item, field_name='properties')
 
         if real_time:
             item['subscribe'] = True
@@ -783,6 +914,77 @@ class CreateExplorerAPI(object):
             for k, v in report.items()
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
+
+    def create_dataset(self, business_id: str) -> Dict:
+        """Create new DataSet associated to a business
+
+        :param business_id:
+        """
+        endpoint: str = f'business/{business_id}/dataSet'
+
+        return self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': {}},
+        )
+
+    def create_reportdataset(
+            self, business_id: str, app_id: str, report_id: str,
+            dataset_id: str, dataset_properties: str,
+    ) -> Dict:
+        """Create new dataset associated to a Report
+
+        :param business_id:
+        :param app_id:
+        :param report_id:
+        :param dataset_id:
+        :param dataset_properties: a json with the properties
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'reportDataSet'
+        )
+
+        item: Dict = {
+            'reportId': report_id,
+            'dataSetId': dataset_id,
+        }
+
+        if dataset_properties:
+            item['properties'] = dataset_properties
+
+        return self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': item},
+        )
+
+    def create_data_points(
+            self, business_id: str, dataset_id: str,
+            items: List[str],
+    ) -> List[Dict]:
+        """Create new row in Data (equivalent to reportEntry)
+
+        :param business_id:
+        :param dataset_id:
+        :param items:
+        """
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'dataSet/{dataset_id}/'
+            f'data'
+        )
+
+        data: List[Dict] = []
+        for item in items:
+            datum: Dict = (
+                self.api_client.query_element(
+                    method='POST', endpoint=endpoint,
+                    **{'body_params': item},
+                )
+            )
+            sleep(.25)
+            data = data + [datum]
+
+        return data
 
     def _create_report_entries(
         self, business_id: str, app_id: str, report_id: str,
@@ -814,6 +1016,52 @@ class CreateExplorerAPI(object):
             report_entries = report_entries + [report_entry]
 
         return report_entries
+
+    def create_file(
+            self, business_id: str, app_id: str,
+            file_metadata: Dict, file_object: bytes,
+    ) -> Dict:
+        """Create new Files associated to an AppId
+
+        Example
+        ------------
+            file_metadata= {
+                name: String
+                fileName: String (It should be normalized)
+                contentType: String (Content type of the file you want to upload. Ex: image/png)
+            }
+
+        :param business_id:
+        :param app_id:
+        :param file_metadata:
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file'
+
+        file_data: str = (
+            self.api_client.query_element(
+                method='POST', endpoint=endpoint,
+                **{'body_params': file_metadata},
+            )
+        )
+        try:
+            url: str = file_data['url']
+        except KeyError:
+            raise KeyError(f'Could not POST file')
+
+        r = self.api_client.raw_request(
+            **dict(
+                method='PUT', url=url, data=file_object,
+                headers={'Content-Type': 'text/csv'},
+            )
+        )
+        try:
+            assert all([r.status_code >= 200,  r.status_code < 300])
+            file_data['Success'] = True
+        except AssertionError:
+            file_data['Success'] = False
+        file_data['Status'] = r.status_code
+        file_data.pop('url')
+        return file_data
 
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
@@ -869,14 +1117,41 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
         )
 
     def update_report(
-        self, business_id: str, app_id: str, report_id: str,
-        report_metadata: Dict,
+            self, business_id: str, app_id: str, report_id: str,
+            report_metadata: Dict,
     ) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}/app/{app_id}/report/{report_id}'
         return self.api_client.query_element(
             method='PATCH', endpoint=endpoint,
             **{'body_params': report_metadata},
+        )
+
+    def update_reportdataset(
+            self, business_id: str, app_id: str, report_id: str,
+            reportdataset_id: str, reportdataset_metadata: Dict,
+    ) -> Dict:
+        """"""
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'{reportdataset_id}'
+        )
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint,
+            **{'body_params': reportdataset_metadata},
+        )
+
+    def update_dataset(
+            self, business_id: str, dataset_id: str,
+            dataset_metadata: Dict,
+    ) -> Dict:
+        """"""
+        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        return self.api_client.query_element(
+            method='PATCH', endpoint=endpoint,
+            **{'body_params': dataset_metadata},
         )
 
 
@@ -927,6 +1202,122 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
         app_id: str = self.get_app_id_by_report(report_id=report_id, **kwargs)
         business_id: str = self.get_business_id_by_app(app_id=app_id, **kwargs)
         return business_id
+
+
+class CascadeCreateExplorerAPI(CreateExplorerAPI):
+    update_report = UpdateExplorerAPI.update_report
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+
+    def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
+        """Create AppType and App if required and return the App component
+        """
+        try:
+            app_type: Dict = self._create_app_type(name=app_type_name)
+        except ValueError:  # It already exists then
+            app_type: Dict = (
+                self._find_app_type_by_name_filter(name=app_type_name)
+            )
+
+        app_type_id: str = app_type['id']
+        apps: Dict = self._get_business_apps(business_id=self.business_id)
+        target_apps = [app for app in apps if app['appType']['id'] == app_type_id]
+
+        if not apps:
+            app: Dict = (
+                self._create_app(
+                    business_id=self.business_id,
+                    app_type_id=app_type_id,
+                )
+            )
+        else:
+            app: Dict = target_apps[0]
+        return app
+
+    def create_report_and_dataset(
+        self, business_id: str, app_id: str,
+        report_metadata: Dict,
+        items: Union[List[str], Dict],
+        report_properties: Dict,
+        report_dataset_properties: Optional[Dict] = None,
+        sort: Optional[Dict] = None,
+        real_time: bool = False,
+    ) -> Dict[str, Union[Dict, List[Dict]]]:
+        """
+        Example
+        -------
+        sort = {
+            'field': 'date'
+            'direction': 'asc',
+        }
+
+        1. Create a report
+        2. Create a dataset
+        3. Create data associated to a dataset
+        4. Associate dataset and report through reportDataSet
+        """
+        report: Dict = self.create_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+            real_time=real_time,
+        )
+
+        dataset: Dict = self.create_dataset(business_id=business_id)
+        dataset_id: str = dataset['id']
+
+        if type(items) == list:  # ECHARTS2
+            items_keys: Optional[List[str]] = list(items[0].keys())
+            report_dataset_properties = {'mapping': items_keys}
+            if sort:
+                report_dataset_properties.update(sort)
+        elif type(items) == dict:  # FORM
+            items_keys: Optional[List[str]] = None
+            items = [items]
+            try:
+                assert report_dataset_properties is not None
+            except AssertionError:
+                raise ValueError(
+                    'report_dataset_properties is required if items is a dict'
+                )
+        else:
+            raise ValueError('items must be a list or dict')
+
+        report_dataset: Dict = self.create_reportdataset(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report['id'],
+            dataset_id=dataset_id,
+            dataset_properties=json.dumps(report_dataset_properties),
+        )
+
+        data: List[Dict] = self.create_data_points(
+            business_id=business_id,
+            dataset_id=dataset_id,
+            items=items,
+        )
+
+        # Syntax to be accepted by the FrontEnd
+        options_dataset_id: str = '#{' + f'{report_dataset["id"]}' + '}'
+        report_properties['dataset'] = {'source': options_dataset_id}
+        if items_keys is not None:  # ECHARTS2
+            report_properties['dimensions']: items_keys
+        report_properties = {'properties': json.dumps({'option': report_properties})}
+
+        report: Dict = self.update_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report['id'],
+            report_metadata=report_properties,
+        )
+
+        return {
+            'report': report,
+            'dataset': dataset,
+            'report_dataset': report_dataset,
+            'data': data,
+        }
 
 
 class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
@@ -1019,6 +1410,30 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
+    def delete_reportdataset(
+            self, business_id: str, app_id: str,
+            report_id: str, reportdataset_id: str,
+    ) -> Dict:
+        """"""
+        endpoint: str = (
+            f'business/{business_id}/'
+            f'app/{app_id}/'
+            f'report/{report_id}/'
+            f'{reportdataset_id}'
+        )
+        result: Dict = self.api_client.query_element(
+            method='DELETE', endpoint=endpoint
+        )
+        return result
+
+    def delete_dataset(self, business_id: str, dataset_id: str) -> Dict:
+        """"""
+        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        result: Dict = self.api_client.query_element(
+            method='DELETE', endpoint=endpoint
+        )
+        return result
+
     def delete_report_entries(
         self, business_id: str, app_id: str, report_id: str,
     ) -> None:
@@ -1044,7 +1459,22 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
                 method='DELETE', endpoint=endpoint
             )
 
+    def delete_file(
+        self, business_id: str, app_id: str, file_id: str,
+    ) -> Dict:
+        """Delete a file
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        result: Dict = self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
 
+
+# TODO los siguientes puntos:
+#  . Si elimino (delete) un report se eliminan sus reportdataset?
+#  . Tengo función cascade para dado un report coger (GET) todos los reportdataset?
+#  . No puedo crear data sin un dataset asociado, esto es así?
+#  . Si elimino (delete) un dataset se eliminan sus data ?
+#  . Tengo función cascade para dado un dataset coger (GET) todos los data?
 class MultiDeleteApi:
     """Get Businesses, Apps, Paths and Reports in any possible combination
     """
@@ -1056,6 +1486,7 @@ class MultiDeleteApi:
     _delete_app = DeleteExplorerApi.delete_app
     _delete_app_type = DeleteExplorerApi.delete_app_type
     _delete_report = DeleteExplorerApi.delete_report
+    _delete_dataset = DeleteExplorerApi.delete_dataset
 
     def __init__(self):
         return
@@ -1145,6 +1576,16 @@ class MultiDeleteApi:
                 f'app_id: {app_id}'
             )
 
+    def delete_report_and_dataset(
+            self, business_id: str, app_id: str, report_id: str, dataset_id: str,
+    ):
+        self._delete_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id
+        )
+        self._delete_dataset(business_id=business_id, dataset_id=dataset_id)
+
 
 class MultiCreateApi(MultiDeleteApi):
     """If some upper level elements are not created it does it
@@ -1152,10 +1593,10 @@ class MultiCreateApi(MultiDeleteApi):
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
 
-    _create_business = CreateExplorerAPI.create_business
-    _create_app_type = CreateExplorerAPI.create_app_type
-    _create_app = CreateExplorerAPI.create_app
-    _create_report = CreateExplorerAPI.create_report
+    _create_business = CascadeCreateExplorerAPI.create_business
+    _create_app_type = CascadeCreateExplorerAPI.create_app_type
+    _create_app = CascadeCreateExplorerAPI.create_app
+    _create_report = CascadeCreateExplorerAPI.create_report
 
     def __init__(self):
         super().__init__()
@@ -1434,7 +1875,7 @@ class BusinessExplorerApi:
     get_business = GetExplorerAPI.get_business
     get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    create_business = CreateExplorerAPI.create_business
+    create_business = CascadeCreateExplorerAPI.create_business
     update_business = UpdateExplorerAPI.update_business
 
     get_business_apps = CascadeExplorerAPI.get_business_apps
@@ -1452,7 +1893,7 @@ class AppTypeExplorerApi:
     get_app_type = GetExplorerAPI.get_app_type
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
-    create_app_type = CreateExplorerAPI.create_app_type
+    create_app_type = CascadeCreateExplorerAPI.create_app_type
     update_app_type = UpdateExplorerAPI.update_app_type
 
     delete_app_type = DeleteExplorerApi.delete_app_type
@@ -1463,7 +1904,7 @@ class AppExplorerApi:
     _create_key_name = CreateExplorerAPI._create_key_name
 
     get_app = GetExplorerAPI.get_app
-    create_app = CreateExplorerAPI.create_app
+    create_app = CascadeCreateExplorerAPI.create_app
     update_app = UpdateExplorerAPI.update_app
 
     _get_business_apps = CascadeExplorerAPI.get_business_apps
@@ -1489,7 +1930,7 @@ class ReportExplorerApi:
 
     _get_app_reports = CascadeExplorerAPI.get_app_reports
 
-    create_report = CreateExplorerAPI.create_report
+    create_report = CascadeCreateExplorerAPI.create_report
     create_app_and_report = MultiCreateApi.create_app_and_report
 
     update_report = UpdateExplorerAPI.update_report
@@ -1499,8 +1940,50 @@ class ReportExplorerApi:
     delete_report = DeleteExplorerApi.delete_report
 
 
+class DatasetExplorerApi:
+
+    get_dataset = GetExplorerAPI.get_dataset
+
+    get_dataset_data = CascadeExplorerAPI.get_dataset_data
+
+    create_data_points = CreateExplorerAPI.create_data_points
+    create_dataset = CascadeCreateExplorerAPI.create_dataset
+
+    update_dataset = UpdateExplorerAPI.update_dataset
+
+    delete_dataset = DeleteExplorerApi.delete_dataset
+
+
+class ReportDatasetExplorerApi:
+
+    get_reportdataset = GetExplorerAPI.get_reportdataset
+    get_report_datasets = CascadeExplorerAPI.get_report_datasets
+    get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
+
+    create_reportdataset = CascadeCreateExplorerAPI.create_reportdataset
+    create_report_and_dataset = CascadeCreateExplorerAPI.create_report_and_dataset
+
+    update_reportdataset = UpdateExplorerAPI.update_reportdataset
+
+    delete_reportdataset = DeleteExplorerApi.delete_reportdataset
+    delete_report_and_dataset = MultiDeleteApi.delete_report_and_dataset
+
+
+class FileExplorerApi:
+    _get_file = GetExplorerAPI.get_file
+    get_files = GetExplorerAPI.get_files
+
+    _create_file = CreateExplorerAPI.create_file
+
+    _delete_file = DeleteExplorerApi.delete_file
+
+    _get_business_apps = CascadeExplorerAPI.get_business_apps
+    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    get_business_apps = CascadeExplorerAPI.get_business_apps
+
+
 class ExplorerApi(
-    CreateExplorerAPI,
+    CascadeCreateExplorerAPI,
     DeleteExplorerApi,
 ):
     """Get Businesses, Apps, Paths and Reports in any possible combination

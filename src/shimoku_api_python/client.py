@@ -263,6 +263,9 @@ class ApiClient(object):
                 " `POST`, `PATCH`, `PUT` or `DELETE`."
             )
 
+    def raw_request(self, **kwargs):
+        return requests.request(**kwargs)
+
     def sanitize_for_serialization(self, obj):
         """Builds a JSON POST object.
         If obj is None, return None.

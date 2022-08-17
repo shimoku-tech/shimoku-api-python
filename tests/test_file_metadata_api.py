@@ -320,7 +320,7 @@ def test_delete_files_by_name_prefix():
 
     s.file.delete_files_by_name_prefix(
         business_id=business_id,
-        file_name='helloworld',
+        name_prefix='helloworld',
         app_name='test',
     )
 

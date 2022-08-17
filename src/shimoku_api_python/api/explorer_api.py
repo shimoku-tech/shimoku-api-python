@@ -219,6 +219,43 @@ class GetExplorerAPI(object):
             ]
             return report_entries[0]['items']
 
+    def get_file(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+            file_id: Optional[str] = None,
+    ) -> bytes:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        :param file_id: Shimoku report UUID
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        file_data: str = self.api_client.query_element(method='GET', endpoint=endpoint)
+
+        try:
+            url: str = file_data['url']
+        except KeyError:
+            raise KeyError(f'Could not GET file')
+
+        file_object = self.api_client.raw_request(
+            **dict(method='GET', url=url)
+        )
+        return file_object.content
+
+    def get_files(
+            self, business_id: Optional[str] = None,
+            app_id: Optional[str] = None,
+    ) -> List[Dict]:
+        """Retrieve an specific file from an app
+
+        :param business_id: business UUID
+        :param app_id: Shimoku app UUID (only required if the external_id is provided)
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/files'
+        files: List[Dict] = self.api_client.query_element(method='GET', endpoint=endpoint)
+        return files
+
 
 class CascadeExplorerAPI(GetExplorerAPI):
 
@@ -314,6 +351,15 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )
         return [app['id'] for app in apps]
+
+    def get_business_all_files(self, business_id) -> List[Dict]:
+        """Given a business retrieve all files metadata
+        """
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        files: List[Dict] = list
+        for app in apps:
+            files = files + self.get_files(business_id=business_id, app_id=app['id'])
+        return files
 
     def find_app_by_name_filter(
         self, business_id: str, name: Optional[str] = None,
@@ -971,6 +1017,52 @@ class CreateExplorerAPI(object):
 
         return report_entries
 
+    def create_file(
+            self, business_id: str, app_id: str,
+            file_metadata: Dict, file_object: bytes,
+    ) -> Dict:
+        """Create new Files associated to an AppId
+
+        Example
+        ------------
+            file_metadata= {
+                name: String
+                fileName: String (It should be normalized)
+                contentType: String (Content type of the file you want to upload. Ex: image/png)
+            }
+
+        :param business_id:
+        :param app_id:
+        :param file_metadata:
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file'
+
+        file_data: str = (
+            self.api_client.query_element(
+                method='POST', endpoint=endpoint,
+                **{'body_params': file_metadata},
+            )
+        )
+        try:
+            url: str = file_data['url']
+        except KeyError:
+            raise KeyError(f'Could not POST file')
+
+        r = self.api_client.raw_request(
+            **dict(
+                method='PUT', url=url, data=file_object,
+                headers={'Content-Type': 'text/csv'},
+            )
+        )
+        try:
+            assert all([r.status_code >= 200,  r.status_code < 300])
+            file_data['Success'] = True
+        except AssertionError:
+            file_data['Success'] = False
+        file_data['Status'] = r.status_code
+        file_data.pop('url')
+        return file_data
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
@@ -1366,6 +1458,15 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             _: Dict = self.api_client.query_element(
                 method='DELETE', endpoint=endpoint
             )
+
+    def delete_file(
+        self, business_id: str, app_id: str, file_id: str,
+    ) -> Dict:
+        """Delete a file
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/file/{file_id}'
+        result: Dict = self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
 
 
 # TODO los siguientes puntos:
@@ -1866,6 +1967,19 @@ class ReportDatasetExplorerApi:
 
     delete_reportdataset = DeleteExplorerApi.delete_reportdataset
     delete_report_and_dataset = MultiDeleteApi.delete_report_and_dataset
+
+
+class FileExplorerApi:
+    _get_file = GetExplorerAPI.get_file
+    get_files = GetExplorerAPI.get_files
+
+    _create_file = CreateExplorerAPI.create_file
+
+    _delete_file = DeleteExplorerApi.delete_file
+
+    _get_business_apps = CascadeExplorerAPI.get_business_apps
+    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
+    get_business_apps = CascadeExplorerAPI.get_business_apps
 
 
 class ExplorerApi(

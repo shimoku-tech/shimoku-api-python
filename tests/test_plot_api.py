@@ -255,11 +255,15 @@ def test_set_sub_path_orders():
 def test_set_new_business():
     print('test_set_new_business')
     name: str = 'new-business-test'
+    prev_business_id: str = s.plt.business_id
+
     s.plt.set_new_business(name)
     bs = s.universe.get_universe_businesses()
     for b in bs:
         if b['name'] == name:
             s.business.delete_business(b['id'])
+
+    s.plt.set_business(prev_business_id)
 
 
 def test_delete_path():
@@ -3093,13 +3097,17 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-
+test_delete_path()
+# TODO falla esta
+test_append_data_to_trend_chart()
+test_iframe()
+test_html()
+test_set_new_business()
+test_table()
 test_free_echarts()
 test_input_form()
 test_bentobox()
-# TODO estas no funcan!
-# test_table()
-# test_delete()
+test_delete()
 test_bar_with_filters()
 test_set_apps_orders()
 test_set_sub_path_orders()
@@ -3123,12 +3131,6 @@ test_speed_gauge()
 test_line()
 test_scatter()
 test_funnel()
-test_delete_path()
-test_append_data_to_trend_chart()
-test_iframe()
-test_html()
-test_set_new_business()
-
 
 # TODO
 # test_cohorts()

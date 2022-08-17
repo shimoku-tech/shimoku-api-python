@@ -349,12 +349,62 @@ def test_post_object():
     test_delete_file()
 
 
+def test_get_object():
+    file_name = 'helloworld'
+    app_name = 'test'
+    object_data = b''
+
+    s.file.post_object(
+        business_id=business_id,
+        app_name=app_name,
+        file_name=file_name,
+        object_data=object_data
+    )
+
+    file = s.file.get_object(
+        business_id=business_id,
+        app_name=app_name,
+        file_name=file_name,
+    )
+    assert file == object_data
+
+    test_delete_file()
+
+
 def test_post_dataframe():
-    s.file.post_dataframe()
+    d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
+    df = pd.DataFrame(d)
+    file: Dict = s.file.post_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name='df-test',
+        df=df,
+    )
+    assert file
+
+    test_delete_file()
 
 
-def test_get_dataframe():
-    s.file.get_dataframe()
+def test_post_get_dataframe():
+    file_name: str = 'df-test'
+    d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
+    df_ = pd.DataFrame(d)
+    file: Dict = s.file.post_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name=file_name,
+        df=df_,
+    )
+    assert file
+
+    df: pd.DataFrame = s.file.get_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name=file_name,
+    )
+    assert df.to_dict() == df_.to_dict()
+
+    test_delete_file()
 
 
 test_create_file()
@@ -373,16 +423,17 @@ test_get_files_by_name_prefix()
 test_get_file_by_name()
 test_delete_files_by_name_prefix()
 test_post_object()
+test_get_object()
 
 test_get_all_files_by_date()
 test_get_file_with_max_date()
 test_get_file_by_date()
 
+test_post_dataframe()
+test_post_get_dataframe()
+
 # TODO pending
 # test_replace_file_name()
-# test_post_dataframe()
-# test_get_dataframe()
-
 
 # TODO pending to have a createdAt
 # test_get_all_files_by_creation_date()

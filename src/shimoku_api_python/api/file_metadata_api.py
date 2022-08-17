@@ -3,6 +3,7 @@
 from abc import ABC
 from typing import List, Dict, Optional, Union, Any
 import re
+from io import StringIO
 
 import datetime as dt
 
@@ -96,11 +97,13 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             self, business_id: str, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
+            force_name: bool = False,
     ) -> Union[Dict, bytes]:
-        if '_date:' in file_name or '_chunk:' in file_name:
-            raise ValueError(
-                'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
-            )
+        if not force_name:
+            if '_date:' in file_name or '_chunk:' in file_name:
+                raise ValueError(
+                    'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
+                )
 
         apps: List[Dict] = self._get_business_apps(business_id)
         target_files: List[Dict] = []
@@ -117,6 +120,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 if file_name == file_metadata['name']:
                     target_files.append(file_metadata)
                     break  # there must be only one file with the same name!
+            break
 
         try:
             file: Dict = target_files[0]
@@ -136,9 +140,9 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             app_name: Optional[str] = None,
     ):
         app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
-
         if not app:
-            raise ValueError('App name not found')
+            raise ValueError(f'App not found | App name: {app_name}')
+
         app_id: str = app['id']
         app_name: str = app['name']
 
@@ -163,18 +167,19 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             overwrite: bool = True,
             force_name: bool = False,
             content_type: str = 'text/csv',
+            date: Optional[dt.date] = dt.date.today(),
     ) -> Dict:
         app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
-
         if not app:
-            raise ValueError('App name not found')
+            raise ValueError(f'App not found | App name: {app_name}')
+
         app_id: str = app['id']
 
         if force_name:
             final_file_name: str = file_name
         else:
             final_file_name: str = self._encode_file_name(
-                file_name=file_name, date=dt.date.today()
+                file_name=file_name, date=date,
             )
 
         file_metadata = {
@@ -184,13 +189,9 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         }
 
         if overwrite:
-            try:
-                app: Dict = [
-                    app for app in self._get_business_apps(business_id)
-                    if app['name'] == app_name
-                ][0]
-            except IndexError:
-                raise ValueError(f'App not found | app_name: {app_name}')
+            app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
+            if not app:
+                raise ValueError(f'App not found | App name: {app_name}')
 
             files: List[Dict] = self.get_files(business_id=business_id, app_id=app_id)
             try:
@@ -325,6 +326,10 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             get_file_object: bool = False,
     ) -> Any:
         """Get a specific file with maximum date"""
+        app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
+        if not app:
+            raise ValueError(f'App not found | App name: {app_name}')
+
         files: List[Dict] = self.get_files_by_name_prefix(
             business_id=business_id,
             name_prefix=file_name,
@@ -341,14 +346,6 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 target_file = file
 
         if get_file_object:  # return Object
-            try:
-                app: Dict = [
-                    app for app in self._get_business_apps(business_id)
-                    if app['name'] == app_name
-                ][0]
-            except IndexError:
-                raise ValueError(f'App not found | app_name: {app_name}')
-
             return self._get_file(
                 business_id=business_id,
                 app_id=app['id'],
@@ -357,9 +354,11 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:  # return Dict
             return target_file
 
+    # TODO pending implementation
     def replace_file_name(
             self, business_id: str, app_name: str, old_name: str, new_name: str
     ) -> Dict:
+        """
         app: Dict = self._get_app_by_name(business_id=business_id, name=app_name)
 
         if not app:
@@ -393,6 +392,30 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             file_name=old_name,
         )
         return file
+        """
+        raise NotImplementedError
+
+    def get_object(
+            self, business_id: str,
+            app_name: str,
+            file_name: str,
+            force_name: bool = False,
+    ) -> bytes:
+        if force_name:
+            return self.get_file_by_name(
+                business_id=business_id,
+                app_name=app_name,
+                file_name=file_name,
+                get_file_object=True,
+                force_name=True,
+            )
+        else:
+            return self.get_file_with_max_date(
+                business_id=business_id,
+                file_name=file_name,
+                app_name=app_name,
+                get_file_object=True,
+            )
 
     def post_dataframe(
             self, business_id: str, app_name: str, file_name: str, df: pd.DataFrame,
@@ -434,16 +457,11 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 return objects
 
         dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
-        if force_name:
-            final_file_name: str = file_name
-        else:
-            final_file_name: str = self._encode_file_name(
-                file_name=file_name, date=dt.datetime.today(),
-            )
+
         return self.post_object(
             business_id=business_id,
             app_name=app_name,
-            file_name=final_file_name,
+            file_name=file_name,
             object_data=dataframe_binary,
         )
 
@@ -468,14 +486,14 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
             df = pd.DataFrame()
             for dataset_name in dataset_names:
-# TODO voy por aqui
-                dataset_binary: bytes = self.get_file_by_name(
+                dataset_binary: bytes = self.get_object(
                     business_id=business_id,
                     app_name=app_name,
                     file_name=dataset_name['name'],
-                    get_file_object=True,
+                    force_name=True,
                 )
-                df = df.append(pd.read_csv(dataset_binary.decode('utf-8')))
+                d = StringIO(dataset_binary.decode('utf-8'))
+                df = df.append(pd.read_csv(d))
         else:
             dataset_binary: bytes = self.get_file_by_name(
                 business_id=business_id,
@@ -483,4 +501,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 file_name=file_name,
                 get_file_object=True,
             )
-            return pd.read_csv(dataset_binary.decode('utf-8'))
+            d = StringIO(dataset_binary.decode('utf-8'))
+            df = pd.read_csv(d)
+
+        return df.reset_index(drop=True)

@@ -10,11 +10,10 @@ from itertools import repeat
 from concurrent.futures import ThreadPoolExecutor
 import requests as rq
 from requests.exceptions import Timeout, ReadTimeout
-from urllib3.exceptions import ConnectTimeoutError
 
 import pandas as pd
 
-from shimoku_api_python.api.plot_api import PlotApi
+from shimoku_api_python.api.plot_api import BasePlot, PlotApi
 
 
 logger = logging.getLogger(__name__)
@@ -85,7 +84,11 @@ def with_retries(
     return wrapper if not _func else wrapper(_func)
 
 
-class AiAPI(PlotApi):
+class AiPlotAdapter(BasePlot):
+    _table = PlotApi.table
+
+
+class AiAPI(AiPlotAdapter):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
@@ -95,8 +98,10 @@ class AiAPI(PlotApi):
         else:
             self.business_id: Optional[str] = None
 
-    def _predict_categorical(
-            self, df_test: pd.DataFrame, model_endpoint: str,
+    def predict_categorical(
+            self, df_test: pd.DataFrame,
+            model_endpoint: Optional[str] = None,
+            app_name: Optional[str] = None, model_name: Optional[str] = None,
             explain: bool = False, append_test_data: bool = True,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
@@ -212,6 +217,10 @@ class AiAPI(PlotApi):
 
             return rs, rs_error
 
+        if not model_endpoint:
+            if not app_name or not model_name:
+                raise ValueError('model_endpoint OR app_name and model_name are required')
+
         results: List = []
         results_error: List = []
         # conditions: Dict = {"prediction_probability": True, "explainability": explain}
@@ -237,9 +246,11 @@ class AiAPI(PlotApi):
         raise NotImplementedError
 
     def predictive_table(
-            self, df_test: pd.DataFrame, model_endpoint: str,
+            self, df_test: pd.DataFrame,
             target_column: str, column_to_predict: str,
             menu_path: str, order: int,
+            model_endpoint: Optional[str] = None,
+            app_name: Optional[str] = None, model_name: Optional[str] = None,
             explain: bool = True,
             prediction_type: str = 'categorical',
             add_filter_by_column_to_predict: bool = True,
@@ -255,11 +266,13 @@ class AiAPI(PlotApi):
         column_to_predict = 'y'
 
         :param df_test:
-        :param model_endpoint:
         :param target_column:
         :param column_to_predict:
         :param menu_path:
         :param order:
+        :param model_endpoint:
+        :param app_name:
+        :param model_name:
         :param explain:
         :param prediction_type:
         :param add_filter_by_column_to_predict:
@@ -268,6 +281,10 @@ class AiAPI(PlotApi):
         :param extra_search_columns:
         :return:
         """
+        if not model_endpoint:
+            if not app_name or not model_name:
+                raise ValueError('model_endpoint OR app_name and model_name are required')
+
         available_predictions: List[str] = ['categorical']
         if prediction_type not in available_predictions:
             raise ValueError(
@@ -275,7 +292,7 @@ class AiAPI(PlotApi):
                 f'Prediction type available are {available_predictions}'
             )
 
-        df_result, _ = self._predict_categorical(
+        df_result, _ = self.predict_categorical(
             df_test=df_test, model_endpoint=model_endpoint, explain=explain,
         )
 
@@ -294,7 +311,7 @@ class AiAPI(PlotApi):
         if extra_search_columns:
             search_columns = search_columns + extra_search_columns
 
-        self.table(
+        self._table(
             data=df_result,
             menu_path=menu_path,
             order=order,

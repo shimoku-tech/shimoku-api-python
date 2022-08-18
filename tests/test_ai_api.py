@@ -27,7 +27,7 @@ df_test_fail: pd.DataFrame = pd.DataFrame(d_fail, index=[0])
 
 
 def test_predict_categorical():
-    df_pred, df_error = s.ai._predict_categorical(
+    df_pred, df_error = s.ai.predict_categorical(
         df_test=df_test_fail,
         model_endpoint=model_endpoint,
         explain=False,
@@ -35,7 +35,7 @@ def test_predict_categorical():
     assert df_pred.empty
     assert not df_error.empty
 
-    df_pred, df_error = s.ai._predict_categorical(
+    df_pred, df_error = s.ai.predict_categorical(
         df_test=df_test,
         model_endpoint=model_endpoint,
         explain=False,
@@ -43,7 +43,7 @@ def test_predict_categorical():
     assert not df_pred.empty
     assert df_error.empty
 
-    df_pred, df_error = s.ai._predict_categorical(
+    df_pred, df_error = s.ai.predict_categorical(
         df_test=df_test,
         model_endpoint=model_endpoint,
         explain=True,
@@ -72,7 +72,6 @@ def test_predictive_table():
         extra_filter_columns=None,
         extra_search_columns=None,
     )
-
 
 
 test_predict_categorical()

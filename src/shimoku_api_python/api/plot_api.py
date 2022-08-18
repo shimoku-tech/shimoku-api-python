@@ -1628,7 +1628,7 @@ class PlotApi(BasePlot):
             report_metadata['order']: int = 0
 
         if overwrite:
-            if not row and not column and not order:
+            if not row and not column and order is None:
                 raise ValueError(
                     'Row, Column or Order must be specified to overwrite a report'
                 )

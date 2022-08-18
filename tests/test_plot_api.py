@@ -3097,8 +3097,8 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
+
 test_delete_path()
-# TODO falla esta
 test_append_data_to_trend_chart()
 test_iframe()
 test_html()

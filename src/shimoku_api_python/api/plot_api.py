@@ -100,7 +100,7 @@ class BasePlot(PlotAux):
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
 
-    # TODO this method goes somewhere else (scripting tools?)
+    # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
     def _convert_to_json(items: List[Dict]) -> str:
         try:
@@ -1628,7 +1628,7 @@ class PlotApi(BasePlot):
             report_metadata['order']: int = 0
 
         if overwrite:
-            if not row and not column and not order:
+            if not row and not column and order is None:
                 raise ValueError(
                     'Row, Column or Order must be specified to overwrite a report'
                 )

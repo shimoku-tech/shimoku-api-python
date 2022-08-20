@@ -841,7 +841,10 @@ class BasePlot(PlotAux):
         }
         """
         for menu_path, order in paths_order.items():
-            app_normalized_name, app_path_name = self._clean_menu_path(menu_path=menu_path)
+            if '/' in menu_path:
+                app_normalized_name, app_path_name = menu_path.split('/')
+            else:
+                app_normalized_name, app_path_name = menu_path, None
 
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')

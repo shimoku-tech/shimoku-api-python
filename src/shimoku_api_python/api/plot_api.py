@@ -1071,11 +1071,6 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                 )
 
-    def clear_business(self):
-        """Calls "delete_path" for all the apps of the actual business, clearing the business"""
-        for app in self.get_business_apps(self.business_id):
-            self.delete_path(app["name"])
-
     # TODO pending add append_report_data to free Echarts
     def free_echarts(
             self, menu_path: str,

@@ -43,3 +43,6 @@ class Client(object):
 
         if business_id != "":
             self.plt.set_business(business_id)
+
+    def set_config(self, config={}):
+        self.api_client.set_config(config)

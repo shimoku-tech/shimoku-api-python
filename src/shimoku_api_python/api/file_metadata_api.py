@@ -19,12 +19,12 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
 
     @staticmethod
     def _encode_file_name(
-            file_name: str, date: dt.datetime, chunk: Optional[int] = None
+            file_name: str, date: dt.date, chunk: Optional[int] = None
     ) -> str:
         """Append the date and chunk to the file name"""
         return (
             f'{file_name}_date:{date.isoformat()}_chunk:{chunk}'
-            if chunk else f'{file_name}_date:{date.isoformat()}'
+            if chunk is not None else f'{file_name}_date:{date.isoformat()}'
         )
 
     @staticmethod
@@ -445,15 +445,16 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                         final_file_name: str = file_name
                     else:
                         final_file_name: str = self._encode_file_name(
-                            file_name=file_name, date=dt.datetime.today(), chunk=chunk
+                            file_name=file_name, date=dt.date.today(), chunk=chunk
                         )
                     object = self.post_object(
                         business_id=business_id,
                         app_name=app_name,
                         file_name=final_file_name,
                         object_data=dataframe_binary,
+                        force_name=True,
                     )
-                    objects = objects + object
+                    objects = objects + [object]
                 return objects
 
         dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')

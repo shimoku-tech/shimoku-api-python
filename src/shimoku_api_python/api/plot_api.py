@@ -1770,20 +1770,38 @@ class PlotApi(BasePlot):
         'color': '#002FD8',  # put multicolor
         """
 
-        option_modifications: Dict[str, Any] = {
-            'dataZoom': False,
-            'optionModifications': {
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'axisPointer': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'restore': True,
+                    'dataView': True,
+                    'dataZoom': True,
+                    'magicType': True,
+                },
+                'xAxis': {
+                    'name': 'xAxisName',
+                    'type': 'category',
+                },
+                'yAxis': {
+                    'name': 'yAxisName',
+                    'type': 'value',
+                },
+                'dataZoom': True,
                 'series': {
-                    'itemStyle': {
-                        'borderRadius': [9, 9, 0, 0]
-                    }
+                    'smooth': True,
+                    'itemStyle': {'borderRadius': [9, 9, 0, 0]}
                 },
-                # 'color': '#002FD8',  # TODO put multicolor
-                'emphasis': {
-                    'itemStyle': {'color': '#29D86F'}
-                },
+                'emphasis': {'itemStyle': {'color': '#29D86F'}},
             }
-        }
+
+        if title:
+            option_modifications['title'] = title
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,
@@ -1903,6 +1921,35 @@ class PlotApi(BasePlot):
             bentobox_data: Optional[Dict] = None,
     ):
         """"""
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'axisPointer': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'restore': True,
+                    'dataView': True,
+                    'dataZoom': True,
+                    'magicType': True,
+                },
+                'xAxis': {
+                    'name': 'xAxisName',
+                    'type': 'category',
+                },
+                'yAxis': {
+                    'name': 'yAxisName',
+                    'type': 'value',
+                },
+                'dataZoom': True,
+                'series': {'smooth': True},
+            }
+
+        if title:
+            option_modifications['title'] = title
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
+
         return self._create_trend_charts(
             data=data, filters=filters,
             **dict(
@@ -2488,9 +2535,24 @@ class PlotApi(BasePlot):
         df = df[[x, y]]  # keep only x and y
         df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'dataView': True,
+                }
+            }
+
+        data_fields: Dict = {
+            'type': 'pie',
+            'chartOptions': option_modifications,
+        }
+
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
-            'dataFields': {'type': 'pie'},
+            'dataFields': data_fields,
             'title': title,
         }
 
@@ -2725,9 +2787,29 @@ class PlotApi(BasePlot):
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
-        option_modifications: Dict = {
-            "toolbox": {"orient": "horizontal", "top": 0},
+        option_modifications = {
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': True,
+                'dataZoom': True,
+            },
+            'xAxis': {
+                'name': 'xAxisName',
+                'type': 'category',
+            },
+            'yAxis': {
+                'name': 'yAxisName',
+                'type': 'category',
+            },
+            'visualMap': 'piecewise'
         }
+
+        if title:
+            option_modifications['title'] = title
+
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,

@@ -3176,7 +3176,6 @@ def test_get_input_forms():
     assert rs
 
 
-
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')

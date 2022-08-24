@@ -407,6 +407,27 @@ def test_post_get_dataframe():
     test_delete_file()
 
 
+def test_jose():
+    import numpy as np
+    key_classification_dataset = 'classification_dataset_short.csv'
+
+    df = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
+                      columns=['a', 'b', 'c'])
+
+    s.file.post_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name=key_classification_dataset,
+        df=df)
+
+    dataset: pd.DataFrame = s.file.get_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name=key_classification_dataset
+    )
+
+
+test_jose()
 test_create_file()
 test_delete_file()
 test_get_file()

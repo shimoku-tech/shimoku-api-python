@@ -59,6 +59,9 @@ class PlotAux:
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
     _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
+    get_report_datasets = CascadeExplorerAPI.get_report_datasets
+    get_dataset_data = CascadeExplorerAPI.get_dataset_data
+    _get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
 
     create_report = CreateExplorerAPI.create_report
     _create_report = CreateExplorerAPI.create_report
@@ -246,6 +249,7 @@ class BasePlot(PlotAux):
             'stockline': 'STOCKLINECHART',
             'html': 'HTML',
             'MULTIFILTER': 'MULTIFILTER',
+            'FORM': 'FORM',
         }
         if component_type in type_map.keys():
             component_type = type_map[component_type]
@@ -257,10 +261,6 @@ class BasePlot(PlotAux):
             by_grid = True
         elif order is not None:
             pass
-        else:
-            raise ValueError(
-                'Row and Column or Order must be specified'
-            )
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
@@ -293,6 +293,14 @@ class BasePlot(PlotAux):
                 if (
                         report['path'] == path_name
                         and report['grid'] == grid
+                )
+            ]
+        elif order is None:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
                 )
             ]
         else:
@@ -881,6 +889,32 @@ class BasePlot(PlotAux):
                         report_id=report['id'],
                         report_metadata={'pathOrder': int(new_path_order)},
                     )
+
+    def get_input_forms(self, menu_path: str) -> List[Dict]:
+        """"""
+        target_reports: List[Dict] = (
+            self._find_target_reports(
+                menu_path=menu_path,
+                component_type='FORM',
+            )
+        )
+
+        results: List[Dict] = []
+        for report in target_reports:
+            result: List = self._get_report_dataset_data(
+                business_id=self.business_id,
+                app_id=report['appId'],
+                report_id=report['id'],
+            )
+
+            clean_result: Dict = {}
+            for element in result:
+                clean_result['data'] = json.loads(element['customField1'])
+                clean_result['order'] = report['order']
+                clean_result['reportId'] = report['id']
+
+            results = results + [clean_result]
+        return results
 
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],

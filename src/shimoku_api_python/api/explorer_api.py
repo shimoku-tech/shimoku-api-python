@@ -466,7 +466,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     endpoint=endpoint, method='GET',
                 )
             )
-            if data_set.get('item'):
+            if data_set.get('reportDataSets'):
                 data_sets = data_sets + [data_set]
         return data_sets
 

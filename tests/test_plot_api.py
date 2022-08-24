@@ -3093,11 +3093,96 @@ def test_input_form():
     )
 
 
+def test_get_input_forms():
+    menu_path: str = 'test/input-form-to-get'
+    report_dataset_properties = {
+      'fields': [
+        {
+          'title': 'Personal information',
+          'fields': [
+            {
+                'mapping': 'name',
+                'fieldName': 'name',
+                'inputType': 'text',
+              },
+              {
+                'mapping': 'surname',
+                'fieldName': 'surname',
+                'inputType': 'text',
+              },
+            {
+              'mapping': 'age',
+              'fieldName': 'age',
+              'inputType': 'number',
+            },
+            {
+                'mapping': 'tel',
+                'fieldName': 'phone',
+                'inputType': 'tel',
+              },
+              {
+                'mapping': 'gender',
+                'fieldName': 'Gender',
+                'inputType': 'radio',
+                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+              },
+            {
+                'mapping': 'email',
+                'fieldName': 'email',
+                'inputType': 'email',
+              },
+
+          ],
+        },
+        {
+          'title': 'Other data',
+          'fields': [
+            {
+              'mapping': 'skills',
+              'fieldName': 'Skills',
+              'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+              'inputType': 'checkbox',
+            },
+            {
+                'mapping': 'birthDay',
+                'fieldName': 'Birthday',
+                'inputType': 'date',
+              },
+              {
+                'mapping': 'onCompany',
+                'fieldName': 'Time on Shimoku',
+                'inputType': 'dateRange',
+              },
+              {
+                'mapping': 'hobbies',
+                'fieldName': 'Hobbies',
+                'inputType': 'select',
+                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+              },
+              {
+                'mapping': 'textField2',
+                'fieldName': 'Test Text',
+                'inputType': 'text',
+              },
+          ],
+        },
+      ],
+    }
+    s.plt.input_form(
+        menu_path=menu_path, order=0,
+        report_dataset_properties=report_dataset_properties
+    )
+    rs: List[Dict] = s.plt.get_input_forms(menu_path)
+    assert rs
+
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
 
+test_get_input_forms()
 test_delete_path()
 test_append_data_to_trend_chart()
 test_iframe()

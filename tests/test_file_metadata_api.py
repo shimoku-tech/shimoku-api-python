@@ -61,8 +61,6 @@ def test_get_files():
 def test_get_file():
     test_create_file()
 
-    filename = 'helloworld'
-
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
@@ -73,7 +71,13 @@ def test_get_file():
             app_id=app_id,
             file_id=file['id'],
         )
-        assert file_
+        try:
+            assert file_
+            break
+        except AssertionError:
+            continue
+    else:
+        raise Exception('No files found')
 
     test_delete_file()
 
@@ -255,7 +259,8 @@ def test_get_file_by_date():
         app_name='test',
         get_file_object=True,
     )
-    assert file_object == object_data
+    assert len(file_object) == 1
+    assert file_object[0] == object_data
 
     tomorrow = today + dt.timedelta(1)
     file: Dict = s.io.get_file_by_date(
@@ -267,7 +272,7 @@ def test_get_file_by_date():
     assert not file
 
 
-def test_get_file_with_max_date():
+def test_get_files_with_max_date():
     file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
@@ -278,20 +283,22 @@ def test_get_file_with_max_date():
         object_data=object_data
     )
 
-    file = s.io.get_file_with_max_date(
+    files = s.io.get_files_with_max_date(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
     )
-    assert file['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
+    assert len(files) == 1
+    assert files[0]['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
 
-    file_object = s.io.get_file_with_max_date(
+    files_object = s.io.get_files_with_max_date(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
         get_file_object=True,
     )
-    assert file_object == object_data
+    assert len(files_object) == 1
+    assert files_object[0] == object_data
 
     test_delete_file()
 
@@ -362,12 +369,13 @@ def test_get_object():
         object_data=object_data
     )
 
-    file = s.io.get_object(
+    files = s.io.get_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
     )
-    assert file == object_data
+    assert len(files) == 1
+    assert files[0] == object_data
 
     test_delete_file()
 
@@ -432,8 +440,8 @@ def test_post_get_model():
         app_name='test',
         file_name='model-test',
     )
-
-    assert m2 == m
+    assert len(m2) == 1
+    assert m2[0] == m
 
     s.io.post_ai_model(
         business_id=business_id,
@@ -450,8 +458,6 @@ def test_post_get_model():
 
     assert type(clf2) == type(clf)
 
-# TODO no funca
-test_get_file_with_max_date()
 
 test_create_file()
 test_get_file()
@@ -472,6 +478,7 @@ test_post_object()
 test_get_object()
 
 test_get_all_files_by_date()
+test_get_files_with_max_date()
 test_get_file_by_date()
 
 test_post_dataframe()

@@ -327,7 +327,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             raise ValueError('Multiple files found for the same date')
 
-    def get_file_with_max_date(
+    def get_files_with_max_date(
             self, business_id: str,
             file_name: str,
             app_name: Optional[str] = None,
@@ -368,10 +368,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                     file_id=target_file['id'],
                 )
                 results = results + [result]
-            if len(results) == 1:  # return bytes
-                return results[0]
-            else:  # return List[bytes]
-                return results
+            return results
         else:  # return Dict
             return target_files
 
@@ -431,7 +428,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 force_name=True,
             )
         else:
-            return self.get_file_with_max_date(
+            return self.get_files_with_max_date(
                 business_id=business_id,
                 file_name=file_name,
                 app_name=app_name,
@@ -503,17 +500,14 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         if parse_name:
             df = pd.DataFrame()
             if get_last_date:
-                dataset_binary = self.get_file_with_max_date(
+                dataset_binary = self.get_files_with_max_date(
                     business_id=business_id,
                     app_name=app_name,
                     file_name=file_name,
                     get_file_object=True,
                 )
-                if type(dataset_binary) == list:
-                    for binary in dataset_binary:
-                        df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
-                else:  # bytes
-                    df = df.append(pd.read_csv(StringIO(dataset_binary.decode('utf-8'))))
+                for binary in dataset_binary:
+                    df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
             elif date:
                 dataset_binary = self.get_file_by_date(
                     business_id=business_id,
@@ -521,11 +515,8 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                     file_name=file_name,
                     date=date,
                 )
-                if type(dataset_binary) == list:
-                    for binary in dataset_binary:
-                        df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
-                else:  # bytes
-                    df = df.append(pd.read_csv(StringIO(dataset_binary.decode('utf-8'))))
+                for binary in dataset_binary:
+                    df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
             else:
                 dataset_names: List[Dict] = (
                     self.get_files_by_name_prefix(
@@ -536,14 +527,14 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 )
 
                 for dataset_name in dataset_names:
-                    dataset_binary: bytes = self.get_object(
+                    dataset_binary = self.get_object(
                         business_id=business_id,
                         app_name=app_name,
                         file_name=dataset_name['name'],
                         force_name=True,
                     )
-                    d = StringIO(dataset_binary.decode('utf-8'))
-                    df = df.append(pd.read_csv(d))
+                    for binary in dataset_binary:
+                        df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
         else:
             dataset_binary: bytes = self.get_file_by_name(
                 business_id=business_id,
@@ -587,5 +578,8 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             app_name=app_name,
             file_name=model_name,
         )
+
+        assert len(model_binary) == 1
+        model_binary = model_binary[0]
 
         return pickle.loads(model_binary)

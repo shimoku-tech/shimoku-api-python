@@ -407,27 +407,50 @@ def test_post_get_dataframe():
     test_delete_file()
 
 
-def test_jose():
-    import numpy as np
-    key_classification_dataset = 'classification_dataset_short.csv'
+def test_post_get_model():
+    import pickle
 
-    df = pd.DataFrame(np.array([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
-                      columns=['a', 'b', 'c'])
+    from sklearn import svm
+    from sklearn import datasets
 
-    s.file.post_dataframe(
+    clf = svm.SVC()
+    X, y = datasets.load_iris(return_X_y=True)
+    clf.fit(X, y)
+
+    m: bytes = pickle.dumps(clf)
+
+    s.file.post_object(
         business_id=business_id,
         app_name='test',
-        file_name=key_classification_dataset,
-        df=df)
-
-    dataset: pd.DataFrame = s.file.get_dataframe(
-        business_id=business_id,
-        app_name='test',
-        file_name=key_classification_dataset
+        file_name='model-test',
+        object_data=m
     )
 
+    m2 = s.file.get_object(
+        business_id=business_id,
+        app_name='test',
+        file_name='model-test',
+    )
 
-test_jose()
+    assert m2 == m
+
+    s.file.post_ai_model(
+        business_id=business_id,
+        app_name='test',
+        model_name='model-object-test',
+        model=clf,
+    )
+
+    clf2 = s.file.get_ai_model(
+        business_id=business_id,
+        app_name='test',
+        model_name='model-object-test',
+    )
+
+    assert clf2 == clf
+
+
+test_post_get_model()
 test_create_file()
 test_delete_file()
 test_get_file()

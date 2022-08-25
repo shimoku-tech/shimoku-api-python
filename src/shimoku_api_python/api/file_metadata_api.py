@@ -1,9 +1,10 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, Callable
 import re
 from io import StringIO
+import pickle
 
 import datetime as dt
 
@@ -554,3 +555,37 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             df = pd.read_csv(d)
 
         return df.reset_index(drop=True)
+
+    def post_ai_model(
+            self, business_id: str, app_name: str, model_name: str, model: Callable,
+    ) -> Dict:
+        """
+        :param business_id:
+        :param app_name:
+        :param model_name:
+        :param model:
+        """
+        model_binary: bytes = pickle.dumps(model)
+
+        return self.post_object(
+            business_id=business_id,
+            app_name=app_name,
+            file_name=model_name,
+            object_data=model_binary,
+        )
+
+    def get_ai_model(
+            self, business_id: str, app_name: str, model_name: str,
+    ) -> Any:
+        """
+        :param business_id:
+        :param app_name:
+        :param model_name:
+        """
+        model_binary: bytes = self.get_object(
+            business_id=business_id,
+            app_name=app_name,
+            file_name=model_name,
+        )
+
+        return pickle.loads(model_binary)

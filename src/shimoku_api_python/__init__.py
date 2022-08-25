@@ -37,7 +37,7 @@ class Client(object):
         self.app = AppMetadataApi(self._api_client)
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
-        self.file = FileMetadataApi(self._api_client)
+        self.io = FileMetadataApi(self._api_client)
         self.plt = PlotApi(self._api_client)
         self.ai = AiAPI(self._api_client)
 

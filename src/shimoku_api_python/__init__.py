@@ -18,7 +18,7 @@ from shimoku_api_python.client import ApiClient
 
 class Client(object):
     def __init__(self, universe_id: str, environment: str = 'staging',
-                 acces_token: str = "", config={}, business_id: str = ""):
+                 access_token: str = "", config={}, business_id: str = ""):
 
         if acces_token != "":
             config = {'access_token': acces_token}

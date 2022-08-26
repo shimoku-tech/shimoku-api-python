@@ -2834,11 +2834,11 @@ class PlotApi(BasePlot):
                 'dataZoom': True,
             },
             'xAxis': {
-                'name': 'xAxisName',
+                'name': f'{x_axis_name}',
                 'type': 'category',
             },
             'yAxis': {
-                'name': 'yAxisName',
+                'name': f'{y_axis_name}',
                 'type': 'category',
             },
             'visualMap': 'piecewise'

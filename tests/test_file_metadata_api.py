@@ -459,6 +459,26 @@ def test_post_get_model():
     assert type(clf2) == type(clf)
 
 
+def test_big_data():
+    filename = '../data/classification_dataset_short.csv'
+    df = pd.read_csv(filename)
+    df.reset_index(inplace=True)
+
+    s.io.post_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name='test-big-df',
+        df=df
+    )
+
+    dataset: pd.DataFrame = s.io.get_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name='test-big-df'
+    )
+    assert len(dataset) == len(df)
+
+
 test_create_file()
 test_get_file()
 test_get_files()
@@ -484,6 +504,8 @@ test_get_file_by_date()
 test_post_dataframe()
 test_post_get_dataframe()
 test_post_get_model()
+
+test_big_data()
 
 # TODO pending
 # test_replace_file_name()

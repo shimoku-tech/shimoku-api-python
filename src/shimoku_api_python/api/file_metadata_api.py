@@ -356,6 +356,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
             if new_date > max_date:
                 target_files = [file]
+                max_date = new_date
             elif new_date == max_date:
                 target_files = target_files + [file]
 
@@ -453,9 +454,9 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             bytes_size_df: int = bytes_size_df / 1024 / 1024
             if bytes_size_df > 5:
                 objects: List[Dict] = []
-                total_chunks: int = int(bytes_size_df / 5) + 1
+                total_chunks: int = int(bytes_size_df / 5)
                 chunk_rows: int = int(len_df / total_chunks)
-                for chunk in range(total_chunks):
+                for chunk in range(total_chunks + 1):
                     df_temp: pd.DataFrame = df.iloc[chunk*chunk_rows:(chunk+1)*chunk_rows]
                     dataframe_binary: bytes = df_temp.to_csv(index=False).encode('utf-8')
 

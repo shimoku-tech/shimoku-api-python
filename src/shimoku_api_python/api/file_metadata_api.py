@@ -1,9 +1,10 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, Callable
 import re
 from io import StringIO
+import pickle
 
 import datetime as dt
 
@@ -19,12 +20,12 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
 
     @staticmethod
     def _encode_file_name(
-            file_name: str, date: dt.datetime, chunk: Optional[int] = None
+            file_name: str, date: dt.date, chunk: Optional[int] = None
     ) -> str:
         """Append the date and chunk to the file name"""
         return (
             f'{file_name}_date:{date.isoformat()}_chunk:{chunk}'
-            if chunk else f'{file_name}_date:{date.isoformat()}'
+            if chunk is not None else f'{file_name}_date:{date.isoformat()}'
         )
 
     @staticmethod
@@ -56,11 +57,13 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
     def _get_files_by_string_matching(
             self, business_id: str, string_match: str,
             app_name: Optional[str] = None,
+            allow_reserved_words: bool = False,
     ) -> List[Dict]:
-        if '_date:' in string_match or '_chunk:' in string_match:
-            raise ValueError(
-                'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
-            )
+        if not allow_reserved_words:
+            if '_date:' in string_match or '_chunk:' in string_match:
+                raise ValueError(
+                    'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
+                )
 
         apps: List[Dict] = self._get_business_apps(business_id)
         target_files: List[Dict] = []
@@ -80,13 +83,15 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
 
     def get_files_by_name_prefix(
             self, business_id: str, name_prefix: str,
-            app_name: Optional[str] = None
+            app_name: Optional[str] = None,
+            allow_reserved_words: bool = False,
     ) -> List[Dict]:
         target_files: List[Dict] = list()
         files: List[Dict] = self._get_files_by_string_matching(
             business_id=business_id,
             string_match=name_prefix,
             app_name=app_name,
+            allow_reserved_words=allow_reserved_words,
         )
         for file in files:
             if file['name'].startswith(name_prefix):
@@ -193,19 +198,18 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             if not app:
                 raise ValueError(f'App not found | App name: {app_name}')
 
-            files: List[Dict] = self.get_files(business_id=business_id, app_id=app_id)
-            try:
-                target_file: Dict = [
-                    file for file in files if file['name'] == file_metadata['name']
-                ][0]
-
+            fs: List[Dict] = self.get_files_by_name_prefix(
+                business_id=business_id,
+                app_name=app_name,
+                name_prefix=file_metadata['name'],
+                allow_reserved_words=True
+            )
+            for f in fs:
                 self._delete_file(
                     business_id=business_id,
                     app_id=app['id'],
-                    file_id=target_file['id'],
+                    file_id=f['id'],
                 )
-            except IndexError:
-                pass
 
         return self._create_file(
             business_id=business_id,
@@ -299,8 +303,8 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 return None
             else:
                 return {}
-        elif len_target_files == 1:
-            if get_file_object:  # return Object
+        elif len_target_files >= 1:
+            if get_file_object:  # return List[Object]
                 try:
                     app: Dict = [
                         app for app in self._get_business_apps(business_id)
@@ -309,17 +313,21 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 except IndexError:
                     raise ValueError(f'App not found | app_name: {app_name}')
 
-                return self._get_file(
-                    business_id=business_id,
-                    app_id=app['id'],
-                    file_id=target_files[0]['id'],
-                )
-            else:  # return Dict
-                return target_files[0]
+                results: List[bytes] = []
+                for file in target_files:
+                    result = self._get_file(
+                        business_id=business_id,
+                        app_id=app['id'],
+                        file_id=file['id'],
+                    )
+                    results = results + [result]
+                return results
+            else:  # return List[Dict]
+                return target_files
         else:
             raise ValueError('Multiple files found for the same date')
 
-    def get_file_with_max_date(
+    def get_files_with_max_date(
             self, business_id: str,
             file_name: str,
             app_name: Optional[str] = None,
@@ -335,24 +343,35 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             name_prefix=file_name,
             app_name=app_name,
         )
-        target_file: Dict = {}
+        target_files: List[Dict] = []
         max_date: dt.date = dt.date(2000, 1, 1)
         for file in files:
-            new_date: Optional[dt.date] = self._get_file_date(file['name'])
+            try:
+                new_date: Optional[dt.date] = self._get_file_date(file['name'])
+            except ValueError:
+                continue
+
             if new_date is None:
                 continue
 
             if new_date > max_date:
-                target_file = file
+                target_files = [file]
+                max_date = new_date
+            elif new_date == max_date:
+                target_files = target_files + [file]
 
-        if get_file_object:  # return Object
-            return self._get_file(
-                business_id=business_id,
-                app_id=app['id'],
-                file_id=target_file['id'],
-            )
+        if get_file_object:  # return List[bytes]
+            results: List[bytes] = []
+            for target_file in target_files:
+                result = self._get_file(
+                    business_id=business_id,
+                    app_id=app['id'],
+                    file_id=target_file['id'],
+                )
+                results = results + [result]
+            return results
         else:  # return Dict
-            return target_file
+            return target_files
 
     # TODO pending implementation
     def replace_file_name(
@@ -410,7 +429,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 force_name=True,
             )
         else:
-            return self.get_file_with_max_date(
+            return self.get_files_with_max_date(
                 business_id=business_id,
                 file_name=file_name,
                 app_name=app_name,
@@ -435,9 +454,9 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             bytes_size_df: int = bytes_size_df / 1024 / 1024
             if bytes_size_df > 5:
                 objects: List[Dict] = []
-                total_chunks: int = int(bytes_size_df / 5) + 1
+                total_chunks: int = int(bytes_size_df / 5)
                 chunk_rows: int = int(len_df / total_chunks)
-                for chunk in range(total_chunks):
+                for chunk in range(total_chunks + 1):
                     df_temp: pd.DataFrame = df.iloc[chunk*chunk_rows:(chunk+1)*chunk_rows]
                     dataframe_binary: bytes = df_temp.to_csv(index=False).encode('utf-8')
 
@@ -445,15 +464,16 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                         final_file_name: str = file_name
                     else:
                         final_file_name: str = self._encode_file_name(
-                            file_name=file_name, date=dt.datetime.today(), chunk=chunk
+                            file_name=file_name, date=dt.date.today(), chunk=chunk
                         )
                     object = self.post_object(
                         business_id=business_id,
                         app_name=app_name,
                         file_name=final_file_name,
                         object_data=dataframe_binary,
+                        force_name=True,
                     )
-                    objects = objects + object
+                    objects = objects + [object]
                 return objects
 
         dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
@@ -467,33 +487,55 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
     def get_dataframe(
             self, business_id: str, app_name: str, file_name: str,
-            parse_name: bool = True,
+            get_last_date: bool = True, parse_name: bool = True,
+            date: Optional[dt.date] = None,
     ) -> pd.DataFrame:
         """
         :param business_id:
         :param app_name:
         :param file_name:
         :param parse_name: if true then we parse the file name to get the date
+        :param get_last_date:
+        :param date:
         """
         if parse_name:
-            dataset_names: List[Dict] = (
-                self.get_files_by_name_prefix(
-                    business_id=business_id,
-                    app_name=app_name,
-                    name_prefix=file_name,
-                )
-            )
-
             df = pd.DataFrame()
-            for dataset_name in dataset_names:
-                dataset_binary: bytes = self.get_object(
+            if get_last_date:
+                dataset_binary = self.get_files_with_max_date(
                     business_id=business_id,
                     app_name=app_name,
-                    file_name=dataset_name['name'],
-                    force_name=True,
+                    file_name=file_name,
+                    get_file_object=True,
                 )
-                d = StringIO(dataset_binary.decode('utf-8'))
-                df = df.append(pd.read_csv(d))
+                for binary in dataset_binary:
+                    df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
+            elif date:
+                dataset_binary = self.get_file_by_date(
+                    business_id=business_id,
+                    app_name=app_name,
+                    file_name=file_name,
+                    date=date,
+                )
+                for binary in dataset_binary:
+                    df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
+            else:
+                dataset_names: List[Dict] = (
+                    self.get_files_by_name_prefix(
+                        business_id=business_id,
+                        app_name=app_name,
+                        name_prefix=file_name,
+                    )
+                )
+
+                for dataset_name in dataset_names:
+                    dataset_binary = self.get_object(
+                        business_id=business_id,
+                        app_name=app_name,
+                        file_name=dataset_name['name'],
+                        force_name=True,
+                    )
+                    for binary in dataset_binary:
+                        df = df.append(pd.read_csv(StringIO(binary.decode('utf-8'))))
         else:
             dataset_binary: bytes = self.get_file_by_name(
                 business_id=business_id,
@@ -505,3 +547,40 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             df = pd.read_csv(d)
 
         return df.reset_index(drop=True)
+
+    def post_ai_model(
+            self, business_id: str, app_name: str, model_name: str, model: Callable,
+    ) -> Dict:
+        """
+        :param business_id:
+        :param app_name:
+        :param model_name:
+        :param model:
+        """
+        model_binary: bytes = pickle.dumps(model)
+
+        return self.post_object(
+            business_id=business_id,
+            app_name=app_name,
+            file_name=model_name,
+            object_data=model_binary,
+        )
+
+    def get_ai_model(
+            self, business_id: str, app_name: str, model_name: str,
+    ) -> Any:
+        """
+        :param business_id:
+        :param app_name:
+        :param model_name:
+        """
+        model_binary: bytes = self.get_object(
+            business_id=business_id,
+            app_name=app_name,
+            file_name=model_name,
+        )
+
+        assert len(model_binary) == 1
+        model_binary = model_binary[0]
+
+        return pickle.loads(model_binary)

@@ -59,6 +59,9 @@ class PlotAux:
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
     _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
+    get_report_datasets = CascadeExplorerAPI.get_report_datasets
+    get_dataset_data = CascadeExplorerAPI.get_dataset_data
+    _get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
 
     create_report = CreateExplorerAPI.create_report
     _create_report = CreateExplorerAPI.create_report
@@ -100,7 +103,7 @@ class BasePlot(PlotAux):
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
 
-    # TODO this method goes somewhere else (scripting tools?)
+    # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
     def _convert_to_json(items: List[Dict]) -> str:
         try:
@@ -246,6 +249,7 @@ class BasePlot(PlotAux):
             'stockline': 'STOCKLINECHART',
             'html': 'HTML',
             'MULTIFILTER': 'MULTIFILTER',
+            'FORM': 'FORM',
         }
         if component_type in type_map.keys():
             component_type = type_map[component_type]
@@ -257,10 +261,6 @@ class BasePlot(PlotAux):
             by_grid = True
         elif order is not None:
             pass
-        else:
-            raise ValueError(
-                'Row and Column or Order must be specified'
-            )
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
@@ -293,6 +293,14 @@ class BasePlot(PlotAux):
                 if (
                         report['path'] == path_name
                         and report['grid'] == grid
+                )
+            ]
+        elif order is None:
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['path'] == path_name
                 )
             ]
         else:
@@ -841,7 +849,10 @@ class BasePlot(PlotAux):
         }
         """
         for menu_path, order in paths_order.items():
-            app_normalized_name, app_path_name = self._clean_menu_path(menu_path=menu_path)
+            if '/' in menu_path:
+                app_normalized_name, app_path_name = menu_path.split('/')
+            else:
+                app_normalized_name, app_path_name = menu_path, None
 
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
@@ -878,6 +889,32 @@ class BasePlot(PlotAux):
                         report_id=report['id'],
                         report_metadata={'pathOrder': int(new_path_order)},
                     )
+
+    def get_input_forms(self, menu_path: str) -> List[Dict]:
+        """"""
+        target_reports: List[Dict] = (
+            self._find_target_reports(
+                menu_path=menu_path,
+                component_type='FORM',
+            )
+        )
+
+        results: List[Dict] = []
+        for report in target_reports:
+            result: List = self._get_report_dataset_data(
+                business_id=self.business_id,
+                app_id=report['appId'],
+                report_id=report['id'],
+            )
+
+            clean_result: Dict = {}
+            for element in result:
+                clean_result['data'] = json.loads(element['customField1'])
+                clean_result['order'] = report['order']
+                clean_result['reportId'] = report['id']
+
+            results = results + [clean_result]
+        return results
 
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -1067,6 +1104,11 @@ class BasePlot(PlotAux):
                     business_id=self.business_id,
                     app_id=app_id,
                 )
+
+    def clear_business(self):
+        """Calls "delete_path" for all the apps of the actual business, clearing the business"""
+        for app in self.get_business_apps(self.business_id):
+            self.delete_path(app["name"])
 
     # TODO pending add append_report_data to free Echarts
     def free_echarts(
@@ -1628,7 +1670,7 @@ class PlotApi(BasePlot):
             report_metadata['order']: int = 0
 
         if overwrite:
-            if not row and not column and not order:
+            if not row and not column and order is None:
                 raise ValueError(
                     'Row, Column or Order must be specified to overwrite a report'
                 )
@@ -1767,20 +1809,38 @@ class PlotApi(BasePlot):
         'color': '#002FD8',  # put multicolor
         """
 
-        option_modifications: Dict[str, Any] = {
-            'dataZoom': False,
-            'optionModifications': {
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'axisPointer': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'restore': True,
+                    'dataView': True,
+                    'dataZoom': True,
+                    'magicType': True,
+                },
+                'xAxis': {
+                    'name': 'xAxisName',
+                    'type': 'category',
+                },
+                'yAxis': {
+                    'name': 'yAxisName',
+                    'type': 'value',
+                },
+                'dataZoom': True,
                 'series': {
-                    'itemStyle': {
-                        'borderRadius': [9, 9, 0, 0]
-                    }
+                    'smooth': True,
+                    'itemStyle': {'borderRadius': [9, 9, 0, 0]}
                 },
-                # 'color': '#002FD8',  # TODO put multicolor
-                'emphasis': {
-                    'itemStyle': {'color': '#29D86F'}
-                },
+                'emphasis': {'itemStyle': {'color': '#29D86F'}},
             }
-        }
+
+        if title:
+            option_modifications['title'] = title
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,
@@ -1900,6 +1960,35 @@ class PlotApi(BasePlot):
             bentobox_data: Optional[Dict] = None,
     ):
         """"""
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'axisPointer': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'restore': True,
+                    'dataView': True,
+                    'dataZoom': True,
+                    'magicType': True,
+                },
+                'xAxis': {
+                    'name': 'xAxisName',
+                    'type': 'category',
+                },
+                'yAxis': {
+                    'name': 'yAxisName',
+                    'type': 'value',
+                },
+                'dataZoom': True,
+                'series': {'smooth': True},
+            }
+
+        if title:
+            option_modifications['title'] = title
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
+
         return self._create_trend_charts(
             data=data, filters=filters,
             **dict(
@@ -2485,9 +2574,24 @@ class PlotApi(BasePlot):
         df = df[[x, y]]  # keep only x and y
         df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
+        if not option_modifications:
+            option_modifications = {
+                'legend': True,
+                'tooltip': True,
+                'toolbox': {
+                    'saveAsImage': True,
+                    'dataView': True,
+                }
+            }
+
+        data_fields: Dict = {
+            'type': 'pie',
+            'chartOptions': option_modifications,
+        }
+
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
-            'dataFields': {'type': 'pie'},
+            'dataFields': data_fields,
             'title': title,
         }
 
@@ -2722,9 +2826,29 @@ class PlotApi(BasePlot):
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
-        option_modifications: Dict = {
-            "toolbox": {"orient": "horizontal", "top": 0},
+        option_modifications = {
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': True,
+                'dataZoom': True,
+            },
+            'xAxis': {
+                'name': 'xAxisName',
+                'type': 'category',
+            },
+            'yAxis': {
+                'name': 'yAxisName',
+                'type': 'category',
+            },
+            'visualMap': 'piecewise'
         }
+
+        if title:
+            option_modifications['title'] = title
+
+        if subtitle:
+            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,

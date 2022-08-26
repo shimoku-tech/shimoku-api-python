@@ -39,7 +39,7 @@ def test_create_file():
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    file = s.file._create_file(
+    file = s.io._create_file(
         business_id=business_id, app_id=app_id,
         file_metadata=file_metadata, file_object=file_object,
     )
@@ -52,7 +52,7 @@ def test_get_files():
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    files = s.file.get_files(business_id=business_id, app_id=app_id)
+    files = s.io.get_files(business_id=business_id, app_id=app_id)
     assert files
 
     test_delete_file()
@@ -61,19 +61,23 @@ def test_get_files():
 def test_get_file():
     test_create_file()
 
-    filename = 'helloworld'
-
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    files = s.file.get_files(business_id=business_id, app_id=app_id)
+    files = s.io.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        file_ = s.file._get_file(
+        file_ = s.io._get_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
         )
-        assert file_
+        try:
+            assert file_
+            break
+        except AssertionError:
+            continue
+    else:
+        raise Exception('No files found')
 
     test_delete_file()
 
@@ -82,40 +86,41 @@ def test_delete_file():
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    files = s.file.get_files(business_id=business_id, app_id=app_id)
+    files = s.io.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        s.file._delete_file(
+        s.io._delete_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
         )
-    files = s.file.get_files(business_id=business_id, app_id=app_id)
+
+    files = s.io.get_files(business_id=business_id, app_id=app_id)
     assert not files
 
 
 def test_encode_file_name():
     file_name = 'helloworld'
     today = dt.date.today()
-    new_file_name = s.file._encode_file_name(file_name=file_name, date=today)
+    new_file_name = s.io._encode_file_name(file_name=file_name, date=today)
     assert new_file_name == f'helloworld_date:{dt.date.today().isoformat()}'
 
 
 def test_decode_file_name():
     file_name = f'helloworld_date:{dt.date.today().isoformat()}'
-    new_file_name = s.file._decode_file_name(file_name)
+    new_file_name = s.io._decode_file_name(file_name)
     assert new_file_name == 'helloworld'
 
 
 def test_get_file_date():
     today = dt.date.today()
     file_name = f'helloworld_date:{today.isoformat()}'
-    date = s.file._get_file_date(file_name)
+    date = s.io._get_file_date(file_name)
     assert date == today
 
 
 def test_get_all_files_by_app_name():
     test_create_file()
-    files: List[Dict] = s.file.get_all_files_by_app_name(
+    files: List[Dict] = s.io.get_all_files_by_app_name(
         business_id=business_id, app_name='test',
     )
     assert files
@@ -125,22 +130,22 @@ def test_get_all_files_by_app_name():
 def test_get_files_by_string_matching():
     test_create_file()
 
-    files: List[Dict] = s.file._get_files_by_string_matching(
+    files: List[Dict] = s.io._get_files_by_string_matching(
         business_id=business_id, string_match='hello',
     )
     assert files
 
-    files: List[Dict] = s.file._get_files_by_string_matching(
+    files: List[Dict] = s.io._get_files_by_string_matching(
         business_id=business_id, string_match='hello', app_name='test',
     )
     assert files
 
-    files: List[Dict] = s.file._get_files_by_string_matching(
+    files: List[Dict] = s.io._get_files_by_string_matching(
         business_id=business_id, string_match='fail', app_name='test',
     )
     assert not files
 
-    files: List[Dict] = s.file._get_files_by_string_matching(
+    files: List[Dict] = s.io._get_files_by_string_matching(
         business_id=business_id, string_match='hello', app_name='fail'
     )
     assert not files
@@ -151,7 +156,7 @@ def test_get_files_by_string_matching():
 def test_get_file_by_name():
     test_create_file()
 
-    file = s.file.get_file_by_name(
+    file = s.io.get_file_by_name(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
@@ -159,7 +164,7 @@ def test_get_file_by_name():
     )
     assert file
 
-    file = s.file.get_file_by_name(
+    file = s.io.get_file_by_name(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
@@ -174,7 +179,7 @@ def test_get_all_files_by_date():
     test_post_object()
 
     today = dt.date.today().isoformat()
-    files: List[Dict] = s.file.get_files_by_date(
+    files: List[Dict] = s.io.get_files_by_date(
         business_id=business_id,
         date=today,
         app_name='test',
@@ -182,7 +187,7 @@ def test_get_all_files_by_date():
     assert files
 
     tomorrow = today + dt.timedelta(1)
-    files: List[Dict] = s.file.get_file_by_creation_date(
+    files: List[Dict] = s.io.get_file_by_creation_date(
         business_id=business_id,
         date=tomorrow,
         app_name='test',
@@ -208,7 +213,7 @@ def test_get_all_files_by_date():
     file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
-    s.file.post_object(
+    s.io.post_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
@@ -216,7 +221,7 @@ def test_get_all_files_by_date():
     )
 
     today = dt.date.today()
-    files: List[Dict] = s.file.get_all_files_by_date(
+    files: List[Dict] = s.io.get_all_files_by_date(
         business_id=business_id,
         app_name='test',
         date=today,
@@ -231,14 +236,14 @@ def test_get_file_by_date():
     file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
-    s.file.post_object(
+    s.io.post_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
-    file: Dict = s.file.get_file_by_date(
+    file: Dict = s.io.get_file_by_date(
         business_id=business_id,
         date=today,
         file_name='helloworld',
@@ -247,17 +252,18 @@ def test_get_file_by_date():
 
     assert file
 
-    file_object: bytes = s.file.get_file_by_date(
+    file_object: bytes = s.io.get_file_by_date(
         business_id=business_id,
         date=today,
         file_name='helloworld',
         app_name='test',
         get_file_object=True,
     )
-    assert file_object == object_data
+    assert len(file_object) == 1
+    assert file_object[0] == object_data
 
     tomorrow = today + dt.timedelta(1)
-    file: Dict = s.file.get_file_by_date(
+    file: Dict = s.io.get_file_by_date(
         business_id=business_id,
         date=tomorrow,
         app_name='test',
@@ -266,31 +272,33 @@ def test_get_file_by_date():
     assert not file
 
 
-def test_get_file_with_max_date():
+def test_get_files_with_max_date():
     file_name = 'helloworld'
     app_name = 'test'
     object_data = b''
-    s.file.post_object(
+    s.io.post_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
-    file = s.file.get_file_with_max_date(
+    files = s.io.get_files_with_max_date(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
     )
-    assert file['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
+    assert len(files) == 1
+    assert files[0]['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
 
-    file_object = s.file.get_file_with_max_date(
+    files_object = s.io.get_files_with_max_date(
         business_id=business_id,
         app_name='test',
         file_name='helloworld',
         get_file_object=True,
     )
-    assert file_object == object_data
+    assert len(files_object) == 1
+    assert files_object[0] == object_data
 
     test_delete_file()
 
@@ -298,7 +306,7 @@ def test_get_file_with_max_date():
 def test_get_files_by_name_prefix():
     test_create_file()
 
-    files: List[Dict] = s.file.get_files_by_name_prefix(
+    files: List[Dict] = s.io.get_files_by_name_prefix(
         business_id=business_id, name_prefix='hello', app_name='test',
     )
     assert files
@@ -310,7 +318,7 @@ def test_delete_files_by_name_prefix():
     class MyTestCase(unittest.TestCase):
         def test_fake_business(self):
             with self.assertRaises(ValueError):
-                s.file.get_file_by_name(
+                s.io.get_file_by_name(
                     business_id=business_id,
                     file_name='helloworld',
                     app_name='test'
@@ -318,7 +326,7 @@ def test_delete_files_by_name_prefix():
 
     test_create_file()
 
-    s.file.delete_files_by_name_prefix(
+    s.io.delete_files_by_name_prefix(
         business_id=business_id,
         name_prefix='helloworld',
         app_name='test',
@@ -329,7 +337,7 @@ def test_delete_files_by_name_prefix():
 
 
 def test_replace_file_name():
-    s.file._replace_file_name()
+    s.io._replace_file_name()
 
 
 def test_post_object():
@@ -337,7 +345,7 @@ def test_post_object():
     app_name = 'test'
     object_data = b''
 
-    file = s.file.post_object(
+    file = s.io.post_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
@@ -354,19 +362,20 @@ def test_get_object():
     app_name = 'test'
     object_data = b''
 
-    s.file.post_object(
+    s.io.post_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
-    file = s.file.get_object(
+    files = s.io.get_object(
         business_id=business_id,
         app_name=app_name,
         file_name=file_name,
     )
-    assert file == object_data
+    assert len(files) == 1
+    assert files[0] == object_data
 
     test_delete_file()
 
@@ -374,7 +383,7 @@ def test_get_object():
 def test_post_dataframe():
     d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
     df = pd.DataFrame(d)
-    file: Dict = s.file.post_dataframe(
+    file: Dict = s.io.post_dataframe(
         business_id=business_id,
         app_name='test',
         file_name='df-test',
@@ -389,7 +398,7 @@ def test_post_get_dataframe():
     file_name: str = 'df-test'
     d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
     df_ = pd.DataFrame(d)
-    file: Dict = s.file.post_dataframe(
+    file: Dict = s.io.post_dataframe(
         business_id=business_id,
         app_name='test',
         file_name=file_name,
@@ -397,7 +406,7 @@ def test_post_get_dataframe():
     )
     assert file
 
-    df: pd.DataFrame = s.file.get_dataframe(
+    df: pd.DataFrame = s.io.get_dataframe(
         business_id=business_id,
         app_name='test',
         file_name=file_name,
@@ -407,10 +416,73 @@ def test_post_get_dataframe():
     test_delete_file()
 
 
+def test_post_get_model():
+    import pickle
+
+    from sklearn import svm
+    from sklearn import datasets
+
+    clf = svm.SVC()
+    X, y = datasets.load_iris(return_X_y=True)
+    clf.fit(X, y)
+
+    m: bytes = pickle.dumps(clf)
+
+    s.io.post_object(
+        business_id=business_id,
+        app_name='test',
+        file_name='model-test',
+        object_data=m
+    )
+
+    m2 = s.io.get_object(
+        business_id=business_id,
+        app_name='test',
+        file_name='model-test',
+    )
+    assert len(m2) == 1
+    assert m2[0] == m
+
+    s.io.post_ai_model(
+        business_id=business_id,
+        app_name='test',
+        model_name='model-object-test',
+        model=clf,
+    )
+
+    clf2 = s.io.get_ai_model(
+        business_id=business_id,
+        app_name='test',
+        model_name='model-object-test',
+    )
+
+    assert type(clf2) == type(clf)
+
+
+def test_big_data():
+    filename = '../data/classification_dataset_short.csv'
+    df = pd.read_csv(filename)
+    df.reset_index(inplace=True)
+
+    s.io.post_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name='test-big-df',
+        df=df
+    )
+
+    dataset: pd.DataFrame = s.io.get_dataframe(
+        business_id=business_id,
+        app_name='test',
+        file_name='test-big-df'
+    )
+    assert len(dataset) == len(df)
+
+
 test_create_file()
-test_delete_file()
 test_get_file()
 test_get_files()
+test_delete_file()
 
 test_encode_file_name()
 test_decode_file_name()
@@ -426,11 +498,14 @@ test_post_object()
 test_get_object()
 
 test_get_all_files_by_date()
-test_get_file_with_max_date()
+test_get_files_with_max_date()
 test_get_file_by_date()
 
 test_post_dataframe()
 test_post_get_dataframe()
+test_post_get_model()
+
+test_big_data()
 
 # TODO pending
 # test_replace_file_name()

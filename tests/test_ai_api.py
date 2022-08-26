@@ -4,7 +4,6 @@ from os import getenv
 import pandas as pd
 
 import shimoku_api_python as shimoku
-from data.data_churn_ai import d_fail
 
 
 api_key: str = getenv('API_TOKEN')
@@ -23,6 +22,7 @@ s.ai.set_business(business_id)
 
 filename: str = '../data/churn_test.csv'
 df_test: pd.DataFrame = pd.read_csv(filename, index_col=0).head(10)
+d_fail = {'a': 1, 'b': 2, 'c': 3}
 df_test_fail: pd.DataFrame = pd.DataFrame(d_fail, index=[0])
 
 

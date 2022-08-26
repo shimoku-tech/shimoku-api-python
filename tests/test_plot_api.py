@@ -3094,6 +3094,7 @@ def test_input_form():
 
 
 def test_get_input_forms():
+    print('test_get_input_forms')
     menu_path: str = 'test/input-form-to-get'
     report_dataset_properties = {
       'fields': [

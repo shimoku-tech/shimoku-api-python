@@ -20,8 +20,8 @@ class Client(object):
     def __init__(self, universe_id: str, environment: str = 'staging',
                  access_token: str = "", config={}, business_id: str = ""):
 
-        if acces_token != "":
-            config = {'access_token': acces_token}
+        if access_token != "":
+            config = {'access_token': access_token}
 
         self._api_client = ApiClient(
             config=config,

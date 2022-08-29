@@ -1822,11 +1822,11 @@ class PlotApi(BasePlot):
                     'magicType': True,
                 },
                 'xAxis': {
-                    'name': 'xAxisName',
+                    'name': f'{x_axis_name}',
                     'type': 'category',
                 },
                 'yAxis': {
-                    'name': 'yAxisName',
+                    'name': f'{y_axis_name}',
                     'type': 'value',
                 },
                 'dataZoom': True,
@@ -1837,8 +1837,6 @@ class PlotApi(BasePlot):
                 'emphasis': {'itemStyle': {'color': '#29D86F'}},
             }
 
-        if title:
-            option_modifications['title'] = title
         if subtitle:
             option_modifications['subtitle'] = subtitle
 
@@ -1973,19 +1971,17 @@ class PlotApi(BasePlot):
                     'magicType': True,
                 },
                 'xAxis': {
-                    'name': 'xAxisName',
+                    'name': f'{x_axis_name}',
                     'type': 'category',
                 },
                 'yAxis': {
-                    'name': 'yAxisName',
+                    'name': f'{y_axis_name}',
                     'type': 'value',
                 },
                 'dataZoom': True,
                 'series': {'smooth': True},
             }
 
-        if title:
-            option_modifications['title'] = title
         if subtitle:
             option_modifications['subtitle'] = subtitle
 
@@ -2843,9 +2839,6 @@ class PlotApi(BasePlot):
             },
             'visualMap': 'piecewise'
         }
-
-        if title:
-            option_modifications['title'] = title
 
         if subtitle:
             option_modifications['subtitle'] = subtitle

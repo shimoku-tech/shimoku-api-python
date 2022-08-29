@@ -296,6 +296,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         filter_map: Optional[Dict[str, str]] = None,
         filter_fields: Optional[Dict[str, List[str]]] = None,
         search_columns: Optional[List[str]] = None,
+        report_entry_chunks: bool = True,
     ) -> List[Dict]:
         """
         :param df:
@@ -305,6 +306,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 'stringField2': ['probable', 'improbable'],
             }
         :param search_columns:
+        :param report_entry_chunks:
         """
         cols: List[str] = df.columns.tolist()
 
@@ -331,23 +333,31 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             metadata_entries: List[Dict] = []
 
         records: List[Dict] = df.to_dict(orient='records')
-        try:
-            data_entries: List[Dict] = [
-                {'data': json.dumps(d)}
-                for d in records
-            ]
-        except TypeError:
-            # If we have date or datetime values
-            # then we need to convert them to isoformat
+
+        if report_entry_chunks:
             for datum in records:
                 for k, v in datum.items():
                     if isinstance(v, dt.date) or isinstance(v, dt.datetime):
                         datum[k] = v.isoformat()
+            data_entries = [{'data': d} for d in records]
+        else:
+            try:
+                data_entries: List[Dict] = [
+                    {'data': json.dumps(d)}
+                    for d in records
+                ]
+            except TypeError:
+                # If we have date or datetime values
+                # then we need to convert them to isoformat
+                for datum in records:
+                    for k, v in datum.items():
+                        if isinstance(v, dt.date) or isinstance(v, dt.datetime):
+                            datum[k] = v.isoformat()
 
-            data_entries: List[Dict] = [
-                {'data': json.dumps(d)}
-                for d in records
-            ]
+                data_entries: List[Dict] = [
+                    {'data': json.dumps(d)}
+                    for d in records
+                ]
 
         if metadata_entries:
             try:

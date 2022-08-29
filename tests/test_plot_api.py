@@ -618,10 +618,17 @@ def test_bar_with_filters():
 def test_bar():
     print('test_bar')
     menu_path = 'test/bar-test'
+    data_ = [{'date': dt.date(2021, 1, 1), 'x': 50000000, 'y': 5},
+            {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
+            {'date': dt.date(2021, 1, 3), 'x': 40000000, 'y': 5},
+            {'date': dt.date(2021, 1, 4), 'x': 70000000, 'y': 5},
+            {'date': dt.date(2021, 1, 5), 'x': 30000000, 'y': 5}]
     s.plt.bar(
-        data=data,
+        data=data_,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
         # row=1, column=1,
         order=0, rows_size=2,
         cols_size=12,
@@ -3182,6 +3189,7 @@ if delete_paths:
     s.plt.delete_path('test')
 
 
+test_line()
 test_get_input_forms()
 test_delete_path()
 test_append_data_to_trend_chart()

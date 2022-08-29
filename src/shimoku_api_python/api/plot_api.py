@@ -474,37 +474,26 @@ class BasePlot(PlotAux):
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
         # Default
-        option_modifications_temp = {
-            "legend": {"type": "scroll"},
-            "toolbox": {"orient": "vertical", "top": 20},
-            'series': {'smooth': True}
-        }
+        option_modifications_temp = {"legend": {"type": "scroll"}}
 
         # TODO this will be done in FE
         #  https://trello.com/c/GXRYHEsO/
-        num_size: int = len(df[y].max())
+        num_size: int = len(f'{max([k for k in df[y].max()])}')
         if num_size > 6:
-            margin: int = 12 * (num_size - 6)  # 12 pixels by extra num
+            margin: int = 18 * (num_size - 6)  # 12 pixels by extra num
             option_modifications_temp["yAxis"] = {
                 "axisLabel": {"margin": margin},
+                'nameGap': margin + 36,
             }
 
         if option_modifications:
-            if not option_modifications.get('legend'):
-                option_modifications.update({"legend": {"type": "scroll"}})
-
-            if not option_modifications.get('toolbox'):
-                option_modifications['toolbox'] = {"orient": "vertical", "top": 20}
-            elif not option_modifications.get('toolbox').get('orient'):
-                option_modifications['toolbox'].update({"orient": "vertical", "top": 20})
-
-            if not option_modifications.get('series'):
-                option_modifications['series'] = {'smooth': True}
-            elif not option_modifications.get('series').get('smooth'):
-                option_modifications['series'].update({'smooth': True})
-
+            if option_modifications.get('optionModifications'):
+                option_modifications['optionModifications'].update(option_modifications_temp)
+            else:
+                option_modifications['optionModifications'] = option_modifications_temp
         else:
-            option_modifications = option_modifications_temp
+            option_modifications: Dict = {}
+            option_modifications['optionModifications'] = option_modifications_temp
 
         # TODO we have two titles now, take a decision
         #  one in dataFields the other as field
@@ -790,8 +779,6 @@ class BasePlot(PlotAux):
                 'name': y_axis_name if y_axis_name else "",
                 'type': 'value',
             },
-            'dataZoom': True,
-            'smooth': True,
         }
 
         data_fields: Dict = {
@@ -1811,6 +1798,7 @@ class PlotApi(BasePlot):
 
         if not option_modifications:
             option_modifications = {
+                'subtitle': subtitle if subtitle else '',
                 'legend': True,
                 'tooltip': True,
                 'axisPointer': True,
@@ -1822,23 +1810,22 @@ class PlotApi(BasePlot):
                     'magicType': True,
                 },
                 'xAxis': {
-                    'name': f'{x_axis_name}',
+                    'name': x_axis_name if x_axis_name else "",
                     'type': 'category',
                 },
                 'yAxis': {
-                    'name': f'{y_axis_name}',
+                    'name': y_axis_name if y_axis_name else "",
                     'type': 'value',
                 },
-                'dataZoom': True,
-                'series': {
-                    'smooth': True,
-                    'itemStyle': {'borderRadius': [9, 9, 0, 0]}
-                },
-                'emphasis': {'itemStyle': {'color': '#29D86F'}},
+                'optionModifications': {
+                    'yAxis': {"axisLabel": {"margin": 12}, 'nameGap': 24},
+                    'series': {
+                        'smooth': True,
+                        'itemStyle': {'borderRadius': [9, 9, 0, 0]}
+                    },
+                }
+                # 'dataZoom': True,
             }
-
-        if subtitle:
-            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,
@@ -1960,6 +1947,7 @@ class PlotApi(BasePlot):
         """"""
         if not option_modifications:
             option_modifications = {
+                'subtitle': subtitle if subtitle else "",
                 'legend': True,
                 'tooltip': True,
                 'axisPointer': True,
@@ -1971,19 +1959,16 @@ class PlotApi(BasePlot):
                     'magicType': True,
                 },
                 'xAxis': {
-                    'name': f'{x_axis_name}',
+                    'name': x_axis_name if x_axis_name else "",
                     'type': 'category',
                 },
                 'yAxis': {
-                    'name': f'{y_axis_name}',
+                    'name': y_axis_name if y_axis_name else "",
                     'type': 'value',
                 },
                 'dataZoom': True,
-                'series': {'smooth': True},
+                'optionModifications': {'series': {'smooth': True}}
             }
-
-        if subtitle:
-            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,
@@ -2823,6 +2808,7 @@ class PlotApi(BasePlot):
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
         option_modifications = {
+            'subtitle': subtitle if subtitle else "",
             'toolbox': {
                 'saveAsImage': True,
                 'restore': True,
@@ -2830,18 +2816,15 @@ class PlotApi(BasePlot):
                 'dataZoom': True,
             },
             'xAxis': {
-                'name': f'{x_axis_name}',
+                'name': x_axis_name if x_axis_name else "",
                 'type': 'category',
             },
             'yAxis': {
-                'name': f'{y_axis_name}',
+                'name': y_axis_name if y_axis_name else "",
                 'type': 'category',
             },
             'visualMap': 'piecewise'
         }
-
-        if subtitle:
-            option_modifications['subtitle'] = subtitle
 
         return self._create_trend_charts(
             data=data, filters=filters,

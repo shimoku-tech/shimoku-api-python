@@ -988,7 +988,7 @@ class CreateExplorerAPI(object):
 
     def _create_report_entries(
         self, business_id: str, app_id: str, report_id: str,
-        items: List[Dict],
+        items: List[Dict], batch_size: int = 999,
     ) -> List[Dict]:
         """Create new reportEntry associated to a Report
 
@@ -997,23 +997,26 @@ class CreateExplorerAPI(object):
         :param report_id:
         :param items: A dict with all the values required to create a reportEntry
         """
+        if batch_size >= 1000:
+            raise ValueError('batch_size must be less than 1000')
+
         endpoint: str = (
             f'business/{business_id}/'
             f'app/{app_id}/'
             f'report/{report_id}/'
-            f'reportEntry'
+            f'reportEntry/batch'
         )
 
         report_entries: List[Dict] = []
-        for item in items:
-            report_entry: Dict = (
+        for chunk in range(0, len(items), batch_size):
+            report_entries_batch = report_entries + (
                 self.api_client.query_element(
                     method='POST', endpoint=endpoint,
-                    **{'body_params': item},
+                    **{'body_params': items[chunk:chunk + batch_size]},
                 )
             )
             sleep(.25)
-            report_entries = report_entries + [report_entry]
+            report_entries = report_entries + [report_entries_batch]
 
         return report_entries
 

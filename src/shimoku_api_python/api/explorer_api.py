@@ -629,6 +629,9 @@ class CascadeExplorerAPI(GetExplorerAPI):
         # could have several reports with the same name
         result: Any = {}
         for app in apps:
+            if not app.get('type'):  # is not mandatory for app to have an AppType
+                continue
+
             if app['type']['id'] == app_type_id:
                 if result:
                     if len(result) == 1:

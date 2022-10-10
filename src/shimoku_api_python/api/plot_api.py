@@ -1412,6 +1412,7 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
+            downloadable_to_csv: bool = False,
     ):
         """
         {
@@ -1650,6 +1651,7 @@ class PlotApi(BasePlot):
             'path': path_name,
             'order': order,
             'dataFields': _calculate_table_data_fields(),
+            'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
 
         if row and column:

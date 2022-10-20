@@ -1412,7 +1412,7 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
-            downloadable_to_csv: bool = False,
+            downloadable_to_csv: bool = True,
     ):
         """
         {

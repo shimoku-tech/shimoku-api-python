@@ -1010,18 +1010,18 @@ class CreateExplorerAPI(object):
             f'reportEntry/batch'
         )
 
-        report_entries: List[Dict] = []
+        #report_entries: List[Dict] = []
         for chunk in range(0, len(items), batch_size):
-            report_entries_batch = report_entries + (
-                self.api_client.query_element(
-                    method='POST', endpoint=endpoint,
-                    **{'body_params': items[chunk:chunk + batch_size]},
-                )
+            #report_entries_batch = report_entries + (
+            self.api_client.query_element(
+                method='POST', endpoint=endpoint,
+                **{'body_params': items[chunk:chunk + batch_size]},
             )
+            #)
             sleep(.25)
-            report_entries = report_entries + [report_entries_batch]
+            #report_entries = report_entries + [report_entries_batch]
 
-        return report_entries
+        #return report_entries
 
     def create_file(
             self, business_id: str, app_id: str,

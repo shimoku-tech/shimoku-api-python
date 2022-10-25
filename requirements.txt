@@ -2,3 +2,4 @@ pandas
 requests
 datetime
 json5==0.9.5
+shimoku-components-catalog

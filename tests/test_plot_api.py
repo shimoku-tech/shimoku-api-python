@@ -468,6 +468,7 @@ def test_table():
 
     # Test search columns isolated work
     s.plt.table(
+        title="Test-table",
         data=data_,
         menu_path='test/table-test',
         order=1,
@@ -476,6 +477,7 @@ def test_table():
 
     # Test search columns with filters and sorting works
     s.plt.table(
+        title="Test-table",
         data=data_,
         menu_path='test/table-test',
         order=1,
@@ -485,6 +487,7 @@ def test_table():
     )
 
     s.plt.table(
+        title="Test-table",
         data=data_,
         menu_path='test/sorted-table-test',
         row=1, column=1,
@@ -493,6 +496,7 @@ def test_table():
     )
 
     s.plt.table(
+        title="Test-table",
         data=data_,
         menu_path='test/table-test',
         row=1, column=1,
@@ -521,6 +525,33 @@ def test_table():
         s.plt.delete_path('test/table-test')
         s.plt.delete_path('test/sorted-table-test')
 
+
+def test_table_download_csv():
+    print('test_table_download_csv')
+    data_ = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
+    ]
+
+    s.plt.table(
+        title="Test-table",
+        data=data_,
+        menu_path='test/table-test-csv',
+        order=1,
+        downloadable_to_csv=True
+    )
+
+    if delete_paths:
+        s.plt.delete(
+            menu_path='test/table-test-csv',
+            component_type='table',
+            row=1, column=1,
+        )
+
+        s.plt.delete_path('test/table-test-csv')
 
 def test_bar_with_filters():
     print('test_bar_with_filters')
@@ -1458,6 +1489,52 @@ def test_indicator():
             "value": "1.1946",
         },
     ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=1, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color'
+    )
+
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color'
+    )
+
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
+
+def test_indicator_one_dict():
+    print('test_indicator_one_dict')
+    menu_path: str = 'test/indicator-test-one-dict'
+    data_ = {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "align": "center",
+            "color": "warning"
+        }
+
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
@@ -3206,6 +3283,7 @@ test_set_apps_orders()
 test_set_sub_path_orders()
 test_zero_centered_barchart()
 test_indicator()
+test_indicator_one_dict()
 test_alert_indicator()
 test_stockline()
 test_radar()

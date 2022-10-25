@@ -1405,7 +1405,8 @@ class PlotApi(BasePlot):
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None,
             # TODO
-            #  rows_size: Optional[int] = None, cols_size: int = 12,
+            # rows_size keeps being ignored
+            rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
@@ -1650,6 +1651,8 @@ class PlotApi(BasePlot):
             'path': path_name,
             'order': order,
             'dataFields': _calculate_table_data_fields(),
+            'sizeColumns': cols_size,
+            'sizeRows': rows_size,
         }
 
         if row and column:

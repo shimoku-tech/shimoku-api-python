@@ -1493,6 +1493,52 @@ def test_indicator():
         )
         s.plt.delete_path(menu_path)
 
+def test_indicator_one_dict():
+    print('test_indicator_one_dict')
+    menu_path: str = 'test/indicator-test-one-dict'
+    data_ = {
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "align": "center",
+            "color": "warning"
+        }
+
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        row=1, column=1,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color'
+    )
+
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=1, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color'
+    )
+
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='indicator',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
+
 
 def test_alert_indicator():
     print('test_alert_indicator')
@@ -3206,6 +3252,7 @@ test_set_apps_orders()
 test_set_sub_path_orders()
 test_zero_centered_barchart()
 test_indicator()
+test_indicator_one_dict()
 test_alert_indicator()
 test_stockline()
 test_radar()

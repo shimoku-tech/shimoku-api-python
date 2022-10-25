@@ -192,7 +192,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         if isinstance(report_data, DataFrame):
             chart_data: List[Dict] = report_data.to_dict(orient='records')
         elif isinstance(report_data, dict):
-            df_: DataFrame = pd.DataFrame(report_data)
+            df_: DataFrame = pd.DataFrame([report_data])
             chart_data: List[Dict] = df_.to_dict(orient='records')
         elif isinstance(report_data, list):
             assert isinstance(report_data[0], dict)

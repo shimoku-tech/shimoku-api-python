@@ -1412,6 +1412,7 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
+            downloadable_to_csv: bool = True,
     ):
         """
         {
@@ -1645,11 +1646,16 @@ class PlotApi(BasePlot):
 
         app_id: str = app['id']
 
+        if not isinstance(downloadable_to_csv, bool):
+            raise ValueError("The type of the parameter 'downloadable_to_csv' needs to be a boolean, the type of the"
+                             " parameter provided is: " + str(type(downloadable_to_csv)))
+
         report_metadata: Dict[str, Any] = {
             'title': title,
             'path': path_name,
             'order': order,
             'dataFields': _calculate_table_data_fields(),
+            'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
 
         if row and column:

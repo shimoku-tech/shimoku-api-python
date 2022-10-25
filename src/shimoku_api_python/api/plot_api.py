@@ -1412,6 +1412,7 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
+            label_cols: Optional[Dict[str, str]] = {},
     ):
         """
         {
@@ -1509,6 +1510,12 @@ class PlotApi(BasePlot):
             else:
                 return {}
 
+        def RGB_to_hex(r, g, b):
+            def clamp(x):
+                return max(0, min(x, 255))
+            #from https://stackoverflow.com/questions/3380726/converting-an-rgb-color-tuple-to-a-hexidecimal-string
+            return "#{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
+
         def _calculate_table_data_fields() -> Dict:
             """
             Example
@@ -1602,6 +1609,19 @@ class PlotApi(BasePlot):
                                 'field': extra_map[col],
                                 "type": "search",
                             }
+
+                if col in label_cols:
+                    labels_map = label_cols[col]
+                    if isinstance(labels_map, Dict):
+                        for value, color_def in labels_map.items():
+                            if isinstance(color_def, list):
+                                labels_map[value] = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+
+                    if not data_fields[col]:
+                        data_fields[col] = {'isLabel': labels_map}
+                    else:
+                        data_fields[col]['isLabel'] = labels_map
+
 
             return json.dumps(data_fields)
 

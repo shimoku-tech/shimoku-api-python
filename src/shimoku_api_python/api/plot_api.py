@@ -1510,13 +1510,7 @@ class PlotApi(BasePlot):
             else:
                 return {}
 
-        def RGB_to_hex(r, g, b):
-            def clamp(x):
-                return max(0, min(x, 255))
-            #from https://stackoverflow.com/questions/3380726/converting-an-rgb-color-tuple-to-a-hexidecimal-string
-            return "#{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
-
-        def _calculate_table_data_fields() -> Dict:
+        def _calculate_table_data_fields(DF: DataFrame) -> Dict:
             """
             Example
             -------------
@@ -1553,6 +1547,37 @@ class PlotApi(BasePlot):
                     }
                 }
             """
+            def interpret_color_info(color_def: Union[List, str]) -> str:
+                def RGB_to_hex(r: int, g: int, b: int) -> str:
+                    def clamp(x: int) -> int:
+                        return max(0, min(x, 255))
+
+                    # from https://stackoverflow.com/questions/3380726/converting-an-rgb-color-tuple-to-a-hexidecimal-string
+                    return "#{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
+
+                # from https://xkcd.com/color/rgb/
+                color_defs = {"purple": "#7e1e9c",
+                              "red": "#e50000",
+                              "green": "#15b01a",
+                              "blue": "#0343df",
+                              "pink": "#ff81c0",
+                              "brown": "#653700",
+                              "orange": "#f97306",
+                              "yellow": "#ffff14",
+                              "grey": "#929591",
+                              "violet": "#9a0eea",
+                              "cyan": "#00ffff"
+                              }
+
+                if isinstance(color_def, list):
+                    color_def = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+                elif color_def in color_defs:
+                    color_def = color_defs[color_def]
+                elif not isinstance(color_def, str) or '#' not in color_def:
+                    raise ValueError("Can't interpret color information.")
+
+                return color_def
+
             data_fields: Dict = {}
             cols: List[str] = df.columns.tolist()
             if sort_table_by_col:
@@ -1613,15 +1638,36 @@ class PlotApi(BasePlot):
                 if col in label_cols:
                     labels_map = label_cols[col]
                     if isinstance(labels_map, Dict):
-                        for value, color_def in labels_map.items():
-                            if isinstance(color_def, list):
-                                labels_map[value] = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+                        labels_map_aux = labels_map.copy()
+                        for value, color_def in labels_map_aux.items():
+                            color_def = interpret_color_info(color_def)
+                            if isinstance(value, tuple):
+                                del labels_map[value]
+                                df_values = DF[DF[col].between(value[0], value[1])][col].unique()
+                                for val in df_values:
+                                    if isinstance(val, float) and int(val) - val == 0:
+                                        val = int(val)
+                                    labels_map[val] = color_def
+                            else:
+                                labels_map[value] = color_def
+
+                    elif isinstance(labels_map, str) or isinstance(labels_map, list):
+                        if labels_map != "true":
+                            df_values = DF[col].unique()
+                            color_def = interpret_color_info(labels_map)
+                            labels_map = {}
+                            for val in df_values:
+                                if isinstance(val, float) and int(val) - val == 0:
+                                    val = int(val)
+                                labels_map[val] = color_def
+
+                    else:
+                        raise ValueError("Can't interpret label information")
 
                     if not data_fields[col]:
                         data_fields[col] = {'isLabel': labels_map}
                     else:
                         data_fields[col]['isLabel'] = labels_map
-
 
             return json.dumps(data_fields)
 
@@ -1669,7 +1715,7 @@ class PlotApi(BasePlot):
             'title': title,
             'path': path_name,
             'order': order,
-            'dataFields': _calculate_table_data_fields(),
+            'dataFields': _calculate_table_data_fields(df),
         }
 
         if row and column:

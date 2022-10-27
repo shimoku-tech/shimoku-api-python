@@ -1565,7 +1565,7 @@ class PlotApi(BasePlot):
                               "brown": "#653700",
                               "orange": "#f97306",
                               "yellow": "#ffff14",
-                              "grey": "#929591",
+                              "gray": "#929591",
                               "violet": "#9a0eea",
                               "cyan": "#00ffff",
                               "black": "#000000"

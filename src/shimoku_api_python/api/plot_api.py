@@ -1567,7 +1567,8 @@ class PlotApi(BasePlot):
                               "yellow": "#ffff14",
                               "grey": "#929591",
                               "violet": "#9a0eea",
-                              "cyan": "#00ffff"
+                              "cyan": "#00ffff",
+                              "black": "#000000"
                               }
 
                 if isinstance(color_def, list):

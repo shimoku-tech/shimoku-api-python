@@ -476,16 +476,6 @@ class BasePlot(PlotAux):
         # Default
         option_modifications_temp = {"legend": {"type": "scroll"}}
 
-        # TODO this will be done in FE
-        #  https://trello.com/c/GXRYHEsO/
-        num_size: int = len(f'{max([k for k in df[y].max()])}')
-        if num_size > 6:
-            margin: int = 18 * (num_size - 6)  # 12 pixels by extra num
-            option_modifications_temp["yAxis"] = {
-                "axisLabel": {"margin": margin},
-                'nameGap': margin + 36,
-            }
-
         if option_modifications:
             if option_modifications.get('optionModifications'):
                 option_modifications['optionModifications'].update(option_modifications_temp)

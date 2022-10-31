@@ -652,6 +652,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         :param name: app or apptype name
         """
         apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        name = name.replace('-', ' ')
 
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name

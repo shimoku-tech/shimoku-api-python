@@ -844,6 +844,8 @@ class BasePlot(PlotAux):
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
+            app_normalized_name = self._create_normalized_name(app_normalized_name)
+
             app: Dict = self._get_app_by_url(
                 business_id=self.business_id,
                 url=app_normalized_name,
@@ -861,7 +863,7 @@ class BasePlot(PlotAux):
                     continue
 
                 original_path_name: str = report.get('path')
-                path_name: str = '-'.join(original_path_name.split(' ')).lower()
+                path_name: str = self._create_normalized_name(original_path_name)
                 menu_path_: str = f'{app_normalized_name}/{path_name}'
                 new_path_order: Union[str, int] = paths_order.get(menu_path_)
 

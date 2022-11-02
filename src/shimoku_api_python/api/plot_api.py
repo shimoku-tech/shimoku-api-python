@@ -2469,6 +2469,9 @@ class PlotApi(BasePlot):
             if col_to_rename in mandatory_elements + extra_elements
         }
         df.rename(columns=cols_to_rename, inplace=True)
+        extra_elements = [cols_to_rename[x] if x in cols_to_rename else x
+                          for x in extra_elements]
+
         for extra_element in extra_elements:
             if extra_element == 'align':
                 df['align'] = df['align'].fillna('right')
@@ -2506,7 +2509,7 @@ class PlotApi(BasePlot):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,

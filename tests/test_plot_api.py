@@ -532,66 +532,36 @@ def test_table_with_labels():
     menu_path = 'test/table-test-with-labels'
 
     data_ = [
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
-         'z': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana', 'name2': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura', 'name2': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose', 'name2': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge', 'name2': 'Jorge'},
 
     ]
 
@@ -605,7 +575,8 @@ def test_table_with_labels():
         filter_columns=filter_columns,
         sort_table_by_col={'date': 'asc'},
         search_columns=search_columns,
-        label_cols={"x": {5: "#666666",
+        label_columns={
+                    "x": {5: "#666666",
                           6: "#4287f5",
                           4: "#42F548",
                           7: [255, 0, 0],
@@ -618,16 +589,23 @@ def test_table_with_labels():
                         (75, np.inf): "green"
                     },
                     "z": {
-                        (0, 25): [255, 0, 0],
-                        (25, 50): "orange",
-                        (50, 75): "yellow",
-                        (75, np.inf): "#42F548"
+                        (0, 25): [100, 100, 100],
+                        (25, 50): "yellow",
+                        (50, 75): "orange",
+                        (75, np.inf): "red"
+                    },
+                    "a": {
+                        (0, 25): [100, 100, 100],
+                        (25, 50): "yellow",
+                        (50, 75): "orange",
+                        (75, np.inf): "red"
                     },
                     "filtA": "#666666",
                     "filtB": [125, 54, 200],
                     "name": "true",
                     "name2": "yellow",
-                    }
+                    },
+        value_sufix={'y': '%', 'z': '°'}
     )
 
 def test_table_download_csv():
@@ -3370,43 +3348,43 @@ if delete_paths:
     s.plt.delete_path('test')
 
 
-test_line()
-test_get_input_forms()
-test_delete_path()
-test_append_data_to_trend_chart()
-test_iframe()
-test_html()
-test_set_new_business()
-test_table()
+# test_line()
+# test_get_input_forms()
+# test_delete_path()
+# test_append_data_to_trend_chart()
+# test_iframe()
+# test_html()
+# test_set_new_business()
+# test_table()
 test_table_with_labels()
-test_free_echarts()
-test_input_form()
-test_bentobox()
-test_delete()
-test_bar_with_filters()
-test_set_apps_orders()
-test_set_sub_path_orders()
-test_zero_centered_barchart()
-test_indicator()
-test_indicator_one_dict()
-test_alert_indicator()
-test_stockline()
-test_radar()
-test_pie()
-test_ux()
-test_bar()
-test_ring_gauge()
-test_sunburst()
-test_tree()
-test_treemap()
-test_heatmap()
-test_sankey()
-test_horizontal_barchart()
-test_predictive_line()
-test_speed_gauge()
-test_line()
-test_scatter()
-test_funnel()
+# test_free_echarts()
+# test_input_form()
+# test_bentobox()
+# test_delete()
+# test_bar_with_filters()
+# test_set_apps_orders()
+# test_set_sub_path_orders()
+# test_zero_centered_barchart()
+# test_indicator()
+# test_indicator_one_dict()
+# test_alert_indicator()
+# test_stockline()
+# test_radar()
+# test_pie()
+# test_ux()
+# test_bar()
+# test_ring_gauge()
+# test_sunburst()
+# test_tree()
+# test_treemap()
+# test_heatmap()
+# test_sankey()
+# test_horizontal_barchart()
+# test_predictive_line()
+# test_speed_gauge()
+# test_line()
+# test_scatter()
+# test_funnel()
 
 # TODO
 # test_cohorts()

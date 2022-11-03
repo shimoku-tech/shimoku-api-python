@@ -1412,8 +1412,9 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
-            label_cols: Optional[Dict[str, str]] = {},
+            label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
+            value_sufixes: Optional[Dict[str, str]] = {}
     ):
         """
         {
@@ -1548,6 +1549,12 @@ class PlotApi(BasePlot):
                     }
                 }
             """
+
+            def check_correct_value(n):
+                admitted_types = (int, float, str)
+                if not isinstance(n, admitted_types):
+                    raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
+
             def interpret_color_info(color_def: Union[List, str]) -> str:
                 def RGB_to_hex(r: int, g: int, b: int) -> str:
                     def clamp(x: int) -> int:
@@ -1637,8 +1644,11 @@ class PlotApi(BasePlot):
                                 "type": "search",
                             }
 
-                if col in label_cols:
-                    labels_map = label_cols[col]
+                if col in label_columns:
+                    labels_map = label_columns[col]
+                    value_suffix = ""
+                    if col in value_sufixes:
+                        value_suffix = value_sufixes[col]
                     if isinstance(labels_map, Dict):
                         labels_map_aux = labels_map.copy()
                         for value, color_def in labels_map_aux.items():
@@ -1647,11 +1657,13 @@ class PlotApi(BasePlot):
                                 del labels_map[value]
                                 df_values = DF[DF[col].between(value[0], value[1])][col].unique()
                                 for val in df_values:
-                                    if isinstance(val, float) and int(val) - val == 0:
+                                    check_correct_value(val)
+                                    if value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
                                         val = int(val)
-                                    labels_map[val] = color_def
+                                    labels_map[f'{val}{value_suffix}'] = color_def
                             else:
-                                labels_map[value] = color_def
+                                check_correct_value(value)
+                                labels_map[f'{value}{value_suffix}'] = color_def
 
                     elif isinstance(labels_map, str) or isinstance(labels_map, list):
                         if labels_map != "true":
@@ -1659,9 +1671,10 @@ class PlotApi(BasePlot):
                             color_def = interpret_color_info(labels_map)
                             labels_map = {}
                             for val in df_values:
-                                if isinstance(val, float) and int(val) - val == 0:
+                                check_correct_value(val)
+                                if value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
                                     val = int(val)
-                                labels_map[val] = color_def
+                                labels_map[f'{val}{value_suffix}'] = color_def
 
                     else:
                         raise ValueError("Can't interpret label information")
@@ -1724,6 +1737,9 @@ class PlotApi(BasePlot):
             'dataFields': _calculate_table_data_fields(df),
             'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
+
+        for col, value_format in value_sufixes.items():
+            df[col] = df[col].astype(str)+value_format
 
         if row and column:
             report_metadata['grid']: str = f'{row}, {column}'

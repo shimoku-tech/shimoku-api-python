@@ -248,12 +248,7 @@ def test_set_sub_path_orders():
         paths_order={
             'test/funnel-test': 1,
             'test/tree-test': 2,
-        }
-    )
-    s.plt.set_sub_path_orders(
-        paths_order={
-            'Test/Funnel test': 1,
-            'Test/Tree test': 2,
+            'Test/Line Test': 3,
         }
     )
 

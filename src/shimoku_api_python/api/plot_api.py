@@ -845,6 +845,7 @@ class BasePlot(PlotAux):
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
             app_normalized_name = self._create_normalized_name(app_normalized_name)
+            app_path_name = self._create_normalized_name(app_path_name)
 
             app: Dict = self._get_app_by_url(
                 business_id=self.business_id,
@@ -858,26 +859,16 @@ class BasePlot(PlotAux):
             )
 
             for report in reports:
-                raw_path_name: str = report.get('path')
-                if not raw_path_name:
-                    continue
-
                 original_path_name: str = report.get('path')
-                path_name: str = self._create_normalized_name(original_path_name)
-                menu_path_: str = f'{app_normalized_name}/{path_name}'
-                new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order is None:
-                    menu_path_: str = f'{app_normalized_name}/{original_path_name}'
-                    new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order:
-                    self.update_report(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                        report_id=report['id'],
-                        report_metadata={'pathOrder': int(new_path_order)},
-                    )
+                if original_path_name:
+                    path_name: str = self._create_normalized_name(original_path_name)
+                    if path_name == app_path_name:
+                        self.update_report(
+                            business_id=self.business_id,
+                            app_id=app_id,
+                            report_id=report['id'],
+                            report_metadata={'pathOrder': int(order)},
+                        )
 
     def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""

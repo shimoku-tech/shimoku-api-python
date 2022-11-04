@@ -605,7 +605,7 @@ def test_table_with_labels():
                     "name": "true",
                     "name2": "yellow",
                     },
-        value_sufix={'y': '%', 'z': '°'}
+        value_sufixes={'y': '%', 'z': '°'}
     )
 
 def test_table_download_csv():

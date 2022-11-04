@@ -1587,6 +1587,39 @@ class PlotApi(BasePlot):
 
                 return color_def
 
+            def interpret_label_info(_labels_map, _value_suffix):
+                if isinstance(_labels_map, Dict):
+                    labels_map_aux = _labels_map.copy()
+                    for value, color_def in labels_map_aux.items():
+                        color_def = interpret_color_info(color_def)
+                        if isinstance(value, tuple):
+                            del _labels_map[value]
+                            df_values = DF[DF[col].between(value[0], value[1])][col].unique()
+                            for val in df_values:
+                                check_correct_value(val)
+                                if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                    val = int(val)
+                                _labels_map[f'{val}{_value_suffix}'] = color_def
+                        else:
+                            check_correct_value(value)
+                            _labels_map[f'{value}{_value_suffix}'] = color_def
+
+                elif isinstance(_labels_map, str) or isinstance(_labels_map, list):
+                    if _labels_map != "true":
+                        df_values = DF[col].unique()
+                        color_def = interpret_color_info(_labels_map)
+                        _labels_map = {}
+                        for val in df_values:
+                            check_correct_value(val)
+                            if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                val = int(val)
+                            _labels_map[f'{val}{_value_suffix}'] = color_def
+
+                else:
+                    raise ValueError("Can't interpret label information")
+
+                return _labels_map
+
             data_fields: Dict = {}
             cols: List[str] = df.columns.tolist()
             if sort_table_by_col:
@@ -1645,39 +1678,11 @@ class PlotApi(BasePlot):
                             }
 
                 if col in label_columns:
-                    labels_map = label_columns[col]
                     value_suffix = ""
                     if col in value_sufixes:
                         value_suffix = value_sufixes[col]
-                    if isinstance(labels_map, Dict):
-                        labels_map_aux = labels_map.copy()
-                        for value, color_def in labels_map_aux.items():
-                            color_def = interpret_color_info(color_def)
-                            if isinstance(value, tuple):
-                                del labels_map[value]
-                                df_values = DF[DF[col].between(value[0], value[1])][col].unique()
-                                for val in df_values:
-                                    check_correct_value(val)
-                                    if value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
-                                        val = int(val)
-                                    labels_map[f'{val}{value_suffix}'] = color_def
-                            else:
-                                check_correct_value(value)
-                                labels_map[f'{value}{value_suffix}'] = color_def
 
-                    elif isinstance(labels_map, str) or isinstance(labels_map, list):
-                        if labels_map != "true":
-                            df_values = DF[col].unique()
-                            color_def = interpret_color_info(labels_map)
-                            labels_map = {}
-                            for val in df_values:
-                                check_correct_value(val)
-                                if value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
-                                    val = int(val)
-                                labels_map[f'{val}{value_suffix}'] = color_def
-
-                    else:
-                        raise ValueError("Can't interpret label information")
+                    labels_map = interpret_label_info(label_columns[col], value_suffix)
 
                     if not data_fields[col]:
                         data_fields[col] = {'isLabel': labels_map}

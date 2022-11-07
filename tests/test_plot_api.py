@@ -1467,48 +1467,48 @@ def test_indicator():
     menu_path: str = 'test/indicator-test'
     data_ = [
         {
-            "description": "",
-            "title": "Estado",
-            "value": "Abierto",
-            "align": "center",
+            "footer": "",
+            "header": "Estado",
+            "val": "Abierto",
+            "alignment": "center",
         },
         {
-            "description": "",
-            "title": "Price ($)",
-            "value": "455",
-            "color": "success",
+            "footer": "",
+            "header": "Price ($)",
+            "val": "455",
+            "col": "success",
         },
         {
-            "description": "this is a description",
-            "title": "Volumen",
-            "value": "41153"
+            "footer": "this is a description",
+            "header": "Volumen",
+            "val": "41153"
         },
         {
-            "description": "",
-            "title": "Cambio €/$",
-            "value": "1.1946",
+            "footer": "",
+            "header": "Cambio €/$",
+            "val": "1.1946",
         },
     ]
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         row=1, column=1,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
+        value='val',
+        header='header',
+        footer='footer',
+        align='alignment',
+        color='col'
     )
 
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         order=1, rows_size=2, cols_size=12,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
+        value='val',
+        header='header',
+        footer='footer',
+        align='alignment',
+        color='col'
     )
 
     if delete_paths:
@@ -3266,42 +3266,42 @@ if delete_paths:
     s.plt.delete_path('test')
 
 
-test_line()
-test_get_input_forms()
-test_delete_path()
-test_append_data_to_trend_chart()
-test_iframe()
-test_html()
-test_set_new_business()
-test_table()
-test_free_echarts()
-test_input_form()
-test_bentobox()
-test_delete()
-test_bar_with_filters()
-test_set_apps_orders()
-test_set_sub_path_orders()
-test_zero_centered_barchart()
+# test_line()
+# test_get_input_forms()
+# test_delete_path()
+# test_append_data_to_trend_chart()
+# test_iframe()
+# test_html()
+# test_set_new_business()
+# test_table()
+# test_free_echarts()
+# test_input_form()
+# test_bentobox()
+# test_delete()
+# test_bar_with_filters()
+# test_set_apps_orders()
+# test_set_sub_path_orders()
+# test_zero_centered_barchart()
 test_indicator()
 test_indicator_one_dict()
 test_alert_indicator()
-test_stockline()
-test_radar()
-test_pie()
-test_ux()
-test_bar()
-test_ring_gauge()
-test_sunburst()
-test_tree()
-test_treemap()
-test_heatmap()
-test_sankey()
-test_horizontal_barchart()
-test_predictive_line()
-test_speed_gauge()
-test_line()
-test_scatter()
-test_funnel()
+# test_stockline()
+# test_radar()
+# test_pie()
+# test_ux()
+# test_bar()
+# test_ring_gauge()
+# test_sunburst()
+# test_tree()
+# test_treemap()
+# test_heatmap()
+# test_sankey()
+# test_horizontal_barchart()
+# test_predictive_line()
+# test_speed_gauge()
+# test_line()
+# test_scatter()
+# test_funnel()
 
 # TODO
 # test_cohorts()

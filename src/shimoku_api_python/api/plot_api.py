@@ -668,6 +668,7 @@ class BasePlot(PlotAux):
         filter_elements: List[Dict] = []
         self._validate_filters(filters=filters)
 
+        first_overwrite = True
         # We are going to save all the reports one by one
         for df_temp, filter_element in (
                 self._create_multifilter_reports(
@@ -681,10 +682,11 @@ class BasePlot(PlotAux):
                 if value in cols
             ]
             report_id = self._create_trend_chart(
-                data=df_temp, overwrite=False, **kwargs_,
+                data=df_temp, overwrite=first_overwrite, **kwargs_,
             )
             filter_element['reportId'] = [report_id]
             filter_elements.append(filter_element)
+            first_overwrite = False     # Just overwrite once to delete previous plots
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: Optional[int] = filters.get('row')

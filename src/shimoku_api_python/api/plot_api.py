@@ -1555,7 +1555,7 @@ class PlotApi(BasePlot):
                 if not isinstance(n, admitted_types):
                     raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
 
-            def interpret_color_info(color_def: Union[List, str]) -> str:
+            def interpret_color_info(color_def: Union[List, str]) -> Union[str, Dict]:
                 def RGB_to_hex(r: int, g: int, b: int) -> str:
                     def clamp(x: int) -> int:
                         return max(0, min(x, 255))
@@ -1578,22 +1578,46 @@ class PlotApi(BasePlot):
                               "black": "#000000"
                               }
 
+                default_FE_colors = ['active', 'error', 'warning', 'caution', 'main', 'neutral']
+                radius_options = ['rectangle', 'rounded']
+                variant_options = ['filled', 'outlined']
+
+                options = None
+                if isinstance(color_def, tuple):
+                    options_list = color_def[1:]
+                    options = {}
+                    color_def = color_def[0]
+
+                    for option in options_list:
+                        if option in radius_options:
+                            options['radius'] = option
+                        elif option in variant_options:
+                            options['variant'] = option
+                        else:
+                            raise ValueError("Can't interpret style options information.")
+
                 if isinstance(color_def, list):
                     color_def = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+                elif color_def in default_FE_colors:
+                    pass
                 elif color_def in color_defs:
                     color_def = color_defs[color_def]
                 elif not isinstance(color_def, str) or '#' not in color_def:
                     raise ValueError("Can't interpret color information.")
+
+                if options:
+                    options['color'] = color_def
+                    return options
 
                 return color_def
 
             def interpret_label_info(_labels_map, _value_suffix):
                 if isinstance(_labels_map, Dict):
                     labels_map_aux = _labels_map.copy()
+                    _labels_map = {}
                     for value, color_def in labels_map_aux.items():
                         color_def = interpret_color_info(color_def)
                         if isinstance(value, tuple):
-                            del _labels_map[value]
                             df_values = DF[DF[col].between(value[0], value[1])][col].unique()
                             for val in df_values:
                                 check_correct_value(val)
@@ -1604,7 +1628,7 @@ class PlotApi(BasePlot):
                             check_correct_value(value)
                             _labels_map[f'{value}{_value_suffix}'] = color_def
 
-                elif isinstance(_labels_map, str) or isinstance(_labels_map, list):
+                elif isinstance(_labels_map, (str, list, tuple)):
                     if _labels_map != "true":
                         df_values = DF[col].unique()
                         color_def = interpret_color_info(_labels_map)

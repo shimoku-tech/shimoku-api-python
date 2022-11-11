@@ -652,7 +652,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
         :param name: app or apptype name
         """
         apps: List[Dict] = self.get_business_apps(business_id=business_id)
-        name = name.replace('-', ' ')
+
+        # This normalizes the names, we can't use the function to normalize name because its in another class and it
+        # might create unwanted dependencies
+        name = '-'.join(name.split(' ')).lower()
+        name = name.replace('_', '-')
 
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name
@@ -660,8 +664,8 @@ class CascadeExplorerAPI(GetExplorerAPI):
         for app in apps:
             # if App name does not match check the AppType,
             # if it does not match the AppType Name then pass to the following App
-            if app.get('name'):
-                if not app['name'] == name:
+            if app.get('normalizedName'):
+                if not app['normalizedName'] == name:
                     continue
             else:
                 if not app.get('type'):

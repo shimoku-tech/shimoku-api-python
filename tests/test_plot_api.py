@@ -252,6 +252,7 @@ def test_set_sub_path_orders():
         }
     )
 
+
 def test_set_new_business():
     print('test_set_new_business')
     name: str = 'new-business-test'
@@ -1467,48 +1468,48 @@ def test_indicator():
     menu_path: str = 'test/indicator-test'
     data_ = [
         {
-            "description": "",
-            "title": "Estado",
-            "value": "Abierto",
-            "align": "center",
+            "footer": "",
+            "header": "Estado",
+            "val": "Abierto",
+            "alignment": "center",
         },
         {
-            "description": "",
-            "title": "Price ($)",
-            "value": "455",
-            "color": "success",
+            "footer": "",
+            "header": "Price ($)",
+            "val": "455",
+            "col": "success",
         },
         {
-            "description": "this is a description",
-            "title": "Volumen",
-            "value": "41153"
+            "footer": "this is a description",
+            "header": "Volumen",
+            "val": "41153"
         },
         {
-            "description": "",
-            "title": "Cambio €/$",
-            "value": "1.1946",
+            "footer": "",
+            "header": "Cambio €/$",
+            "val": "1.1946",
         },
     ]
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         row=1, column=1,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
+        value='val',
+        header='header',
+        footer='footer',
+        align='alignment',
+        color='col'
     )
 
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         order=1, rows_size=2, cols_size=12,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
+        value='val',
+        header='header',
+        footer='footer',
+        align='alignment',
+        color='col'
     )
 
     if delete_paths:

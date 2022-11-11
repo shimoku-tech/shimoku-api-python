@@ -476,16 +476,6 @@ class BasePlot(PlotAux):
         # Default
         option_modifications_temp = {"legend": {"type": "scroll"}}
 
-        # TODO this will be done in FE
-        #  https://trello.com/c/GXRYHEsO/
-        num_size: int = len(f'{max([k for k in df[y].max()])}')
-        if num_size > 6:
-            margin: int = 18 * (num_size - 6)  # 12 pixels by extra num
-            option_modifications_temp["yAxis"] = {
-                "axisLabel": {"margin": margin},
-                'nameGap': margin + 36,
-            }
-
         if option_modifications:
             if option_modifications.get('optionModifications'):
                 option_modifications['optionModifications'].update(option_modifications_temp)
@@ -2462,6 +2452,9 @@ class PlotApi(BasePlot):
             if col_to_rename in mandatory_elements + extra_elements
         }
         df.rename(columns=cols_to_rename, inplace=True)
+        extra_elements = [cols_to_rename[x] if x in cols_to_rename else x
+                          for x in extra_elements]
+
         for extra_element in extra_elements:
             if extra_element == 'align':
                 df['align'] = df['align'].fillna('right')
@@ -2499,7 +2492,7 @@ class PlotApi(BasePlot):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,

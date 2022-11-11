@@ -653,10 +653,10 @@ class CascadeExplorerAPI(GetExplorerAPI):
         """
         apps: List[Dict] = self.get_business_apps(business_id=business_id)
 
-        # This normalizes the names, we can't use the function to normalize name because its in another class and it
-        # might create unwanted dependencies
+        # This normalizes the name, we can't use the function to normalize name because its in another class from this
+        # file, with the same level of responsibility, and it might create unwanted dependencies
+        name = name.strip().replace('_', '-')
         name = '-'.join(name.split(' ')).lower()
-        name = name.replace('_', '-')
 
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name
@@ -759,9 +759,14 @@ class CreateExplorerAPI(object):
 
         Example
         ----------------------
-        # "name": "Test Borrar"
-        # "normalizedName": "test-borrar"
+        # "name": "   Test Borrar_grafico    "
+        # "normalizedName": "test-borrar-grafico"
         """
+        # remove empty spaces at the beginning and end
+        name: str = name.strip()
+        # replace "_" for www protocol it is not good
+        name = name.replace('_', '-')
+
         return '-'.join(name.split(' ')).lower()
 
     def _create_key_name(self, name: str) -> str:

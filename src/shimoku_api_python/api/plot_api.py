@@ -1401,7 +1401,7 @@ class PlotApi(BasePlot):
             overwrite: bool = True,
             label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
-            value_sufixes: Optional[Dict[str, str]] = {}
+            value_suffixes: Optional[Dict[str, str]] = {}
     ):
         """
         {
@@ -1690,8 +1690,8 @@ class PlotApi(BasePlot):
 
                 if col in label_columns:
                     value_suffix = ""
-                    if col in value_sufixes:
-                        value_suffix = value_sufixes[col]
+                    if col in value_suffixes:
+                        value_suffix = value_suffixes[col]
 
                     labels_map = interpret_label_info(label_columns[col], value_suffix)
 
@@ -1756,7 +1756,7 @@ class PlotApi(BasePlot):
             'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
 
-        for col, value_format in value_sufixes.items():
+        for col, value_format in value_suffixes.items():
             df[col] = df[col].astype(str)+value_format
 
         if row and column:

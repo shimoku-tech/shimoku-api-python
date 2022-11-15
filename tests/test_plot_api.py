@@ -613,7 +613,7 @@ def test_table_with_labels():
                     },
                     "name3": "neutral"
                     },
-        value_sufixes={'y': '%', 'z': '°'}
+        value_suffixes={'y': '%', 'z': '°'}
     )
 
 def test_table_download_csv():

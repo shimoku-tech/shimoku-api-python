@@ -659,6 +659,7 @@ class BasePlot(PlotAux):
         filter_elements: List[Dict] = []
         self._validate_filters(filters=filters)
 
+        first_overwrite = True
         # We are going to save all the reports one by one
         for df_temp, filter_element in (
                 self._create_multifilter_reports(
@@ -672,10 +673,11 @@ class BasePlot(PlotAux):
                 if value in cols
             ]
             report_id = self._create_trend_chart(
-                data=df_temp, overwrite=False, **kwargs_,
+                data=df_temp, overwrite=first_overwrite, **kwargs_,
             )
             filter_element['reportId'] = [report_id]
             filter_elements.append(filter_element)
+            first_overwrite = False     # Just overwrite once to delete previous plots
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: Optional[int] = filters.get('row')
@@ -835,6 +837,9 @@ class BasePlot(PlotAux):
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
+            app_normalized_name = self._create_normalized_name(app_normalized_name)
+            app_path_name = self._create_normalized_name(app_path_name)
+
             app: Dict = self._get_app_by_url(
                 business_id=self.business_id,
                 url=app_normalized_name,
@@ -847,26 +852,16 @@ class BasePlot(PlotAux):
             )
 
             for report in reports:
-                raw_path_name: str = report.get('path')
-                if not raw_path_name:
-                    continue
-
                 original_path_name: str = report.get('path')
-                path_name: str = '-'.join(original_path_name.split(' ')).lower()
-                menu_path_: str = f'{app_normalized_name}/{path_name}'
-                new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order is None:
-                    menu_path_: str = f'{app_normalized_name}/{original_path_name}'
-                    new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order:
-                    self.update_report(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                        report_id=report['id'],
-                        report_metadata={'pathOrder': int(new_path_order)},
-                    )
+                if original_path_name:
+                    path_name: str = self._create_normalized_name(original_path_name)
+                    if path_name == app_path_name:
+                        self.update_report(
+                            business_id=self.business_id,
+                            app_id=app_id,
+                            report_id=report['id'],
+                            report_metadata={'pathOrder': int(order)},
+                        )
 
     def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
@@ -1396,7 +1391,8 @@ class PlotApi(BasePlot):
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None,
             # TODO
-            #  rows_size: Optional[int] = None, cols_size: int = 12,
+            # rows_size keeps being ignored
+            rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
@@ -1755,6 +1751,8 @@ class PlotApi(BasePlot):
             'path': path_name,
             'order': order,
             'dataFields': _calculate_table_data_fields(df),
+            'sizeColumns': cols_size,
+            'sizeRows': rows_size,
             'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
 

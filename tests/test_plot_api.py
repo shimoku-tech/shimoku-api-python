@@ -250,6 +250,7 @@ def test_set_sub_path_orders():
         paths_order={
             'test/funnel-test': 1,
             'test/tree-test': 2,
+            'Test/Line Test': 3,
         }
     )
 
@@ -3355,6 +3356,8 @@ if delete_paths:
     s.plt.delete_path('test')
 
 test_line()
+test_funnel()
+test_tree()
 test_get_input_forms()
 test_delete_path()
 test_append_data_to_trend_chart()
@@ -3381,7 +3384,6 @@ test_ux()
 test_bar()
 test_ring_gauge()
 test_sunburst()
-test_tree()
 test_treemap()
 test_heatmap()
 test_sankey()
@@ -3390,7 +3392,7 @@ test_predictive_line()
 test_speed_gauge()
 test_line()
 test_scatter()
-test_funnel()
+
 
 # TODO
 # test_cohorts()

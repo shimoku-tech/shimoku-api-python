@@ -8,6 +8,7 @@ from itertools import product
 import json5
 import datetime as dt
 import pandas as pd
+import numpy as np
 from pandas import DataFrame
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -1541,7 +1542,7 @@ class PlotApi(BasePlot):
             """
 
             def check_correct_value(n):
-                admitted_types = (int, float, str)
+                admitted_types = (int, float, str, dt.date, np.float32, np.float64, np.int32, np.int64)
                 if not isinstance(n, admitted_types):
                     raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
 

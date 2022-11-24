@@ -1855,10 +1855,35 @@ class PlotApi(BasePlot):
         """
         option_modifications: Dict[str, Any] = {
             'dataZoom': False,
-            'xAxis': {'type': 'value'},
-            'yAxis': {'type': 'category'},
-            'optionModifications': {'yAxis': {'boundaryGap': True}},
+            'subtitle': subtitle if subtitle else '',
+            'legend': True,
+            'tooltip': True,
+            'axisPointer': True,
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': True,
+                'dataZoom': True,
+                'magicType': True,
+            },
+            'xAxis': {
+                'name': x_axis_name if x_axis_name else "",
+                'type': 'value',
+            },
+            'yAxis': {
+                'name': y_axis_name if y_axis_name else "",
+                'type': 'category',
+            },
+            'optionModifications': {
+                'yAxis': {'boundaryGap': True},
+                'xAxis': {"axisLabel": {"margin": 12}, 'nameGap': 24},
+                'series': {
+                    'smooth': True,
+                    'itemStyle': {'borderRadius': [0, 9, 9, 0]}
+                },
+            },
         }
+
         return self._create_trend_charts(
             data=data, filters=filters,
             **dict(
@@ -1893,7 +1918,19 @@ class PlotApi(BasePlot):
         """
         option_modifications: Dict[str, Any] = {
             'dataZoom': False,
+            'subtitle': subtitle if subtitle else '',
+            'legend': True,
+            'tooltip': True,
+            'axisPointer': True,
+            'toolbox': {
+                'saveAsImage': True,
+                'restore': True,
+                'dataView': True,
+                'dataZoom': True,
+                'magicType': True,
+            },
             'xAxis': {
+                'name': x_axis_name if x_axis_name else "",
                 'type': 'value',
                 'position': 'top',
                 'splitLine': {
@@ -1901,13 +1938,21 @@ class PlotApi(BasePlot):
                 }
             },
             'yAxis': {
+                'name': y_axis_name if y_axis_name else "",
                 'type': 'category',
                 'axisLine': {'show': False},
                 'axisLabel': {'show': False},
                 'axisTick': {'show': False},
                 'splitLine': {'show': False},
             },
-            'optionModifications': {'yAxis': {'boundaryGap': True}},
+            'optionModifications': {
+                'yAxis': {'boundaryGap': True},
+                'xAxis': {"axisLabel": {"margin": 12}, 'nameGap': 24},
+                'series': {
+                    'smooth': True,
+                    'itemStyle': {'borderRadius': [9, 0, 9, 0]}
+                },
+            },
         }
         return self._create_trend_charts(
             data=data, filters=filters,

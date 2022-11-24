@@ -719,10 +719,10 @@ def test_zero_centered_barchart():
     print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
     data_ = [
-        {'Name': 'a', 'y': 5},
-        {'Name': 'b', 'y': -7},
-        {'Name': 'c', 'y': 3},
-        {'Name': 'd', 'y': -5},
+        {'Name': 'a', 'y': 5, 'z': -3, 'a': 0.01},
+        {'Name': 'b', 'y': -7, 'z': 4, 'a': 0.1},
+        {'Name': 'c', 'y': 3, 'z': -5, 'a': 0.1},
+        {'Name': 'd', 'y': -5, 'z': 6, 'a': 0.01},
     ]
 
     s.plt.zero_centered_barchart(
@@ -734,9 +734,13 @@ def test_zero_centered_barchart():
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x='Name', y=['y'],
+        x='Name', y=['y', 'z', 'a'],
+        x_axis_name="Axis x",
+        y_axis_name="Axis y",
+        title="Title",
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=1, rows_size=3, cols_size=10,
+        padding="0,0,0,1"
     )
 
     if delete_paths:
@@ -758,10 +762,10 @@ def test_horizontal_barchart():
     menu_path: str = 'test/horizontal-bar-test'
 
     data_ = [
-        {'Name': 'a', 'y': 5, 'z': 3},
-        {'Name': 'b', 'y': 7, 'z': 4},
-        {'Name': 'c', 'y': 3, 'z': 5},
-        {'Name': 'd', 'y': 5, 'z': 6},
+        {'Name': 'a', 'y': 5, 'z': 3, 'a': 0.01},
+        {'Name': 'b', 'y': 7, 'z': 4, 'a': 0.1},
+        {'Name': 'c', 'y': 3, 'z': 5, 'a': 0.1},
+        {'Name': 'd', 'y': 5, 'z': 6, 'a': 0.01},
     ]
 
     s.plt.horizontal_barchart(
@@ -773,9 +777,13 @@ def test_horizontal_barchart():
 
     s.plt.horizontal_barchart(
         data=data_,
-        x='Name', y=['y', 'z'],
+        x='Name', y=['y', 'z', 'a'],
+        x_axis_name="Axis x",
+        y_axis_name="Axis y",
+        title="Title",
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=1, rows_size=3, cols_size=10,
+        padding="0,0,0,1"
     )
 
     if delete_paths:

@@ -3168,6 +3168,12 @@ def test_input_form():
                 'fieldName': 'Test Text',
                 'inputType': 'text',
               },
+              {
+                'mapping': 'objectives',
+                'fieldName': 'Objetivos',
+                'inputType': 'multiSelect',
+                'options': ['sleep', 'close eyes', 'awake']
+              }
           ],
         },
       ],

@@ -3310,6 +3310,8 @@ class PlotApi(BasePlot):
                         data[field_name] = ''  # data[options][0]
                     elif input_type == 'select':
                         data[field_name] = ''  # data['options'][0]
+                    elif input_type == 'multiSelect':
+                        data[field_name] = ''  # data['options'][0]
                     elif input_type == 'checkbox':
                         data[field_name] = ''  # data['options'][0]
                     elif input_type == 'radio':

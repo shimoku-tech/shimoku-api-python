@@ -58,7 +58,6 @@ class PlotAux:
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    _get_app_by_url = CascadeExplorerAPI.get_app_by_url
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
     get_report_datasets = CascadeExplorerAPI.get_report_datasets
     get_dataset_data = CascadeExplorerAPI.get_dataset_data

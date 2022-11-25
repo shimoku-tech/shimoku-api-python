@@ -261,6 +261,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     def __init__(self, api_client):
         super().__init__(api_client)
+        # self.cached_apps = {}
+
+    # def __cache_apps_by_normalized_name(self, apps):
+    #     for app in apps:
+    #         self.cached_apps[app['appBusinessId']+app['normalizedName']] = app
 
     def get_universe_businesses(self) -> List[Dict]:
         endpoint: str = f'businesses'
@@ -648,15 +653,20 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     def get_app_by_name(self, business_id: str, name: str) -> Dict:
         """
+        First normalizes the name and then searches for a match, if a match isn't found it tries to search for app_type
         :param business_id: business UUID
         :param name: app or apptype name
         """
-        apps: List[Dict] = self.get_business_apps(business_id=business_id)
-
         # This normalizes the name, we can't use the function to normalize name because its in another class from this
         # file, with the same level of responsibility, and it might create unwanted dependencies
         name = name.strip().replace('_', '-')
         name = '-'.join(name.split(' ')).lower()
+
+        # if business_id+name in self.cached_apps:
+        #     return self.cached_apps[business_id+name]
+
+        apps: List[Dict] = self.get_business_apps(business_id=business_id)
+        # self.__cache_apps_by_normalized_name(apps)
 
         # Is expected to be a single item (Dict) but an App
         # could have several reports with the same name
@@ -681,54 +691,6 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     not app_type['normalizedName'] == name
                     and
                     not app_type['name'] == name
-                ):
-                    continue
-
-            if result:
-                if len(result) == 1:
-                    result: List[Dict] = result + [app]
-                else:
-                    result: List[Dict] = result + [app]
-            else:
-                result: List[Dict] = [app]
-
-        if result:
-            assert len(result) == 1
-            return result[0]
-        else:
-            return {}
-
-    def get_app_by_url(self, business_id: str, url: str) -> Dict:
-        """Internally known as normalizedName
-        :param business_id: business UUID
-        :param url: app url
-        """
-        apps: List[Dict] = self.get_business_apps(business_id=business_id)
-
-        # Is expected to be a single item (Dict) but an App
-        # could have several reports with the same name
-        result: Any = {}
-        for app in apps:
-            # if App normalizedName does not match check the AppType,
-            # if it does not match the AppType normalizedName then
-            # pass to the following App
-            if app.get('normalizedName'):
-                if not app['normalizedName'] == url:
-                    continue
-            else:
-                if not app.get('type'):
-                    continue
-                try:
-                    app_type: Dict = self.get_app_type(
-                        app_type_id=app['type']['id'],
-                    )
-                except ApiClientError:  # Business admin user
-                    continue
-
-                if (
-                    not app_type['normalizedName'] == url
-                    and
-                    not app_type['name'] == url
                 ):
                     continue
 
@@ -835,24 +797,29 @@ class CreateExplorerAPI(object):
         item['name'] = name
         item['normalizedName'] = normalized_name
 
+        item['hideTitle'] = 'true'
         if app_metadata:
             hide_title: bool = app_metadata.get('hideTitle')
-            if hide_title:
-                item['hideTitle'] = 'true' if hide_title else 'false'
-            else:
-                item['hideTitle'] = 'true'
+            hide_path: bool = app_metadata.get('hidePath')
+            show_breadcrumb: bool = app_metadata.get('showBreadcrumb')
+            show_history: bool = app_metadata.get('showHistoryNavigation')
+
+            if not hide_title and hide_title is not None:
+                item['hideTitle'] = 'false'
+
+            item['hidePath'] = 'true' if hide_path else 'false'
+            item['showBreadcrumb'] = 'true' if show_breadcrumb else 'false'
+            item['showHistoryNavigation'] = 'true' if show_history else 'false'
 
             # These are the optional fields (previous were the mandatory ones)
             allowed_columns: List[str] = [
-                'paymentType', 'trialDays',
-                'appSubscriptionInUserId',
+                'paymentType', 'trialDays', 'appSubscriptionInUserId',
+                'hideTitle', 'hidePath', 'showBreadcrumb', 'showHistoryNavigation'
             ]
             # Check all kwargs keys are in the allowed_columns list
             assert all([key in allowed_columns for key in app_metadata.keys()])
             # Update items with kwargs
             item.update(app_metadata)
-        else:
-            item['hideTitle'] = 'true'
 
         return self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
@@ -1933,7 +1900,6 @@ class AppExplorerApi:
     get_app_by_type = CascadeExplorerAPI.get_app_by_type
     get_app_type = CascadeExplorerAPI.get_app_type
     get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    get_app_by_url = CascadeExplorerAPI.get_app_by_url
 
     delete_app = DeleteExplorerApi.delete_app
 

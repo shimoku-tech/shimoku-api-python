@@ -371,7 +371,7 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
+        app = self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
@@ -969,7 +969,7 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = self._get_or_create_app_and_apptype(business_id=self.business_id, name=name)
+        app = self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:

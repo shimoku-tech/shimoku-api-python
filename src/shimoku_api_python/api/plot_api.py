@@ -102,6 +102,11 @@ class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
+        self.tabs = dict( #Apps
+                        dict( #Tab group
+                            dict() #Lists of reports
+                        )
+                    )
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -352,8 +357,9 @@ class BasePlot(PlotAux):
             rows_size: Optional[int] = None,
             cols_size: Optional[int] = None,
             padding: Optional[int] = None,
-            overwrite: bool = True,
-            real_time: bool = False,
+            overwrite: Optional[bool] = True,
+            real_time: Optional[bool] = False,
+            tabs_index: Optional[Tuple[int, int]] = None,
     ) -> str:
         """
         :param data:
@@ -390,6 +396,19 @@ class BasePlot(PlotAux):
             real_time=real_time,
         )
         report_id: str = report['id']
+
+        if tabs_index:
+            if not self.tabs.get(app_id):
+                self.tabs[app_id] = dict()
+                
+            if not self.tabs[app_id].get(tabs_index[0]):
+                self.tabs[app_id][tabs_index[0]] = dict()
+
+            if not self.tabs[app_id][tabs_index[0]].get(tabs_index[1]):
+                self.tabs[app_id][tabs_index[0]][tabs_index[1]] = []
+
+            self.tabs[app_id][tabs_index[0]][tabs_index[1]] = \
+                self.tabs[app_id][tabs_index[0]][tabs_index[1]] + [report_id]
 
         try:
             if data:
@@ -429,7 +448,8 @@ class BasePlot(PlotAux):
             filters: Optional[Dict] = None,
             overwrite: bool = True,
             report_metadata: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -524,6 +544,7 @@ class BasePlot(PlotAux):
             menu_path=menu_path, overwrite=overwrite,
             report_metadata=report_metadata, order=order,
             rows_size=rows_size, cols_size=cols_size, padding=padding,
+            tabs_index=tabs_index,
         )
 
     def _create_multifilter_reports(
@@ -576,6 +597,7 @@ class BasePlot(PlotAux):
             filter_elements: List,
             menu_path: str,
             update_type: str = 'concat',
+            tabs_index: Optional[Tuple[int, str]] = None,
     ) -> None:
         """"""
         filter_reports: List[Dict] = (
@@ -648,6 +670,7 @@ class BasePlot(PlotAux):
             menu_path=menu_path,
             report_metadata=report_metadata,
             overwrite=True,
+            tabs_index=tabs_index,
         )
 
     def _create_trend_charts_with_filters(
@@ -683,6 +706,7 @@ class BasePlot(PlotAux):
         filter_column: Optional[int] = filters.get('column')
         filter_order: Optional[int] = filters.get('order')
 
+        tabs_index = kwargs.get("tabs_index")
         if update_filter_type:
             # concat is to add new filter options
             # append is to add new reports to existing filter options
@@ -700,6 +724,7 @@ class BasePlot(PlotAux):
                 filter_elements=filter_elements,
                 menu_path=kwargs['menu_path'],
                 update_type=update_filter_type,
+                tabs_index=tabs_index,
             )
         else:
             report_metadata: Dict = {
@@ -720,6 +745,7 @@ class BasePlot(PlotAux):
                 report_metadata=report_metadata,
                 order=filter_order,
                 overwrite=True,
+                tabs_index=tabs_index,
             )
 
     def _create_trend_charts(
@@ -948,7 +974,8 @@ class BasePlot(PlotAux):
             padding: Optional[str] = None,
             report_type: str = 'ECHARTS2',
             overwrite: bool = True,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
             options: Optional[Dict] = None,
             report_dataset_properties: Optional[Dict] = None,
             sort: Optional[Dict] = None,
@@ -1095,7 +1122,8 @@ class BasePlot(PlotAux):
             padding: Optional[List[int]] = None,
             overwrite: bool = True,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
             real_time: bool = False,
     ):
         """
@@ -1117,6 +1145,7 @@ class BasePlot(PlotAux):
         :param padding:
         :param overwrite:
         :param filters:
+        :param tabs_index:
         :param bentobox_data:
         :param real_time:
         """
@@ -1352,6 +1381,7 @@ class BasePlot(PlotAux):
                     report_metadata=report_metadata,
                     order=filter_order,
                     overwrite=True,
+                    tabs_index=tabs_index,
                 )
 
         if options is None:
@@ -1378,12 +1408,28 @@ class PlotApi(BasePlot):
     """
 
     def __init__(self, api_client, **kwargs):
-        self.api_client = api_client
+        super().__init__(api_client)
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
         else:
             self.business_id: Optional[str] = None
+
+    def generate_tabs(self):
+        for app_id, app_tabs in self.tabs.items():
+            for _, tabs_group in app_tabs.items():
+                report_metadata: Dict[str, Any] = {
+                    'order': 0,
+                    'path': 'bar test',
+                    'reportType': 'TABS',
+                    'properties': '{"tabs":' + json.dumps(tabs_group) + '}'
+                }
+                print(report_metadata)
+                self._create_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_metadata=report_metadata,
+                )
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -1787,6 +1833,7 @@ class PlotApi(BasePlot):
             report_metadata=report_metadata,
         )
         report_id: str = report['id']
+        #TODO adapt tabs to tables
 
         report_entry_filter_fields: Dict[str, List[str]] = {
             extra_map[extra_name]: values
@@ -1816,7 +1863,8 @@ class PlotApi(BasePlot):
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
@@ -1836,6 +1884,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index
         )
 
     def iframe(
@@ -1845,7 +1894,8 @@ class PlotApi(BasePlot):
             padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -1869,6 +1919,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def bar(
@@ -1883,7 +1934,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a barchart
         """
@@ -1945,6 +1997,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='bar',
+                tabs_index=tabs_index,
             )
         )
 
@@ -1960,7 +2013,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -1983,6 +2037,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='bar',
+                tabs_index=tabs_index,
             )
         )
 
@@ -1998,7 +2053,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2033,6 +2089,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='bar',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2048,7 +2105,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # thid layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         if not option_modifications:
@@ -2088,6 +2146,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='line',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2105,7 +2164,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         :param data:
@@ -2158,6 +2218,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='line',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2172,7 +2233,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2278,6 +2340,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='line',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2292,7 +2355,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2396,6 +2460,7 @@ class PlotApi(BasePlot):
             echart_type='scatter',
             bentobox_data=bentobox_data,
             filters=filters,
+            tabs_index=tabs_index,
         )
 
     def stockline(
@@ -2409,6 +2474,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         self._validate_table_data(data, elements=[x] + y)
@@ -2441,6 +2507,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index
         )
 
     def scatter(
@@ -2455,7 +2522,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         try:
@@ -2475,6 +2543,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='scatter',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2490,7 +2559,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,  # to create filters
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         self._create_trend_chart(
@@ -2519,7 +2589,8 @@ class PlotApi(BasePlot):
             align: Optional[str] = None,
             multi_column: int = 4,
             real_time: bool = False,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         :param data:
@@ -2614,6 +2685,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             real_time=real_time,
+            tabs_index=tabs_index,
         )
 
     def alert_indicator(
@@ -2627,7 +2699,8 @@ class PlotApi(BasePlot):
             footer: Optional[str] = None,
             color: Optional[str] = None,
             multi_column: int = 4,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
@@ -2655,7 +2728,8 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Piechart
         """
@@ -2700,6 +2774,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def radar(
@@ -2712,7 +2787,8 @@ class PlotApi(BasePlot):
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a RADAR
         """
@@ -2748,6 +2824,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def tree(
@@ -2759,7 +2836,8 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Tree
         """
@@ -2786,6 +2864,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def treemap(
@@ -2797,7 +2876,8 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Treemap
         """
@@ -2824,6 +2904,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def sunburst(
@@ -2836,7 +2917,8 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """Create a Sunburst
         """
@@ -2863,6 +2945,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def candlestick(
@@ -2877,7 +2960,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -2894,6 +2978,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='candlestick',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2909,7 +2994,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2947,6 +3033,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
+                tabs_index=tabs_index,
             )
         )
 
@@ -2961,7 +3048,8 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -2997,6 +3085,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
+                tabs_index=tabs_index,
             )
         )
 
@@ -3016,7 +3105,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3051,6 +3141,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def funnel(
@@ -3065,7 +3156,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3090,6 +3182,7 @@ class PlotApi(BasePlot):
                 option_modifications=option_modifications,
                 bentobox_data=bentobox_data,
                 echart_type='funnel',
+                tabs_index=tabs_index,
             )
         )
 
@@ -3107,7 +3200,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ) -> str:
         """
         option = {
@@ -3271,6 +3365,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def ring_gauge(
@@ -3285,7 +3380,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -3326,6 +3422,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            tabs_index=tabs_index,
         )
 
     def themeriver(
@@ -3340,7 +3437,8 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
                 df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3362,6 +3460,7 @@ class PlotApi(BasePlot):
             option_modifications=option_modifications,
             echart_type='themeriver',
             filters=filters,
+            tabs_index=tabs_index,
         )
         """
         raise NotImplementedError
@@ -3375,7 +3474,8 @@ class PlotApi(BasePlot):
             order: Optional[int] = None,
             rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[List[int]] = None,
-            bentobox_data: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None, 
+            tabs_index: Optional[Tuple[int, str]] = None,
     ):
         """
         :param data:

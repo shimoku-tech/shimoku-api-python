@@ -102,11 +102,19 @@ class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
-        self.tabs = dict( #Apps
-                        dict( #Tab group
-                            dict() #Lists of reports
-                        )
+        # Tree to store tab plotting information
+        self._tabs = dict( #Tab path
+                        dict(list()) #Tab group
                     )
+        # Hash to store tab to tab insertions
+        self._tab_to_tab = dict()
+
+        # Hash to store the report_id of each tab
+        self._tabs_id = dict()
+
+        # Hashes to store the first and last order of its reports
+        self._tabs_last_order = dict()
+        self._tabs_first_order = dict()
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -350,6 +358,36 @@ class BasePlot(PlotAux):
         else:
             return order_temp + 1
 
+    def _insert_in_tab(self, app_id: str, path_name: str,
+                       report_id: str, tabs_index: Tuple[int, str],
+                       order_of_chart: int) -> Union[None, str]:
+        """This function creates an entry on the tabs tree. If there exists another chart in the same order in the tab
+         as the one being created it returns its report_id, if not it returns None"""
+
+        order_of_tabs, name_of_tab = tabs_index
+        path_tuple = (app_id, path_name, order_of_tabs)
+
+        # Check if it's order is greater than the last report
+        if not self._tabs_last_order.get(path_tuple) or order_of_chart > self._tabs_last_order[path_tuple]:
+            self._tabs_last_order[path_tuple] = order_of_chart
+
+        if not self._tabs.get(path_tuple):
+            self._tabs[path_tuple] = {name_of_tab: [(report_id, order_of_chart)]}
+            return None
+
+        if not self._tabs[path_tuple].get(name_of_tab):
+            self._tabs[path_tuple][name_of_tab] = [(report_id, order_of_chart)]
+            return None
+
+        other_chart = None
+        for report_id_aux,  order_of_chart_aux in self._tabs[path_tuple][name_of_tab]:
+            if order_of_chart_aux == order_of_chart:
+                other_chart = report_id_aux
+                break
+
+        self._tabs[path_tuple][name_of_tab] = self._tabs[path_tuple][name_of_tab] + [(report_id, order_of_chart)]
+        return other_chart
+
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
@@ -359,7 +397,7 @@ class BasePlot(PlotAux):
             padding: Optional[int] = None,
             overwrite: Optional[bool] = True,
             real_time: Optional[bool] = False,
-            tabs_index: Optional[Tuple[int, int]] = None,
+            tabs_index: Optional[Tuple[int, str]] = None,
     ) -> str:
         """
         :param data:
@@ -381,7 +419,7 @@ class BasePlot(PlotAux):
         app = self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
-        if overwrite:
+        if overwrite and tabs_index is None:
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
@@ -398,17 +436,13 @@ class BasePlot(PlotAux):
         report_id: str = report['id']
 
         if tabs_index:
-            if not self.tabs.get(app_id):
-                self.tabs[app_id] = dict()
-                
-            if not self.tabs[app_id].get(tabs_index[0]):
-                self.tabs[app_id][tabs_index[0]] = dict()
-
-            if not self.tabs[app_id][tabs_index[0]].get(tabs_index[1]):
-                self.tabs[app_id][tabs_index[0]][tabs_index[1]] = []
-
-            self.tabs[app_id][tabs_index[0]][tabs_index[1]] = \
-                self.tabs[app_id][tabs_index[0]][tabs_index[1]] + [report_id]
+            other_chart = self._insert_in_tab(app_id, path_name, report_id, tabs_index, order)
+            if other_chart and overwrite:
+                self._delete_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=other_chart
+                )
 
         try:
             if data:
@@ -1415,21 +1449,91 @@ class PlotApi(BasePlot):
         else:
             self.business_id: Optional[str] = None
 
+    def insert_tab_in_tab(self, menu_path: str, parent_tabs_index: Tuple[int, str],
+                          child_tabs_order: int, order_of_child_in_parent_tab: Optional[int] = -1):
+        """Updates the hash that will be used to include tabs inside other tabs, with the necessary information to
+           insert the child tab inside the parent tab."""
+
+        parent_tabs_order, parent_tabs_name = parent_tabs_index
+
+        # The cascade update of orders will only work if they are updated in order
+        if parent_tabs_order >= child_tabs_order:
+            raise ValueError("The order of the parent tab report has to be smaller than it's children.")
+
+        app_name, path_name = self._clean_menu_path(menu_path)
+        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app_id = app['id']
+
+        tab_entry = (app_id, path_name, parent_tabs_index)
+        if not self._tab_to_tab.get(tab_entry):
+            self._tab_to_tab[tab_entry] = [(child_tabs_order, order_of_child_in_parent_tab)]
+            return
+
+        self._tab_to_tab[tab_entry] = self._tab_to_tab[tab_entry] + [(child_tabs_order, order_of_child_in_parent_tab)]
+
     def generate_tabs(self):
-        for app_id, app_tabs in self.tabs.items():
-            for _, tabs_group in app_tabs.items():
-                report_metadata: Dict[str, Any] = {
-                    'order': 0,
-                    'path': 'bar test',
-                    'reportType': 'TABS',
-                    'properties': '{"tabs":' + json.dumps(tabs_group) + '}'
-                }
-                print(report_metadata)
-                self._create_report(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                    report_metadata=report_metadata,
-                )
+        """Uses the information in the tabs tree and tab_to_tab hash to create all the tabs components"""
+
+        #Create all tabs using the tree information and store the ids in the tab_to_tab hash map
+        for (app_id, path_name, tabs_order), tabs_groups in self._tabs.items():
+            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_group]
+                                 for tab_name, tab_group in tabs_groups.items()}
+            report_metadata: Dict[str, Any] = {
+                'order': tabs_order,
+                'path': path_name,
+                'reportType': 'TABS',
+                'properties': '{"tabs":' + json.dumps(tabs_groups_clean) + '}'
+            }
+            report: Dict = self._create_report(
+                business_id=self.business_id,
+                app_id=app_id,
+                report_metadata=report_metadata,
+            )
+            report_id: str = report['id']
+            tab_entry = (app_id, path_name, tabs_order)
+            self._tabs_id[tab_entry] = report_id
+            self._tabs_first_order[tab_entry] = 0
+
+        #Use the ids of tab_to_tab to include tabs inside of tabs
+        for (app_id, path_name, parent_tabs_index), tabs_list in self._tab_to_tab.items():
+            parent_tabs_order, parent_tabs_name = parent_tabs_index
+            parent_tabs_id = self._tabs_id[(app_id, path_name, parent_tabs_order)]
+
+            child_tabs_id_list = [(self._tabs_id[(app_id, path_name, child_tabs_order)], order_in_parent)
+                                  for child_tabs_order, order_in_parent in tabs_list]
+
+            self._tabs[(app_id, path_name, parent_tabs_order)][parent_tabs_name] += child_tabs_id_list
+            tabs_groups = self._tabs[(app_id, path_name, parent_tabs_order)]
+
+            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_group]
+                                 for tab_name, tab_group in tabs_groups.items()}
+
+            self.update_report(business_id=self.business_id,
+                               app_id=app_id,
+                               report_id=parent_tabs_id,
+                               report_metadata={
+                                   'properties': '{"tabs":' + json.dumps(tabs_groups_clean) + '}'
+                               },
+                               )
+
+            # Cascade update of orders
+            parents_first_order = self._tabs_first_order[(app_id, path_name, parent_tabs_order)]
+            parents_last_order = self._tabs_last_order[(app_id, path_name, parent_tabs_order)]
+
+            for (child_tabs_order, order_in_parent), (child_tabs_id, _) in zip(tabs_list, child_tabs_id_list):
+
+                if order_in_parent < 0:
+                    order_in_parent = parents_last_order+1
+
+                self.update_report(business_id=self.business_id,
+                                   app_id=app_id,
+                                   report_id=child_tabs_id,
+                                   report_metadata={
+                                       'order': parents_first_order + order_in_parent
+                                   },
+                                   )
+                self._tabs_first_order[(app_id, path_name, child_tabs_order)] += parents_last_order
+                self._tabs_last_order[(app_id, path_name, child_tabs_order)] += parents_last_order
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -3486,6 +3590,7 @@ class PlotApi(BasePlot):
         :param cols_size:
         :param padding:
         :param bentobox_data:
+        :param tabs_index:
         """
         self._validate_input_form_data(report_dataset_properties)
 
@@ -3543,4 +3648,5 @@ class PlotApi(BasePlot):
             rows_size=rows_size, cols_size=cols_size, padding=padding,
             data=data, bentobox_data=bentobox_data,
             force_custom_field=True,
+            tabs_index=tabs_index
         )

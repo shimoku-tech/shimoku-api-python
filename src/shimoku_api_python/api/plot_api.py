@@ -37,6 +37,7 @@ class PlotAux:
     _get_business = BusinessExplorerApi.get_business
     _get_business_apps = BusinessExplorerApi.get_business_apps
     get_business_apps = BusinessExplorerApi.get_business_apps
+    _get_business_reports = BusinessExplorerApi.get_business_reports
 
     get_universe_businesses = UniverseExplorerApi.get_universe_businesses
 
@@ -54,6 +55,7 @@ class PlotAux:
     # TODO this shit (methods with underscore _* and *) has to be fixed
     get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
     _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+    get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_reports = CascadeExplorerAPI.get_app_reports
     _get_app_by_type = CascadeExplorerAPI.get_app_by_type
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
@@ -101,6 +103,13 @@ class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
+        self._clear_or_create_tabs_info()
+
+        # list of deleted reports, quick way to deal with non-existing plots for tabs, updating the tabs info with each
+        # deletion would be costly, ugly and error-prone
+        self._deleted_reports = []
+
+    def _clear_or_create_tabs_info(self):
         # Tree to store tab plotting information
         self._tabs = dict( #Tab path
                         dict(list()) #Tab group
@@ -109,11 +118,14 @@ class BasePlot(PlotAux):
         self._tab_to_tab = dict()
 
         # Hash to store the report_id of each tab
-        self._tabs_id = dict()
+        self._tabs_group_id = dict()
 
         # Hashes to store the first and last order of its reports
         self._tabs_last_order = dict()
         self._tabs_first_order = dict()
+
+        # Hash to store the order of groups of tabs
+        self._tabs_group_order = dict()
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -262,6 +274,7 @@ class BasePlot(PlotAux):
             'html': 'HTML',
             'MULTIFILTER': 'MULTIFILTER',
             'FORM': 'FORM',
+            'TABS': 'TABS',
         }
         if component_type in type_map.keys():
             component_type = type_map[component_type]
@@ -358,33 +371,40 @@ class BasePlot(PlotAux):
             return order_temp + 1
 
     def _insert_in_tab(self, app_id: str, path_name: str,
-                       report_id: str, tabs_index: Tuple[int, str],
+                       report_id: str, tabs_index: Tuple[str, str],
                        order_of_chart: int) -> Union[None, str]:
         """This function creates an entry on the tabs tree. If there exists another chart in the same order in the tab
          as the one being created it returns its report_id, if not it returns None"""
 
-        order_of_tabs, name_of_tab = tabs_index
-        path_tuple = (app_id, path_name, order_of_tabs)
+        group, tab = tabs_index
 
-        # Check if it's order is greater than the last report
-        if not self._tabs_last_order.get(path_tuple) or order_of_chart > self._tabs_last_order[path_tuple]:
-            self._tabs_last_order[path_tuple] = order_of_chart
+        if not isinstance(group, str) or not isinstance(tab, str):
+            raise ValueError("Tabs indexing data must be of the type 'str'.")
 
-        if not self._tabs.get(path_tuple):
-            self._tabs[path_tuple] = {name_of_tab: [(report_id, order_of_chart)]}
+        tabs_group_entry = (app_id, path_name, group)
+        self._tabs_group_order[tabs_group_entry] = -1
+
+        if not self._tabs.get(tabs_group_entry):
+            self._tabs[tabs_group_entry] = {tab: [(report_id, order_of_chart)]}
+            self._tabs_first_order[tabs_group_entry] = 0
+            self._tabs_last_order[tabs_group_entry] = order_of_chart
             return None
 
-        if not self._tabs[path_tuple].get(name_of_tab):
-            self._tabs[path_tuple][name_of_tab] = [(report_id, order_of_chart)]
+        # Check if it's order is greater than the last report
+        if order_of_chart > self._tabs_last_order[tabs_group_entry]:
+            self._tabs_last_order[tabs_group_entry] = order_of_chart
+
+        if not self._tabs[tabs_group_entry].get(tab):
+            self._tabs[tabs_group_entry][tab] = [(report_id, order_of_chart)]
             return None
 
         other_chart = None
-        for report_id_aux,  order_of_chart_aux in self._tabs[path_tuple][name_of_tab]:
+        for report_id_aux,  order_of_chart_aux in self._tabs[tabs_group_entry][tab]:
             if order_of_chart_aux == order_of_chart:
                 other_chart = report_id_aux
                 break
 
-        self._tabs[path_tuple][name_of_tab] = self._tabs[path_tuple][name_of_tab] + [(report_id, order_of_chart)]
+        self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [(report_id, order_of_chart)]
         return other_chart
 
     def _create_chart(
@@ -396,7 +416,7 @@ class BasePlot(PlotAux):
             padding: Optional[int] = None,
             overwrite: Optional[bool] = True,
             real_time: Optional[bool] = False,
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """
         :param data:
@@ -436,12 +456,13 @@ class BasePlot(PlotAux):
 
         if tabs_index:
             other_chart = self._insert_in_tab(app_id, path_name, report_id, tabs_index, order)
-            if other_chart and overwrite:
+            if other_chart and overwrite and other_chart not in self._deleted_reports:
                 self._delete_report(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=other_chart
                 )
+                self._deleted_reports += [other_chart]
 
         try:
             if data:
@@ -482,7 +503,7 @@ class BasePlot(PlotAux):
             overwrite: bool = True,
             report_metadata: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -630,7 +651,7 @@ class BasePlot(PlotAux):
             filter_elements: List,
             menu_path: str,
             update_type: str = 'concat',
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ) -> None:
         """"""
         filter_reports: List[Dict] = (
@@ -1008,7 +1029,7 @@ class BasePlot(PlotAux):
             report_type: str = 'ECHARTS2',
             overwrite: bool = True,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
             options: Optional[Dict] = None,
             report_dataset_properties: Optional[Dict] = None,
             sort: Optional[Dict] = None,
@@ -1094,6 +1115,7 @@ class BasePlot(PlotAux):
                 app_id=report['appId'],
                 report_id=report['id']
             )
+            self._deleted_reports += [report['id']]
 
     def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
@@ -1156,7 +1178,7 @@ class BasePlot(PlotAux):
             overwrite: bool = True,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
             real_time: bool = False,
     ):
         """
@@ -1439,6 +1461,35 @@ class BasePlot(PlotAux):
 class PlotApi(BasePlot):
     """
     """
+    def _get_business_tabs_info(self):
+
+        business_reports = self._get_business_reports(self.business_id)
+        business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
+
+        for tabs_group in business_tabs:
+            data_fields = json.loads(tabs_group['dataFields'].replace("'", '"'))
+            properties = json.loads(tabs_group['properties'].replace("'", '"'))
+            tabs_group_report_id = tabs_group['id']
+            app_id = tabs_group['appId']
+            path_name = tabs_group['path']
+            first_order = tabs_group['order']
+            original_order = data_fields['originalOrder']
+            group_name = data_fields['groupName']
+            tabs_group_entry = (app_id, path_name, group_name)
+
+            self._tabs_group_id[tabs_group_entry] = tabs_group_report_id
+            self._tabs_last_order[tabs_group_entry] = first_order
+            self._tabs_first_order[tabs_group_entry] = first_order
+            self._tabs_group_order[tabs_group_entry] = original_order
+            self._tabs[tabs_group_entry] = {}
+
+            for tab_name, tab_reports_ids in properties['tabs'].items():
+                self._tabs[tabs_group_entry][tab_name] = \
+                    [(report_id, self.get_report(self.business_id, app_id, report_id)["order"])
+                     for report_id in tab_reports_ids]
+                max_order = max([order for _, order in self._tabs[tabs_group_entry][tab_name]])
+                if max_order > self._tabs_last_order[tabs_group_entry]:
+                    self._tabs_last_order[tabs_group_entry] = max_order
 
     def __init__(self, api_client, **kwargs):
         super().__init__(api_client)
@@ -1448,64 +1499,82 @@ class PlotApi(BasePlot):
         else:
             self.business_id: Optional[str] = None
 
-    def insert_tab_in_tab(self, menu_path: str, parent_tabs_index: Tuple[int, str],
-                          child_tabs_order: int, order_of_child_in_parent_tab: Optional[int] = -1):
+        self._get_business_tabs_info()
+
+    def change_tabs_group_order(self, menu_path: str, tabs_group: str, tabs_group_order: int):
+        app_name, path_name = self._clean_menu_path(menu_path)
+        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app_id = app['id']
+
+        tabs_group_entry = (app_id, path_name, tabs_group)
+        if not self._tabs_group_order.get(tabs_group_entry):
+            raise ValueError("The specified tabs group has not been defined yet.")
+
+        if not isinstance(tabs_group_order, int):
+            raise ValueError("The parameter 'tabs_group_order' must be of the type 'int'.")
+
+        self._tabs_group_order[tabs_group_entry] = tabs_group_order
+
+    def insert_tabs_group_in_tab(self, menu_path: str, parent_tabs_index: Tuple[str, str],
+                                 child_tabs_group: str):
         """Updates the hash that will be used to include tabs inside other tabs, with the necessary information to
            insert the child tab inside the parent tab."""
-
-        parent_tabs_order, parent_tabs_name = parent_tabs_index
-
-        # The cascade update of orders will only work if they are updated in order
-        if parent_tabs_order >= child_tabs_order:
-            raise ValueError("The order of the parent tab report has to be smaller than it's children.")
 
         app_name, path_name = self._clean_menu_path(menu_path)
         app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
 
+        #TODO make it so cascade upgrade works
+        #self._tabs_group_order[tab_entry]
+        parent_group, parent_tab = parent_tabs_index
+        tabs_group_entry = (app_id, path_name, parent_group)
         tab_entry = (app_id, path_name, parent_tabs_index)
+
         if not self._tab_to_tab.get(tab_entry):
-            self._tab_to_tab[tab_entry] = [(child_tabs_order, order_of_child_in_parent_tab)]
+            self._tab_to_tab[tab_entry] = [(child_tabs_group, self._tabs_group_order[tabs_group_entry])]
             return
 
-        self._tab_to_tab[tab_entry] = self._tab_to_tab[tab_entry] + [(child_tabs_order, order_of_child_in_parent_tab)]
+        self._tab_to_tab[tab_entry] += [(child_tabs_group, self._tabs_group_order[tabs_group_entry])]
 
     def generate_tabs(self):
         """Uses the information in the tabs tree and tab_to_tab hash to create all the tabs components"""
-
         #Create all tabs using the tree information and store the ids in the tab_to_tab hash map
-        for (app_id, path_name, tabs_order), tabs_groups in self._tabs.items():
-            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_group]
-                                 for tab_name, tab_group in tabs_groups.items()}
+        for (app_id, path_name, group_name), tabs_group in self._tabs.items():
+            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_ids]
+                                 for tab_name, tab_ids in tabs_group.items()}
+            tabs_group_entry = (app_id, path_name, group_name)
             report_metadata: Dict[str, Any] = {
-                'order': tabs_order,
+                'dataFields': "{'groupName': '"+group_name+"',"
+                              " 'originalOrder': "+str(self._tabs_group_order[tabs_group_entry])+"}",
+                'order': max(self._tabs_group_order[tabs_group_entry], 0),
                 'path': path_name,
                 'reportType': 'TABS',
                 'properties': '{"tabs":' + json.dumps(tabs_groups_clean) + '}'
             }
+            #TODO deal with unexisting apps (have to update all tabs info)
             report: Dict = self._create_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_metadata=report_metadata,
             )
             report_id: str = report['id']
-            tab_entry = (app_id, path_name, tabs_order)
-            self._tabs_id[tab_entry] = report_id
-            self._tabs_first_order[tab_entry] = 0
+
+            self._tabs_group_id[tabs_group_entry] = report_id
+            self._tabs_first_order[tabs_group_entry] = max(self._tabs_group_order[tabs_group_entry], 0)
 
         #Use the ids of tab_to_tab to include tabs inside of tabs
         for (app_id, path_name, parent_tabs_index), tabs_list in self._tab_to_tab.items():
-            parent_tabs_order, parent_tabs_name = parent_tabs_index
-            parent_tabs_id = self._tabs_id[(app_id, path_name, parent_tabs_order)]
+            parent_group, parent_tab = parent_tabs_index
+            parent_tabs_id = self._tabs_group_id[(app_id, path_name, parent_group)]
 
-            child_tabs_id_list = [(self._tabs_id[(app_id, path_name, child_tabs_order)], order_in_parent)
-                                  for child_tabs_order, order_in_parent in tabs_list]
+            child_tabs_id_list = [(self._tabs_group_id[(app_id, path_name, child_group)], order_in_parent)
+                                  for child_group, order_in_parent in tabs_list]
 
-            self._tabs[(app_id, path_name, parent_tabs_order)][parent_tabs_name] += child_tabs_id_list
-            tabs_groups = self._tabs[(app_id, path_name, parent_tabs_order)]
+            self._tabs[(app_id, path_name, parent_group)][parent_tab] += child_tabs_id_list
+            tabs_group = self._tabs[(app_id, path_name, parent_group)]
 
-            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_group]
-                                 for tab_name, tab_group in tabs_groups.items()}
+            tabs_groups_clean = {tab_name: [report_id for report_id, _ in tab_ids]
+                                 for tab_name, tab_ids in tabs_group.items()}
 
             self.update_report(business_id=self.business_id,
                                app_id=app_id,
@@ -1516,23 +1585,22 @@ class PlotApi(BasePlot):
                                )
 
             # Cascade update of orders
-            parents_first_order = self._tabs_first_order[(app_id, path_name, parent_tabs_order)]
-            parents_last_order = self._tabs_last_order[(app_id, path_name, parent_tabs_order)]
+            parents_first_order = self._tabs_first_order[(app_id, path_name, parent_group)]
+            parents_last_order = self._tabs_last_order[(app_id, path_name, parent_group)] + 1
 
-            for (child_tabs_order, order_in_parent), (child_tabs_id, _) in zip(tabs_list, child_tabs_id_list):
-
+            for (child_group, order_in_parent), (child_group_id, _) in zip(tabs_list, child_tabs_id_list):
                 if order_in_parent < 0:
-                    order_in_parent = parents_last_order+1
+                    order_in_parent = parents_last_order
 
                 self.update_report(business_id=self.business_id,
                                    app_id=app_id,
-                                   report_id=child_tabs_id,
+                                   report_id=child_group_id,
                                    report_metadata={
                                        'order': parents_first_order + order_in_parent
                                    },
                                    )
-                self._tabs_first_order[(app_id, path_name, child_tabs_order)] += parents_last_order
-                self._tabs_last_order[(app_id, path_name, child_tabs_order)] += parents_last_order
+                self._tabs_first_order[(app_id, path_name, child_group)] += parents_last_order
+                self._tabs_last_order[(app_id, path_name, child_group)] += parents_last_order
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -1855,7 +1923,7 @@ class PlotApi(BasePlot):
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
@@ -1886,7 +1954,7 @@ class PlotApi(BasePlot):
             title: Optional[str] = None,
             height: Optional[int] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -1926,7 +1994,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a barchart
         """
@@ -2005,7 +2073,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2045,7 +2113,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2097,7 +2165,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # thid layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         if not option_modifications:
@@ -2156,7 +2224,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         :param data:
@@ -2225,7 +2293,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2347,7 +2415,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2465,7 +2533,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         self._validate_table_data(data, elements=[x] + y)
@@ -2514,7 +2582,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         try:
@@ -2551,7 +2619,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,  # to create filters
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         self._create_trend_chart(
@@ -2581,7 +2649,7 @@ class PlotApi(BasePlot):
             multi_column: int = 4,
             real_time: bool = False,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         :param data:
@@ -2691,7 +2759,7 @@ class PlotApi(BasePlot):
             color: Optional[str] = None,
             multi_column: int = 4,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
@@ -2720,7 +2788,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Piechart
         """
@@ -2779,7 +2847,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a RADAR
         """
@@ -2828,7 +2896,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Tree
         """
@@ -2868,7 +2936,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Treemap
         """
@@ -2909,7 +2977,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Sunburst
         """
@@ -2952,7 +3020,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -2986,7 +3054,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3040,7 +3108,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3097,7 +3165,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3148,7 +3216,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3192,7 +3260,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """
         option = {
@@ -3372,7 +3440,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -3429,7 +3497,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
                 df: DataFrame = self._validate_data_is_pandarable(data)
@@ -3466,7 +3534,7 @@ class PlotApi(BasePlot):
             rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[int, str]] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         :param data:

@@ -442,6 +442,26 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [report['id'] for report in reports]
 
+    def get_business_reports(self, business_id: str) -> List[Dict]:
+        """Given a business retrieve all reports
+
+        :param business_id: business UUID
+        """
+        business_apps = self.get_business_apps(business_id)
+        return [report
+                for app_id in business_apps
+                    for report in self.get_app_reports(business_id, app_id['id'])]
+
+    def get_business_report_ids(self, business_id: str) -> List[str]:
+        """Given an business retrieve all report_ids
+
+        :param business_id: business UUID
+        """
+        business_apps = self.get_business_apps(business_id)
+        return [report['id']
+                for app_id in business_apps
+                    for report in self.get_app_reports(business_id, app_id['id'])]
+
     def get_report_datasets(
             self, business_id: str, app_id: str,  report_id: str,
     ) -> List[Dict]:
@@ -1864,6 +1884,9 @@ class BusinessExplorerApi:
     get_business_apps = CascadeExplorerAPI.get_business_apps
     get_business_app_ids = CascadeExplorerAPI.get_business_app_ids
     get_business_all_apps_with_filter = CascadeExplorerAPI.get_business_apps_with_filter
+
+    get_business_reports = CascadeExplorerAPI.get_business_reports
+    get_business_report_ids = CascadeExplorerAPI.get_business_report_ids
 
     delete_business = DeleteExplorerApi.delete_business
 

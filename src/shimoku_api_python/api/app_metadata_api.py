@@ -20,9 +20,13 @@ class AppMetadataApi(AppExplorerApi, ABC):
     _create_app = CascadeCreateExplorerAPI.create_app
     _get_business = BusinessExplorerApi.get_business
 
-    def __init__(self, api_client):
+    def __init__(self, api_client, **kwargs):
         self.api_client = api_client
-        self.business_id = None
+
+        if kwargs.get('business_id'):
+            self.business_id: Optional[str] = kwargs['business_id']
+        else:
+            self.business_id: Optional[str] = None
 
     def set_business(self, business_id: str):
         """"""

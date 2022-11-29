@@ -8,6 +8,7 @@ from itertools import product
 import json5
 import datetime as dt
 import pandas as pd
+import numpy as np
 from pandas import DataFrame
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -476,16 +477,6 @@ class BasePlot(PlotAux):
         # Default
         option_modifications_temp = {"legend": {"type": "scroll"}}
 
-        # TODO this will be done in FE
-        #  https://trello.com/c/GXRYHEsO/
-        num_size: int = len(f'{max([k for k in df[y].max()])}')
-        if num_size > 6:
-            margin: int = 18 * (num_size - 6)  # 12 pixels by extra num
-            option_modifications_temp["yAxis"] = {
-                "axisLabel": {"margin": margin},
-                'nameGap': margin + 36,
-            }
-
         if option_modifications:
             if option_modifications.get('optionModifications'):
                 option_modifications['optionModifications'].update(option_modifications_temp)
@@ -668,6 +659,7 @@ class BasePlot(PlotAux):
         filter_elements: List[Dict] = []
         self._validate_filters(filters=filters)
 
+        first_overwrite = True
         # We are going to save all the reports one by one
         for df_temp, filter_element in (
                 self._create_multifilter_reports(
@@ -681,10 +673,11 @@ class BasePlot(PlotAux):
                 if value in cols
             ]
             report_id = self._create_trend_chart(
-                data=df_temp, overwrite=False, **kwargs_,
+                data=df_temp, overwrite=first_overwrite, **kwargs_,
             )
             filter_element['reportId'] = [report_id]
             filter_elements.append(filter_element)
+            first_overwrite = False     # Just overwrite once to delete previous plots
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: Optional[int] = filters.get('row')
@@ -844,6 +837,9 @@ class BasePlot(PlotAux):
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
+            app_normalized_name = self._create_normalized_name(app_normalized_name)
+            app_path_name = self._create_normalized_name(app_path_name)
+
             app: Dict = self._get_app_by_url(
                 business_id=self.business_id,
                 url=app_normalized_name,
@@ -856,26 +852,16 @@ class BasePlot(PlotAux):
             )
 
             for report in reports:
-                raw_path_name: str = report.get('path')
-                if not raw_path_name:
-                    continue
-
                 original_path_name: str = report.get('path')
-                path_name: str = '-'.join(original_path_name.split(' ')).lower()
-                menu_path_: str = f'{app_normalized_name}/{path_name}'
-                new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order is None:
-                    menu_path_: str = f'{app_normalized_name}/{original_path_name}'
-                    new_path_order: Union[str, int] = paths_order.get(menu_path_)
-
-                if new_path_order:
-                    self.update_report(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                        report_id=report['id'],
-                        report_metadata={'pathOrder': int(new_path_order)},
-                    )
+                if original_path_name:
+                    path_name: str = self._create_normalized_name(original_path_name)
+                    if path_name == app_path_name:
+                        self.update_report(
+                            business_id=self.business_id,
+                            app_id=app_id,
+                            report_id=report['id'],
+                            report_metadata={'pathOrder': int(order)},
+                        )
 
     def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
@@ -1405,14 +1391,17 @@ class PlotApi(BasePlot):
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None,
             # TODO
-            #  rows_size: Optional[int] = None, cols_size: int = 12,
+            # rows_size keeps being ignored
+            rows_size: Optional[int] = None, cols_size: int = 12,
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
+            label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
+            value_suffixes: Optional[Dict[str, str]] = {}
     ):
         """
         {
@@ -1510,7 +1499,7 @@ class PlotApi(BasePlot):
             else:
                 return {}
 
-        def _calculate_table_data_fields() -> Dict:
+        def _calculate_table_data_fields(DF: DataFrame) -> Dict:
             """
             Example
             -------------
@@ -1547,6 +1536,101 @@ class PlotApi(BasePlot):
                     }
                 }
             """
+
+            def check_correct_value(n):
+                admitted_types = (int, float, str, dt.date, np.float32, np.float64, np.int32, np.int64)
+                if not isinstance(n, admitted_types):
+                    raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
+
+            def interpret_color_info(color_def: Union[List, str]) -> Union[str, Dict]:
+                def RGB_to_hex(r: int, g: int, b: int) -> str:
+                    def clamp(x: int) -> int:
+                        return max(0, min(x, 255))
+
+                    # from https://stackoverflow.com/questions/3380726/converting-an-rgb-color-tuple-to-a-hexidecimal-string
+                    return "#{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
+
+                # from https://xkcd.com/color/rgb/
+                color_defs = {"purple": "#7e1e9c",
+                              "red": "#e50000",
+                              "green": "#15b01a",
+                              "blue": "#0343df",
+                              "pink": "#ff81c0",
+                              "brown": "#653700",
+                              "orange": "#f97306",
+                              "yellow": "#ffff14",
+                              "gray": "#929591",
+                              "violet": "#9a0eea",
+                              "cyan": "#00ffff",
+                              "black": "#000000"
+                              }
+
+                default_FE_colors = ['active', 'error', 'warning', 'caution', 'main', 'neutral']
+                radius_options = ['rectangle', 'rounded']
+                variant_options = ['filled', 'outlined']
+
+                options = None
+                if isinstance(color_def, tuple):
+                    options_list = color_def[1:]
+                    options = {}
+                    color_def = color_def[0]
+
+                    for option in options_list:
+                        if option in radius_options:
+                            options['radius'] = option
+                        elif option in variant_options:
+                            options['variant'] = option
+                        else:
+                            raise ValueError("Can't interpret style options information.")
+
+                if isinstance(color_def, list):
+                    color_def = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+                elif color_def in default_FE_colors:
+                    pass
+                elif color_def in color_defs:
+                    color_def = color_defs[color_def]
+                elif not isinstance(color_def, str) or '#' not in color_def:
+                    raise ValueError("Can't interpret color information.")
+
+                if options:
+                    options['color'] = color_def
+                    return options
+
+                return color_def
+
+            def interpret_label_info(_labels_map, _value_suffix):
+                if isinstance(_labels_map, Dict):
+                    labels_map_aux = _labels_map.copy()
+                    _labels_map = {}
+                    for value, color_def in labels_map_aux.items():
+                        color_def = interpret_color_info(color_def)
+                        if isinstance(value, tuple):
+                            df_values = DF[DF[col].between(value[0], value[1])][col].unique()
+                            for val in df_values:
+                                check_correct_value(val)
+                                if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                    val = int(val)
+                                _labels_map[f'{val}{_value_suffix}'] = color_def
+                        else:
+                            check_correct_value(value)
+                            _labels_map[f'{value}{_value_suffix}'] = color_def
+
+                elif isinstance(_labels_map, (str, list, tuple)):
+                    if _labels_map != "true":
+                        df_values = DF[col].unique()
+                        color_def = interpret_color_info(_labels_map)
+                        _labels_map = {}
+                        for val in df_values:
+                            check_correct_value(val)
+                            if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                val = int(val)
+                            _labels_map[f'{val}{_value_suffix}'] = color_def
+
+                else:
+                    raise ValueError("Can't interpret label information")
+
+                return _labels_map
+
             data_fields: Dict = {}
             cols: List[str] = df.columns.tolist()
             if sort_table_by_col:
@@ -1604,6 +1688,18 @@ class PlotApi(BasePlot):
                                 "type": "search",
                             }
 
+                if col in label_columns:
+                    value_suffix = ""
+                    if col in value_suffixes:
+                        value_suffix = value_suffixes[col]
+
+                    labels_map = interpret_label_info(label_columns[col], value_suffix)
+
+                    if not data_fields[col]:
+                        data_fields[col] = {'isLabel': labels_map}
+                    else:
+                        data_fields[col]['isLabel'] = labels_map
+
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1654,9 +1750,14 @@ class PlotApi(BasePlot):
             'title': title,
             'path': path_name,
             'order': order,
-            'dataFields': _calculate_table_data_fields(),
+            'dataFields': _calculate_table_data_fields(df),
+            'sizeColumns': cols_size,
+            'sizeRows': rows_size,
             'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
+
+        for col, value_format in value_suffixes.items():
+            df[col] = df[col].astype(str)+value_format
 
         if row and column:
             report_metadata['grid']: str = f'{row}, {column}'
@@ -2469,6 +2570,9 @@ class PlotApi(BasePlot):
             if col_to_rename in mandatory_elements + extra_elements
         }
         df.rename(columns=cols_to_rename, inplace=True)
+        extra_elements = [cols_to_rename[x] if x in cols_to_rename else x
+                          for x in extra_elements]
+
         for extra_element in extra_elements:
             if extra_element == 'align':
                 df['align'] = df['align'].fillna('right')
@@ -2506,7 +2610,7 @@ class PlotApi(BasePlot):
             report_metadata['grid'] = f'{row}, {column}'
 
         return self._create_chart(
-            data=data,
+            data=df,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,

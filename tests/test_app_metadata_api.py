@@ -223,6 +223,38 @@ def test_get_app_by_type():
     assert isinstance(app, dict)
 
 
+def test_get_app_by_name():
+    name = '   Test app_to_get_NAME    '
+    app: Dict = (
+        s.app.create_app(
+            business_id=business_id,
+            app_type_id=app_type_id,
+            name=name,
+        )
+    )
+    app_id_: str = app['id']
+
+    app: Dict = s.app.get_app_by_name(
+        business_id=business_id,
+        name=name
+    )
+    assert app
+    assert app["normalizedName"] == s.plt._create_normalized_name(name)
+
+    name = "test-app-to-get-name"
+    app: Dict = s.app.get_app_by_name(
+        business_id=business_id,
+        name=name
+    )
+    assert app
+    assert app["normalizedName"] == s.plt._create_normalized_name(name)
+
+    s.app.delete_app(
+        business_id=business_id,
+        app_id=app_id_,
+    )
+
+
 def test_has_app_report():
     has_reports: bool = s.app.has_app_report(**app_element)
     assert has_reports
@@ -237,4 +269,5 @@ test_get_app_reports()
 test_get_app_report_ids()
 # TODO  test_get_app_path_names()
 test_get_app_by_type()
+test_get_app_by_name()
 test_has_app_report()

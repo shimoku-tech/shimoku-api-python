@@ -8,6 +8,7 @@ from itertools import product
 import json5
 import datetime as dt
 import pandas as pd
+import numpy as np
 from pandas import DataFrame
 
 from shimoku_api_python.exceptions import ApiClientError
@@ -1398,7 +1399,9 @@ class PlotApi(BasePlot):
             sort_table_by_col: Optional[str] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
+            label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
+            value_suffixes: Optional[Dict[str, str]] = {}
     ):
         """
         {
@@ -1496,7 +1499,7 @@ class PlotApi(BasePlot):
             else:
                 return {}
 
-        def _calculate_table_data_fields() -> Dict:
+        def _calculate_table_data_fields(DF: DataFrame) -> Dict:
             """
             Example
             -------------
@@ -1533,6 +1536,101 @@ class PlotApi(BasePlot):
                     }
                 }
             """
+
+            def check_correct_value(n):
+                admitted_types = (int, float, str, dt.date, np.float32, np.float64, np.int32, np.int64)
+                if not isinstance(n, admitted_types):
+                    raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
+
+            def interpret_color_info(color_def: Union[List, str]) -> Union[str, Dict]:
+                def RGB_to_hex(r: int, g: int, b: int) -> str:
+                    def clamp(x: int) -> int:
+                        return max(0, min(x, 255))
+
+                    # from https://stackoverflow.com/questions/3380726/converting-an-rgb-color-tuple-to-a-hexidecimal-string
+                    return "#{0:02x}{1:02x}{2:02x}".format(clamp(r), clamp(g), clamp(b))
+
+                # from https://xkcd.com/color/rgb/
+                color_defs = {"purple": "#7e1e9c",
+                              "red": "#e50000",
+                              "green": "#15b01a",
+                              "blue": "#0343df",
+                              "pink": "#ff81c0",
+                              "brown": "#653700",
+                              "orange": "#f97306",
+                              "yellow": "#ffff14",
+                              "gray": "#929591",
+                              "violet": "#9a0eea",
+                              "cyan": "#00ffff",
+                              "black": "#000000"
+                              }
+
+                default_FE_colors = ['active', 'error', 'warning', 'caution', 'main', 'neutral']
+                radius_options = ['rectangle', 'rounded']
+                variant_options = ['filled', 'outlined']
+
+                options = None
+                if isinstance(color_def, tuple):
+                    options_list = color_def[1:]
+                    options = {}
+                    color_def = color_def[0]
+
+                    for option in options_list:
+                        if option in radius_options:
+                            options['radius'] = option
+                        elif option in variant_options:
+                            options['variant'] = option
+                        else:
+                            raise ValueError("Can't interpret style options information.")
+
+                if isinstance(color_def, list):
+                    color_def = RGB_to_hex(color_def[0], color_def[1], color_def[2])
+                elif color_def in default_FE_colors:
+                    pass
+                elif color_def in color_defs:
+                    color_def = color_defs[color_def]
+                elif not isinstance(color_def, str) or '#' not in color_def:
+                    raise ValueError("Can't interpret color information.")
+
+                if options:
+                    options['color'] = color_def
+                    return options
+
+                return color_def
+
+            def interpret_label_info(_labels_map, _value_suffix):
+                if isinstance(_labels_map, Dict):
+                    labels_map_aux = _labels_map.copy()
+                    _labels_map = {}
+                    for value, color_def in labels_map_aux.items():
+                        color_def = interpret_color_info(color_def)
+                        if isinstance(value, tuple):
+                            df_values = DF[DF[col].between(value[0], value[1])][col].unique()
+                            for val in df_values:
+                                check_correct_value(val)
+                                if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                    val = int(val)
+                                _labels_map[f'{val}{_value_suffix}'] = color_def
+                        else:
+                            check_correct_value(value)
+                            _labels_map[f'{value}{_value_suffix}'] = color_def
+
+                elif isinstance(_labels_map, (str, list, tuple)):
+                    if _labels_map != "true":
+                        df_values = DF[col].unique()
+                        color_def = interpret_color_info(_labels_map)
+                        _labels_map = {}
+                        for val in df_values:
+                            check_correct_value(val)
+                            if _value_suffix == "" and isinstance(val, float) and int(val) - val == 0:
+                                val = int(val)
+                            _labels_map[f'{val}{_value_suffix}'] = color_def
+
+                else:
+                    raise ValueError("Can't interpret label information")
+
+                return _labels_map
+
             data_fields: Dict = {}
             cols: List[str] = df.columns.tolist()
             if sort_table_by_col:
@@ -1590,6 +1688,18 @@ class PlotApi(BasePlot):
                                 "type": "search",
                             }
 
+                if col in label_columns:
+                    value_suffix = ""
+                    if col in value_suffixes:
+                        value_suffix = value_suffixes[col]
+
+                    labels_map = interpret_label_info(label_columns[col], value_suffix)
+
+                    if not data_fields[col]:
+                        data_fields[col] = {'isLabel': labels_map}
+                    else:
+                        data_fields[col]['isLabel'] = labels_map
+
             return json.dumps(data_fields)
 
         df: DataFrame = self._validate_data_is_pandarable(data)
@@ -1640,11 +1750,14 @@ class PlotApi(BasePlot):
             'title': title,
             'path': path_name,
             'order': order,
-            'dataFields': _calculate_table_data_fields(),
+            'dataFields': _calculate_table_data_fields(df),
             'sizeColumns': cols_size,
             'sizeRows': rows_size,
             'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
         }
+
+        for col, value_format in value_suffixes.items():
+            df[col] = df[col].astype(str)+value_format
 
         if row and column:
             report_metadata['grid']: str = f'{row}, {column}'

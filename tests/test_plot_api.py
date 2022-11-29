@@ -376,9 +376,7 @@ def test_delete():
     else:
         app_id = None
 
-    # TODO this must not be here! We must have an app_id! fix the test
-    if app_id:
-        assert not s.app.get_app_reports(business_id, app_id)
+    assert s.app.get_app_reports(business_id, app_id)
 
     s.plt.delete(
         menu_path=menu_path,
@@ -399,9 +397,7 @@ def test_delete():
         by_component_type=False,
     )
 
-    # TODO this must not be here! We must have an app_id! fix the test
-    if app_id:
-        assert not s.app.get_app_reports(business_id, app_id)
+    assert not s.app.get_app_reports(business_id, app_id)
 
 
 def test_append_data_to_trend_chart():

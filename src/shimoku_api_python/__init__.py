@@ -18,7 +18,7 @@ from shimoku_api_python.client import ApiClient
 
 class Client(object):
     def __init__(self, universe_id: str, environment: str = 'staging',
-                 access_token: str = "", config={}, business_id: str = ""):
+                 access_token: str = "", config={}, business_id: str = None):
 
         if access_token != "":
             config = {'access_token': access_token}
@@ -34,16 +34,12 @@ class Client(object):
         self.universe = UniverseMetadataApi(self._api_client)
         self.business = BusinessMetadataApi(self._api_client)
         self.app_type = AppTypeMetadataApi(self._api_client)
-        self.app = AppMetadataApi(self._api_client)
+        self.app = AppMetadataApi(self._api_client, business_id=business_id)
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client)
-        self.plt = PlotApi(self._api_client)
+        self.plt = PlotApi(self._api_client, business_id=business_id)
         self.ai = AiAPI(self._api_client)
-
-        if business_id != "":
-            self.plt.set_business(business_id)
-            self.app.set_business(business_id)
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

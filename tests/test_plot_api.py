@@ -3267,49 +3267,319 @@ def test_get_input_forms():
     rs: List[Dict] = s.plt.get_input_forms(menu_path)
     assert rs
 
+def test_tabs():
+    menu_path="test-tabs"
+    def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
+        bentobox_id: Dict = {'bentoboxId': 'test20220101'}
+        bentobox_data: Dict = {
+            'bentoboxOrder': 0,
+            'bentoboxSizeColumns': 8,
+            'bentoboxSizeRows': 20,
+        }
+        bentobox_data.update(bentobox_id)
+
+        data_ = [
+            {
+                "description": "",
+                "title": "Estado",
+                "value": "Abierto",
+            },
+        ]
+        s.plt.indicator(
+            data=data_,
+            menu_path=menu_path,
+            order=0, rows_size=8, cols_size=12,
+            value='value',
+            header='title',
+            footer='description',
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index
+        )
+
+        s.plt.indicator(
+            data=data_,
+            menu_path=menu_path,
+            order=1, rows_size=8, cols_size=12,
+            value='value',
+            header='title',
+            footer='description',
+            bentobox_data=bentobox_id,
+            tabs_index=tabs_index
+        )
+
+        data = [
+            {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+            {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
+            {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
+            {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
+            {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
+        ]
+        s.plt.bar(
+            data=data,
+            x='date', y=['x', 'y'],
+            menu_path=menu_path,
+            order=2, rows_size=14, cols_size=24,
+            bentobox_data=bentobox_id,
+            tabs_index=tabs_index
+        )
+
+    _test_bentobox()
+    _test_bentobox(("Deepness 1", "Bento box"))
+    tabs_index = ("Deepness 0", "line test")
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=0,
+        tabs_index=tabs_index
+    )
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1,
+        tabs_index=tabs_index
+    )
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
+        # row=1, column=1,
+        order=0, rows_size=2,
+        cols_size=12,
+        tabs_index=("Deepness 0", "Bar 1")
+    )
+    report_dataset_properties = {
+        'fields': [
+            {
+                'title': 'Personal information',
+                'fields': [
+                    {
+                        'mapping': 'name',
+                        'fieldName': 'name',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'surname',
+                        'fieldName': 'surname',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'age',
+                        'fieldName': 'age',
+                        'inputType': 'number',
+                    },
+                    {
+                        'mapping': 'tel',
+                        'fieldName': 'phone',
+                        'inputType': 'tel',
+                    },
+                    {
+                        'mapping': 'gender',
+                        'fieldName': 'Gender',
+                        'inputType': 'radio',
+                        'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+                    },
+                    {
+                        'mapping': 'email',
+                        'fieldName': 'email',
+                        'inputType': 'email',
+                    },
+
+                ],
+            },
+            {
+                'title': 'Other data',
+                'fields': [
+                    {
+                        'mapping': 'skills',
+                        'fieldName': 'Skills',
+                        'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                        'inputType': 'checkbox',
+                    },
+                    {
+                        'mapping': 'birthDay',
+                        'fieldName': 'Birthday',
+                        'inputType': 'date',
+                    },
+                    {
+                        'mapping': 'onCompany',
+                        'fieldName': 'Time on Shimoku',
+                        'inputType': 'dateRange',
+                    },
+                    {
+                        'mapping': 'hobbies',
+                        'fieldName': 'Hobbies',
+                        'inputType': 'select',
+                        'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+                    },
+                    {
+                        'mapping': 'textField2',
+                        'fieldName': 'Test Text',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'objectives',
+                        'fieldName': 'Objetivos',
+                        'inputType': 'multiSelect',
+                        'options': ['sleep', 'close eyes', 'awake']
+                    },
+
+                ],
+            },
+        ],
+    }
+
+    s.plt.input_form(
+        menu_path=menu_path, order=0,
+        report_dataset_properties=report_dataset_properties,
+        tabs_index=("Deepness 0", "Input Form")
+    )
+
+    for i in range(5):
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "warning"
+        },
+            menu_path=menu_path,
+            order=0,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 1")
+        )
+
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "main"
+        },
+            menu_path=menu_path,
+            order=0,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 2")
+        )
+
+    data_ = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+             {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
+             {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
+             {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
+             {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5}]
+
+    s.plt.bar(
+        data=data_,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
+        # row=1, column=1,
+        order=0, rows_size=2,
+        cols_size=12,
+        tabs_index=("Bar deep 1", "Bar 1")
+    )
+    s.plt.bar(
+        data=data_,
+        x='date', y=['y'],
+        menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
+        # row=1, column=1,
+        order=2, rows_size=2,
+        cols_size=12,
+        tabs_index=("Bar deep 2", "Bar 1")
+    )
+    s.plt.line(
+        data=data_,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
+        # row=1, column=1,
+        order=0, rows_size=2,
+        cols_size=12,
+        tabs_index=("Bar deep 2", "Line 1")
+    )
+    s.plt.line(
+        data=data_,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        x_axis_name='Date',
+        y_axis_name=['Revenue'],
+        # row=1, column=1,
+        order=0, rows_size=2,
+        cols_size=12,
+        tabs_index=("Bar deep 2", "Line 2")
+    )
+
+    s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
+                                   parent_tab_index=("Bar deep 1", "Bar 1"),
+                                   child_tabs_group="Bar deep 2")
+
+    s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
+                                   parent_tab_index=("Deepness 0", "Bar 1"),
+                                   child_tabs_group="Bar deep 1")
+
+    for i in [4, 3, 2, 1]:
+        s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
+                                       parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
+                                       child_tabs_group=(f"Deepness {i}")
+                                       )
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-
-# test_line()
-# test_funnel()
-# test_tree()
-# test_get_input_forms()
-# test_delete_path()
-# test_append_data_to_trend_chart()
-# test_iframe()
-# test_html()
-# test_set_new_business()
-# test_table()
-# test_free_echarts()
-# test_input_form()
-# test_bentobox()
+s.plt.clear_business()
+test_tabs()
+test_line()
+test_funnel()
+test_tree()
+test_get_input_forms()
+test_delete_path()
+test_append_data_to_trend_chart()
+test_iframe()
+test_html()
+test_set_new_business()
+test_table()
+test_free_echarts()
+test_input_form()
+test_bentobox()
 test_delete()
-# test_bar_with_filters()
-# test_set_apps_orders()
-# test_set_sub_path_orders()
-# test_zero_centered_barchart()
-# test_indicator()
-# test_indicator_one_dict()
-# test_alert_indicator()
-# test_stockline()
-# test_radar()
-# test_pie()
-# test_ux()
-# test_bar()
-# test_ring_gauge()
-# test_sunburst()
-# test_treemap()
-# test_heatmap()
-# test_sankey()
-# test_horizontal_barchart()
-# test_predictive_line()
-# test_speed_gauge()
-# test_line()
-# test_scatter()
-
+test_bar_with_filters()
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_zero_centered_barchart()
+test_indicator()
+test_indicator_one_dict()
+test_alert_indicator()
+test_stockline()
+test_radar()
+test_pie()
+test_ux()
+test_bar()
+test_ring_gauge()
+test_sunburst()
+test_treemap()
+test_heatmap()
+test_sankey()
+test_horizontal_barchart()
+test_predictive_line()
+test_speed_gauge()
+test_line()
+test_scatter()
+test_tabs()
 
 # TODO
 # test_cohorts()

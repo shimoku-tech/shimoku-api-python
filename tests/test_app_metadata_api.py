@@ -247,19 +247,19 @@ def test_hide_and_show_breadcrumbs():
     breadcrumb_status: bool = app[col_var]
 
     if breadcrumb_status:
-        s.app.hide_breadcrumb(app_name=app_name)
+        s.app.hide_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert not app_updated[col_var]
 
-        s.app.show_breadcrumb(app_name=app_name)
+        s.app.show_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert app_updated[col_var]
     else:
-        s.app.hide_breadcrumb(app_name=app_name)
+        s.app.show_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert app_updated[col_var]
 
-        s.app.show_breadcrumb(app_name=app_name)
+        s.app.hide_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert not app_updated[col_var]
 

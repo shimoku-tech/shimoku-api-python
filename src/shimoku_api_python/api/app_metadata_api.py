@@ -95,7 +95,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
-    def hide_breadcrumb(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
+    def hide_breadcrumbs(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
                 business_id=self.business_id,
@@ -104,7 +104,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
-    def show_breadcrumb(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
+    def show_breadcrumbs(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
                 business_id=self.business_id,

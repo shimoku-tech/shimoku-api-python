@@ -234,6 +234,11 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
     def __init__(self, api_client, **kwargs):
         super().__init__(api_client, **kwargs)
 
+        if kwargs.get('business_id'):
+            self.business_id: Optional[str] = kwargs['business_id']
+        else:
+            self.business_id: Optional[str] = None
+
     def set_business(self, business_id: str):
         super().set_business(business_id)
 

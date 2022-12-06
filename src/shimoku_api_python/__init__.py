@@ -37,12 +37,9 @@ class Client(object):
         self.app = AppMetadataApi(self._api_client)
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
-        self.io = FileMetadataApi(self._api_client)
-        self.plt = PlotApi(self._api_client)
+        self.io = FileMetadataApi(self._api_client, business_id=business_id)
+        self.plt = PlotApi(self._api_client, business_id=business_id)
         self.ai = AiAPI(self._api_client)
-
-        if business_id != "":
-            self.plt.set_business(business_id)
 
     def set_config(self, config={}):
         self.api_client.set_config(config)

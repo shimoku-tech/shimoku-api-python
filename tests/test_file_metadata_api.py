@@ -19,6 +19,7 @@ s = shimoku.Client(
     config={'access_token': api_key},
     universe_id=universe_id,
     environment=environment,
+    business_id=business_id
 )
 
 
@@ -120,9 +121,7 @@ def test_get_file_date():
 
 def test_get_all_files_by_app_name():
     test_create_file()
-    files: List[Dict] = s.io.get_all_files_by_app_name(
-        business_id=business_id, app_name='test',
-    )
+    files: List[Dict] = s.io.get_all_files_by_app_name(app_name='test')
     assert files
     test_delete_file()
 
@@ -130,23 +129,21 @@ def test_get_all_files_by_app_name():
 def test_get_files_by_string_matching():
     test_create_file()
 
+    files: List[Dict] = s.io._get_files_by_string_matching(string_match='hello')
+    assert files
+
     files: List[Dict] = s.io._get_files_by_string_matching(
-        business_id=business_id, string_match='hello',
+        string_match='hello', app_name='test',
     )
     assert files
 
     files: List[Dict] = s.io._get_files_by_string_matching(
-        business_id=business_id, string_match='hello', app_name='test',
-    )
-    assert files
-
-    files: List[Dict] = s.io._get_files_by_string_matching(
-        business_id=business_id, string_match='fail', app_name='test',
+        string_match='fail', app_name='test',
     )
     assert not files
 
     files: List[Dict] = s.io._get_files_by_string_matching(
-        business_id=business_id, string_match='hello', app_name='fail'
+        string_match='hello', app_name='fail'
     )
     assert not files
 
@@ -157,7 +154,6 @@ def test_get_file_by_name():
     test_create_file()
 
     file = s.io.get_file_by_name(
-        business_id=business_id,
         app_name='test',
         file_name='helloworld',
         get_file_object=False,
@@ -165,7 +161,6 @@ def test_get_file_by_name():
     assert file
 
     file = s.io.get_file_by_name(
-        business_id=business_id,
         app_name='test',
         file_name='helloworld',
         get_file_object=True,
@@ -180,7 +175,6 @@ def test_get_all_files_by_date():
 
     today = dt.date.today().isoformat()
     files: List[Dict] = s.io.get_files_by_date(
-        business_id=business_id,
         date=today,
         app_name='test',
     )
@@ -188,7 +182,6 @@ def test_get_all_files_by_date():
 
     tomorrow = today + dt.timedelta(1)
     files: List[Dict] = s.io.get_file_by_creation_date(
-        business_id=business_id,
         date=tomorrow,
         app_name='test',
     )
@@ -214,7 +207,6 @@ def test_get_all_files_by_date():
     app_name = 'test'
     object_data = b''
     s.io.post_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
@@ -222,7 +214,6 @@ def test_get_all_files_by_date():
 
     today = dt.date.today()
     files: List[Dict] = s.io.get_all_files_by_date(
-        business_id=business_id,
         app_name='test',
         date=today,
     )
@@ -237,14 +228,12 @@ def test_get_file_by_date():
     app_name = 'test'
     object_data = b''
     s.io.post_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
     file: Dict = s.io.get_file_by_date(
-        business_id=business_id,
         date=today,
         file_name='helloworld',
         app_name='test',
@@ -253,7 +242,6 @@ def test_get_file_by_date():
     assert file
 
     file_object: bytes = s.io.get_file_by_date(
-        business_id=business_id,
         date=today,
         file_name='helloworld',
         app_name='test',
@@ -264,7 +252,6 @@ def test_get_file_by_date():
 
     tomorrow = today + dt.timedelta(1)
     file: Dict = s.io.get_file_by_date(
-        business_id=business_id,
         date=tomorrow,
         app_name='test',
         file_name='helloworld',
@@ -277,14 +264,12 @@ def test_get_files_with_max_date():
     app_name = 'test'
     object_data = b''
     s.io.post_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
     files = s.io.get_files_with_max_date(
-        business_id=business_id,
         app_name='test',
         file_name='helloworld',
     )
@@ -292,7 +277,6 @@ def test_get_files_with_max_date():
     assert files[0]['name'] == f'helloworld_date:{dt.date.today().isoformat()}'
 
     files_object = s.io.get_files_with_max_date(
-        business_id=business_id,
         app_name='test',
         file_name='helloworld',
         get_file_object=True,
@@ -307,7 +291,7 @@ def test_get_files_by_name_prefix():
     test_create_file()
 
     files: List[Dict] = s.io.get_files_by_name_prefix(
-        business_id=business_id, name_prefix='hello', app_name='test',
+        name_prefix='hello', app_name='test',
     )
     assert files
 
@@ -319,7 +303,6 @@ def test_delete_files_by_name_prefix():
         def test_fake_business(self):
             with self.assertRaises(ValueError):
                 s.io.get_file_by_name(
-                    business_id=business_id,
                     file_name='helloworld',
                     app_name='test'
                 )
@@ -327,7 +310,6 @@ def test_delete_files_by_name_prefix():
     test_create_file()
 
     s.io.delete_files_by_name_prefix(
-        business_id=business_id,
         name_prefix='helloworld',
         app_name='test',
     )
@@ -346,7 +328,6 @@ def test_post_object():
     object_data = b''
 
     file = s.io.post_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
@@ -363,14 +344,12 @@ def test_get_object():
     object_data = b''
 
     s.io.post_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
         object_data=object_data
     )
 
     files = s.io.get_object(
-        business_id=business_id,
         app_name=app_name,
         file_name=file_name,
     )
@@ -384,7 +363,6 @@ def test_post_dataframe():
     d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
     df = pd.DataFrame(d)
     file: Dict = s.io.post_dataframe(
-        business_id=business_id,
         app_name='test',
         file_name='df-test',
         df=df,
@@ -399,7 +377,6 @@ def test_post_get_dataframe():
     d = {'a': [1, 2, 3], 'b': [1, 4, 9]}
     df_ = pd.DataFrame(d)
     file: Dict = s.io.post_dataframe(
-        business_id=business_id,
         app_name='test',
         file_name=file_name,
         df=df_,
@@ -407,7 +384,6 @@ def test_post_get_dataframe():
     assert file
 
     df: pd.DataFrame = s.io.get_dataframe(
-        business_id=business_id,
         app_name='test',
         file_name=file_name,
     )
@@ -429,14 +405,12 @@ def test_post_get_model():
     m: bytes = pickle.dumps(clf)
 
     s.io.post_object(
-        business_id=business_id,
         app_name='test',
         file_name='model-test',
         object_data=m
     )
 
     m2 = s.io.get_object(
-        business_id=business_id,
         app_name='test',
         file_name='model-test',
     )
@@ -444,14 +418,12 @@ def test_post_get_model():
     assert m2[0] == m
 
     s.io.post_ai_model(
-        business_id=business_id,
         app_name='test',
         model_name='model-object-test',
         model=clf,
     )
 
     clf2 = s.io.get_ai_model(
-        business_id=business_id,
         app_name='test',
         model_name='model-object-test',
     )
@@ -465,14 +437,12 @@ def test_big_data():
     df.reset_index(inplace=True)
 
     s.io.post_dataframe(
-        business_id=business_id,
         app_name='test',
         file_name='test-big-df',
         df=df
     )
 
     dataset: pd.DataFrame = s.io.get_dataframe(
-        business_id=business_id,
         app_name='test',
         file_name='test-big-df'
     )

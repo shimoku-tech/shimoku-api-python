@@ -11,6 +11,7 @@ api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 app_id: str = getenv('APP_ID')
+app_name: str = getenv('APP_NAME')
 app_type_id: str = getenv('APP_TYPE_ID')
 environment: str = getenv('ENVIRONMENT')
 app_element: Dict[str, str] = dict(
@@ -26,6 +27,7 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
+    business_id=business_id
 )
 
 
@@ -191,28 +193,98 @@ def test_rename_app():
 
 
 def test_hide_and_show_title():
-    col_var: str = ''  # TODO 'titleStatus' ??
-
+    col_var: str = 'hideTitle'
     app: Dict = s.app.get_app(**app_element)
+
     title_status: bool = app[col_var]
 
-    if title_status:
-        s.app.hide_title(**app_element)
+    if not title_status:
+        s.app.hide_title(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+
+        s.app.show_title(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
+    else:
+        s.app.show_title(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert not app_updated[col_var]
 
-        s.app.show_title(**app_element)
+        s.app.hide_title(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+
+
+def test_hide_and_show_path():
+    col_var: str = 'hidePath'
+    app: Dict = s.app.get_app(**app_element)
+
+    path_status: bool = app[col_var]
+
+    if not path_status:
+        s.app.hide_path(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+
+        s.app.show_path(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
+    else:
+        s.app.show_path(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
+
+        s.app.hide_path(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+
+
+def test_hide_and_show_breadcrumbs():
+    col_var: str = 'showBreadcrumb'
+    app: Dict = s.app.get_app(**app_element)
+
+    breadcrumb_status: bool = app[col_var]
+
+    if breadcrumb_status:
+        s.app.hide_breadcrumbs(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
+
+        s.app.show_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert app_updated[col_var]
     else:
-        s.app.show_title(**app_element)
+        s.app.show_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert app_updated[col_var]
 
-        s.app.hide_title(**app_element)
+        s.app.hide_breadcrumbs(app_name=app_name)
         app_updated: Dict = s.app.get_app(**app_element)
         assert not app_updated[col_var]
 
+def test_hide_and_show_show_history_navigation():
+    col_var: str = 'showHistoryNavigation'
+    app: Dict = s.app.get_app(**app_element)
+
+    history_navigation_status: bool = app[col_var]
+
+    if history_navigation_status:
+        s.app.hide_history_navigation(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
+
+        s.app.show_history_navigation(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+    else:
+        s.app.show_history_navigation(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert app_updated[col_var]
+
+        s.app.hide_history_navigation(app_name=app_name)
+        app_updated: Dict = s.app.get_app(**app_element)
+        assert not app_updated[col_var]
 
 def test_get_app_by_type():
     app: Dict = s.app.get_app_by_type(
@@ -225,6 +297,7 @@ def test_get_app_by_type():
 
 def test_get_app_by_name():
     name = '   Test app_to_get_NAME    '
+    s.plt.delete_path(name)
     app: Dict = (
         s.app.create_app(
             business_id=business_id,
@@ -256,7 +329,7 @@ def test_get_app_by_name():
 
 
 def test_has_app_report():
-    has_reports: bool = s.app.has_app_report(**app_element)
+    has_reports: bool = s.app.has_app_report(app_name=app_name)
     assert has_reports
 
 
@@ -269,5 +342,9 @@ test_get_app_reports()
 test_get_app_report_ids()
 # TODO  test_get_app_path_names()
 test_get_app_by_type()
+test_hide_and_show_title()
+test_hide_and_show_breadcrumbs()
+test_hide_and_show_path()
+test_hide_and_show_show_history_navigation()
 test_get_app_by_name()
 test_has_app_report()

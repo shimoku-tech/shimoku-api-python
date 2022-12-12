@@ -1,6 +1,6 @@
 """"""
 from sys import stdout
-from typing import List, Dict, Optional, Union, Tuple, Any, Iterable
+from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import logging
 import json
 from itertools import product
@@ -3729,8 +3729,115 @@ class PlotApi(BasePlot):
         """
         raise NotImplementedError
 
-    def stacked_barchart(self):
-        raise NotImplementedError
+    def stacked_barchart(
+            self, data: Union[str, DataFrame, List[Dict]],
+            menu_path: str,
+            x: str,
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            option_modifications: Optional[Dict] = None,  # third layer
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            show_values: Optional[List] = None,
+            calculate_distribution: bool = False,
+    ):
+        """Create a stacked barchart
+        """
+        def row_distribution(row):
+            def max_precision():
+                max_p = 0
+                for n in row:
+                    str_n = str(n)
+                    if '.' in str_n:
+                        n_precision = len(str_n.split('.')[1])
+                        max_p = n_precision if n_precision > max_p else max_p
+                return max(max_p, 2)
+
+            perc = round(100 * row / sum(row), max_precision())
+            round_max = 99.9
+            while sum(perc) > 100:
+                perc = round(round_max * row / sum(row), max_precision())
+                round_max -= 0.1
+            return perc
+
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        value_columns = [col for col in df.columns if col != x]
+        if calculate_distribution:
+            df[value_columns] = df[value_columns].apply(lambda row: row_distribution(row), axis=1)
+
+        if not option_modifications:
+            option_modifications = {
+                'subtitle': subtitle if subtitle else '',
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'tooltip': {
+                    'trigger': 'item',
+                    'axisPointer': {'type': 'cross'},
+                },
+                'toolbox': {
+                    'show': True,
+                    'feature': {
+                        'dataView': {
+                            'readOnly': False
+                        },
+                        'magicType': {
+                            'type': ['line', 'bar']
+                        },
+                        'saveAsImage': {}
+                    }
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'axisLabel': {
+                        'formatter': '{value} %' if calculate_distribution else '{value}',
+                    }
+                },
+                # 'dataZoom': True,
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'series': [{
+                    'type': 'bar',
+                    'stack': 'total',
+                    'emphasis': {'focus': 'series'},
+                    'label': {'show': not show_values or name in show_values},
+                    'name': name,
+                    'itemStyle': {'borderRadius': [0, 0, 0, 0] if name != value_columns[-1] else [8, 8, 0, 0]},
+                } for name in value_columns],
+            }
+
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index
+        )
 
     def input_form(
             self, report_dataset_properties: Dict, menu_path: str,

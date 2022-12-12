@@ -800,6 +800,31 @@ def test_bar():
         s.plt.delete_path(menu_path=menu_path)
 
 
+def test_stacked_barchart():
+    menu_path = 'test/stacked_distribution'
+    data_ = pd.read_csv('../data/test_stack_distribution.csv')
+
+    s.plt.stacked_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=0,
+        rows_size=3, cols_size=12,
+    )
+
+    s.plt.stacked_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=1,
+        rows_size=3, cols_size=12,
+        show_values=['Price'],
+        calculate_distribution=True,
+    )
+
+
 def test_zero_centered_barchart():
     print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
@@ -3654,6 +3679,7 @@ test_radar()
 test_pie()
 test_ux()
 test_bar()
+test_stacked_barchart()
 test_ring_gauge()
 test_sunburst()
 test_treemap()

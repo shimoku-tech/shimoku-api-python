@@ -800,6 +800,32 @@ def test_bar():
         s.plt.delete_path(menu_path=menu_path)
 
 
+def test_stacked_barchart():
+    print("test_stacked_barchart")
+    menu_path = 'test/stacked_distribution'
+    data_ = pd.read_csv('../data/test_stack_distribution.csv')
+
+    s.plt.stacked_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=0,
+        rows_size=3, cols_size=12,
+    )
+
+    s.plt.stacked_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=1,
+        rows_size=3, cols_size=12,
+        show_values=['Price'],
+        calculate_percentages=True,
+    )
+
+
 def test_zero_centered_barchart():
     print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
@@ -1206,6 +1232,42 @@ def test_heatmap():
         s.plt.delete_path(menu_path)
 
 
+def test_shimoku_gauges():
+    print("test_shimoku_gauges")
+    menu_path: str = 'test/shimoku-gauges'
+    df = pd.read_csv('../data/test_stack_distribution.csv')
+    gauges_data = pd.DataFrame(columns=["name", "value", "color"])
+    df_transposed = df.transpose().reset_index().drop(0)
+    value_columns = [col for col in df_transposed.columns if col != "index"]
+    gauges_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
+    gauges_data["name"] = df_transposed['index']
+    gauges_data["color"] = range(1, len(df_transposed) + 1)
+
+    order = s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=0, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+    )
+
+    s.plt.shimoku_gauge(
+        value=-60, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3,
+        color=1)
+
+    order += 1
+    s.plt.shimoku_gauge(
+        value=60, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3, name="test",
+        color="status-error")
+
+    order += 1
+    s.plt.shimoku_gauge(
+        value=-90, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3, name="test",
+        color='#FF0000')
+
+
 def test_speed_gauge():
     print('test_speed_gauge')
     menu_path: str = 'test/speed-gauge-test'
@@ -1595,6 +1657,51 @@ def test_indicator():
         footer='footer',
         align='alignment',
         color='col'
+    )
+    data_ = [{
+        "color": "success",
+        "variant": "contained",
+        "description": "This indicator has a Link",
+        "targetPath": "/indicators/indicator/1",
+        "title": "Target Indicator",
+        "align": "left",
+        "value": "500€"
+    }, {
+        "color": "warning",
+        "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
+        "variant": "outlined",
+        "description": "This has a background",
+        "title": "Super cool indicator",
+        "align": "left",
+        "value": "Value"
+    }, {
+        "color": "error",
+        "variant": "outlined",
+        "description": "This hasn't got any icons",
+        "title": "Error indicator",
+        "align": "left",
+        "value": "Value",
+    }, {
+        "color": "caution",
+        "variant": "contained",
+        "description": "Aligned to right and full of icons",
+        "title": "Multiple cases",
+        "align": "right",
+        "value": "Value",
+    }
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=2, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        background_image='backgroundImage',
     )
 
     if delete_paths:
@@ -3353,7 +3460,8 @@ def test_get_input_forms():
     assert rs
 
 def test_tabs():
-    menu_path="test-tabs"
+    print("test_tabs")
+    menu_path = "test-tabs"
     def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
         bentobox_id: Dict = {'bentoboxId': 'test20220101'}
         bentobox_data: Dict = {
@@ -3654,6 +3762,8 @@ test_radar()
 test_pie()
 test_ux()
 test_bar()
+test_stacked_barchart()
+test_shimoku_gauges()
 test_ring_gauge()
 test_sunburst()
 test_treemap()

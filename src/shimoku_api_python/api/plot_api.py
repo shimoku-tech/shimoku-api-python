@@ -2876,6 +2876,8 @@ class PlotApi(BasePlot):
             footer: Optional[str] = None,
             color: Optional[str] = None,
             align: Optional[str] = None,
+            variant: Optional[str] = None,
+            background_image: Optional[str] = None,
             multi_column: int = 4,
             real_time: bool = False,
             bentobox_data: Optional[Dict] = None, 
@@ -2902,10 +2904,10 @@ class PlotApi(BasePlot):
         :param bentobox_data:
         """
         mandatory_elements: List[str] = [
-            header, value, target_path,
+            header, value
         ]
         mandatory_elements = [element for element in mandatory_elements if element]
-        extra_elements: List[str] = [footer, color, align]
+        extra_elements: List[str] = [footer, color, align, variant, target_path, background_image]
         extra_elements = [element for element in extra_elements if element]
 
         self._validate_table_data(data, elements=mandatory_elements)
@@ -2918,10 +2920,10 @@ class PlotApi(BasePlot):
             value: 'value',
             color: 'color',
             align: 'align',
+            variant: 'variant',
+            background_image: 'backgroundImage',
+            target_path: 'targetPath'
         }
-
-        if target_path:
-            cols_to_rename.update({target_path: 'targetPath'})
 
         cols_to_rename = {
             col_to_rename: v
@@ -2937,8 +2939,10 @@ class PlotApi(BasePlot):
                 df['align'] = df['align'].fillna('right')
             elif extra_element == 'color':
                 df['color'] = df['color'].fillna('black')
-            elif extra_element == 'description':
-                df['description'] = df['description'].fillna('')
+            elif extra_element == 'variant':
+                df['variant'] = df['variant'].fillna('default')
+            elif extra_element in ('backgroundImage', 'description', 'targetPath'):
+                df[extra_element] = df[extra_element].fillna('')
             else:
                 raise ValueError(f'{extra_element} is not solved')
 

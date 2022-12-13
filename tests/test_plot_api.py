@@ -1658,6 +1658,51 @@ def test_indicator():
         align='alignment',
         color='col'
     )
+    data_ = [{
+        "color": "success",
+        "variant": "contained",
+        "description": "This indicator has a Link",
+        "targetPath": "/indicators/indicator/1",
+        "title": "Target Indicator",
+        "align": "left",
+        "value": "500€"
+    }, {
+        "color": "warning",
+        "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
+        "variant": "outlined",
+        "description": "This has a background",
+        "title": "Super cool indicator",
+        "align": "left",
+        "value": "Value"
+    }, {
+        "color": "error",
+        "variant": "outlined",
+        "description": "This hasn't got any icons",
+        "title": "Error indicator",
+        "align": "left",
+        "value": "Value",
+    }, {
+        "color": "caution",
+        "variant": "contained",
+        "description": "Aligned to right and full of icons",
+        "title": "Multiple cases",
+        "align": "right",
+        "value": "Value",
+    }
+    ]
+    s.plt.indicator(
+        data=data_,
+        menu_path=menu_path,
+        order=2, rows_size=2, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        background_image='backgroundImage',
+    )
 
     if delete_paths:
         s.plt.delete(

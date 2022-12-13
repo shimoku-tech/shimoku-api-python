@@ -801,6 +801,7 @@ def test_bar():
 
 
 def test_stacked_barchart():
+    print("test_stacked_barchart")
     menu_path = 'test/stacked_distribution'
     data_ = pd.read_csv('../data/test_stack_distribution.csv')
 
@@ -821,7 +822,7 @@ def test_stacked_barchart():
         order=1,
         rows_size=3, cols_size=12,
         show_values=['Price'],
-        calculate_distribution=True,
+        calculate_percentages=True,
     )
 
 
@@ -1229,6 +1230,42 @@ def test_heatmap():
             order=1
         )
         s.plt.delete_path(menu_path)
+
+
+def test_shimoku_gauges():
+    print("test_shimoku_gauges")
+    menu_path: str = 'test/shimoku-gauges'
+    df = pd.read_csv('../data/test_stack_distribution.csv')
+    gauges_data = pd.DataFrame(columns=["name", "value", "color"])
+    df_transposed = df.transpose().reset_index().drop(0)
+    value_columns = [col for col in df_transposed.columns if col != "index"]
+    gauges_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
+    gauges_data["name"] = df_transposed['index']
+    gauges_data["color"] = range(1, len(df_transposed) + 1)
+
+    order = s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=0, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+    )
+
+    s.plt.shimoku_gauge(
+        value=-60, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3,
+        color=1)
+
+    order += 1
+    s.plt.shimoku_gauge(
+        value=60, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3, name="test",
+        color="status-error")
+
+    order += 1
+    s.plt.shimoku_gauge(
+        value=-90, menu_path=menu_path, order=order,
+        rows_size=1, cols_size=3, name="test",
+        color='#FF0000')
 
 
 def test_speed_gauge():
@@ -3378,7 +3415,8 @@ def test_get_input_forms():
     assert rs
 
 def test_tabs():
-    menu_path="test-tabs"
+    print("test_tabs")
+    menu_path = "test-tabs"
     def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
         bentobox_id: Dict = {'bentoboxId': 'test20220101'}
         bentobox_data: Dict = {
@@ -3680,6 +3718,7 @@ test_pie()
 test_ux()
 test_bar()
 test_stacked_barchart()
+test_shimoku_gauges()
 test_ring_gauge()
 test_sunburst()
 test_treemap()

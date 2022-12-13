@@ -11,6 +11,7 @@ import pandas as pd
 import numpy as np
 from pandas import DataFrame
 
+from random import choices
 from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
@@ -1220,6 +1221,7 @@ class BasePlot(PlotAux):
             real_time=real_time,
         )
         report_id: str = report_dataset['report']['id']
+        self._report_order[report_id] = report_dataset['report']['order']
 
         if tabs_index:
             other_chart = self._insert_in_tab(self.business_id, app_id, path_name,
@@ -1669,6 +1671,28 @@ class PlotApi(BasePlot):
         self._clear_or_create_all_local_state()
         self._get_business_state(self.business_id)
 
+    # TODO both of this functions are auxiliary, and don't make sense here, find a better place for them
+    @staticmethod
+    def _calculate_percentages_from_list(numbers, round_digits_min):
+        def max_precision():
+            max_p = 0
+            for n in numbers:
+                str_n = str(n)
+                if '.' in str_n:
+                    n_precision = len(str_n.split('.')[1])
+                    max_p = n_precision if n_precision > max_p else max_p
+            return max(max_p, round_digits_min)
+
+        if isinstance(numbers, list):
+            numbers = np.array(numbers)
+
+        perc = np.round(100 * numbers / np.sum(numbers), max_precision())
+        round_max = 99.9
+        while np.sum(perc) > 100:
+            perc = np.round(round_max * numbers / np.sum(numbers), max_precision())
+            round_max -= 0.1
+        return perc
+
     def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
                                  last_in_order: Optional[bool] = True):
         app_name, path_name = self._clean_menu_path(menu_path)
@@ -1851,6 +1875,7 @@ class PlotApi(BasePlot):
                 if not isinstance(n, admitted_types):
                     raise ValueError("Invalid type for table data, admitted types are: " + str(admitted_types))
 
+            #TODO this method should use a more general method to interpret color
             def interpret_color_info(color_def: Union[List, str]) -> Union[str, Dict]:
                 def RGB_to_hex(r: int, g: int, b: int) -> str:
                     def clamp(x: int) -> int:
@@ -3689,6 +3714,143 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    def shimoku_gauge(self,
+        value: Union[int, float], menu_path: str, name: Optional[str] = None,
+        color: Optional[Union[str, int]] = 1, order: Optional[int] = None,
+        rows_size: Optional[int] = None, cols_size: int = 12,
+        padding: Optional[List[int]] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        is_percentage: bool = True,
+    ):
+        data = [{'value': abs(value)}]
+        if name:
+            data[0]['name'] = name
+
+        #TODO this should use a more general method for interpreting color
+        default_FE_colors = ['success', 'error', 'warning', 'success-light',
+                             'error-light', 'warning-light', 'status-error']
+        if color in default_FE_colors:
+            color = f'var(--color-{color})'
+        elif isinstance(color, int):
+            color = f'var(--chart-C{abs(color)})'
+
+        if not option_modifications:
+            option_modifications = {
+                'grid': {
+                    'left': '5%',
+                    'right': '5%',
+                    'top': '5%',
+                    'bottom': '5%',
+                    'containLabel': True
+                },
+                'series': [
+                    {
+                        'type': 'gauge',
+                        'startAngle': 180,
+                        'endAngle': 0,
+                        'radius': '100%',
+                        'min': 0,
+                        'max': 100,
+                        'pointer': {
+                            'show': False,
+                        },
+                        'progress': {
+                            'show': True,
+                            'width': 30,
+                            'overlap': False,
+                            'roundCap': False,
+                            'clip': False,
+                            'itemStyle': {
+                                'borderWidth': 0,
+                                'borderColor': color,
+                                'color': color,
+                            }
+                        },
+                        'splitLine': {
+                            'show': False,
+                        },
+                        'axisLine':
+                            {'lineStyle':
+                                 {'width': 30}
+                             },
+                        'axisTick': {
+                            'show': False
+                        },
+                        'axisLabel': {
+                            'show': False,
+                        },
+                        'title': {
+                            'fontSize': 16,
+                            'fontFamily': 'Rubik',
+                            'offsetCenter': ['0', '30'],
+                        },
+                        'data': data,
+                        'detail': {
+                            'fontSize': 24,
+                            'fontFamily': 'Rubik',
+                            'font': 'inherit',
+                            'color': '#202A36',
+                            'borderColor': 'auto',
+                            'borderWidth': 0,
+                            'formatter': ('-' if value < 0 else '') + '{value}' + ('%' if is_percentage else ''),
+                            'valueAnimation': True,
+                            'offsetCenter': ['0', '-10']
+                        }
+                    }
+                ]
+            }
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=data,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index
+        )
+
+    def shimoku_gauges_group(
+        self, gauges_data: Union[pd.DataFrame, List[Dict]], order: int, menu_path: str,
+        rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
+        gauges_padding: Optional[str] = '3, 1, 1, 1',
+        gauges_rows_size: Optional[int] = 11, gauges_cols_size: Optional[int] = 4,
+        filters: Optional[Dict] = None, tabs_index: Optional[Tuple[str, str]] = None,
+        calculate_percentages: Optional[bool] = False
+    ):
+        if isinstance(gauges_data, pd.DataFrame):
+            gauges_data = gauges_data.to_dict(orient="records")
+
+        if calculate_percentages:
+            percentages = self._calculate_percentages_from_list([gauge['value'] for gauge in gauges_data], 0)
+            for i in range(len(percentages)):
+                gauges_data[i]['value'] = percentages[i]
+
+        bentobox_data = {
+            'bentoboxId': ''.join(choices("qwertyuiopasdfghjklzxcvbnm1234567890", k=20)),
+            'bentoboxOrder': order,
+            'bentoboxSizeColumns': cols_size,
+            'bentoboxSizeRows': rows_size,
+        }
+        for gauge in gauges_data:
+            order += 1
+            self.shimoku_gauge(
+                value=gauge['value'],
+                menu_path=menu_path, order=order, name=gauge.get('name'),
+                padding=gauge['padding'] if gauge.get('padding') else gauges_padding,
+                color=gauge['color'] if gauge.get('color') else 1,
+                rows_size=gauge['rows_size'] if gauge.get('rows_size') else gauges_rows_size,
+                cols_size=gauge['cols_size'] if gauge.get('cols_size') else gauges_cols_size,
+                bentobox_data=bentobox_data, tabs_index=tabs_index, filters=filters,
+                is_percentage=gauge['is_percentage'] if gauge.get('is_percentage') else True,
+            )
+        return order+1
+
     def themeriver(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, name: str,  # first layer
@@ -3743,31 +3905,15 @@ class PlotApi(BasePlot):
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
             show_values: Optional[List] = None,
-            calculate_distribution: bool = False,
+            calculate_percentages: bool = False,
     ):
         """Create a stacked barchart
         """
-        def row_distribution(row):
-            def max_precision():
-                max_p = 0
-                for n in row:
-                    str_n = str(n)
-                    if '.' in str_n:
-                        n_precision = len(str_n.split('.')[1])
-                        max_p = n_precision if n_precision > max_p else max_p
-                return max(max_p, 2)
-
-            perc = round(100 * row / sum(row), max_precision())
-            round_max = 99.9
-            while sum(perc) > 100:
-                perc = round(round_max * row / sum(row), max_precision())
-                round_max -= 0.1
-            return perc
-
         df: DataFrame = self._validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
-        if calculate_distribution:
-            df[value_columns] = df[value_columns].apply(lambda row: row_distribution(row), axis=1)
+        if calculate_percentages:
+            df[value_columns] = df[value_columns].apply(
+                lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
 
         if not option_modifications:
             option_modifications = {
@@ -3806,7 +3952,7 @@ class PlotApi(BasePlot):
                     'type': 'value',
                     'fontFamily': 'Rubik',
                     'axisLabel': {
-                        'formatter': '{value} %' if calculate_distribution else '{value}',
+                        'formatter': '{value} %' if calculate_percentages else '{value}',
                     }
                 },
                 # 'dataZoom': True,

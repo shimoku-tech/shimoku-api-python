@@ -11,7 +11,7 @@ import pandas as pd
 import numpy as np
 from pandas import DataFrame
 
-from random import choices
+import uuid
 from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
@@ -1209,7 +1209,7 @@ class BasePlot(PlotAux):
         if force_custom_field and len(items) == 1:  # 'FORM'
             items: Dict = self._convert_input_data_to_db_items(items[0])
         else:  # 'ECHARTS2'
-            items: List[str] = self._convert_input_data_to_db_items(items)
+            items: List[Dict[str]] = self._convert_input_data_to_db_items(items, sort)
 
         report_dataset = self._create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
@@ -3763,7 +3763,7 @@ class PlotApi(BasePlot):
                         },
                         'progress': {
                             'show': True,
-                            'width': 30,
+                            'width': 30 if rows_size > 1 else 25,
                             'overlap': False,
                             'roundCap': False,
                             'clip': False,
@@ -3778,7 +3778,7 @@ class PlotApi(BasePlot):
                         },
                         'axisLine':
                             {'lineStyle':
-                                 {'width': 30}
+                                 {'width': 30 if rows_size > 1 else 25}
                              },
                         'axisTick': {
                             'show': False
@@ -3836,7 +3836,7 @@ class PlotApi(BasePlot):
                 gauges_data[i]['value'] = percentages[i]
 
         bentobox_data = {
-            'bentoboxId': ''.join(choices("qwertyuiopasdfghjklzxcvbnm1234567890", k=20)),
+            'bentoboxId': str(uuid.uuid1()),
             'bentoboxOrder': order,
             'bentoboxSizeColumns': cols_size,
             'bentoboxSizeRows': rows_size,
@@ -3976,6 +3976,8 @@ class PlotApi(BasePlot):
                 } for name in value_columns],
             }
 
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
         return self.free_echarts(
             menu_path=menu_path,
             data=df,
@@ -3986,7 +3988,213 @@ class PlotApi(BasePlot):
             padding=padding,
             filters=filters,
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    def stacked_horizontal_barchart(
+            self, data: Union[str, DataFrame, List[Dict]],
+            menu_path: str,
+            x: str,
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            option_modifications: Optional[Dict] = None,  # third layer
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            show_values: Optional[List] = None,
+            calculate_percentages: bool = False,
+    ):
+        """Create a stacked barchart
+        """
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        value_columns = [col for col in df.columns if col != x]
+        if calculate_percentages:
+            df[value_columns] = df[value_columns].apply(
+                lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        if not option_modifications:
+            option_modifications = {
+                'subtitle': subtitle if subtitle else '',
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'tooltip': {
+                    'trigger': 'item',
+                    'axisPointer': {'type': 'cross'},
+                },
+                'toolbox': {
+                    'show': True,
+                    'feature': {
+                        'dataView': {
+                            'readOnly': False
+                        },
+                        'magicType': {
+                            'type': ['line', 'bar']
+                        },
+                        'saveAsImage': {}
+                    }
+                },
+                'xAxis': {
+                    'name': x_axis_name if x_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'axisLabel': {
+                        'formatter': '{value} %' if calculate_percentages else '{value}',
+                    }
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                # 'dataZoom': True,
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'series': [{
+                    'type': 'bar',
+                    'stack': 'total',
+                    'emphasis': {'focus': 'series'},
+                    'label': {'show': not show_values or name in show_values},
+                    'name': name,
+                    'itemStyle': {'borderRadius': [0, 0, 0, 0] if name != value_columns[-1] else [0, 8, 8, 0]},
+                } for name in value_columns],
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+
+        )
+
+    def stacked_area_chart(
+            self, data: Union[str, DataFrame, List[Dict]],
+            menu_path: str,
+            x: str,
+            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            padding: Optional[List[int]] = None,
+            subtitle: Optional[str] = None,
+            x_axis_name: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            option_modifications: Optional[Dict] = None,  # third layer
+            filters: Optional[Dict] = None,
+            bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            show_values: Optional[List] = None,
+            calculate_percentages: bool = False,
+    ):
+        """Create a stacked barchart
+        """
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        value_columns = [col for col in df.columns if col != x]
+        if calculate_percentages:
+            df[value_columns] = df[value_columns].apply(
+                lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        if not option_modifications:
+            option_modifications = {
+                'subtitle': subtitle if subtitle else '',
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'icon': 'circle'
+                },
+                'tooltip': {
+                    'trigger': 'item',
+                    'axisPointer': {'type': 'cross'},
+                },
+                'toolbox': {
+                    'show': True,
+                    'feature': {
+                        'dataView': {
+                            'readOnly': False
+                        },
+                        'magicType': {
+                            'type': ['line', 'bar']
+                        },
+                        'saveAsImage': {}
+                    }
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'boundaryGap': False,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'axisLabel': {
+                        'formatter': '{value} %' if calculate_percentages else '{value}',
+                    }
+                },
+                # 'dataZoom': True,
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'series': [{
+                    'type': 'line',
+                    'stack': 'total',
+                    'emphasis': {'focus': 'series'},
+                    'label': {'show': not show_values or name in show_values},
+                    'areaStyle': {},
+                    'name': name,
+                    'itemStyle': {'borderRadius': [0, 0, 0, 0] if name != value_columns[-1] else [8, 8, 0, 0]},
+                } for name in value_columns],
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
         )
 
     def input_form(

@@ -826,6 +826,65 @@ def test_stacked_barchart():
     )
 
 
+def test_stacked_horizontal_barchart():
+    print("test_horizontal_stacked_barchart")
+    menu_path = 'test/horizontal_stacked_distribution'
+    data_ = pd.read_csv('../data/test_stack_distribution.csv')
+
+    s.plt.stacked_horizontal_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=0,
+        rows_size=3, cols_size=12,
+    )
+
+    s.plt.stacked_horizontal_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=1,
+        rows_size=3, cols_size=12,
+        show_values=['Price'],
+        calculate_percentages=True,
+    )
+
+
+def test_stacked_area_chart():
+    print("test_area_chart")
+    menu_path = 'test/stacked-area-chart'
+    data_ = [
+        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
+        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+    ]
+    s.plt.stacked_area_chart(
+        data=data_,
+        menu_path=menu_path,
+        x="Weekday",
+        x_axis_name='Visits per weekday',
+        order=0,
+        rows_size=3, cols_size=12,
+    )
+
+    s.plt.stacked_area_chart(
+        data=data_,
+        menu_path=menu_path,
+        x="Weekday",
+        x_axis_name='Visits per weekday',
+        order=1,
+        rows_size=3, cols_size=12,
+        show_values=['Search Engine', 'Union Ads'],
+        calculate_percentages=True,
+    )
+
+
 def test_zero_centered_barchart():
     print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
@@ -2773,13 +2832,15 @@ def test_free_echarts():
             'emphasis': {'focus': 'series'},
         }]
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=1, rows_size=2, cols_size=12,
         sort={
-            'field': 'Weekday',
+            'field': 'sort_values',
             'direction': 'asc',
         }
     )
@@ -2847,13 +2908,15 @@ def test_free_echarts():
             }
         ]
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=2, rows_size=2, cols_size=6,
         sort={
-            'field': 'Type',
+            'field': 'sort_values',
             'direction': 'desc',
         }
     )
@@ -2911,13 +2974,15 @@ def test_free_echarts():
             'data': ['A', 'B', 'C']
         }
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=3, rows_size=2, cols_size=6,
         sort={
-            'field': 'Weekday',
+            'field': 'sort_values',
             'direction': 'asc',
         }
     )
@@ -3763,6 +3828,8 @@ test_pie()
 test_ux()
 test_bar()
 test_stacked_barchart()
+test_stacked_horizontal_barchart()
+test_stacked_area_chart()
 test_shimoku_gauges()
 test_ring_gauge()
 test_sunburst()

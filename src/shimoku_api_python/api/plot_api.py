@@ -606,7 +606,10 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                     report_id=other_chart
                 )
-                del self._report_order[other_chart]
+                try:  # It should always exist
+                    del self._report_order[other_chart]
+                except KeyError:
+                    print("Report wasn't correctly stored in self._report_order")
         try:
             if data:
                 self._update_report_data(
@@ -1232,7 +1235,11 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                     report_id=other_chart
                 )
-                del self._report_order[other_chart]
+                try:  # It should always exist
+                    del self._report_order[other_chart]
+                except KeyError:
+                    print("Report wasn't correctly stored in self._report_order")
+
         return report_dataset
 
     def delete(
@@ -1642,10 +1649,6 @@ class BasePlot(PlotAux):
             else:
                 options = transform_dict_js_to_py(raw_options)
                 data = retrieve_data_from_options(options)
-                sort = {
-                    'field': 'index',
-                    'direction': 'asc',
-                }
         elif data is None:
             raise ValueError('If "options" is provided "data" must be provided too')
 
@@ -1688,7 +1691,7 @@ class PlotApi(BasePlot):
 
         perc = np.round(100 * numbers / np.sum(numbers), max_precision())
         round_max = 99.9
-        while np.sum(perc) > 100:
+        while np.sum(perc) > 99.99:
             perc = np.round(round_max * numbers / np.sum(numbers), max_precision())
             round_max -= 0.1
         return perc
@@ -3662,19 +3665,19 @@ class PlotApi(BasePlot):
         )
 
     def ring_gauge(
-            self, data: Union[str, DataFrame, List[Dict]],
-            name: str, value: str,
-            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
-            title: Optional[str] = None,  # second layer
-            # subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
-            tabs_index: Optional[Tuple[str, str]] = None,
+        self, data: Union[str, DataFrame, List[Dict]],
+        name: str, value: str,
+        menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+        order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+        padding: Optional[List[int]] = None,
+        title: Optional[str] = None,  # second layer
+        # subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """"""
         self._validate_table_data(data, elements=[name, value])
@@ -3718,10 +3721,137 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    def doughnut(self,
+        data: Union[str, List[Dict], pd.DataFrame],
+        menu_path: str, order: int,
+        name_field: Optional[str] = 'name', value_field: Optional[str] = 'value',
+        rows_size: Optional[int] = 2, cols_size: int = 3,
+        padding: Optional[List[int]] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        rounded: Optional[bool] = True
+    ):
+        if not option_modifications:
+            option_modifications = {
+                'tooltip': {
+                    'trigger': 'item',
+                },
+                'legend': {
+                  'left': 'center'
+                },
+                'series':
+                [
+                    {
+                        'type': 'pie',
+                        'radius': ['40%', '70%'],
+                        'avoidLabelOverlap': True,
+                        'pointer': {
+                            'show': False,
+                        },
+                        'itemStyle': {
+                          'borderRadius': 10 if rounded else 0,
+                        },
+                        'label': {
+                            'show': False,
+                            'position': 'center'
+                        },
+                        'emphasis': {
+                            'label': {
+                                'show': True,
+                                'fontSize': 30,
+                                'fontWeight': 'bold',
+                                'fontFamily': 'Rubik'
+                            }
+                        },
+                        'labelLine': {
+                          'show': False
+                        },
+                    }
+                ]
+            }
+
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    def rose(self,
+        data: Union[str, List[Dict], pd.DataFrame],
+        menu_path: str, order: int,
+        name_field: Optional[str] = 'name', value_field: Optional[str] = 'value',
+        rows_size: Optional[int] = 2, cols_size: int = 3,
+        padding: Optional[List[int]] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        rounded: Optional[bool] = True
+    ):
+        if not option_modifications:
+            option_modifications = {
+                'legend': {
+                    'top': 'bottom'
+                },
+                'series':
+                [
+                    {
+                        'name': 'Nightingale Chart',
+                        'type': 'pie',
+                        'radius': ['10%', '70%'],
+                        'center': ['50%', '40%'],
+                        'roseType': 'area',
+                        'itemStyle': {
+                          'borderRadius': 8 if rounded else 0,
+                        },
+                    }
+                ]
+            }
+
+        df: DataFrame = self._validate_data_is_pandarable(data)
+        df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+        return self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
     def shimoku_gauge(self,
-        value: Union[int, float], menu_path: str, name: Optional[str] = None,
-        color: Optional[Union[str, int]] = 1, order: Optional[int] = None,
-        rows_size: Optional[int] = None, cols_size: int = 12,
+        value: Union[int, float], menu_path: str, order: int,
+        name: Optional[str] = None, color: Optional[Union[str, int]] = 1,
+        rows_size: Optional[int] = 1, cols_size: int = 3,
         padding: Optional[List[int]] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[Dict] = None,
@@ -3899,7 +4029,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
             x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3942,7 +4072,10 @@ class PlotApi(BasePlot):
                             'type': ['line', 'bar']
                         },
                         'saveAsImage': {}
-                    }
+                    },
+                    'orient': 'horizontal',
+                    'bottom': '2%',
+                    'right': '5%',
                 },
                 'xAxis': {
                     'type': 'category',
@@ -3999,7 +4132,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
             x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -4042,7 +4175,10 @@ class PlotApi(BasePlot):
                             'type': ['line', 'bar']
                         },
                         'saveAsImage': {}
-                    }
+                    },
+                    'orient': 'horizontal',
+                    'bottom': '2%',
+                    'right': '5%',
                 },
                 'xAxis': {
                     'name': x_axis_name if x_axis_name else "",
@@ -4100,7 +4236,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
             x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -4142,7 +4278,10 @@ class PlotApi(BasePlot):
                             'type': ['line', 'bar']
                         },
                         'saveAsImage': {}
-                    }
+                    },
+                    'orient': 'horizontal',
+                    'bottom': '2%',
+                    'right': '5%',
                 },
                 'xAxis': {
                     'type': 'category',

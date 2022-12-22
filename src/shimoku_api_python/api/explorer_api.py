@@ -1274,7 +1274,8 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             items_keys: Optional[List[str]] = list(items[0].keys())
             report_dataset_properties = {'mapping': items_keys}
             if sort:
-                report_dataset_properties.update(sort)
+                report_dataset_properties['sort'] = sort
+
         elif type(items) == dict:  # FORM
             items_keys: Optional[List[str]] = None
             items = [items]

@@ -207,7 +207,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         return chart_data
 
     def _convert_input_data_to_db_items(
-        self, data: Union[List[Dict], Dict]
+        self, data: Union[List[Dict], Dict], sort: Optional[Dict] = None
     ) -> Union[List[Dict], Dict]:
         """Given an input data, for all the keys of the data convert it to
          a Shimoku body parameter for Data table
@@ -279,7 +279,12 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     d.update({k: f'stringField{str_counter}'})
                 elif type_v == float or type_v == int:
                     float_counter += 1
-                    d.update({k: f'intField{float_counter}'})
+                    if sort and k == sort['field']:
+                        d.update({k: 'orderField1'})
+                        sort['field'] = 'orderField1'
+                    else:
+                        d.update({k: f'intField{float_counter}'})
+
                 elif type_v == dt.date or type_v == dt.datetime or type_v == pd.Timestamp:
                     date_counter += 1
                     d.update({k: f'dateField{date_counter}'})

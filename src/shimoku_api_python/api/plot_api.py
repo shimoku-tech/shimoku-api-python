@@ -1875,8 +1875,8 @@ class PlotApi(BasePlot):
                 'type': 'category',
             },
             'optionModifications': {
-                'yAxis': {'boundaryGap': True},
-                'xAxis': {"axisLabel": {"margin": 12}, 'nameGap': 24},
+                'yAxis': {'boundaryGap': True, "axisLabel": {"margin": 12}, 'nameGap': 24},
+                'xAxis': {'boundaryGap': True, "axisLabel": {"margin": 12}, 'nameGap': 24},
                 'series': {
                     'smooth': True,
                     'itemStyle': {'borderRadius': [0, 9, 9, 0]}
@@ -1946,12 +1946,8 @@ class PlotApi(BasePlot):
                 'splitLine': {'show': False},
             },
             'optionModifications': {
-                'yAxis': {'boundaryGap': True},
-                'xAxis': {"axisLabel": {"margin": 12}, 'nameGap': 24},
-                'series': {
-                    'smooth': True,
-                    'itemStyle': {'borderRadius': [9, 0, 9, 0]}
-                },
+                'yAxis': {'boundaryGap': True, "axisLabel": {"margin": 12}, 'nameGap': 24},
+                'xAxis': {'boundaryGap': True, "axisLabel": {"margin": 12}, 'nameGap': 24},
             },
         }
         return self._create_trend_charts(

@@ -4455,3 +4455,45 @@ class PlotApi(BasePlot):
             force_custom_field=True,
             tabs_index=tabs_index
         )
+
+    def generate_input_form_groups(
+        self, menu_path: str, order: int,
+        form_groups: Dict, dynamic_sequential_show: Optional[bool] = False,
+        next_group_label: Optional[str] = 'Next',
+        rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[List[int]] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+    ):
+        """
+        :param dynamic_sequential_show:
+        :param next_group_label:
+        :param form_groups:
+        :param menu_path:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param padding:
+        :param bentobox_data:
+        :param tabs_index:
+        """
+
+        report_dataset_properties = {'fields': []}
+        next_id = str(uuid.uuid1()) if dynamic_sequential_show else None
+
+        for form_group_name, form_group in form_groups.items():
+            form_group_json = {'title': form_group_name, 'fields': form_group}
+            if next_id:
+                form_group_json['id'] = next_id
+                next_id = str(uuid.uuid1())
+                form_group_json['nextFormGroup'] = {'id': next_id, 'label': next_group_label}
+            report_dataset_properties['fields'] += [form_group_json]
+
+        if next_id:
+            del report_dataset_properties['fields'][-1]['nextFormGroup']
+
+        self.input_form(
+            report_dataset_properties=report_dataset_properties,
+            menu_path=menu_path, order=order, rows_size=rows_size, cols_size=cols_size,
+            padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index
+        )

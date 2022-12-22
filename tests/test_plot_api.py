@@ -811,7 +811,6 @@ def test_stacked_barchart():
         x="Segment",
         x_axis_name='Distribution and weight of the Drivers',
         order=0,
-        rows_size=3, cols_size=12,
     )
 
     s.plt.stacked_barchart(
@@ -820,8 +819,62 @@ def test_stacked_barchart():
         x="Segment",
         x_axis_name='Distribution and weight of the Drivers',
         order=1,
-        rows_size=3, cols_size=12,
         show_values=['Price'],
+        calculate_percentages=True,
+    )
+
+
+def test_stacked_horizontal_barchart():
+    print("test_horizontal_stacked_barchart")
+    menu_path = 'test/horizontal_stacked_distribution'
+    data_ = pd.read_csv('../data/test_stack_distribution.csv')
+
+    s.plt.stacked_horizontal_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=0,
+    )
+
+    s.plt.stacked_horizontal_barchart(
+        data=data_,
+        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=1,
+        show_values=['Price'],
+        calculate_percentages=True,
+    )
+
+
+def test_stacked_area_chart():
+    print("test_area_chart")
+    menu_path = 'test/stacked-area-chart'
+    data_ = [
+        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
+        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+    ]
+    s.plt.stacked_area_chart(
+        data=data_,
+        menu_path=menu_path,
+        x="Weekday",
+        x_axis_name='Visits per weekday',
+        order=0,
+    )
+
+    s.plt.stacked_area_chart(
+        data=data_,
+        menu_path=menu_path,
+        x="Weekday",
+        x_axis_name='Visits per weekday',
+        order=1,
+        show_values=['Search Engine', 'Union Ads'],
         calculate_percentages=True,
     )
 
@@ -830,10 +883,10 @@ def test_zero_centered_barchart():
     print('test_zero_centered_barchart')
     menu_path: str = 'test/zero-centered-bar-test'
     data_ = [
-        {'Name': 'a', 'y': 5},
-        {'Name': 'b', 'y': -7},
-        {'Name': 'c', 'y': 3},
-        {'Name': 'd', 'y': -5},
+        {'Name': 'a', 'y': 5, 'z': -3, 'a': 0.01},
+        {'Name': 'b', 'y': -7, 'z': 4, 'a': 0.1},
+        {'Name': 'c', 'y': 3, 'z': -5, 'a': 0.1},
+        {'Name': 'd', 'y': -5, 'z': 6, 'a': 0.01},
     ]
 
     s.plt.zero_centered_barchart(
@@ -845,9 +898,13 @@ def test_zero_centered_barchart():
 
     s.plt.zero_centered_barchart(
         data=data_,
-        x='Name', y=['y'],
+        x='Name', y=['y', 'z', 'a'],
+        x_axis_name="Axis x",
+        y_axis_name="Axis y",
+        title="Title",
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=1, rows_size=3, cols_size=10,
+        padding="0,0,0,1"
     )
 
     if delete_paths:
@@ -869,10 +926,10 @@ def test_horizontal_barchart():
     menu_path: str = 'test/horizontal-bar-test'
 
     data_ = [
-        {'Name': 'a', 'y': 5, 'z': 3},
-        {'Name': 'b', 'y': 7, 'z': 4},
-        {'Name': 'c', 'y': 3, 'z': 5},
-        {'Name': 'd', 'y': 5, 'z': 6},
+        {'Name': 'a', 'y': 5, 'z': 3, 'a': 0.01},
+        {'Name': 'b', 'y': 7, 'z': 4, 'a': 0.1},
+        {'Name': 'c', 'y': 3, 'z': 5, 'a': 0.1},
+        {'Name': 'd', 'y': 5, 'z': 6, 'a': 0.01},
     ]
 
     s.plt.horizontal_barchart(
@@ -884,9 +941,13 @@ def test_horizontal_barchart():
 
     s.plt.horizontal_barchart(
         data=data_,
-        x='Name', y=['y', 'z'],
+        x='Name', y=['y', 'z', 'a'],
+        x_axis_name="Axis x",
+        y_axis_name="Axis y",
+        title="Title",
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=1, rows_size=3, cols_size=10,
+        padding="0,0,0,1"
     )
 
     if delete_paths:
@@ -1232,6 +1293,52 @@ def test_heatmap():
         s.plt.delete_path(menu_path)
 
 
+def test_doughnut():
+    menu_path = 'test/doughnut'
+    print('test_doughnut')
+    data_ = [
+        {'value': 1048, 'name': 'Search Engine'},
+        {'value': 735, 'name': 'Direct'},
+        {'value': 580, 'name': 'Email'},
+        {'value': 484, 'name': 'Union Ads'},
+        {'value': 300, 'name': 'Video Ads'}
+    ]
+    s.plt.doughnut(data_, menu_path=menu_path, order=0)
+    s.plt.doughnut(data_, menu_path=menu_path, order=1, rounded=False)
+
+    df = pd.read_csv('../data/test_stack_distribution.csv')
+    doughnut_data = pd.DataFrame(columns=["name", "value"])
+    df_transposed = df.transpose().reset_index().drop(0)
+    value_columns = [col for col in df_transposed.columns if col != "index"]
+    doughnut_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
+    doughnut_data["name"] = df_transposed['index']
+    s.plt.doughnut(doughnut_data, menu_path=menu_path, order=2,
+                   rows_size=3, cols_size=6)
+
+
+def test_rose():
+    menu_path = 'test/rose'
+    print('test_rose')
+    data_ = [
+        {'value': 1048, 'name': 'Search Engine'},
+        {'value': 735, 'name': 'Direct'},
+        {'value': 580, 'name': 'Email'},
+        {'value': 484, 'name': 'Union Ads'},
+        {'value': 300, 'name': 'Video Ads'}
+    ]
+    s.plt.rose(data_, menu_path=menu_path, order=0)
+    s.plt.rose(data_, menu_path=menu_path, order=1, rounded=False)
+
+    df = pd.read_csv('../data/test_stack_distribution.csv')
+    rose_data = pd.DataFrame(columns=["name", "value"])
+    df_transposed = df.transpose().reset_index().drop(0)
+    value_columns = [col for col in df_transposed.columns if col != "index"]
+    rose_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
+    rose_data["name"] = df_transposed['index']
+    s.plt.rose(rose_data, menu_path=menu_path, order=2,
+               rows_size=3, cols_size=6)
+
+
 def test_shimoku_gauges():
     print("test_shimoku_gauges")
     menu_path: str = 'test/shimoku-gauges'
@@ -1251,21 +1358,21 @@ def test_shimoku_gauges():
     )
 
     s.plt.shimoku_gauge(
-        value=-60, menu_path=menu_path, order=order,
-        rows_size=1, cols_size=3,
-        color=1)
+        value=-60, menu_path=menu_path,
+        order=order, color=1
+    )
 
     order += 1
     s.plt.shimoku_gauge(
         value=60, menu_path=menu_path, order=order,
-        rows_size=1, cols_size=3, name="test",
-        color="status-error")
+        name="test", color="status-error"
+    )
 
     order += 1
     s.plt.shimoku_gauge(
         value=-90, menu_path=menu_path, order=order,
-        rows_size=1, cols_size=3, name="test",
-        color='#FF0000')
+        name="test", color='#FF0000'
+    )
 
 
 def test_speed_gauge():
@@ -2773,13 +2880,15 @@ def test_free_echarts():
             'emphasis': {'focus': 'series'},
         }]
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=1, rows_size=2, cols_size=12,
         sort={
-            'field': 'Weekday',
+            'field': 'sort_values',
             'direction': 'asc',
         }
     )
@@ -2847,13 +2956,15 @@ def test_free_echarts():
             }
         ]
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=2, rows_size=2, cols_size=6,
         sort={
-            'field': 'Type',
+            'field': 'sort_values',
             'direction': 'desc',
         }
     )
@@ -2911,13 +3022,15 @@ def test_free_echarts():
             'data': ['A', 'B', 'C']
         }
     }
+    for i in range(len(data)):
+        data[i]['sort_values'] = i
     s.plt.free_echarts(
         data=data,
         options=options,
         menu_path='test/free-echarts',
         order=3, rows_size=2, cols_size=6,
         sort={
-            'field': 'Weekday',
+            'field': 'sort_values',
             'direction': 'asc',
         }
     )
@@ -3376,6 +3489,108 @@ def test_input_form():
     )
 
 
+def test_dynamic_and_conditional_input_form():
+    print('test_dynamic_and_conditional_input_form')
+    menu_path: str = 'test/input-dynamic-conditional'
+
+    form_groups = {
+        f'form group {i}': [{
+            'mapping': 'country',
+            'fieldName': f'Country {i}',
+            'inputType': 'select',
+            'options': ['España', 'Colombia']
+          },
+          {
+            'dependsOn': f'Country {i}',
+            'mapping': 'city',
+            'fieldName': f'City {i}',
+            'inputType': 'select',
+            'options': {
+                'España': ['Madrid', 'Barcelona'],
+                'Colombia': ['Bogotá', 'Medellin']
+            }
+          }
+        ] for i in range(4)}
+
+    form_groups['Personal information'] = \
+        [
+            {
+                'mapping': 'name',
+                'fieldName': 'name',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'surname',
+                'fieldName': 'surname',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'age',
+                'fieldName': 'age',
+                'inputType': 'number',
+            },
+            {
+                'mapping': 'tel',
+                'fieldName': 'phone',
+                'inputType': 'tel',
+            },
+            {
+                'mapping': 'gender',
+                'fieldName': 'Gender',
+                'inputType': 'radio',
+                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+            },
+            {
+                'mapping': 'email',
+                'fieldName': 'email',
+                'inputType': 'email',
+            },
+        ]
+
+    form_groups['Other data'] = \
+        [
+            {
+                'mapping': 'skills',
+                'fieldName': 'Skills',
+                'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                'inputType': 'checkbox',
+            },
+            {
+                'mapping': 'birthDay',
+                'fieldName': 'Birthday',
+                'inputType': 'date',
+            },
+            {
+                'mapping': 'onCompany',
+                'fieldName': 'Time on Shimoku',
+                'inputType': 'dateRange',
+            },
+            {
+                'mapping': 'hobbies',
+                'fieldName': 'Hobbies',
+                'inputType': 'select',
+                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+            },
+            {
+                'mapping': 'textField2',
+                'fieldName': 'Test Text',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'objectives',
+                'fieldName': 'Objetivos',
+                'inputType': 'multiSelect',
+                'options': ['sleep', 'close eyes', 'awake']
+            }
+        ]
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=0,
+        form_groups=form_groups,
+        dynamic_sequential_show=True
+    )
+
+
 def test_get_input_forms():
     print('test_get_input_forms')
     menu_path: str = 'test/input-form-to-get'
@@ -3748,6 +3963,7 @@ test_table()
 test_table_with_labels()
 test_free_echarts()
 test_input_form()
+test_dynamic_and_conditional_input_form()
 test_bentobox()
 test_delete()
 test_bar_with_filters()
@@ -3763,7 +3979,11 @@ test_pie()
 test_ux()
 test_bar()
 test_stacked_barchart()
+test_stacked_horizontal_barchart()
+test_stacked_area_chart()
 test_shimoku_gauges()
+test_doughnut()
+test_rose()
 test_ring_gauge()
 test_sunburst()
 test_treemap()

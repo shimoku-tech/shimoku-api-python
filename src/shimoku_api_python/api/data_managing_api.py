@@ -298,44 +298,27 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
     def _convert_dataframe_to_report_entry(
         self, df: DataFrame,
-        filter_map: Optional[Dict[str, str]] = None,
-        filter_fields: Optional[Dict[str, List[str]]] = None,
-        search_columns: Optional[List[str]] = None,
+        sorting_columns_map: Optional[Dict[str, str]] = None,
         report_entry_chunks: bool = True,
     ) -> List[Dict]:
         """
         :param df:
-        :param report_id:
-        :param filter_fields: Example: {
-                'stringField1': ['high', 'medium', 'low'],
-                'stringField2': ['probable', 'improbable'],
-            }
-        :param search_columns:
+        :param sorting_columns_map:
         :param report_entry_chunks:
         """
-        cols: List[str] = df.columns.tolist()
 
-        if filter_fields:
+        if sorting_columns_map:
             try:
-                assert len(filter_fields) <= 4
+                assert len(sorting_columns_map) <= 4
             except AssertionError:
                 raise ValueError(
-                    f'At maximum a table may have 4 different filters | '
-                    f'You provided {len(filter_fields)} | '
-                    f'You provided {filter_fields}'
+                    f'At maximum a table may have 4 different sorting columns | '
+                    f'You provided {len(sorting_columns_map)} | '
+                    f'You provided {sorting_columns_map}'
                 )
 
-            df_ = df.rename(columns=filter_map)
-            metadata_entries: Dict = df_[list(filter_map.values())].to_dict(orient='records')
-        elif search_columns:
-            df_ = df.rename(columns=filter_map)
-            filter_search_map: List = [
-                v for k, v in filter_map.items() if k in search_columns
-            ]
-            metadata_entries: Dict = df_[filter_search_map].to_dict(orient='records')
-        else:
-            data_columns: List[str] = cols
-            metadata_entries: List[Dict] = []
+        df_ = df.rename(columns=sorting_columns_map)
+        metadata_entries: Dict = df_[list(sorting_columns_map.values())].to_dict(orient='records')
 
         records: List[Dict] = df.to_dict(orient='records')
 

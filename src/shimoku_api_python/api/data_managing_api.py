@@ -317,9 +317,9 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     f'You provided {sorting_columns_map}'
                 )
             df_ = df.rename(columns=sorting_columns_map)
-            metadata_entries: Dict = df_[list(sorting_columns_map.values())].to_dict(orient='records')
+            metadata_entries: List[Dict] = df_[list(sorting_columns_map.values())].to_dict(orient='records')
         else:
-            metadata_entries = {}
+            metadata_entries: List[Dict] = []
 
         records: List[Dict] = df.to_dict(orient='records')
 

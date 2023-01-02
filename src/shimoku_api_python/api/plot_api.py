@@ -1732,7 +1732,7 @@ class PlotApi(BasePlot):
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
-            sort_table_by_col: Optional[str] = None,
+            sort_table_by_col: Optional[Dict[str, str]] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
             label_columns: Optional[Dict[str, str]] = {},
@@ -2137,9 +2137,7 @@ class PlotApi(BasePlot):
         df = df.fillna('')
         report_entries: List[Dict] = (
             self._convert_dataframe_to_report_entry(
-                df=df, filter_map=extra_map,
-                filter_fields=report_entry_filter_fields,
-                search_columns=search_columns,
+                df=df, sorting_columns_map=extra_map,
             )
         )
 

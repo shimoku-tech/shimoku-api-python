@@ -1,5 +1,5 @@
-pandas
-requests
-datetime
-json5==0.9.5
-shimoku-components-catalog
+pandas==1.5.2
+requests==2.28.1
+datetime==4.9
+json5==0.9.10
+shimoku-components-catalog==0.2

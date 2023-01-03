@@ -3674,9 +3674,50 @@ def test_get_input_forms():
     rs: List[Dict] = s.plt.get_input_forms(menu_path)
     assert rs
 
+
 def test_tabs():
     print("test_tabs")
     menu_path = "test-tabs"
+
+    def check_tabs_index_in_business_state(_tabs_index, how_many):
+        app_name, path_name = s.plt._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+        app: Dict = s.plt._get_app_by_name(business_id=business_id, name=app_name)
+        app_id = app['id']
+        tabs_group_entry = (app_id, path_name, _tabs_index[0])
+
+        assert (tabs_group_entry in s.plt._tabs)
+        assert (_tabs_index[1] in s.plt._tabs[tabs_group_entry])
+        assert (len(s.plt._tabs[tabs_group_entry][_tabs_index[1]]) == how_many)
+        assert (tabs_group_entry in s.plt._tabs_group_id)
+        assert (tabs_group_entry in s.plt._tabs_last_order)
+
+    def check_tabs_info_is_cleared():
+        assert(len(s.plt._tabs) == 0)
+        assert(len(s.plt._tabs_group_id) == 0)
+        assert(len(s.plt._tabs_last_order) == 0)
+        assert(len(s.plt._tabs_group_modified) == 0)
+
+    def check_all_data_restored_correctly(_tabs_index, how_many):
+        check_tabs_index_in_business_state(_tabs_index, how_many)
+
+        _tabs = s.plt._tabs
+        _tabs_group_id = s.plt._tabs_group_id
+        _tabs_last_order = s.plt._tabs_last_order
+        _tabs_group_modified = s.plt._tabs_group_modified
+
+        s.plt._clear_or_create_all_local_state()
+        check_tabs_info_is_cleared()
+        s.plt._get_business_state(business_id)
+
+        assert(_tabs == s.plt._tabs)
+        assert(_tabs_group_id == s.plt._tabs_group_id)
+        assert(_tabs_last_order == s.plt._tabs_last_order)
+        assert(_tabs_group_modified == s.plt._tabs_group_modified)
+
+        check_tabs_index_in_business_state(_tabs_index, how_many)
+
     def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
         bentobox_id: Dict = {'bentoboxId': 'test20220101'}
         bentobox_data: Dict = {
@@ -3722,6 +3763,7 @@ def test_tabs():
             {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
             {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5},
         ]
+
         s.plt.bar(
             data=data,
             x='date', y=['x', 'y'],
@@ -3730,6 +3772,7 @@ def test_tabs():
             bentobox_data=bentobox_id,
             tabs_index=tabs_index
         )
+        check_all_data_restored_correctly(tabs_index, 3)
 
     _test_bentobox()
     _test_bentobox(("Deepness 1", "Bento box"))
@@ -3750,6 +3793,8 @@ def test_tabs():
         order=1,
         tabs_index=tabs_index
     )
+
+    check_all_data_restored_correctly(tabs_index, 2)
 
     s.plt.bar(
         data=data,
@@ -3843,11 +3888,14 @@ def test_tabs():
         ],
     }
 
+    tabs_index = ("Deepness 0", "Input Form")
     s.plt.input_form(
         menu_path=menu_path, order=0,
         report_dataset_properties=report_dataset_properties,
-        tabs_index=("Deepness 0", "Input Form")
+        tabs_index=tabs_index
     )
+
+    check_tabs_index_in_business_state(tabs_index, 1)
 
     for i in range(5):
         s.plt.indicator(data={
@@ -3931,19 +3979,24 @@ def test_tabs():
         tabs_index=("Bar deep 2", "Line 2")
     )
 
-    s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
-                                   parent_tab_index=("Bar deep 1", "Bar 1"),
-                                   child_tabs_group="Bar deep 2")
+    s.plt.insert_tabs_group_in_tab(
+        menu_path=menu_path,
+        parent_tab_index=("Bar deep 1", "Bar 1"),
+        child_tabs_group="Bar deep 2"
+    )
 
-    s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
-                                   parent_tab_index=("Deepness 0", "Bar 1"),
-                                   child_tabs_group="Bar deep 1")
+    s.plt.insert_tabs_group_in_tab(
+        menu_path=menu_path,
+        parent_tab_index=("Deepness 0", "Bar 1"),
+        child_tabs_group="Bar deep 1"
+    )
 
     for i in [4, 3, 2, 1]:
-        s.plt.insert_tabs_group_in_tab(menu_path=menu_path,
-                                       parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
-                                       child_tabs_group=(f"Deepness {i}")
-                                       )
+        s.plt.insert_tabs_group_in_tab(
+            menu_path=menu_path,
+            parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
+            child_tabs_group=f"Deepness {i}"
+        )
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:

@@ -9,6 +9,7 @@ import json5
 import datetime as dt
 import pandas as pd
 import numpy as np
+import warnings
 from pandas import DataFrame
 
 import uuid
@@ -105,65 +106,82 @@ class BasePlot(PlotAux):
 
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
-        self._clear_or_create_tabs_info()
-        self._clear_or_create_reports_info()
+        self._clear_or_create_all_local_state()
 
     def _clear_or_create_all_local_state(self):
-        self._clear_or_create_reports_info()
-        self._clear_or_create_tabs_info()
+        # Clear or create apps info():
+        # Map to store the last order of a path
+        self._paths_last_order = dict()
 
-    def _clear_or_create_reports_info(self):
+        # Clear or create reports
         # Map to store reports order
         self._report_order = dict()
 
         # Map to store the link between reports and tab
         self._report_in_tab = dict()
 
-    def _clear_or_create_tabs_info(self):
+        # Clear or create tabs
         # Tree to store tab plotting information
         self._tabs = dict(dict(list()))
 
         # Map to store the report_id of each tab
         self._tabs_group_id = dict()
 
-        # Map to store the first and last order of its reports
+        # Map to store the last order of its reports
         self._tabs_last_order = dict()
 
         # Flag tabs modifications
         self._tabs_group_modified = set()
 
     def _get_business_state(self, business_id: str):
-        self._get_business_reports_info(business_id)
-        self._get_business_tabs_info(business_id)
+        def _get_business_apps_info(business_id: str):
+            business_reports = self._get_business_reports(business_id)
+            for report in business_reports:
+                app_id = report['appId']
+                path = report['path']
+                # We don't want to append infinitely, we just want to append plots in the current execution
+                # order = report['order']
+                if path not in self._paths_last_order:
+                    self._paths_last_order[(app_id, path)] = -1
 
-    def _get_business_reports_info(self, business_id: str):
-        business_reports = self._get_business_reports(business_id)
-        self._report_order = {report['id']: report['order'] for report in business_reports}
+        def _get_business_reports_info(business_id: str):
+            business_reports = self._get_business_reports(business_id)
+            self._report_order = {report['id']: report['order'] for report in business_reports}
 
-    def _get_business_tabs_info(self, business_id: str):
-        business_reports = self._get_business_reports(business_id)
-        business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
+        def _get_business_tabs_info(business_id: str):
+            business_reports = self._get_business_reports(business_id)
+            business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
-        for tabs_group_report in business_tabs:
-            data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"'))
-            properties = json.loads(tabs_group_report['properties'].replace("'", '"'))
-            tabs_group_report_id = tabs_group_report['id']
-            app_id = tabs_group_report['appId']
-            path_name = tabs_group_report['path'] if tabs_group_report['path'] else ""
-            last_order = data_fields['lastOrder']
-            group_name = data_fields['groupName']
-            tabs_group_entry = (app_id, path_name, group_name)
+            for tabs_group_report in business_tabs:
+                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"'))
+                properties = json.loads(tabs_group_report['properties'].replace("'", '"'))
+                tabs_group_report_id = tabs_group_report['id']
+                app_id = tabs_group_report['appId']
+                path_name = tabs_group_report['path'] if tabs_group_report['path'] else ""
+                last_order = data_fields['lastOrder']
+                group_name = data_fields['groupName']
+                tabs_group_entry = (app_id, path_name, group_name)
 
-            self._tabs_group_id[tabs_group_entry] = tabs_group_report_id
-            self._tabs_last_order[tabs_group_entry] = last_order
-            tabs_group = properties['tabs']
-            self._tabs[tabs_group_entry] = {}
-            for tab_name, report_id_list in tabs_group.items():
-                self._tabs[tabs_group_entry][tab_name] = []
-                for report_id in report_id_list:
-                    if report_id in self._report_order:
-                        self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
-                        self._tabs[tabs_group_entry][tab_name] += [report_id]
+                self._tabs_group_id[tabs_group_entry] = tabs_group_report_id
+                self._tabs_last_order[tabs_group_entry] = last_order
+                try:
+                    tabs_group = properties['tabs']
+                except KeyError:
+                    warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
+                    continue
+
+                self._tabs[tabs_group_entry] = {}
+                for tab_name, order_and_report_ids in tabs_group.items():
+                    report_ids = order_and_report_ids['reportIds']
+                    self._tabs[tabs_group_entry][tab_name] = []
+                    for report_id in report_ids:
+                        if report_id in self._report_order:
+                            self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
+                            self._tabs[tabs_group_entry][tab_name] += [report_id]
+
+        _get_business_apps_info(business_id)
+        _get_business_reports_info(business_id)
+        _get_business_tabs_info(business_id)
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -374,10 +392,16 @@ class BasePlot(PlotAux):
                 if (
                         report['path'] == path_name
                         and report['order'] == order
+                        and report['id'] not in self._report_in_tab
+                        # Don't accept plots inside of tabs even if the order matches
                 )
             ]
         else:
-            tab_report_list = self._tabs[(app_id, path_name, tabs_index[0])][tabs_index[1]]
+            tabs_group_entry = (app_id, path_name if path_name else '', tabs_index[0])
+            tab_name = tabs_index[1]
+            if tabs_group_entry not in self._tabs or tab_name not in self._tabs[tabs_group_entry]:
+                return []
+            tab_report_list = self._tabs[tabs_group_entry][tabs_index[1]]
             target_reports: List[Dict] = [
                 report
                 for report in reports
@@ -435,7 +459,10 @@ class BasePlot(PlotAux):
         if tabs_group_entry in self._tabs_group_modified:
             report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
                                             str(self._tabs_last_order[tabs_group_entry])+'}'
-            report_metadata['properties'] = '{"tabs":' + json.dumps(self._tabs[tabs_group_entry]) + '}'
+            tabs = json.dumps(
+                {tab_name: {'order': index, 'reportIds': report_ids_list}
+                 for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
+            report_metadata['properties'] = '{"tabs":' + tabs + '}'
             self._tabs_group_modified.remove(tabs_group_entry)
 
         self.update_report(
@@ -448,11 +475,12 @@ class BasePlot(PlotAux):
     def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
         """Creates a tab report and stores its id"""
         app_id, path_name, group_name = tabs_group_entry
+        path_entry = (app_id, path_name)
 
         report_metadata: Dict[str, Any] = {
             'dataFields': "{'groupName': '" + group_name + "', 'lastOrder': 0 }",
             'path': path_name if path_name != "" else None,
-            'order': 0,
+            'order': self._paths_last_order[path_entry]+1,
             'reportType': 'TABS',
             'properties': '{}'
         }
@@ -461,7 +489,8 @@ class BasePlot(PlotAux):
             app_id=app_id,
             report_metadata=report_metadata,
         )
-        self._report_order[report['id']] = 0
+        self._paths_last_order[path_entry] += 1
+        self._report_order[report['id']] = self._paths_last_order[path_entry]
         self._tabs_group_id[tabs_group_entry] = report['id']
 
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
@@ -496,7 +525,7 @@ class BasePlot(PlotAux):
 
     def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
                        report_id: str, tabs_index: Tuple[str, str],
-                       order_of_chart: int, overwrite: bool = True) -> Union[None, str]:
+                       order_of_chart: int):
         """This function creates an entry on the tabs tree. If there exists another chart in the same order in the tab
          as the one being created it returns its report_id, if not it returns None"""
 
@@ -509,7 +538,8 @@ class BasePlot(PlotAux):
             raise TypeError("Tabs indexing data must be of the type 'str'.")
 
         if self._report_in_tab.get(report_id):
-            raise TypeError("A report can only be included in one tab.")
+            warnings.warn("A report can only be included in one tab.", RuntimeWarning)
+            return
 
         tabs_group_entry = (app_id, path_name, group)
         tab_entry = (app_id, path_name, tabs_index)
@@ -524,7 +554,7 @@ class BasePlot(PlotAux):
             self._tabs[tabs_group_entry] = {tab: [report_id]}
             self._tabs_last_order[tabs_group_entry] = order_of_chart
             self._update_tabs_group_metadata(business_id, app_id, path_name, group)
-            return None
+            return
 
         # Check if it's order is greater than the last report
         if order_of_chart > self._tabs_last_order[tabs_group_entry]:
@@ -533,21 +563,10 @@ class BasePlot(PlotAux):
         if not self._tabs[tabs_group_entry].get(tab):
             self._tabs[tabs_group_entry][tab] = [report_id]
             self._update_tabs_group_metadata(business_id, app_id, path_name, group)
-            return None
+            return
 
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
-
-        # This shouldn't be necessary, but right now it works, Have it in mind!!!
-        other_chart = None
-        for report_id_aux in self._tabs[tabs_group_entry][tab]:
-            order_of_chart_aux = self._report_order[report_id_aux]
-            if order_of_chart_aux == order_of_chart and report_id_aux != report_id and overwrite:
-                other_chart = report_id_aux
-                self._delete_report_id_from_tab(other_chart)
-                break
-
         self._update_tabs_group_metadata(business_id, app_id, path_name, group)
-        return other_chart
 
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -580,12 +599,14 @@ class BasePlot(PlotAux):
         app = self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
-        if overwrite and tabs_index is None:
+        if overwrite:
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
                 grid=report_metadata.get('grid'),
+                tabs_index=tabs_index,
+                overwrite=True
             )
 
         report: Dict = self._create_report(
@@ -596,20 +617,16 @@ class BasePlot(PlotAux):
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
+        path_entry = (app_id, path_name if path_name else '')
+        if path_entry not in self._paths_last_order:
+            self._paths_last_order[path_entry] = -1
+
+        if not tabs_index and order and order > self._paths_last_order[path_entry]:
+            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            other_chart = self._insert_in_tab(self.business_id, app_id, path_name,
-                                              report_id, tabs_index, order, overwrite)
-            if other_chart and overwrite:
-                self._delete_report(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                    report_id=other_chart
-                )
-                try:  # It should always exist
-                    del self._report_order[other_chart]
-                except KeyError:
-                    print("Report wasn't correctly stored in self._report_order")
+            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+
         try:
             if data:
                 self._update_report_data(
@@ -1199,12 +1216,14 @@ class BasePlot(PlotAux):
         app = self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
-        if overwrite and tabs_index is None:
+        if overwrite:
             self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
                 grid=report_metadata.get('grid'),
+                tabs_index=tabs_index,
+                overwrite=True,
             )
 
         items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
@@ -1225,20 +1244,16 @@ class BasePlot(PlotAux):
         )
         report_id: str = report_dataset['report']['id']
         self._report_order[report_id] = report_dataset['report']['order']
+        path_entry = (app_id, path_name if path_name else '')
+
+        if path_entry not in self._paths_last_order:
+            self._paths_last_order[path_entry] = -1
+
+        if not tabs_index and order and order > self._paths_last_order[path_entry]:
+            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            other_chart = self._insert_in_tab(self.business_id, app_id, path_name,
-                                              report_id, tabs_index, order, overwrite)
-            if other_chart and overwrite:
-                self._delete_report(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                    report_id=other_chart
-                )
-                try:  # It should always exist
-                    del self._report_order[other_chart]
-                except KeyError:
-                    print("Report wasn't correctly stored in self._report_order")
+            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         return report_dataset
 
@@ -1251,6 +1266,7 @@ class BasePlot(PlotAux):
             column: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
+            overwrite: bool = False,
     ) -> None:
         """In cascade find the reports that match the query
         and delete them all
@@ -1273,17 +1289,23 @@ class BasePlot(PlotAux):
                 **kwargs,
             )
         )
-        # Necessary for adding more elements to target_reports (it makes the list mutable inside the for loop)
-        for index, report in list(enumerate(target_reports)):
+        business_reports = self._get_business_reports(business_id=self.business_id)
+        for report in target_reports:
             report_id = report['id']
             app_id = report['appId']
+
+            business_reports.remove(report)
+            app_reports = [report for report in business_reports if report['appId'] == app_id]
 
             self._delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_id=report_id
             )
-            del self._report_order[report_id]
+            try:  # It should always exist
+                del self._report_order[report_id]
+            except KeyError:
+                warnings.warn("Report wasn't correctly stored in self._report_order", RuntimeWarning)
 
             # Tabs data structures maintenance
             if report['reportType'] == 'TABS':
@@ -1294,15 +1316,24 @@ class BasePlot(PlotAux):
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
 
+                child_report_ids = [report_id_in_tab
+                                    for tabs_list in self._tabs[tabs_group_entry].values()
+                                    for report_id_in_tab in tabs_list]
+
                 # Add linked reports to the deletion queue
-                target_reports += [report_id_in_tab
-                                   for tabs_list in self._tabs[tabs_group_entry]
-                                   for report_id_in_tab in tabs_list]
+                target_reports += [report for report in app_reports if report['id'] in child_report_ids]
                 if tabs_group_entry in self._tabs:
                     self._delete_tabs_group(tabs_group_entry)
 
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
+
+            # Check if app can be deleted
+            if not overwrite and len(app_reports) == 0:
+                self._delete_app(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                )
 
     def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
@@ -1707,9 +1738,8 @@ class PlotApi(BasePlot):
         order = self._report_order[child_id]
         if last_in_order:
             order = self._tabs_last_order[(app_id, path_name, parent_tab_index[0])] + 1
-            self._tabs_last_order[(app_id, path_name, parent_tab_index[0])] += 1
-            self._report_order[child_id] = order
             self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
+            self._report_order[child_id] = order
 
         self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
 
@@ -1737,7 +1767,8 @@ class PlotApi(BasePlot):
             overwrite: bool = True,
             label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
-            value_suffixes: Optional[Dict[str, str]] = {}
+            value_suffixes: Optional[Dict[str, str]] = {},
+            tabs_index: Optional[Tuple[str, str]] = None
     ):
         """
         {
@@ -2111,12 +2142,16 @@ class PlotApi(BasePlot):
                     menu_path=menu_path,
                     grid=report_metadata.get('grid'),
                     by_component_type=False,
+                    tabs_index=tabs_index,
+                    overwrite=overwrite,
                 )
             else:
                 self.delete(
                     menu_path=menu_path,
                     order=order,
                     by_component_type=False,
+                    tabs_index=tabs_index,
+                    overwrite=overwrite,
                 )
 
         report: Dict = self._create_report(
@@ -2126,8 +2161,18 @@ class PlotApi(BasePlot):
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
-        #TODO adapt tabs to tables
+        path_entry = (app_id, path_name if path_name else '')
 
+        if path_entry not in self._paths_last_order:
+            self._paths_last_order[path_entry] = -1
+
+        if not tabs_index and order and order > self._paths_last_order[path_entry]:
+            self._paths_last_order[path_entry] = order
+
+        if tabs_index:
+            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+
+        #TODO adapt tabs to tables
         report_entry_filter_fields: Dict[str, List[str]] = {
             extra_map[extra_name]: values
             for extra_name, values in filter_fields.items()

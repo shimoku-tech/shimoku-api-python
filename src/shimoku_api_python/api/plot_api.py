@@ -170,6 +170,9 @@ class BasePlot(PlotAux):
                     warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
                     continue
 
+                # Order them correctly to preserve insertion order
+                tabs_group = dict(sorted(tabs_group.items(), key=lambda item: item[1]['order']))
+
                 self._tabs[tabs_group_entry] = {}
                 for tab_name, order_and_report_ids in tabs_group.items():
                     report_ids = order_and_report_ids['reportIds']
@@ -1750,7 +1753,28 @@ class PlotApi(BasePlot):
             path_name = ""
         app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
-        super()._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
+        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
+
+    def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
+        app_name, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app_id = app['id']
+        tabs_group_entry = (app_id, path_name, group_name)
+        tabs_group_aux = {}
+        tabs_group = self._tabs[tabs_group_entry]
+        for tab_name in tabs_list:
+            if tab_name in tabs_group_aux:
+                warnings.warn('Repeated name in order list! Ignoring this element.', RuntimeWarning)
+                continue
+            tabs_group_aux[tab_name] = tabs_group[tab_name]
+
+        assert(len(tabs_group) == len(tabs_group_aux))
+        self._tabs[tabs_group_entry] = tabs_group_aux
+        self._tabs_group_modified.add(tabs_group_entry)
+        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
+
 
     def table(
             self, data: Union[str, DataFrame, List[Dict]],

@@ -3951,6 +3951,9 @@ def test_tabs():
             tabs_index=(f"Deepness {i}", "Indicators 2")
         )
 
+        if i > 1:
+            s.plt.change_tabs_group_internal_order(f"Deepness {i}", menu_path, ['Indicators 2', 'Indicators 1', 'Indicators 2'])
+
     data_bar = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
              {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
@@ -4110,27 +4113,30 @@ def test_tabs():
     )
     assert not s.app.get_app_by_name(business_id=business_id, name=menu_path)
 
+    menu_path = "test-tabs"
+    s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
+
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-# test_tabs()
-# test_line()
-# test_funnel()
-# test_tree()
-# test_get_input_forms()
-# test_delete_path()
-# test_append_data_to_trend_chart()
-# test_iframe()
-# test_html()
-# test_set_new_business()
-# test_table()
-# test_table_with_labels()
-# test_free_echarts()
-# test_input_form()
-# test_dynamic_and_conditional_input_form()
-# test_bentobox()
+test_tabs()
+test_line()
+test_funnel()
+test_tree()
+test_get_input_forms()
+test_delete_path()
+test_append_data_to_trend_chart()
+test_iframe()
+test_html()
+test_set_new_business()
+test_table()
+test_table_with_labels()
+test_free_echarts()
+test_input_form()
+test_dynamic_and_conditional_input_form()
+test_bentobox()
 test_delete()
 test_bar_with_filters()
 test_set_apps_orders()

@@ -306,8 +306,8 @@ class BasePlot(PlotAux):
             tabs_index: Tuple[str, str] = None,
     ) -> List[Dict]:
         type_map = {
-            'alert_indicator': 'INDICATORS',
-            'indicator': 'INDICATORS',
+            'alert_indicator': 'INDICATOR',
+            'indicator': 'INDICATOR',
             'table': None,
             'stockline': 'STOCKLINECHART',
             'html': 'HTML',
@@ -2908,19 +2908,20 @@ class PlotApi(BasePlot):
         raise NotImplementedError
 
     def indicator(
-            self, data: Union[str, DataFrame, List[Dict]], value: str,
+            self, data: Union[str, DataFrame, List[Dict], Dict], value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+            order: Optional[int] = None, rows_size: Optional[int] = 1, cols_size: int = 12,
             padding: Optional[List[int]] = None,
             target_path: Optional[str] = None,
-            set_title: Optional[str] = None,
             header: Optional[str] = None,
             footer: Optional[str] = None,
             color: Optional[str] = None,
             align: Optional[str] = None,
             variant: Optional[str] = None,
+            icon: Optional[str] = None,
+            big_icon: Optional[str] = None,
             background_image: Optional[str] = None,
-            multi_column: int = 4,
+            vertical: bool = False,
             real_time: bool = False,
             bentobox_data: Optional[Dict] = None, 
             tabs_index: Optional[Tuple[str, str]] = None,
@@ -2949,7 +2950,7 @@ class PlotApi(BasePlot):
             header, value
         ]
         mandatory_elements = [element for element in mandatory_elements if element]
-        extra_elements: List[str] = [footer, color, align, variant, target_path, background_image]
+        extra_elements: List[str] = [footer, color, align, variant, target_path, background_image, icon, big_icon]
         extra_elements = [element for element in extra_elements if element]
 
         self._validate_table_data(data, elements=mandatory_elements)
@@ -2964,7 +2965,9 @@ class PlotApi(BasePlot):
             align: 'align',
             variant: 'variant',
             background_image: 'backgroundImage',
-            target_path: 'targetPath'
+            target_path: 'targetPath',
+            icon: 'icon',
+            big_icon: 'bigIcon'
         }
 
         cols_to_rename = {
@@ -2983,45 +2986,54 @@ class PlotApi(BasePlot):
                 df['color'] = df['color'].fillna('black')
             elif extra_element == 'variant':
                 df['variant'] = df['variant'].fillna('default')
-            elif extra_element in ('backgroundImage', 'description', 'targetPath'):
+            elif extra_element in ('backgroundImage', 'description', 'targetPath', 'icon', 'bigIcon'):
                 df[extra_element] = df[extra_element].fillna('')
             else:
                 raise ValueError(f'{extra_element} is not solved')
 
-        report_metadata: Dict = {
-            'reportType': 'INDICATORS',
-            'title': set_title if set_title else ''
-        }
+        if vertical:
+            if bentobox_data:
+                raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
+            bentobox_data = {
+                'bentoboxId': str(uuid.uuid1()),
+                'bentoboxOrder': order,
+                'bentoboxSizeColumns': cols_size,
+                'bentoboxSizeRows': rows_size*len(df),
+            }
+            cols_size = 24
+            rows_size *= 16
+        else:
+            cols_size = cols_size//len(df)
+            if cols_size < 2:
+                raise ValueError('You must not provide more than 6 indicators when using the horizontal configuration')
 
-        # TODO align is not working well yet
-        # By default Shimoku assigns 4 indicators per row
-        #  the following lines adjust it to the nature of the data
-        #  and the multi_column variable
-        len_df: int = len(df)
-        columns: int = 4
-        if len_df < multi_column:
-            columns: int = len_df
-        elif multi_column != 4:
-            columns: int = multi_column
+        for index, df_row in df.iterrows():
+            report_metadata: Dict = {
+                'reportType': 'INDICATOR',
+            }
 
-        data_fields: Dict = {'dataFields': {'columns': columns}}
-        report_metadata.update(data_fields)
+            if bentobox_data:
+                self._validate_bentobox(bentobox_data)
+                report_metadata['bentobox'] = json.dumps(bentobox_data)
 
-        if bentobox_data:
-            self._validate_bentobox(bentobox_data)
-            report_metadata['bentobox'] = json.dumps(bentobox_data)
+            if row and column:
+                report_metadata['grid'] = f'{row}, {column}'
 
-        if row and column:
-            report_metadata['grid'] = f'{row}, {column}'
+            report_metadata['properties'] = json.dumps(df_row.to_dict())
 
-        return self._create_chart(
-            data=df,
-            menu_path=menu_path,
-            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
-            report_metadata=report_metadata,
-            real_time=real_time,
-            tabs_index=tabs_index,
-        )
+            self._create_chart(
+                data=[df_row.to_dict()],
+                menu_path=menu_path,
+                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+                report_metadata=report_metadata,
+                real_time=real_time,
+                tabs_index=tabs_index,
+            )
+
+            if isinstance(order, int):
+                order += 1
+
+        return order
 
     def alert_indicator(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -3029,11 +3041,10 @@ class PlotApi(BasePlot):
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[List[int]] = None,
-            set_title: Optional[str] = None,
             header: Optional[str] = None,
             footer: Optional[str] = None,
             color: Optional[str] = None,
-            multi_column: int = 4,
+            vertical: Optional[bool] = False,
             bentobox_data: Optional[Dict] = None, 
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
@@ -3046,11 +3057,11 @@ class PlotApi(BasePlot):
             menu_path=menu_path, row=row, column=column,
             order=order, cols_size=cols_size, rows_size=rows_size, padding=padding,
             target_path=target_path,
-            set_title=set_title,
             header=header,
             footer=footer, color=color,
-            multi_column=multi_column,
+            vertical=vertical,
             bentobox_data=bentobox_data,
+            tabs_index=tabs_index
         )
 
     def pie(

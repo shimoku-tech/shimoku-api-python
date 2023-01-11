@@ -3998,6 +3998,28 @@ def test_tabs():
             child_tabs_group=f"Deepness {i}"
         )
 
+
+def test_gauge_indicators():
+    print('test_gauge_indicator')
+    menu_path = 'test/gauge-indicator'
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path,
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path,
+        order=2,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
@@ -4035,6 +4057,7 @@ test_stacked_barchart()
 test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
+test_gauge_indicators()
 test_doughnut()
 test_rose()
 test_ring_gauge()

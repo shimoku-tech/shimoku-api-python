@@ -1669,6 +1669,64 @@ class PlotApi(BasePlot):
         else:
             self.business_id: Optional[str] = None
 
+        self._default_toolbox_options = {
+            'show': True,
+            'orient': 'horizontal',
+            'itemSize': 20,
+            'itemGap': 24,
+            'showTitle': True,
+            'zlevel': 100,
+            'bottom': "2%",
+            'right': "5%",
+            'feature': {
+                'dataView': {
+                    'title': 'Data',
+                    'readOnly': False,
+                    'icon': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a555461a3684b16d544e_database.svg',
+                    'emphasis': {
+                        'iconStyle': {
+                            'textBackgroundColor': 'var(--chart-C1)',
+                            'textBorderRadius': [50, 50, 50, 50],
+                            'textPadding': [8, 8, 8, 8],
+                            'textFill': 'var(--color-white)'
+                        }
+                    },
+                },
+                'magicType': {
+                    'type': ['line', 'bar'],
+                    'title': {
+                        'line': 'Switch to Line Chart',
+                        'bar': 'Switch to Bar Chart',
+                    },
+                    'icon': {
+                        'line': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a55564d52c1ba4d9884d_linechart.svg',
+                        'bar': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a5553cc6580f8e0edea4_barchart.svg'
+                    },
+                    'emphasis': {
+                        'iconStyle': {
+                            'textBackgroundColor': 'var(--chart-C1)',
+                            'textBorderRadius': [50, 50, 50, 50],
+                            'textPadding': [8, 8, 8, 8],
+                            'textFill': 'var(--color-white)'
+                        }
+                    },
+                },
+                'saveAsImage': {
+                    'show': True,
+                    'title': 'Save as image',
+                    'icon': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a555662e1af339154c64_download.svg',
+                    'emphasis': {
+                        'iconStyle': {
+                            'textBackgroundColor': 'var(--chart-C1)',
+                            'textBorderRadius': [50, 50, 50, 50],
+                            'textPadding': [8, 8, 8, 8],
+                            'textFill': 'var(--color-white)'
+                        }
+                    }
+                }
+            }
+        }
+
     def set_business(self, business_id: str):
         super().set_business(business_id)
         self._clear_or_create_all_local_state()
@@ -4101,21 +4159,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': {
-                    'show': True,
-                    'feature': {
-                        'dataView': {
-                            'readOnly': False
-                        },
-                        'magicType': {
-                            'type': ['line', 'bar']
-                        },
-                        'saveAsImage': {}
-                    },
-                    'orient': 'horizontal',
-                    'bottom': '2%',
-                    'right': '5%',
-                },
+                'toolbox': self._default_toolbox_options,
                 'xAxis': {
                     'type': 'category',
                     'fontFamily': 'Rubik',
@@ -4204,21 +4248,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': {
-                    'show': True,
-                    'feature': {
-                        'dataView': {
-                            'readOnly': False
-                        },
-                        'magicType': {
-                            'type': ['line', 'bar']
-                        },
-                        'saveAsImage': {}
-                    },
-                    'orient': 'horizontal',
-                    'bottom': '2%',
-                    'right': '5%',
-                },
+                'toolbox': self._default_toolbox_options,
                 'xAxis': {
                     'name': x_axis_name if x_axis_name else "",
                     'type': 'value',
@@ -4307,21 +4337,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': {
-                    'show': True,
-                    'feature': {
-                        'dataView': {
-                            'readOnly': False
-                        },
-                        'magicType': {
-                            'type': ['line', 'bar']
-                        },
-                        'saveAsImage': {}
-                    },
-                    'orient': 'horizontal',
-                    'bottom': '2%',
-                    'right': '5%',
-                },
+                'toolbox': self._default_toolbox_options,
                 'xAxis': {
                     'type': 'category',
                     'fontFamily': 'Rubik',

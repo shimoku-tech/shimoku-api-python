@@ -1353,6 +1353,14 @@ class BasePlot(PlotAux):
             return
 
         app_id: str = app['id']
+        if '/' not in menu_path:
+            self._delete_app(
+                business_id=self.business_id,
+                app_id=app_id,
+            )
+            self._clear_or_create_all_local_state()
+            self._get_business_state(self.business_id)
+            return
 
         reports: List[Dict] = self._get_app_reports(
             business_id=self.business_id, app_id=app_id,
@@ -1387,19 +1395,15 @@ class BasePlot(PlotAux):
 
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
-        else:
-            if '/' not in menu_path:
-                self._delete_app(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                )
-            self._clear_or_create_all_local_state()
-            self._get_business_state(self.business_id)
 
     def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
         for app in self.get_business_apps(self.business_id):
-            self.delete_path(app["name"])
+            self._delete_app(
+                business_id=self.business_id,
+                app_id=app['id'],
+            )
+        self._clear_or_create_all_local_state()
 
     # TODO pending add append_report_data to free Echarts
     def free_echarts(

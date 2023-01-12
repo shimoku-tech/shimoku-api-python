@@ -397,7 +397,7 @@ def test_delete():
         by_component_type=False,
     )
 
-    assert not s.app.get_app_reports(business_id, app_id)
+    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
 
 
 def test_append_data_to_trend_chart():
@@ -3718,7 +3718,7 @@ def test_tabs():
 
         check_tabs_index_in_business_state(_tabs_index, how_many)
 
-    def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
+    def _test_bentobox(tabs_index_=("Deepness 0", "Bento box")):
         bentobox_id: Dict = {'bentoboxId': 'test20220101'}
         bentobox_data: Dict = {
             'bentoboxOrder': 0,
@@ -3727,7 +3727,7 @@ def test_tabs():
         }
         bentobox_data.update(bentobox_id)
 
-        data_ = [
+        data_indic = [
             {
                 "description": "",
                 "title": "Estado",
@@ -3735,28 +3735,28 @@ def test_tabs():
             },
         ]
         s.plt.indicator(
-            data=data_,
+            data=data_indic,
             menu_path=menu_path,
             order=0, rows_size=8, cols_size=12,
             value='value',
             header='title',
             footer='description',
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
 
         s.plt.indicator(
-            data=data_,
+            data=data_indic,
             menu_path=menu_path,
             order=1, rows_size=8, cols_size=12,
             value='value',
             header='title',
             footer='description',
             bentobox_data=bentobox_id,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
 
-        data = [
+        data_bento = [
             {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
             {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
             {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
@@ -3765,17 +3765,40 @@ def test_tabs():
         ]
 
         s.plt.bar(
-            data=data,
+            data=data_bento,
             x='date', y=['x', 'y'],
             menu_path=menu_path,
             order=2, rows_size=14, cols_size=24,
             bentobox_data=bentobox_id,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
-        check_all_data_restored_correctly(tabs_index, 3)
+        check_all_data_restored_correctly(tabs_index_, 3)
+
+    data_table = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
+    ]
+    filter_columns: List[str] = ['filtA', 'filtB']
+    search_columns: List[str] = ['name']
 
     _test_bentobox()
+
+    s.plt.table(
+        title="Test-table",
+        data=data_table,
+        menu_path=menu_path,
+        order=0,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+        search_columns=search_columns,
+        tabs_index=('Deepness 0', 'table test')
+    )
+
     _test_bentobox(("Deepness 1", "Bento box"))
+
     tabs_index = ("Deepness 0", "line test")
 
     s.plt.line(
@@ -3928,14 +3951,17 @@ def test_tabs():
             tabs_index=(f"Deepness {i}", "Indicators 2")
         )
 
-    data_ = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+        if i > 1:
+            s.plt.change_tabs_group_internal_order(f"Deepness {i}", menu_path, ['Indicators 2', 'Indicators 1', 'Indicators 2'])
+
+    data_bar = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
              {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
              {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
              {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5}]
 
     s.plt.bar(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3946,7 +3972,7 @@ def test_tabs():
         tabs_index=("Bar deep 1", "Bar 1")
     )
     s.plt.bar(
-        data=data_,
+        data=data_bar,
         x='date', y=['y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3957,7 +3983,7 @@ def test_tabs():
         tabs_index=("Bar deep 2", "Bar 1")
     )
     s.plt.line(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3968,7 +3994,7 @@ def test_tabs():
         tabs_index=("Bar deep 2", "Line 1")
     )
     s.plt.line(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3997,6 +4023,99 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
+
+    #Test overwrite
+    _test_bentobox()
+    _test_bentobox(("Deepness 1", "Bento box"))
+    tabs_index = ("Deepness 0", "line test")
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=0,
+        tabs_index=tabs_index
+    )
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1,
+        tabs_index=tabs_index
+    )
+
+    check_all_data_restored_correctly(tabs_index, 2)
+
+    tabs_index = ("Deepness 0", "Input Form")
+    s.plt.input_form(
+        menu_path=menu_path, order=0,
+        report_dataset_properties=report_dataset_properties,
+        tabs_index=tabs_index
+    )
+
+    s.plt.table(
+        title="Test-table",
+        data=data_table,
+        menu_path=menu_path,
+        order=0,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+        search_columns=search_columns,
+        tabs_index=('Deepness 0', 'table test')
+    )
+
+    menu_path = 'test_delete_tabs'
+    for i in range(5):
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "warning"
+        },
+            menu_path=menu_path,
+            order=i*2,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 1")
+        )
+
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "main"
+        },
+            menu_path=menu_path,
+            order=0,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 2")
+        )
+
+    for i in [4, 3, 2, 1]:
+        s.plt.insert_tabs_group_in_tab(
+            menu_path=menu_path,
+            parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
+            child_tabs_group=f"Deepness {i}"
+        )
+        check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
+
+    # Test if cascade deletion works correctly
+    s.plt.delete(
+        menu_path=menu_path,
+        order=0,
+        by_component_type=False,
+    )
+    assert not s.app.get_app_by_name(business_id=business_id, name=menu_path)
+
+    menu_path = "test-tabs"
+    s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
+
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:

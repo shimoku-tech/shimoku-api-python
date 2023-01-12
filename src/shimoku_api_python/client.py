@@ -9,7 +9,8 @@ from typing import List, Dict
 import datetime
 import requests
 import json
-
+from tenacity import retry, wait_exponential, stop_after_attempt
+import random
 from shimoku_api_python.exceptions import ApiClientError
 
 
@@ -71,6 +72,7 @@ class ApiClient(object):
 
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
     def call_api(
             self, resource_path, method, path_params=None, query_params=None,
             header_params=None, body=None, collection_formats=None, **kwargs

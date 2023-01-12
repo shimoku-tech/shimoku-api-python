@@ -3512,6 +3512,11 @@ def test_input_form():
                 'fieldName': 'Objetivos',
                 'inputType': 'multiSelect',
                 'options': ['sleep', 'close eyes', 'awake']
+              },
+              {
+                'mapping': 'voice',
+                'fieldName': 'Audio recorder',
+                'inputType': 'audio',
               }
           ],
         },

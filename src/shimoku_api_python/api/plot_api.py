@@ -2921,7 +2921,7 @@ class PlotApi(BasePlot):
             icon: Optional[str] = None,
             big_icon: Optional[str] = None,
             background_image: Optional[str] = None,
-            vertical: bool = False,
+            vertical: Union[bool, str] = False,
             real_time: bool = False,
             bentobox_data: Optional[Dict] = None, 
             tabs_index: Optional[Tuple[str, str]] = None,
@@ -2991,23 +2991,44 @@ class PlotApi(BasePlot):
             else:
                 raise ValueError(f'{extra_element} is not solved')
 
-        if vertical:
+        len_df = len(df)
+        if vertical and (len_df > 1 or isinstance(vertical, str)):
             if bentobox_data:
                 raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
             bentobox_data = {
                 'bentoboxId': str(uuid.uuid1()),
                 'bentoboxOrder': order,
                 'bentoboxSizeColumns': cols_size,
-                'bentoboxSizeRows': rows_size*len(df),
+                'bentoboxSizeRows': rows_size*len_df,
             }
-            cols_size = 24
-            rows_size *= 16
+            # fixexd cols_size for bentobox and variable rows size
+            cols_size = 22
+            rows_size *= 10
+
+            padding = '1,1,0,1'
+            if isinstance(vertical, str):
+                html = (
+                    f"<p>{vertical}</p>"
+                )
+                self.html(
+                    html=html,
+                    menu_path=menu_path,
+                    order=order, rows_size=2, cols_size=cols_size,
+                    bentobox_data=bentobox_data,
+                    padding=padding,
+                )
+                order += 1
+
         else:
-            cols_size = cols_size//len(df)
+            cols_size = cols_size//len_df
             if cols_size < 2:
                 raise ValueError('You must not provide more than 6 indicators when using the horizontal configuration')
 
+        last_index = df.index[-1]
         for index, df_row in df.iterrows():
+            if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
+                padding = '1,1,1,1'
+
             report_metadata: Dict = {
                 'reportType': 'INDICATOR',
             }

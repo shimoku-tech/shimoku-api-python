@@ -1744,17 +1744,61 @@ def test_indicator():
             "val": "1.1946",
         },
     ]
-    s.plt.indicator(
+    order = s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         value='val',
         header='header',
         footer='footer',
         align='alignment',
         color='col'
     )
-
+    order = s.plt.indicator(
+        data=data_+data_[2:],
+        menu_path=menu_path,
+        order=order,
+        value='val',
+        header='header',
+        footer='footer',
+        align='alignment',
+        color='col'
+    )
+    data_ = [{
+        "color": "success",
+        "variant": "contained",
+        "description": "This indicator has a Link",
+        "targetPath": "/indicators/indicator/1",
+        "title": "Target Indicator",
+        "align": "left",
+        "value": "500€",
+    }, {
+        "color": "warning",
+        "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
+        "variant": "outlined",
+        "description": "This has a background",
+        "title": "Super cool indicator",
+        "align": "left",
+        "value": "Value",
+    }, {
+        "color": "error",
+        "variant": "outlined",
+        "description": "This hasn't got any icons",
+        "title": "Error indicator",
+        "align": "left",
+        "value": "Value",
+        "icon": "Line/download",
+    }, {
+        "color": "caution",
+        "variant": "contained",
+        "description": "Aligned to right and full of icons",
+        "title": "Multiple cases",
+        "align": "right",
+        "value": "Value",
+        "icon": "Line/download",
+        "bigIcon": "Line/calendar",
+    }
+    ]
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
@@ -1773,8 +1817,8 @@ def test_indicator():
 
     order = s.plt.indicator(
         data=data_+data_,
-        menu_path=menu_path+'_vertical',
-        order=0, rows_size=1, cols_size=4,
+        menu_path=menu_path+'-vertical',
+        order=0, rows_size=1, cols_size=6,
         value='value',
         header='title',
         footer='description',
@@ -1785,11 +1829,11 @@ def test_indicator():
         icon='icon',
         big_icon='bigIcon',
         background_image='backgroundImage',
-        vertical=True
+        vertical="Title of the indicators"
     )
     order = s.plt.indicator(
         data=data_,
-        menu_path=menu_path + '_vertical',
+        menu_path=menu_path + '-vertical',
         order=order, rows_size=2, cols_size=4,
         value='value',
         header='title',
@@ -1803,9 +1847,35 @@ def test_indicator():
         background_image='backgroundImage',
         vertical=True
     )
-
+    order = s.plt.indicator(
+        data=data_[0],
+        menu_path=menu_path + '-vertical',
+        order=order, rows_size=8, cols_size=2,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        vertical="Title of the indicator"
+    )
+    s.plt.indicator(
+        data=data_[0],
+        menu_path=menu_path + '-vertical',
+        order=order, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        vertical=True
+    )
     if delete_paths:
         s.plt.delete_path(menu_path)
+        s.plt.delete_path(menu_path+'-vertical')
 
 
 def test_indicator_one_dict():

@@ -13,6 +13,8 @@ from shimoku_api_python.api.ai_api import AiAPI
 from shimoku_api_python.api.ping_api import PingApi
 
 from shimoku_api_python.client import ApiClient
+
+import shimoku_components_catalog.html_components
 # from shimoku_api_python.configuration import Configuration
 
 
@@ -40,6 +42,7 @@ class Client(object):
         self.io = FileMetadataApi(self._api_client, business_id=business_id)
         self.plt = PlotApi(self._api_client, business_id=business_id)
         self.ai = AiAPI(self._api_client)
+        self.html_components = shimoku_components_catalog.html_components
 
     def set_config(self, config={}):
-        self.api_client.set_config(config)
+        self._api_client.set_config(config)

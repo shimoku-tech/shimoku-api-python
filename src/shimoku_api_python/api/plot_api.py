@@ -659,7 +659,7 @@ class BasePlot(PlotAux):
             order: Optional[int] = None,
             rows_size: Optional[int] = None,
             cols_size: Optional[int] = None,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -1415,7 +1415,7 @@ class BasePlot(PlotAux):
             order: Optional[int] = None,
             rows_size: Optional[int] = None,
             cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             overwrite: bool = True,
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None, 
@@ -2349,7 +2349,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2428,7 +2428,7 @@ class PlotApi(BasePlot):
             x: List[str], y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2493,7 +2493,7 @@ class PlotApi(BasePlot):
             x: List[str], y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2561,7 +2561,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2620,7 +2620,7 @@ class PlotApi(BasePlot):
             color_mark: str = 'rgba(255, 173, 177, 0.4)',
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2689,7 +2689,7 @@ class PlotApi(BasePlot):
             x: str, y: str,  # above_band_name: str, below_band_name: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2811,7 +2811,7 @@ class PlotApi(BasePlot):
             x: str, y: str,  # above_band_name: str, below_band_name: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -2930,7 +2930,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
@@ -2977,7 +2977,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3014,7 +3014,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str], z: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3042,7 +3042,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, DataFrame, List[Dict], Dict], value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = 1, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             target_path: Optional[str] = None,
             header: Optional[str] = None,
             footer: Optional[str] = None,
@@ -3192,7 +3192,7 @@ class PlotApi(BasePlot):
             value: str, target_path: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             header: Optional[str] = None,
             footer: Optional[str] = None,
             color: Optional[str] = None,
@@ -3221,7 +3221,7 @@ class PlotApi(BasePlot):
             x: str, y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -3280,7 +3280,7 @@ class PlotApi(BasePlot):
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -3329,7 +3329,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -3369,7 +3369,7 @@ class PlotApi(BasePlot):
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -3410,7 +3410,7 @@ class PlotApi(BasePlot):
             name: str, children: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
@@ -3451,7 +3451,7 @@ class PlotApi(BasePlot):
             x: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3485,7 +3485,7 @@ class PlotApi(BasePlot):
             x: str, y: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3540,7 +3540,7 @@ class PlotApi(BasePlot):
             x: str, y: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3596,7 +3596,7 @@ class PlotApi(BasePlot):
             source: str, target: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3647,7 +3647,7 @@ class PlotApi(BasePlot):
             name: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3691,7 +3691,7 @@ class PlotApi(BasePlot):
             min: int, max: int,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             # subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -3871,7 +3871,7 @@ class PlotApi(BasePlot):
         name: str, value: str,
         menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
         order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-        padding: Optional[List[int]] = None,
+        padding: Optional[str] = None,
         title: Optional[str] = None,  # second layer
         # subtitle: Optional[str] = None,
         x_axis_name: Optional[str] = None,
@@ -3928,7 +3928,7 @@ class PlotApi(BasePlot):
         menu_path: str, order: int,
         name_field: Optional[str] = 'name', value_field: Optional[str] = 'value',
         rows_size: Optional[int] = 2, cols_size: int = 3,
-        padding: Optional[List[int]] = None,
+        padding: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
@@ -4001,7 +4001,7 @@ class PlotApi(BasePlot):
         menu_path: str, order: int,
         name_field: Optional[str] = 'name', value_field: Optional[str] = 'value',
         rows_size: Optional[int] = 2, cols_size: int = 3,
-        padding: Optional[List[int]] = None,
+        padding: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
@@ -4054,7 +4054,7 @@ class PlotApi(BasePlot):
         value: Union[int, float], menu_path: str, order: int,
         name: Optional[str] = None, color: Optional[Union[str, int]] = 1,
         rows_size: Optional[int] = 1, cols_size: int = 3,
-        padding: Optional[List[int]] = None,
+        padding: Optional[str] = None,
         option_modifications: Optional[Dict] = None,  # third layer
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
@@ -4066,9 +4066,9 @@ class PlotApi(BasePlot):
             data[0]['name'] = name
 
         #TODO this should use a more general method for interpreting color
-        default_FE_colors = ['success', 'error', 'warning', 'success-light',
-                             'error-light', 'warning-light', 'status-error']
-        if color in default_FE_colors:
+        _default_FE_colors = ['success', 'error', 'warning', 'success-light',
+                              'error-light', 'warning-light', 'status-error']
+        if color in _default_FE_colors:
             color = f'var(--color-{color})'
         elif isinstance(color, int):
             color = f'var(--chart-C{abs(color)})'
@@ -4187,12 +4187,130 @@ class PlotApi(BasePlot):
             )
         return order+1
 
+    def gauge_indicator(
+            self, menu_path: str, order: int, value: int,
+            title: Optional[str] = "", description: Optional[str] = "",
+            cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
+            color: Optional[Union[str, int]] = 1,
+    ):
+        bentobox_id = str(uuid.uuid1())
+        bentobox_data = {
+            'bentoboxId': bentobox_id,
+            'bentoboxOrder': order,
+            'bentoboxSizeColumns': cols_size,
+            'bentoboxSizeRows': rows_size,
+        }
+
+        data_ = [
+            {
+                'description': description,
+                'title': title,
+                'value': '',
+                'color': '',
+                'align': 'left'
+            }
+        ]
+
+        self.indicator(
+            data=data_,
+            menu_path=menu_path,
+            order=order, rows_size=10, cols_size=17,
+            padding='1, 1, 0, 1',
+            value='value',
+            color='color',
+            header='title',
+            footer='description',
+            align='align',
+            bentobox_data=bentobox_data,
+        )
+
+        data_gauge = [{'value': value}]
+
+        #TODO this should use a more general method for interpreting color
+        _default_FE_colors = ['success', 'error', 'warning', 'success-light',
+                              'error-light', 'warning-light', 'status-error']
+        if color in _default_FE_colors:
+            color = f'var(--color-{color})'
+        elif isinstance(color, int):
+            color = f'var(--chart-C{abs(color)})'
+
+        raw_options = {
+            'grid': {
+                'left': ['5%'],
+                'right': ['5%'],
+                'top': ['5%'],
+                'bottom': ['5%'],
+                'containLabel': True
+            },
+            'series': [
+                {
+                    'type': 'gauge',
+                    'startAngle': 360,
+                    'endAngle': 0,
+                    'radius': '80%',
+                    'center': ['50%', '40%'],
+                    'min': 0,
+                    'max': 100,
+                    'pointer': {
+                        'show': False,
+                    },
+                    'progress': {
+                        'show': True,
+                        'width': 20,
+                        'overlap': False,
+                        'roundCap': False,
+                        'clip': False,
+                        'itemStyle': {
+                            'borderWidth': 0,
+                            'color': color,
+                        }
+                    },
+                    'splitLine': {
+                        'show': False,
+                    },
+                    'axisLine': {'lineStyle': {'width': 20}},
+                    'axisTick': {
+                        'show': False
+                    },
+                    'axisLabel': {
+                        'show': False,
+                    },
+                    'title': {
+                        'show': False,
+                        'fontSize': 16,
+                        'fontFamily': 'Rubik',
+                    },
+                    'data': data_gauge,
+                    'detail': {
+                        'fontSize': 24,
+                        'fontFamily': 'Rubik',
+                        'font': 'inherit',
+                        'color': 'var(--color-black)',
+                        'borderColor': 'auto',
+                        'borderWidth': 0,
+                        'formatter': '{value}%',
+                        'valueAnimation': True,
+                        'offsetCenter': ['0', '60']
+                    }
+                }
+            ]
+        }
+
+        self.free_echarts(
+            data=data_gauge,
+            options=raw_options,
+            menu_path=menu_path,
+            order=order+1, rows_size=10, cols_size=5,
+            padding='2, 0, 1, 0',
+            bentobox_data=bentobox_data,
+        )
+
     def themeriver(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, name: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             title: Optional[str] = None,  # second layer
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
@@ -4232,7 +4350,7 @@ class PlotApi(BasePlot):
             menu_path: str,
             x: str,
             order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
@@ -4321,7 +4439,7 @@ class PlotApi(BasePlot):
             menu_path: str,
             x: str,
             order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
@@ -4411,7 +4529,7 @@ class PlotApi(BasePlot):
             menu_path: str,
             x: str,
             order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             subtitle: Optional[str] = None,
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
@@ -4501,7 +4619,7 @@ class PlotApi(BasePlot):
             data: Optional[Union[str, DataFrame, List[Dict]]] = None,
             order: Optional[int] = None,
             rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[List[int]] = None,
+            padding: Optional[str] = None,
             bentobox_data: Optional[Dict] = None, 
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
@@ -4580,7 +4698,7 @@ class PlotApi(BasePlot):
         form_groups: Dict, dynamic_sequential_show: Optional[bool] = False,
         next_group_label: Optional[str] = 'Next',
         rows_size: Optional[int] = 3, cols_size: int = 12,
-        padding: Optional[List[int]] = None,
+        padding: Optional[str] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
     ):

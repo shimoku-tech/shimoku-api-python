@@ -1,4 +1,5 @@
 """"""
+import json
 from typing import Dict
 from abc import ABC
 
@@ -22,4 +23,10 @@ class BusinessMetadataApi(BusinessExplorerApi, ABC):
         return self.update_business(
             business_id=business_id,
             business_data={'name': new_name}
+        )
+
+    def update_business_theme(self, business_id: str, theme: Dict):
+        return self.update_business(
+            business_id=business_id,
+            business_data={'theme': json.dumps(theme)}
         )

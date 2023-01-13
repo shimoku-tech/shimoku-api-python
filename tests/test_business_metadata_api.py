@@ -1,6 +1,7 @@
 """"""
 from os import getenv
 from typing import Dict, List
+import json
 import unittest
 
 import shimoku_api_python as shimoku
@@ -82,6 +83,52 @@ def test_create_and_delete_business():
 
     t = MyBusinessDeletedCase()
     t.test_business_deleted()
+
+
+def test_theme_customization():
+    s.business.update_business_theme(
+        business_id=business_id,
+        theme={},
+    )
+    business: Dict = (
+        s.business.get_business(business_id)
+    )
+
+    assert business['theme'] == '{}'
+
+    theme = {
+        "palette": {
+            "primary": {
+                "main": "#0f530b",
+            },
+        },
+        "typography": {
+            "h1": {
+                "fontSize": "60px",
+            },
+        },
+        "custom": {
+            "radius": {
+                "xs": "0px",
+                "s": "0px",
+                "m": "0px",
+                "l": "0px",
+                "xl": "0px"
+            },
+            "logo": "https://flaxandkale.com/img/logo-flaxandkale-black.png",
+        }
+    }
+
+    s.business.update_business_theme(
+        business_id=business_id,
+        theme=theme,
+    )
+
+    business: Dict = (
+        s.business.get_business(business_id)
+    )
+
+    assert json.loads(business['theme']) == theme
 
 
 def test_update_business():
@@ -178,6 +225,7 @@ def test_get_business_apps():
 test_get_business()
 test_get_fake_business()
 test_create_and_delete_business()
+test_theme_customization()
 test_update_business()
 test_rename_business()
 test_get_business_apps()

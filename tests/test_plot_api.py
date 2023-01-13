@@ -397,7 +397,7 @@ def test_delete():
         by_component_type=False,
     )
 
-    assert not s.app.get_app_reports(business_id, app_id)
+    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
 
 
 def test_append_data_to_trend_chart():
@@ -1744,21 +1744,20 @@ def test_indicator():
             "val": "1.1946",
         },
     ]
-    s.plt.indicator(
+    order = s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         value='val',
         header='header',
         footer='footer',
         align='alignment',
         color='col'
     )
-
-    s.plt.indicator(
-        data=data_,
+    order = s.plt.indicator(
+        data=data_+data_[2:],
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=order,
         value='val',
         header='header',
         footer='footer',
@@ -1772,7 +1771,7 @@ def test_indicator():
         "targetPath": "/indicators/indicator/1",
         "title": "Target Indicator",
         "align": "left",
-        "value": "500€"
+        "value": "500€",
     }, {
         "color": "warning",
         "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
@@ -1780,7 +1779,7 @@ def test_indicator():
         "description": "This has a background",
         "title": "Super cool indicator",
         "align": "left",
-        "value": "Value"
+        "value": "Value",
     }, {
         "color": "error",
         "variant": "outlined",
@@ -1788,6 +1787,7 @@ def test_indicator():
         "title": "Error indicator",
         "align": "left",
         "value": "Value",
+        "icon": "Line/download",
     }, {
         "color": "caution",
         "variant": "contained",
@@ -1795,12 +1795,14 @@ def test_indicator():
         "title": "Multiple cases",
         "align": "right",
         "value": "Value",
+        "icon": "Line/download",
+        "bigIcon": "Line/calendar",
     }
     ]
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=2, rows_size=2, cols_size=12,
+        order=order, rows_size=1, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -1808,21 +1810,73 @@ def test_indicator():
         color='color',
         variant='variant',
         target_path='targetPath',
+        icon='icon',
+        big_icon='bigIcon',
         background_image='backgroundImage',
     )
 
+    order = s.plt.indicator(
+        data=data_+data_,
+        menu_path=menu_path+'-vertical',
+        order=0, rows_size=1, cols_size=6,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        icon='icon',
+        big_icon='bigIcon',
+        background_image='backgroundImage',
+        vertical="Title of the indicators"
+    )
+    order = s.plt.indicator(
+        data=data_,
+        menu_path=menu_path + '-vertical',
+        order=order, rows_size=2, cols_size=4,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        icon='icon',
+        big_icon='bigIcon',
+        background_image='backgroundImage',
+        vertical=True
+    )
+    order = s.plt.indicator(
+        data=data_[0],
+        menu_path=menu_path + '-vertical',
+        order=order, rows_size=8, cols_size=2,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        vertical="Title of the indicator"
+    )
+    s.plt.indicator(
+        data=data_[0],
+        menu_path=menu_path + '-vertical',
+        order=order, rows_size=8, cols_size=12,
+        value='value',
+        header='title',
+        footer='description',
+        align='align',
+        color='color',
+        variant='variant',
+        target_path='targetPath',
+        vertical=True
+    )
     if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            order=1
-        )
         s.plt.delete_path(menu_path)
+        s.plt.delete_path(menu_path+'-vertical')
+
 
 def test_indicator_one_dict():
     print('test_indicator_one_dict')
@@ -1835,10 +1889,10 @@ def test_indicator_one_dict():
             "color": "warning"
         }
 
-    s.plt.indicator(
+    order = s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         value='value',
         header='title',
         footer='description',
@@ -1849,7 +1903,7 @@ def test_indicator_one_dict():
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=order, rows_size=2, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -1858,16 +1912,6 @@ def test_indicator_one_dict():
     )
 
     if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            order=1
-        )
         s.plt.delete_path(menu_path)
 
 
@@ -1890,10 +1934,10 @@ def test_alert_indicator():
             "targetPath": "/whispers-test/test",
         },
     ]
-    s.plt.alert_indicator(
+    order = s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        row=1, column=1,
+        order=0,
         value='value',
         header='title',
         footer='description',
@@ -1904,7 +1948,7 @@ def test_alert_indicator():
     s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        order=order, rows_size=1, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -1913,16 +1957,6 @@ def test_alert_indicator():
     )
 
     if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='indicator',
-            order=1
-        )
         s.plt.delete_path(menu_path)
 
 
@@ -3478,6 +3512,11 @@ def test_input_form():
                 'fieldName': 'Objetivos',
                 'inputType': 'multiSelect',
                 'options': ['sleep', 'close eyes', 'awake']
+              },
+              {
+                'mapping': 'voice',
+                'fieldName': 'Audio recorder',
+                'inputType': 'audio',
               }
           ],
         },
@@ -3718,7 +3757,7 @@ def test_tabs():
 
         check_tabs_index_in_business_state(_tabs_index, how_many)
 
-    def _test_bentobox(tabs_index=("Deepness 0", "Bento box")):
+    def _test_bentobox(tabs_index_=("Deepness 0", "Bento box")):
         bentobox_id: Dict = {'bentoboxId': 'test20220101'}
         bentobox_data: Dict = {
             'bentoboxOrder': 0,
@@ -3727,7 +3766,7 @@ def test_tabs():
         }
         bentobox_data.update(bentobox_id)
 
-        data_ = [
+        data_indic = [
             {
                 "description": "",
                 "title": "Estado",
@@ -3735,28 +3774,28 @@ def test_tabs():
             },
         ]
         s.plt.indicator(
-            data=data_,
+            data=data_indic,
             menu_path=menu_path,
             order=0, rows_size=8, cols_size=12,
             value='value',
             header='title',
             footer='description',
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
 
         s.plt.indicator(
-            data=data_,
+            data=data_indic,
             menu_path=menu_path,
             order=1, rows_size=8, cols_size=12,
             value='value',
             header='title',
             footer='description',
             bentobox_data=bentobox_id,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
 
-        data = [
+        data_bento = [
             {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
             {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
             {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
@@ -3765,17 +3804,40 @@ def test_tabs():
         ]
 
         s.plt.bar(
-            data=data,
+            data=data_bento,
             x='date', y=['x', 'y'],
             menu_path=menu_path,
             order=2, rows_size=14, cols_size=24,
             bentobox_data=bentobox_id,
-            tabs_index=tabs_index
+            tabs_index=tabs_index_
         )
-        check_all_data_restored_correctly(tabs_index, 3)
+        check_all_data_restored_correctly(tabs_index_, 3)
+
+    data_table = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
+    ]
+    filter_columns: List[str] = ['filtA', 'filtB']
+    search_columns: List[str] = ['name']
 
     _test_bentobox()
+
+    s.plt.table(
+        title="Test-table",
+        data=data_table,
+        menu_path=menu_path,
+        order=0,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+        search_columns=search_columns,
+        tabs_index=('Deepness 0', 'table test')
+    )
+
     _test_bentobox(("Deepness 1", "Bento box"))
+
     tabs_index = ("Deepness 0", "line test")
 
     s.plt.line(
@@ -3928,14 +3990,17 @@ def test_tabs():
             tabs_index=(f"Deepness {i}", "Indicators 2")
         )
 
-    data_ = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
+        if i > 1:
+            s.plt.change_tabs_group_internal_order(f"Deepness {i}", menu_path, ['Indicators 2', 'Indicators 1', 'Indicators 2'])
+
+    data_bar = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
              {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
              {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
              {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5}]
 
     s.plt.bar(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3946,7 +4011,7 @@ def test_tabs():
         tabs_index=("Bar deep 1", "Bar 1")
     )
     s.plt.bar(
-        data=data_,
+        data=data_bar,
         x='date', y=['y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3957,7 +4022,7 @@ def test_tabs():
         tabs_index=("Bar deep 2", "Bar 1")
     )
     s.plt.line(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3968,7 +4033,7 @@ def test_tabs():
         tabs_index=("Bar deep 2", "Line 1")
     )
     s.plt.line(
-        data=data_,
+        data=data_bar,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
         x_axis_name='Date',
@@ -3997,6 +4062,121 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
+
+    #Test overwrite
+    _test_bentobox()
+    _test_bentobox(("Deepness 1", "Bento box"))
+    tabs_index = ("Deepness 0", "line test")
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=0,
+        tabs_index=tabs_index
+    )
+
+    s.plt.line(
+        data=data,
+        x='date', y=['x', 'y'],
+        menu_path=menu_path,
+        order=1,
+        tabs_index=tabs_index
+    )
+
+    check_all_data_restored_correctly(tabs_index, 2)
+
+    tabs_index = ("Deepness 0", "Input Form")
+    s.plt.input_form(
+        menu_path=menu_path, order=0,
+        report_dataset_properties=report_dataset_properties,
+        tabs_index=tabs_index
+    )
+
+    s.plt.table(
+        title="Test-table",
+        data=data_table,
+        menu_path=menu_path,
+        order=0,
+        filter_columns=filter_columns,
+        sort_table_by_col={'date': 'asc'},
+        search_columns=search_columns,
+        tabs_index=('Deepness 0', 'table test')
+    )
+
+    menu_path = 'test_delete_tabs'
+    for i in range(5):
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "warning"
+        },
+            menu_path=menu_path,
+            order=i*2,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 1")
+        )
+
+        s.plt.indicator(data={
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "main"
+        },
+            menu_path=menu_path,
+            order=0,
+            value='value',
+            header='title',
+            footer='description',
+            color='color',
+            tabs_index=(f"Deepness {i}", "Indicators 2")
+        )
+
+    for i in [4, 3, 2, 1]:
+        s.plt.insert_tabs_group_in_tab(
+            menu_path=menu_path,
+            parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
+            child_tabs_group=f"Deepness {i}"
+        )
+        check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
+
+    # Test if cascade deletion works correctly
+    s.plt.delete(
+        menu_path=menu_path,
+        order=0,
+        by_component_type=False,
+    )
+    assert not s.app.get_app_by_name(business_id=business_id, name=menu_path)
+
+    menu_path = "test-tabs"
+    s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
+
+
+
+def test_gauge_indicators():
+    print('test_gauge_indicator')
+    menu_path = 'test/gauge-indicator'
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path,
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path,
+        order=2,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+    )
+
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
@@ -4035,6 +4215,7 @@ test_stacked_barchart()
 test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
+test_gauge_indicators()
 test_doughnut()
 test_rose()
 test_ring_gauge()

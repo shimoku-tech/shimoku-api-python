@@ -1,7 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Optional
 
 from shimoku_api_python.api.explorer_api import (
     AppExplorerApi, MultiCreateApi,
@@ -9,6 +9,10 @@ from shimoku_api_python.api.explorer_api import (
     BusinessExplorerApi
 )
 from shimoku_api_python.exceptions import ApiClientError
+
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
 
 
 class AppMetadataApi(AppExplorerApi, ABC):
@@ -28,12 +32,14 @@ class AppMetadataApi(AppExplorerApi, ABC):
         else:
             self.business_id: Optional[str] = None
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
         _ = self._get_business(business_id)
         self.business_id: str = business_id
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __resolve_app_id(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> str:
         """"""
         if app_id:
@@ -43,6 +49,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
 
         return self._get_app_by_name(self.business_id, app_name)['id']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def has_app_report(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> bool:
         """"""
         reports: List[str] = (
@@ -56,6 +63,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
         else:
             return False
 
+    @logging_before_and_after(logging_level=logger.info)
     def hide_title(
         self, app_id: Optional[str] = None, app_name: Optional[str] = None, hide_title: bool = True
     ) -> Dict:
@@ -70,6 +78,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def show_title(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return self.hide_title(
             app_id=app_id,
@@ -77,6 +86,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             hide_title=False,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def hide_history_navigation(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -86,6 +96,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def show_history_navigation(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -95,6 +106,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def hide_breadcrumbs(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -104,6 +116,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def show_breadcrumbs(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -113,6 +126,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def hide_path(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -122,6 +136,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def show_path(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> Dict:
         return (
             self.update_app(
@@ -131,6 +146,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_or_create_app_and_apptype(self, name: str) -> Dict:
         """Try to create an App and AppType if they exist instead retrieve them"""
         try:

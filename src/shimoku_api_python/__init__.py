@@ -1,4 +1,6 @@
 from __future__ import absolute_import
+import logging
+from shimoku_api_python.execution_logger import configure_logging
 
 # import apis into sdk package
 from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi
@@ -16,11 +18,15 @@ from shimoku_api_python.client import ApiClient
 
 import shimoku_components_catalog.html_components
 # from shimoku_api_python.configuration import Configuration
+logger = logging.getLogger(__name__)
 
 
 class Client(object):
     def __init__(self, universe_id: str, environment: str = 'production',
-                 access_token: str = "", config={}, business_id: str = ""):
+                 access_token: str = '', config={}, business_id: str = '',
+                 verbose: str = ''):
+
+        configure_logging(verbose)
 
         if access_token and access_token != "":
             config = {'access_token': access_token}
@@ -31,8 +37,9 @@ class Client(object):
             environment=environment,
         )
 
-        self.ping = PingApi(self._api_client)
+        logger.info('Initializing modules')
 
+        self.ping = PingApi(self._api_client)
         self.universe = UniverseMetadataApi(self._api_client)
         self.business = BusinessMetadataApi(self._api_client)
         self.app_type = AppTypeMetadataApi(self._api_client)
@@ -43,6 +50,8 @@ class Client(object):
         self.plt = PlotApi(self._api_client, business_id=business_id)
         self.ai = AiAPI(self._api_client)
         self.html_components = shimoku_components_catalog.html_components
+
+        logger.info('Modules initialized')
 
     def set_config(self, config={}):
         self._api_client.set_config(config)

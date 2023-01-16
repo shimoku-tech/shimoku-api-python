@@ -1,7 +1,5 @@
 """"""
-from sys import stdout
 from typing import List, Dict, Optional, Callable, Tuple, Any
-import logging
 import functools
 import json
 import time
@@ -16,13 +14,9 @@ import pandas as pd
 from shimoku_api_python.api.plot_api import BasePlot, PlotApi
 
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logging.basicConfig(
-    stream=stdout,
-    datefmt='%Y-%m-%d %H:%M',
-    format='%(asctime)s | %(levelname)s | %(message)s'
-)
 
 
 # TODO this should not go here but in a different script, maybe aux.py?
@@ -98,6 +92,7 @@ class AiAPI(AiPlotAdapter):
         else:
             self.business_id: Optional[str] = None
 
+    @logging_before_and_after(logging_level=logger.info)
     def predict_categorical(
             self, df_test: pd.DataFrame,
             model_endpoint: Optional[str] = None,
@@ -239,12 +234,14 @@ class AiAPI(AiPlotAdapter):
 
         return pd.DataFrame(results), pd.DataFrame(results_error)
 
+    @logging_before_and_after(logging_level=logger.info)
     def train_model(self) -> str:
         """
         returns the model endpoint
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def predictive_table(
             self, df_test: pd.DataFrame,
             target_column: str, column_to_predict: str,

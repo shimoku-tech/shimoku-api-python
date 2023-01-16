@@ -448,7 +448,6 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             force_name: bool = False, split_by_size: bool = True
     ) -> Union[Dict, List[Dict]]:
         """
-        :param self.business_id:
         :param app_name:
         :param file_name:
         :param df:

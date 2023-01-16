@@ -13,6 +13,10 @@ from .explorer_api import (
 )
 from .report_metadata_api import ReportMetadataApi
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
+
 
 class DataExplorerApi:
     get_report = ReportMetadataApi.get_report
@@ -34,6 +38,7 @@ class DataValidation:
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _validate_data_is_pandarable(
         self, data: Union[str, DataFrame, List[Dict], Dict],
     ) -> DataFrame:
@@ -75,6 +80,7 @@ class DataValidation:
             )
         return df_
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _validate_table_data(
         self, data: Union[str, DataFrame, List[Dict], Dict], elements: List[str],
     ):
@@ -101,6 +107,7 @@ class DataValidation:
                 f'Some of the variables {elements} have none values'
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _validate_tree_data(
         self, data: Union[str, List[Dict]], vals: List[str],
     ):
@@ -119,6 +126,7 @@ class DataValidation:
         except AssertionError:
             raise ValueError('data keys must be "name", "value" and "children"')
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _validate_input_form_data(self, data: Dict):
         try:
             assert type(data) == dict
@@ -149,6 +157,7 @@ class DataValidation:
         except AssertionError:
             raise ValueError('"fieldName" and "mapping" are not keys in the input data')
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _is_report_data_empty(
         self, report_data: Union[List[Dict], str, DataFrame, Dict, List],
     ) -> bool:
@@ -186,6 +195,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _transform_report_data_to_chart_data(
         self, report_data: Union[List[Dict], str, DataFrame, Dict],
     ) -> List[Dict]:
@@ -206,6 +216,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             )
         return chart_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _convert_input_data_to_db_items(
         self, data: Union[List[Dict], Dict], sort: Optional[Dict] = None
     ) -> Union[List[Dict], Dict]:
@@ -296,6 +307,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         else:
             assert type(data) == list or type(data) == dict
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _convert_dataframe_to_report_entry(
         self, df: DataFrame,
         sorting_columns_map: Optional[Dict[str, str]] = None,
@@ -369,6 +381,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             return data_entries
 
 # TODO pending add append_report_data to free Echarts
+    @logging_before_and_after(logging_level=logger.debug)
     def append_report_data(
         self, business_id: str, app_id: str,
         report_data: Union[List[Dict], str, DataFrame, Dict],
@@ -456,6 +469,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                 item.update(datum)
                 self.post_report_entry(item)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_data(
             self, business_id: str, app_id: str,
             report_data: Union[List, Dict, str, DataFrame],
@@ -534,6 +548,7 @@ class DataSetManagingApi(DataExplorerApi, DataValidation):
         self.api_client = api_client
 
 # TODO
+    @logging_before_and_after(logging_level=logger.debug)
     def _convert_dataframe_to_dataset_data(
         self, df: DataFrame,
         filter_map: Optional[Dict[str, str]] = None,
@@ -613,6 +628,7 @@ class DataSetManagingApi(DataExplorerApi, DataValidation):
             return data_entries
 
 # TODO
+    @logging_before_and_after(logging_level=logger.debug)
     def append_dataset_data(
         self, business_id: str, app_id: str,
         report_data: Union[List[Dict], str, DataFrame, Dict],

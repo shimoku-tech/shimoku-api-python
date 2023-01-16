@@ -5,6 +5,10 @@ from typing import Dict, List
 
 from shimoku_api_python.api.explorer_api import AppTypeExplorerApi
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
+
 
 class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
     """
@@ -12,6 +16,7 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def rename_app_type_by_old_name(self, old_name: str, new_name) -> Dict:
         # Get all app_types
         app_types: List[Dict] = self.get_universe_app_types()
@@ -40,12 +45,14 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
             new_name=new_name,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def rename_apps_types(self, app_type_id: str, new_name: str) -> Dict:
         return self.update_app_type(
             app_type_id=app_type_id,
             app_type_metadata={'name': new_name}
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_type_by_name(self, name: str) -> Dict:
         app_types: List[Dict] = self.get_universe_app_types()
         target_app_type: List[Dict] = [

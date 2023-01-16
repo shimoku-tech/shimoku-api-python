@@ -16,6 +16,7 @@ api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
+verbose: str = getenv('VERBOSITY')
 
 
 config = {
@@ -26,6 +27,7 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
+    verbose=verbose
 )
 s.plt.set_business(business_id=business_id)
 delete_paths: bool = False
@@ -473,35 +475,6 @@ def test_table():
         order=1,
         search_columns=search_columns,
     )
-
-    # Test search columns with filters and sorting works
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/table-test',
-        order=1,
-        filter_columns=filter_columns,
-        sort_table_by_col={'date': 'asc'},
-        search_columns=search_columns,
-    )
-
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/sorted-table-test',
-        row=1, column=1,
-        filter_columns=filter_columns,
-        sort_table_by_col={'date': 'asc'},
-    )
-
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/table-test',
-        row=1, column=1,
-        filter_columns=filter_columns,
-    )
-
     if delete_paths:
         s.plt.delete(
             menu_path='test/table-test',

@@ -10,8 +10,11 @@ import datetime
 import requests
 import json
 from tenacity import retry, wait_exponential, stop_after_attempt
-import random
 from shimoku_api_python.exceptions import ApiClientError
+
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
 
 
 class ApiClient(object):
@@ -51,6 +54,7 @@ class ApiClient(object):
 
         # Default vars
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_config(self, config={}):
         """Set all config values"""
         # Basic Auth
@@ -72,6 +76,7 @@ class ApiClient(object):
 
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
+    @logging_before_and_after(logging_level=logger.debug)
     @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
     def call_api(
             self, resource_path, method, path_params=None, query_params=None,
@@ -130,6 +135,7 @@ class ApiClient(object):
         else:
             raise ApiClientError(data)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_http_info(self, **kwargs):  # noqa: E501
         """
         This method makes a synchronous HTTP request by default. To make an
@@ -174,6 +180,7 @@ class ApiClient(object):
             auth_settings, params, collection_formats,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def query_element(
         self, method: str, endpoint: str, **kwargs
     ) -> Dict:
@@ -212,6 +219,7 @@ class ApiClient(object):
         )
         return element_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
 

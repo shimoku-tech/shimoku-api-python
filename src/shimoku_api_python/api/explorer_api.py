@@ -5,6 +5,11 @@ import json
 from time import sleep
 
 from shimoku_api_python.exceptions import ApiClientError
+import tqdm
+
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
 
 
 class GetExplorerAPI(object):
@@ -12,6 +17,7 @@ class GetExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business(self, business_id: str, **kwargs) -> Dict:
         """Retrieve an specific user_id
 
@@ -25,6 +31,7 @@ class GetExplorerAPI(object):
         )
         return business_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_type(self, app_type_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
@@ -38,6 +45,7 @@ class GetExplorerAPI(object):
         )
         return app_type_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app(self, business_id: str, app_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
@@ -53,6 +61,7 @@ class GetExplorerAPI(object):
         return app_data
 
 # TODO add new data & dataset logic!
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_report_with_data(
         self,
         business_id: Optional[str] = None,
@@ -111,6 +120,7 @@ class GetExplorerAPI(object):
             report_data['chartData'] = json.loads(report_data['chartData'])
         return report_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report(
         self,
         business_id: Optional[str] = None,
@@ -140,6 +150,7 @@ class GetExplorerAPI(object):
             report_data.pop('chartData')
         return report_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_dataset(self, business_id: str, dataset_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
@@ -154,6 +165,7 @@ class GetExplorerAPI(object):
         )
         return dataset_data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reportdataset(
             self, business_id: str, app_id: str, report_id: str,
             reportdataset_id: str, **kwargs
@@ -179,6 +191,7 @@ class GetExplorerAPI(object):
         return dataset_data
 
 # TODO add new data & dataset logic!
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_data(
         self, business_id: str,
         app_id: Optional[str] = None,
@@ -219,6 +232,7 @@ class GetExplorerAPI(object):
             ]
             return report_entries[0]['items']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_file(
             self, business_id: Optional[str] = None,
             app_id: Optional[str] = None,
@@ -243,6 +257,7 @@ class GetExplorerAPI(object):
         )
         return file_object.content
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_files(
             self, business_id: Optional[str] = None,
             app_id: Optional[str] = None,
@@ -266,7 +281,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
     # def __cache_apps_by_normalized_name(self, apps):
     #     for app in apps:
     #         self.cached_apps[app['appBusinessId']+app['normalizedName']] = app
-
+    @logging_before_and_after(logging_level=logger.debug)
     def get_universe_businesses(self) -> List[Dict]:
         endpoint: str = f'businesses'
         return (
@@ -275,6 +290,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )['items']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def find_business_by_name_filter(
         self, name: Optional[str] = None,
     ) -> Dict:
@@ -293,6 +309,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         business: Dict = businesses[0]
         return business
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_universe_app_types(self) -> List[Dict]:
         endpoint: str = f'apptypes'
         return (
@@ -301,6 +318,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             )
         )['items']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def find_app_type_by_name_filter(
         self, name: Optional[str] = None,
         normalized_name: Optional[str] = None,
@@ -328,6 +346,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         app_type: Dict = app_types[0]
         return app_type
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_apps(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all app metadata
 
@@ -345,6 +364,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return []
         return apps
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_app_ids(self, business_id: str) -> List[str]:
         """Given a business retrieve all app ids
 
@@ -357,6 +377,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [app['id'] for app in apps]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_all_files(self, business_id) -> List[Dict]:
         """Given a business retrieve all files metadata
         """
@@ -366,6 +387,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             files = files + self.get_files(business_id=business_id, app_id=app['id'])
         return files
 
+    @logging_before_and_after(logging_level=logger.debug)
     def find_app_by_name_filter(
         self, business_id: str, name: Optional[str] = None,
         normalized_name: Optional[str] = None,
@@ -393,6 +415,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         apps: Dict = apps[0]
         return apps
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_path_names(self, business_id: str, app_id: str) -> List[str]:
         """Given a Path that belongs to an AppId retrieve all reportId
 
@@ -413,6 +436,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 paths = paths + [path]
         return paths
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_reports(self, business_id: str, app_id: str) -> List[Dict]:
         """Given an App Id retrieve all reports data from all reports
         that belongs to such App Id.
@@ -428,6 +452,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return []
         return reports
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
@@ -442,6 +467,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         )
         return [report['id'] for report in reports]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_reports(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all reports
 
@@ -452,6 +478,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 for app_id in business_apps
                     for report in self.get_app_reports(business_id, app_id['id'])]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_report_ids(self, business_id: str) -> List[str]:
         """Given an business retrieve all report_ids
 
@@ -462,6 +489,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 for app_id in business_apps
                     for report in self.get_app_reports(business_id, app_id['id'])]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_datasets(
             self, business_id: str, app_id: str,  report_id: str,
     ) -> List[Dict]:
@@ -495,6 +523,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 data_sets = data_sets + [data_set]
         return data_sets
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_dataset_data(
             self, business_id: str, dataset_id: str,
     ) -> List[Dict]:
@@ -513,6 +542,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             return []
         return datas
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_dataset_data(
             self, business_id: str, app_id: str, report_id: str,
     ) -> List[Dict]:
@@ -533,6 +563,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return data
 
     # TODO pending
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_all_report_entries(self, report_id: str) -> List[str]:
         """Given a report retrieve all reportEntries
 
@@ -540,6 +571,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_path_report_ids(
         self, business_id: str, app_id: str, path_name: str,
     ) -> List[str]:
@@ -556,6 +588,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 path_report_ids = path_report_ids + [report_id]
         return path_report_ids
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_path_reports(
         self, business_id: str, app_id: str, path_name: str,
     ) -> List[Dict]:
@@ -571,6 +604,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 path_reports = path_reports + [report]
         return path_reports
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_apps_with_filter(
             self, business_id: str, app_filter: Dict
     ) -> List[Dict]:
@@ -589,6 +623,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     apps.append(app)
         return apps
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_reports_by_filter(
         self, app_id: str,
         report_filter: Dict
@@ -612,6 +647,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                     reports.append(report)
             return reports
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_type_by_name(
             self, name: Optional[str] = None,
             normalized_name: Optional[str] = None,
@@ -641,6 +677,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         else:
             return {}
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_by_type(
         self, business_id: str, app_type_id: str,
     ) -> Dict:
@@ -671,6 +708,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         else:
             return {}
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_app_by_name(self, business_id: str, name: str) -> Dict:
         """
         First normalizes the name and then searches for a match, if a match isn't found it tries to search for app_type
@@ -736,6 +774,7 @@ class CreateExplorerAPI(object):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_normalized_name(self, name: str) -> str:
         """Having a name create a normalizedName
 
@@ -751,6 +790,7 @@ class CreateExplorerAPI(object):
 
         return '-'.join(name.split(' ')).lower()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_key_name(self, name: str) -> str:
         """Having a name create a key
 
@@ -761,6 +801,7 @@ class CreateExplorerAPI(object):
         """
         return '_'.join(name.split(' ')).upper()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_business(self, name: str) -> Dict:
         """"""
         business: Dict = self._find_business_by_name_filter(name=name)
@@ -775,6 +816,7 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_app_type(self, name: str) -> Dict:
         """"""
         app_type: Dict = self._find_app_type_by_name_filter(name=name)
@@ -799,6 +841,7 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_app(
         self, business_id: str,
         name: Optional[str],
@@ -845,6 +888,7 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_report(
         self, business_id: str, app_id: str, report_metadata: Dict,
         real_time: bool = False,
@@ -915,6 +959,7 @@ class CreateExplorerAPI(object):
             if k not in ['chartData', 'owner', 'chartDataItem']  # we do not return the data
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_dataset(self, business_id: str) -> Dict:
         """Create new DataSet associated to a business
 
@@ -926,6 +971,7 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': {}},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_reportdataset(
             self, business_id: str, app_id: str, report_id: str,
             dataset_id: str, dataset_properties: str,
@@ -957,6 +1003,7 @@ class CreateExplorerAPI(object):
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_data_points(
             self, business_id: str, dataset_id: str,
             items: List[str],
@@ -986,6 +1033,7 @@ class CreateExplorerAPI(object):
 
         return data
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_report_entries(
         self, business_id: str, app_id: str, report_id: str,
         items: List[Dict], batch_size: int = 999,
@@ -1007,19 +1055,25 @@ class CreateExplorerAPI(object):
             f'reportEntry/batch'
         )
 
-        #report_entries: List[Dict] = []
-        for chunk in range(0, len(items), batch_size):
-            #report_entries_batch = report_entries + (
-            self.api_client.query_element(
-                method='POST', endpoint=endpoint,
-                **{'body_params': items[chunk:chunk + batch_size]},
-            )
-            #)
-            sleep(.25)
-            #report_entries = report_entries + [report_entries_batch]
+        log_level = logger.getEffectiveLevel()
+        if log_level >= logging.INFO:
+            logger.info("Uploading table data")
+            print()
 
-        #return report_entries
+        with tqdm.tqdm(total=len(items), unit=' report entries', disable=(log_level > logging.INFO)) as progress_bar:
+            for chunk in range(0, len(items), batch_size):
+                self.api_client.query_element(
+                    method='POST', endpoint=endpoint,
+                    **{'body_params': items[chunk:chunk + batch_size]},
+                )
+                progress_bar.update(len(items[chunk:chunk + batch_size]))
+                sleep(.25)
+                if log_level == logging.DEBUG:
+                    print()
 
+        logger.info("Table data uploaded")
+
+    @logging_before_and_after(logging_level=logger.debug)
     def create_file(
             self, business_id: str, app_id: str,
             file_metadata: Dict, file_object: bytes,
@@ -1074,6 +1128,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_business(self, business_id: str, business_data: Dict) -> Dict:
         """"""
         name = business_data.get('name')
@@ -1090,6 +1145,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             method='PATCH', endpoint=endpoint, **{'body_params': business_data},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_app_type(self, app_type_id: str, app_type_metadata: Dict) -> Dict:
         """"""
         name = app_type_metadata.get('name')
@@ -1106,6 +1162,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             method='PATCH', endpoint=endpoint, **{'body_params': app_type_metadata},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_app(self, business_id: str, app_id: str, app_metadata: Dict) -> Dict:
         """
         :param business_id:
@@ -1119,6 +1176,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             **{'body_params': app_metadata},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report(
             self, business_id: str, app_id: str, report_id: str,
             report_metadata: Dict,
@@ -1130,6 +1188,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             **{'body_params': report_metadata},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_reportdataset(
             self, business_id: str, app_id: str, report_id: str,
             reportdataset_id: str, reportdataset_metadata: Dict,
@@ -1146,6 +1205,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             **{'body_params': reportdataset_metadata},
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_dataset(
             self, business_id: str, dataset_id: str,
             dataset_metadata: Dict,
@@ -1164,6 +1224,7 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
         super().__init__(api_client)
 
     # TODO paginate
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_paths(self, business_id: str) -> List[str]:
         """Given a business retrieve all path names
 
@@ -1177,7 +1238,9 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
             paths = paths + app_paths
         return paths
 
+
     # TODO paginate
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_reports(self, business_id: str) -> List[str]:
         """Given a business retrieve all report ids
 
@@ -1198,6 +1261,7 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
         return report_ids
 
     # TODO paginate
+    @logging_before_and_after(logging_level=logger.debug)
     def get_business_id_by_report(self, report_id: str, **kwargs) -> str:
         """Bottom-up method
         Having a report_id return the app it belongs to
@@ -1213,6 +1277,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
     def __init__(self, api_client):
         self.api_client = api_client
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
         """Create AppType and App if required and return the App component
         """
@@ -1238,6 +1303,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             app: Dict = target_apps[0]
         return app
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_report_and_dataset(
         self, business_id: str, app_id: str,
         report_metadata: Dict,
@@ -1331,6 +1397,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
     def __init__(self, api_client):
         super().__init__(api_client)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_business(self, business_id: str):
         """Delete a Business.
         All apps, reports and data associated with that business is removed by the API
@@ -1340,6 +1407,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             method='DELETE', endpoint=endpoint,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_app_type(self, app_type_id: str):
         """Delete an appType"""
         endpoint: str = f'apptype/{app_type_id}'
@@ -1347,6 +1415,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             method='DELETE', endpoint=endpoint,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_app(self, business_id: str, app_id: str) -> Dict:
         """Delete an App
         All reports and data associated with that app is removed by the API
@@ -1357,6 +1426,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_path(self, business_id: str, app_id: str, path_name: str):
         """Delete all Reports in a path
         All data associated with that report is removed by the API"""
@@ -1371,6 +1441,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             report_id: str = report['id']
             self.delete_report_and_entries(report_id)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_report(
         self, business_id: str, app_id: str, report_id: str,
         relocating: bool = True, delete_data: bool = True,
@@ -1414,6 +1485,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_reportdataset(
             self, business_id: str, app_id: str,
             report_id: str, reportdataset_id: str,
@@ -1430,6 +1502,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_dataset(self, business_id: str, dataset_id: str) -> Dict:
         """"""
         endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
@@ -1438,6 +1511,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_report_entries(
         self, business_id: str, app_id: str, report_id: str,
     ) -> None:
@@ -1463,6 +1537,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
                 method='DELETE', endpoint=endpoint
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_file(
         self, business_id: str, app_id: str, file_id: str,
     ) -> Dict:
@@ -1495,6 +1570,7 @@ class MultiDeleteApi:
     def __init__(self):
         return
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_business_and_app_type(
         self, business_id: str, app_type_id: str
     ):
@@ -1537,6 +1613,7 @@ class MultiDeleteApi:
                 f'app_type_id: {app_type_id}'
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_business_and_app(
         self, business_id: str, app_id: str,
     ):
@@ -1580,6 +1657,7 @@ class MultiDeleteApi:
                 f'app_id: {app_id}'
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def delete_report_and_dataset(
             self, business_id: str, app_id: str, report_id: str, dataset_id: str,
     ):
@@ -1605,6 +1683,7 @@ class MultiCreateApi(MultiDeleteApi):
     def __init__(self):
         super().__init__()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_business_and_app(
         self, app_type_id: str, business_name: str, app_metadata: Dict,
     ) -> Dict[str, Dict]:
@@ -1642,6 +1721,7 @@ class MultiCreateApi(MultiDeleteApi):
             'app': app,
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_app_type_and_app(
         self, business_id: str,
         app_type_metadata: Dict,
@@ -1676,6 +1756,7 @@ class MultiCreateApi(MultiDeleteApi):
             'app': app
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_app_and_report(
         self, business_id: str, app_type_id: str,
         app_metadata: Dict, report_metadata: Dict,
@@ -1709,6 +1790,7 @@ class MultiCreateApi(MultiDeleteApi):
 
         return report
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_business_app_and_app_type(
         self, business_name: str,
         app_metadata: Dict,
@@ -1757,6 +1839,7 @@ class MultiCreateApi(MultiDeleteApi):
             'app': app
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_business_app_and_report(
         self, app_type_id: str,
         business_name: str,
@@ -1815,6 +1898,7 @@ class MultiCreateApi(MultiDeleteApi):
             'report': report,
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
     def create_business_app_type_app_and_report(
         self, business_name: str,
         app_type_metadata: Dict,
@@ -1999,6 +2083,7 @@ class ExplorerApi(
         super().__init__(api_client)
 
     # TODO WiP
+    @logging_before_and_after(logging_level=logger.debug)
     def has_app_report_data(self, business_id: str, app_id: str) -> bool:
         """"""
         report_ids: List[str] = self.get_app_report_ids(
@@ -2011,6 +2096,7 @@ class ExplorerApi(
         return False
 
     # TODO WiP
+    @logging_before_and_after(logging_level=logger.debug)
     def has_path_data(self, business_id: str, app_id: str, path_name: str) -> bool:
         """"""
         report_ids: List[str] = self.get_app_report_ids(

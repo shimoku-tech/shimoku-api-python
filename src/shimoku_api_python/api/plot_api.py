@@ -1,7 +1,5 @@
 """"""
-from sys import stdout
-from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
-import logging
+from typing import List, Dict, Optional, Union, Tuple, Any, Iterable
 import json
 from itertools import product
 
@@ -26,14 +24,9 @@ from .data_managing_api import DataManagingApi
 from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 
-
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logging.basicConfig(
-    stream=stdout,
-    datefmt='%Y-%m-%d %H:%M',
-    format='%(asctime)s | %(levelname)s | %(message)s'
-)
 
 
 class PlotAux:
@@ -108,6 +101,7 @@ class BasePlot(PlotAux):
         self.api_client = api_client
         self._clear_or_create_all_local_state()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
         # Clear or create apps info():
         # Map to store the last order of a path
@@ -133,7 +127,9 @@ class BasePlot(PlotAux):
         # Flag tabs modifications
         self._tabs_group_modified = set()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_business_state(self, business_id: str):
+        @logging_before_and_after(logging_level=logger.debug)
         def _get_business_apps_info(business_id: str):
             business_reports = self._get_business_reports(business_id)
             for report in business_reports:
@@ -144,10 +140,12 @@ class BasePlot(PlotAux):
                 if path not in self._paths_last_order:
                     self._paths_last_order[(app_id, path)] = -1
 
+        @logging_before_and_after(logging_level=logger.debug)
         def _get_business_reports_info(business_id: str):
             business_reports = self._get_business_reports(business_id)
             self._report_order = {report['id']: report['order'] for report in business_reports}
 
+        @logging_before_and_after(logging_level=logger.debug)
         def _get_business_tabs_info(business_id: str):
             business_reports = self._get_business_reports(business_id)
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
@@ -285,6 +283,7 @@ class BasePlot(PlotAux):
         return name, path_name
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _fill_report_metadata(
             path_name: str, report_metadata: Dict,
             order: Optional[int] = None,
@@ -318,6 +317,7 @@ class BasePlot(PlotAux):
 
         return report_metadata
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _find_target_reports(
             self, menu_path: str,
             grid: Optional[str] = None,
@@ -447,6 +447,7 @@ class BasePlot(PlotAux):
             return order_temp + 1
 
     # TABS
+    @logging_before_and_after(logging_level=logger.debug)
     def _update_tabs_group_metadata(self, business_id: str, app_id: str, path_name: str, group_name: str,
                                     order: Optional[int] = None, cols_size: Optional[str] = None):
         """Updates the tabs report metadata"""
@@ -475,6 +476,7 @@ class BasePlot(PlotAux):
             report_metadata=report_metadata,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
         """Creates a tab report and stores its id"""
         app_id, path_name, group_name = tabs_group_entry
@@ -496,6 +498,7 @@ class BasePlot(PlotAux):
         self._report_order[report['id']] = self._paths_last_order[path_entry]
         self._tabs_group_id[tabs_group_entry] = report['id']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
         """Given a tabs_group_entry deletes all the information related to it in the tabs data structures"""
         del self._tabs[tabs_group_entry]
@@ -506,6 +509,7 @@ class BasePlot(PlotAux):
         if self._tabs_group_id.get(tabs_group_entry):
             del self._tabs_group_id[tabs_group_entry]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_report_id_from_tab(self, report_id: str):
         """Given a report_id it is deleted from all the data structures of tabs
            :report_id: report UUID
@@ -526,6 +530,7 @@ class BasePlot(PlotAux):
         else:
             del self._report_in_tab[report_id]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
                        report_id: str, tabs_index: Tuple[str, str],
                        order_of_chart: int):
@@ -571,6 +576,7 @@ class BasePlot(PlotAux):
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
         self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
@@ -649,6 +655,7 @@ class BasePlot(PlotAux):
 
         return report_id
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_trend_chart(
             self, echart_type: str,
             data: Union[str, DataFrame, List[Dict]],
@@ -766,6 +773,7 @@ class BasePlot(PlotAux):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_multifilter_reports(
             self, data: Union[str, DataFrame, List[Dict]], filters: Dict,
     ) -> Iterable:
@@ -809,6 +817,7 @@ class BasePlot(PlotAux):
 
             yield df_temp, filter_element
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _update_filter_report(
             self, filter_row: Optional[int],
             filter_column: Optional[int],
@@ -892,6 +901,7 @@ class BasePlot(PlotAux):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_trend_charts_with_filters(
             self, data: Union[str, DataFrame, List[Dict]],
             filters: Dict, **kwargs,
@@ -967,6 +977,7 @@ class BasePlot(PlotAux):
                 tabs_index=tabs_index,
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_trend_charts(
             self, data: Union[str, DataFrame, List[Dict]],
             filters: Optional[Dict], **kwargs,
@@ -989,6 +1000,7 @@ class BasePlot(PlotAux):
         else:
             self._create_trend_chart(data=data, **kwargs)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _set_data_fields(
             self, title: str, subtitle: str,
             x_axis_name: str, y_axis_name: str,
@@ -1031,17 +1043,20 @@ class BasePlot(PlotAux):
 
         return data_fields
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
         _ = self._get_business(business_id)
         self.business_id: str = business_id
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_new_business(self, name: str):
         """"""
         business: Dict = self._create_business(name=name)
         self.business_id: str = business['id']
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
         """
         :param apps_order: example {'test': 0, 'more-test': 1}
@@ -1064,6 +1079,7 @@ class BasePlot(PlotAux):
                     app_metadata={'order': int(new_app_order)},
                 )
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
         """
         :param paths_order: example {
@@ -1107,6 +1123,7 @@ class BasePlot(PlotAux):
                             report_metadata={'pathOrder': int(order)},
                         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
         target_reports: List[Dict] = (
@@ -1133,6 +1150,7 @@ class BasePlot(PlotAux):
             results = results + [clean_result]
         return results
 
+    @logging_before_and_after(logging_level=logger.info)
     def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],
@@ -1185,6 +1203,7 @@ class BasePlot(PlotAux):
                 report_data=df,
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_dataset_charts(
             self, menu_path: str, order: int,
             rows_size: int, cols_size: int,
@@ -1260,6 +1279,7 @@ class BasePlot(PlotAux):
 
         return report_dataset
 
+    @logging_before_and_after(logging_level=logger.info)
     def delete(
             self, menu_path: str,
             tabs_index: Optional[str] = None,
@@ -1338,6 +1358,7 @@ class BasePlot(PlotAux):
                     app_id=app_id,
                 )
 
+    @logging_before_and_after(logging_level=logger.info)
     def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
 
@@ -1396,6 +1417,7 @@ class BasePlot(PlotAux):
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
 
+    @logging_before_and_after(logging_level=logger.info)
     def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
         for app in self.get_business_apps(self.business_id):
@@ -1403,9 +1425,11 @@ class BasePlot(PlotAux):
                 business_id=self.business_id,
                 app_id=app['id'],
             )
+            logger.info(f'The app {app["name"]} has been deleted')
         self._clear_or_create_all_local_state()
 
     # TODO pending add append_report_data to free Echarts
+    @logging_before_and_after(logging_level=logger.info)
     def free_echarts(
             self, menu_path: str,
             data: Optional[Union[str, DataFrame, List[Dict]]] = None,
@@ -1765,6 +1789,7 @@ class PlotApi(BasePlot):
             }
         }
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
         super().set_business(business_id)
         self._clear_or_create_all_local_state()
@@ -1772,6 +1797,7 @@ class PlotApi(BasePlot):
 
     # TODO both of this functions are auxiliary, and don't make sense here, find a better place for them
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _calculate_percentages_from_list(numbers, round_digits_min):
         def max_precision():
             max_p = 0
@@ -1792,6 +1818,7 @@ class PlotApi(BasePlot):
             round_max -= 0.1
         return perc
 
+    @logging_before_and_after(logging_level=logger.info)
     def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
                                  last_in_order: Optional[bool] = True):
         app_name, path_name = self._clean_menu_path(menu_path)
@@ -1808,6 +1835,7 @@ class PlotApi(BasePlot):
 
         self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
 
+    @logging_before_and_after(logging_level=logger.info)
     def update_tabs_group_metadata(self, group_name: str, menu_path: str, order: Optional[int] = None,
                                    cols_size: Optional[int] = None):
         app_name, path_name = self._clean_menu_path(menu_path)
@@ -1817,6 +1845,7 @@ class PlotApi(BasePlot):
         app_id = app['id']
         self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
 
+    @logging_before_and_after(logging_level=logger.info)
     def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
@@ -1837,7 +1866,7 @@ class PlotApi(BasePlot):
         self._tabs_group_modified.add(tabs_group_entry)
         self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
 
-
+    @logging_before_and_after(logging_level=logger.info)
     def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2279,6 +2308,7 @@ class PlotApi(BasePlot):
             report_data=report_entries,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def html(
             self, html: str, menu_path: str,
             title: Optional[str] = None,
@@ -2309,6 +2339,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def iframe(
             self, menu_path: str, url: str,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2344,6 +2375,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def bar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -2423,6 +2455,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def horizontal_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
@@ -2488,6 +2521,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def zero_centered_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
@@ -2556,6 +2590,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -2612,6 +2647,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def predictive_line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -2684,6 +2720,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def line_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
@@ -2806,6 +2843,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def scatter_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
@@ -2925,6 +2963,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def stockline(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -2972,6 +3011,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def scatter(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -3009,6 +3049,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def bubble_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str], z: str,  # first layer
@@ -3038,6 +3079,7 @@ class PlotApi(BasePlot):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def indicator(
             self, data: Union[str, DataFrame, List[Dict], Dict], value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3187,6 +3229,7 @@ class PlotApi(BasePlot):
 
         return order
 
+    @logging_before_and_after(logging_level=logger.info)
     def alert_indicator(
             self, data: Union[str, DataFrame, List[Dict]],
             value: str, target_path: str,
@@ -3216,6 +3259,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def pie(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # first layer
@@ -3275,6 +3319,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def radar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -3325,6 +3370,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def tree(
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3365,6 +3411,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def treemap(
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3405,6 +3452,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def sunburst(
             self, data: List[Dict],
             name: str, children: str, value: str,
@@ -3446,6 +3494,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def candlestick(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str,
@@ -3480,6 +3529,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def heatmap(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
@@ -3535,6 +3585,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def cohort(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
@@ -3587,10 +3638,12 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def predictive_cohort(self):
         """"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def sankey(
             self, data: Union[str, DataFrame, List[Dict]],
             source: str, target: str, value: str,
@@ -3642,6 +3695,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def funnel(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
@@ -3684,6 +3738,7 @@ class PlotApi(BasePlot):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def speed_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
@@ -3866,6 +3921,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def ring_gauge(
         self, data: Union[str, DataFrame, List[Dict]],
         name: str, value: str,
@@ -3923,6 +3979,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def doughnut(self,
         data: Union[str, List[Dict], pd.DataFrame],
         menu_path: str, order: int,
@@ -3996,6 +4053,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def rose(self,
         data: Union[str, List[Dict], pd.DataFrame],
         menu_path: str, order: int,
@@ -4050,6 +4108,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def shimoku_gauge(self,
         value: Union[int, float], menu_path: str, order: int,
         name: Optional[str] = None, color: Optional[Union[str, int]] = 1,
@@ -4151,6 +4210,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def shimoku_gauges_group(
         self, gauges_data: Union[pd.DataFrame, List[Dict]], order: int, menu_path: str,
         rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
@@ -4187,6 +4247,7 @@ class PlotApi(BasePlot):
             )
         return order+1
 
+    @logging_before_and_after(logging_level=logger.info)
     def gauge_indicator(
             self, menu_path: str, order: int, value: int,
             title: Optional[str] = "", description: Optional[str] = "",
@@ -4305,6 +4366,7 @@ class PlotApi(BasePlot):
             bentobox_data=bentobox_data,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def themeriver(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, name: str,  # first layer
@@ -4345,6 +4407,7 @@ class PlotApi(BasePlot):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4434,6 +4497,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_horizontal_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4524,6 +4588,7 @@ class PlotApi(BasePlot):
 
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_area_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4614,6 +4679,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def input_form(
             self, report_dataset_properties: Dict, menu_path: str,
             data: Optional[Union[str, DataFrame, List[Dict]]] = None,
@@ -4693,6 +4759,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def generate_input_form_groups(
         self, menu_path: str, order: int,
         form_groups: Dict, dynamic_sequential_show: Optional[bool] = False,

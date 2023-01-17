@@ -1723,6 +1723,8 @@ class BasePlot(PlotAux):
 class PlotApi(BasePlot):
     """
     """
+
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
         super().__init__(api_client)
         if kwargs.get('business_id'):

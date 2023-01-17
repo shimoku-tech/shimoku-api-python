@@ -5,3 +5,4 @@ json5==0.9.10
 tenacity==8.1.0
 shimoku-components-catalog==0.2
 tqdm==4.64.1
+psutil==5.9.4

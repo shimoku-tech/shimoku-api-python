@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
     """
     """
+
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
         self.api_client = api_client
 

@@ -11,12 +11,17 @@ import datetime as dt
 import pandas as pd
 from shimoku_api_python.api.explorer_api import FileExplorerApi, BusinessExplorerApi
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
+
 
 class BasicFileMetadataApi(FileExplorerApi, ABC):
     """
     """
     _get_business = BusinessExplorerApi.get_business
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
 
@@ -26,6 +31,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             self.business_id: Optional[str] = None
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _encode_file_name(
             file_name: str, date: dt.date, chunk: Optional[int] = None
     ) -> str:
@@ -36,6 +42,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         )
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _decode_file_name(file_name: str) -> str:
         """Decode the file name into its components
         """
@@ -50,6 +57,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             raise ValueError('Invalid file name has multiple times "_date:" or "_chunk:"')
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_file_date(file_name: str) -> Optional[dt.date]:
         try:
             date_iso: str = file_name.split('_date:')[1].split('_chunk:')[0]
@@ -58,9 +66,11 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         return dt.datetime.strptime(date_iso, '%Y-%m-%d').date()
 
     # TODO applies only to dataframes
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_file_chunk(self):
         raise NotImplementedError('Not implemented yet')
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_files_by_string_matching(
             self, string_match: str,
             app_name: Optional[str] = None,
@@ -88,12 +98,14 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
 
         return target_files
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
         _ = self._get_business(business_id)
         self.business_id: str = business_id
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_files_by_name_prefix(
             self, name_prefix: str,
             app_name: Optional[str] = None,
@@ -110,6 +122,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 target_files.append(file)
         return target_files
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_file_by_name(
             self, file_name: str,
             app_name: Optional[str] = None,
@@ -152,6 +165,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             )
         return file
 
+    @logging_before_and_after(logging_level=logger.info)
     def delete_files_by_name_prefix(
             self, name_prefix: str,
             app_name: Optional[str] = None,
@@ -175,6 +189,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 file_id=file_metadata['id'],
             )
 
+    @logging_before_and_after(logging_level=logger.info)
     def post_object(
             self, app_name: str,
             file_name: str,
@@ -231,6 +246,8 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
 class FileMetadataApi(BasicFileMetadataApi, ABC):
     """
     """
+
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
         super().__init__(api_client, **kwargs)
 
@@ -239,9 +256,11 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             self.business_id: Optional[str] = None
 
+    @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
         super().set_business(business_id)
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_all_files_by_app_name(self, app_name: str) -> List[Dict]:
         """"""
         apps: List[Dict] = self._get_business_apps(self.business_id)
@@ -256,6 +275,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             break
         return files
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_all_files_by_creation_date(
             self, datetime: dt.datetime,
             app_name: Optional[str] = None,
@@ -264,6 +284,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """Get all files from a target creation date"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_file_by_creation_date(
             self, file_name: str,
             date: dt.date,
@@ -273,6 +294,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """Get a specific file from a target creation date"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_last_created_target_file(
             self, file_name: str,
             app_name: Optional[str] = None,
@@ -280,6 +302,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """Get a specific file from a target creation date"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_all_files_by_date(
             self, date: dt.date,
             app_name: Optional[str] = None,
@@ -291,6 +314,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             app_name=app_name,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_file_by_date(
             self, file_name: str,
             date: dt.date,
@@ -339,6 +363,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             raise ValueError('Multiple files found for the same date')
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_files_with_max_date(
             self, file_name: str,
             app_name: Optional[str] = None,
@@ -384,6 +409,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             return target_files
 
     # TODO pending implementation
+    @logging_before_and_after(logging_level=logger.info)
     def replace_file_name(
             self, app_name: str, old_name: str, new_name: str
     ) -> Dict:
@@ -424,6 +450,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_object(
             self, app_name: str,
             file_name: str,
@@ -443,6 +470,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 get_file_object=True,
             )
 
+    @logging_before_and_after(logging_level=logger.info)
     def post_dataframe(
             self, app_name: str, file_name: str, df: pd.DataFrame,
             force_name: bool = False, split_by_size: bool = True
@@ -489,6 +517,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             object_data=dataframe_binary,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_dataframe(
             self, app_name: str, file_name: str,
             get_last_date: bool = True, parse_name: bool = True,
@@ -547,6 +576,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
         return df.reset_index(drop=True)
 
+    @logging_before_and_after(logging_level=logger.info)
     def post_ai_model(
             self, app_name: str, model_name: str, model: Callable,
     ) -> Dict:
@@ -564,6 +594,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             object_data=model_binary,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_ai_model(
             self, app_name: str, model_name: str,
     ) -> Any:

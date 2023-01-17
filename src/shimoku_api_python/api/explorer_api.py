@@ -771,6 +771,7 @@ class CreateExplorerAPI(object):
     _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
     _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
         self.api_client = api_client
 

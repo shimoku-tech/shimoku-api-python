@@ -24,6 +24,7 @@ class AppMetadataApi(AppExplorerApi, ABC):
     _create_app = CascadeCreateExplorerAPI.create_app
     _get_business = BusinessExplorerApi.get_business
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
 

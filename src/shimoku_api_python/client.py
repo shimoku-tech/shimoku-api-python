@@ -3,17 +3,20 @@ Used as base Mailchimp:
 https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py
 """
 
-
 from typing import List, Dict
 
 import datetime
 import requests
 import json
+import asyncio
 from tenacity import retry, wait_exponential, stop_after_attempt
 from shimoku_api_python.exceptions import ApiClientError
+from functools import wraps
 
+import aiohttp
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
+
 logger = logging.getLogger(__name__)
 
 
@@ -78,8 +81,9 @@ class ApiClient(object):
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
     @logging_before_and_after(logging_level=logger.debug)
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
-    def call_api(
+    # @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
+    # @sync_fallback
+    async def call_api(
             self, resource_path, method, path_params=None, query_params=None,
             header_params=None, body=None, collection_formats=None, **kwargs
     ):
@@ -89,8 +93,7 @@ class ApiClient(object):
         header_params.update(self.default_headers)
         if header_params:
             header_params = self.sanitize_for_serialization(header_params)
-            header_params = dict(self.parameters_to_tuples(header_params,
-                                                           collection_formats))
+            header_params = dict(self.parameters_to_tuples(header_params, collection_formats))
 
         # path parameters
         if path_params:
@@ -116,25 +119,12 @@ class ApiClient(object):
 
         # perform request and return response
         try:
-            res = self.request(
+            return await self.request(
                 method, url, query_params,
                 headers=header_params, body=body,
             )
         except Exception as err:
             raise ApiClientError(err)
-
-        try:
-            if 'application/json' in res.headers.get('content-type'):
-                data = res.json()
-            else:
-                data = res.text
-        except Exception:
-            data = None
-
-        if res.ok:
-            return data
-        else:
-            raise ApiClientError(data)
 
     @logging_before_and_after(logging_level=logger.debug)
     def set_http_info(self, **kwargs):  # noqa: E501
@@ -182,8 +172,8 @@ class ApiClient(object):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def query_element(
-        self, method: str, endpoint: str, **kwargs
+    async def query_element(
+            self, method: str, endpoint: str, **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
@@ -200,7 +190,7 @@ class ApiClient(object):
         if endpoint in params:
             path_params[endpoint] = params[endpoint]  # noqa: E501
 
-        element_data: Dict = (
+        element_data: Dict = await (
             self.call_api(
                 endpoint, method,
                 path_params,
@@ -221,58 +211,40 @@ class ApiClient(object):
         return element_data
 
     @logging_before_and_after(logging_level=logger.debug)
-    def request(self, method, url, query_params=None, headers=None, body=None):
+    # @sync_fallback
+    async def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
 
         if self.is_basic_auth:
             auth = ('user', self.api_key)
 
-        if self.is_oauth:
-            if headers:
-                headers.update({'Authorization': 'Bearer ' + self.access_token})
-            else:
-                headers = {'Authorization': 'Bearer ' + self.access_token}
+        if self.is_basic_auth:
+            auth = aiohttp.BasicAuth('user', self.api_key)
+        elif self.is_oauth:
+            headers = headers or {}
+            headers.update({'Authorization': 'Bearer ' + self.access_token})
 
-        if method == "GET":
-            return requests.get(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "HEAD":
-            return requests.head(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "OPTIONS":
-            return requests.options(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "POST":
-            return requests.post(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "PUT":
-            return requests.put(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "PATCH":
-            return requests.patch(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "DELETE":
-            return requests.delete(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        else:
+        if method not in ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'POST', 'PUT', 'PATCH']:
             raise ValueError(
                 "http method must be `GET`, `HEAD`, `OPTIONS`,"
                 " `POST`, `PATCH`, `PUT` or `DELETE`."
             )
+
+        async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+            async with session.request(
+                    method, url, params=query_params, json=body, headers=headers) as res:
+                try:
+                    if 'application/json' in res.headers.get('content-type'):
+                        data = await res.json()
+                    else:
+                        data = await res.text()
+                except Exception:
+                    data = None
+
+                if res.ok:
+                    return data
+                else:
+                    raise ApiClientError(data)
 
     def raw_request(self, **kwargs):
         return requests.request(**kwargs)

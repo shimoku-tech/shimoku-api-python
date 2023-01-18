@@ -55,8 +55,8 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_app_type_by_name(self, name: str) -> Dict:
-        app_types: List[Dict] = self.get_universe_app_types()
+    async def get_app_type_by_name(self, name: str) -> Dict:
+        app_types: List[Dict] = await self.get_universe_app_types()
         target_app_type: List[Dict] = [
             app_type
             for app_type in app_types

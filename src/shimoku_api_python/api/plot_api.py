@@ -23,10 +23,22 @@ from .explorer_api import (
 from .data_managing_api import DataManagingApi
 from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
+import asyncio
+from functools import wraps
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
+
+
+# Synchronous fallback decorator if system doesn't have the ability for async
+def sync_fallback(async_func):
+    @wraps(async_func)
+    def wrapper(*args, **kwargs):
+        task = asyncio.run(async_func(*args, **kwargs))
+        # get the return value from the wrapped coroutine
+        return task.result()
+    return wrapper
 
 
 class PlotAux:
@@ -128,10 +140,10 @@ class BasePlot(PlotAux):
         self._tabs_group_modified = set()
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _get_business_state(self, business_id: str):
+    async def _get_business_state(self, business_id: str):
         @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_apps_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
+        async def _get_business_apps_info(business_id: str):
+            business_reports = await self._get_business_reports(business_id)
             for report in business_reports:
                 app_id = report['appId']
                 path = report['path']
@@ -141,13 +153,13 @@ class BasePlot(PlotAux):
                     self._paths_last_order[(app_id, path)] = -1
 
         @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_reports_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
+        async def _get_business_reports_info(business_id: str):
+            business_reports = await self._get_business_reports(business_id)
             self._report_order = {report['id']: report['order'] for report in business_reports}
 
         @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_tabs_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
+        async def _get_business_tabs_info(business_id: str):
+            business_reports = await self._get_business_reports(business_id)
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
@@ -180,9 +192,9 @@ class BasePlot(PlotAux):
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
 
-        _get_business_apps_info(business_id)
-        _get_business_reports_info(business_id)
-        _get_business_tabs_info(business_id)
+        await _get_business_apps_info(business_id)
+        await _get_business_reports_info(business_id)
+        await _get_business_tabs_info(business_id)
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -1729,7 +1741,8 @@ class PlotApi(BasePlot):
         super().__init__(api_client)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
-            self._get_business_state(self.business_id)
+            asyncio.run(self._get_business_state(self.business_id))
+            print(self)
         else:
             self.business_id: Optional[str] = None
 
@@ -1869,7 +1882,7 @@ class PlotApi(BasePlot):
         self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
 
     @logging_before_and_after(logging_level=logger.info)
-    def table(
+    async def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None,
@@ -2212,7 +2225,7 @@ class PlotApi(BasePlot):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
         try:
-            d: Dict[str, Dict] = self._create_app_type_and_app(
+            d: Dict[str, Dict] = await self._create_app_type_and_app(
                 business_id=self.business_id,
                 app_type_metadata={'name': name},
                 app_metadata={},
@@ -2221,7 +2234,7 @@ class PlotApi(BasePlot):
         except ApiClientError:  # Business admin user
             app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
             if not app:
-                app: Dict = self._create_app(
+                app: Dict = await self._create_app(
                     business_id=self.business_id, name=name,
                 )
 

@@ -310,21 +310,21 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return business
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_universe_app_types(self) -> List[Dict]:
+    async def get_universe_app_types(self) -> List[Dict]:
         endpoint: str = f'apptypes'
-        return (
+        return await (
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
         )['items']
 
     @logging_before_and_after(logging_level=logger.debug)
-    def find_app_type_by_name_filter(
+    async def find_app_type_by_name_filter(
         self, name: Optional[str] = None,
         normalized_name: Optional[str] = None,
     ) -> Dict:
         """"""
-        app_types: List[Dict] = self.get_universe_app_types()
+        app_types: List[Dict] = await self.get_universe_app_types()
 
         if name:
             app_types: List[Dict] = [
@@ -347,13 +347,13 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return app_type
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_business_apps(self, business_id: str) -> List[Dict]:
+    async def get_business_apps(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all app metadata
 
         :param business_id: business UUID
         """
         endpoint: str = f'business/{business_id}/apps'
-        apps_raw: Dict = (
+        apps_raw: Dict = await (
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
@@ -437,12 +437,12 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return paths
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_app_reports(self, business_id: str, app_id: str) -> List[Dict]:
+    async def get_app_reports(self, business_id: str, app_id: str) -> List[Dict]:
         """Given an App Id retrieve all reports data from all reports
         that belongs to such App Id.
         """
         endpoint: str = f'business/{business_id}/app/{app_id}/reports'
-        reports_raw: Dict = (
+        reports_raw: Dict = await (
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
@@ -453,13 +453,13 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return reports
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
+    async def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
         :param business_id: business UUID
         :param app_id: app UUID
         """
-        reports: List[Dict] = (
+        reports: List[Dict] = await (
             self.get_app_reports(
                 business_id=business_id,
                 app_id=app_id,
@@ -468,29 +468,29 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return [report['id'] for report in reports]
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_business_reports(self, business_id: str) -> List[Dict]:
+    async def get_business_reports(self, business_id: str) -> List[Dict]:
         """Given a business retrieve all reports
 
         :param business_id: business UUID
         """
-        business_apps = self.get_business_apps(business_id)
+        business_apps = await self.get_business_apps(business_id)
         return [report
                 for app_id in business_apps
-                    for report in self.get_app_reports(business_id, app_id['id'])]
+                    for report in (await self.get_app_reports(business_id, app_id['id']))]
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_business_report_ids(self, business_id: str) -> List[str]:
+    async def get_business_report_ids(self, business_id: str) -> List[str]:
         """Given an business retrieve all report_ids
 
         :param business_id: business UUID
         """
-        business_apps = self.get_business_apps(business_id)
+        business_apps = await self.get_business_apps(business_id)
         return [report['id']
                 for app_id in business_apps
-                    for report in self.get_app_reports(business_id, app_id['id'])]
+                    for report in await self.get_app_reports(business_id, app_id['id'])]
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_report_datasets(
+    async def get_report_datasets(
             self, business_id: str, app_id: str,  report_id: str,
     ) -> List[Dict]:
         endpoint: str = (
@@ -499,7 +499,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             f'report/{report_id}/'
             f'reportDataSets'
         )
-        reportdatasets: List[Dict] = (
+        reportdatasets: List[Dict] = await (
             self.api_client.query_element(
                 endpoint=endpoint, method='GET',
             )
@@ -514,7 +514,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 f'business/{business_id}/'
                 f'dataSet/{reportdataset["dataSetId"]}'
             )
-            data_set: Dict = (
+            data_set: Dict = await (
                 self.api_client.query_element(
                     endpoint=endpoint, method='GET',
                 )
@@ -818,9 +818,9 @@ class CreateExplorerAPI(object):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def create_app_type(self, name: str) -> Dict:
+    async def create_app_type(self, name: str) -> Dict:
         """"""
-        app_type: Dict = self._find_app_type_by_name_filter(name=name)
+        app_type: Dict = await self._find_app_type_by_name_filter(name=name)
         if app_type:
             raise ValueError(f'An AppType with the name {name} already exists')
 
@@ -838,12 +838,12 @@ class CreateExplorerAPI(object):
             'normalizedName': normalized_name,
         }
 
-        return self.api_client.query_element(
+        return await self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def create_app(
+    async def create_app(
         self, business_id: str,
         name: Optional[str],
         app_type_id: Optional[str] = None,
@@ -885,7 +885,7 @@ class CreateExplorerAPI(object):
             # Update items with kwargs
             item.update(app_metadata)
 
-        return self.api_client.query_element(
+        return await self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
         )
 
@@ -1723,7 +1723,7 @@ class MultiCreateApi(MultiDeleteApi):
         }
 
     @logging_before_and_after(logging_level=logger.debug)
-    def create_app_type_and_app(
+    async def create_app_type_and_app(
         self, business_id: str,
         app_type_metadata: Dict,
         app_metadata: Optional[Dict] = None,
@@ -1732,10 +1732,10 @@ class MultiCreateApi(MultiDeleteApi):
         If app_type_id is None we create it
         """
         try:
-            app_type: Dict = self._create_app_type(**app_type_metadata)
+            app_type: Dict = await self._create_app_type(**app_type_metadata)
         except ValueError:
             app_type_name: str = app_type_metadata['name']
-            app_type: Dict = self._get_app_type_by_name(app_type_name)
+            app_type: Dict = await self._get_app_type_by_name(app_type_name)
 
         app_type_id: str = app_type['id']
         app_metadata['app_type_id'] = app_type_id
@@ -1747,10 +1747,10 @@ class MultiCreateApi(MultiDeleteApi):
         )
         if not app:
             if app_metadata.get('name'):
-                app: Dict = self._create_app(**app_metadata)
+                app: Dict = await self._create_app(**app_metadata)
             else:  # get the AppType name and use it
                 app_metadata.update({'name': app_type_metadata['name']})
-                app: Dict = self._create_app(**app_metadata)
+                app: Dict = await self._create_app(**app_metadata)
 
         return {
             'app_type': app_type,

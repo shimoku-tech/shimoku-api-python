@@ -103,9 +103,8 @@ class BasePlot(PlotAux):
         self.api_client = api_client
         self._clear_or_create_all_local_state()
 
-    @staticmethod
-    @async_auto_call_manager(execute=True)
-    async def execute_task_pool():
+    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    async def execute_task_pool(self):
         pass
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -1288,7 +1287,7 @@ class BasePlot(PlotAux):
 
         return report_dataset
 
-    @logging_before_and_after(logging_level=logger.info)
+    @logging_before_and_after(logging_level=logger.debug)
     async def delete(
             self, menu_path: str,
             tabs_index: Optional[str] = None,
@@ -2323,6 +2322,7 @@ class PlotApi(BasePlot):
             report_data=report_entries,
         )
 
+    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     def html(
             self, html: str, menu_path: str,
@@ -3145,6 +3145,9 @@ class PlotApi(BasePlot):
         df: DataFrame = self._validate_data_is_pandarable(data)
         df = df[mandatory_elements + extra_elements]  # keep only x and y
 
+        # Apply decorator to create chart so that indicators are added to the execution pool
+        pool_create_chart = async_auto_call_manager()(self._create_chart)
+
         cols_to_rename: Dict[str, str] = {
             header: 'title',
             footer: 'description',
@@ -3213,6 +3216,7 @@ class PlotApi(BasePlot):
                 raise ValueError('You must not provide more than 6 indicators when using the horizontal configuration')
 
         last_index = df.index[-1]
+
         for index, df_row in df.iterrows():
             if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
@@ -3230,7 +3234,7 @@ class PlotApi(BasePlot):
 
             report_metadata['properties'] = json.dumps(df_row.to_dict())
 
-            self._create_chart(
+            pool_create_chart(
                 data=[df_row.to_dict()],
                 menu_path=menu_path,
                 order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,

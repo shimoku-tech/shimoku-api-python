@@ -1687,11 +1687,10 @@ class MultiCreateApi(MultiDeleteApi):
             app_type_id=app_type_id,
         )
         if not app:
-            if app_metadata.get('name'):
-                app: Dict = await self._create_app(**app_metadata)
-            else:  # get the AppType name and use it
-                app_metadata.update({'name': app_type_metadata['name']})
-                app: Dict = await self._create_app(**app_metadata)
+            if not app_metadata.get('name'):
+                app_metadata.update({'name': app_type_metadata['name']})  # get the AppType name and use it
+
+            app: Dict = await self._create_app(**app_metadata)
 
         return {
             'app_type': app_type,

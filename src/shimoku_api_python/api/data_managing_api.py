@@ -382,7 +382,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
 
 # TODO pending add append_report_data to free Echarts
     @logging_before_and_after(logging_level=logger.debug)
-    def append_report_data(
+    async def append_report_data(
         self, business_id: str, app_id: str,
         report_data: Union[List[Dict], str, DataFrame, Dict],
         report_id: Optional[str] = None,
@@ -398,7 +398,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         if self._is_report_data_empty(report_data):
             return
 
-        report: Dict = (
+        report: Dict = await(
             self._get_report_with_data(
                 business_id=business_id,
                 app_id=app_id,
@@ -458,7 +458,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         else:  # Then it is a table
             item: Dict = {'reportId': report_id}
 
-            data: List[Dict] = (
+            data: List[Dict] = await(
                 self.convert_dataframe_to_report_entry(
                     report_id=report_id, df=report_data,
                 )
@@ -467,10 +467,10 @@ class DataManagingApi(DataExplorerApi, DataValidation):
             # TODO we can store batches and go faster than one by one
             for datum in data:
                 item.update(datum)
-                self.post_report_entry(item)
+                await self.post_report_entry(item)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def update_report_data(
+    async def update_report_data(
             self, business_id: str, app_id: str,
             report_data: Union[List, Dict, str, DataFrame],
             report_id: Optional[str] = None,
@@ -482,7 +482,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         if self._is_report_data_empty(report_data):
             return
 
-        report: Dict = (
+        report: Dict = await (
             self.get_report(
                 business_id=business_id,
                 app_id=app_id,
@@ -519,20 +519,20 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     'chartData': json.dumps(chart_data),
                 }
 
-            self._update_report(
+            await self._update_report(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
                 report_metadata=report_data_,
             )
         else:  # Then it is a table
-            self._delete_report_entries(
+            await self._delete_report_entries(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
             )
 
-            self._create_report_entries(
+            await self._create_report_entries(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,

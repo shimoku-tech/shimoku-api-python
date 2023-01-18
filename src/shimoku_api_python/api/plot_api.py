@@ -24,22 +24,12 @@ from .data_managing_api import DataManagingApi
 from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 import asyncio
-from functools import wraps
+
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-
-
-# Synchronous fallback decorator if system doesn't have the ability for async
-def sync_fallback(async_func):
-    @wraps(async_func)
-    def wrapper(*args, **kwargs):
-        task = asyncio.run(async_func(*args, **kwargs))
-        # get the return value from the wrapped coroutine
-        return task.result()
-    return wrapper
-
 
 class PlotAux:
     _get_business = BusinessExplorerApi.get_business
@@ -112,6 +102,11 @@ class BasePlot(PlotAux):
     def __init__(self, api_client, **kwargs):
         self.api_client = api_client
         self._clear_or_create_all_local_state()
+
+    @staticmethod
+    @async_auto_call_manager(execute=True)
+    async def execute_task_pool():
+        pass
 
     @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
@@ -332,7 +327,7 @@ class BasePlot(PlotAux):
         return report_metadata
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _find_target_reports(
+    async def _find_target_reports(
             self, menu_path: str,
             grid: Optional[str] = None,
             order: Optional[int] = None,
@@ -363,13 +358,13 @@ class BasePlot(PlotAux):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = self._get_app_by_name(
+        app: Dict = await self._get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
         app_id: str = app['id']
 
-        reports: List[Dict] = self._get_app_reports(
+        reports: List[Dict] = await self._get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -591,7 +586,7 @@ class BasePlot(PlotAux):
         self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _create_chart(
+    async def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
             order: Optional[int] = None,
@@ -619,11 +614,11 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = self._get_or_create_app_and_apptype(name=name)
+        app = await self._get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
-            self.delete(
+            await self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
@@ -632,7 +627,7 @@ class BasePlot(PlotAux):
                 overwrite=True
             )
 
-        report: Dict = self._create_report(
+        report: Dict = await self._create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -652,7 +647,7 @@ class BasePlot(PlotAux):
 
         try:
             if data:
-                self._update_report_data(
+                await self._update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -660,7 +655,7 @@ class BasePlot(PlotAux):
                 )
         except ValueError:
             if not data.empty:
-                self._update_report_data(
+                await self._update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -832,7 +827,7 @@ class BasePlot(PlotAux):
             yield df_temp, filter_element
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _update_filter_report(
+    async def _update_filter_report(
             self, filter_row: Optional[int],
             filter_column: Optional[int],
             filter_order: Optional[int],
@@ -843,7 +838,7 @@ class BasePlot(PlotAux):
     ) -> None:
         """"""
         filter_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 grid=f'{filter_row}, {filter_column}',
                 order=filter_order,
@@ -907,7 +902,7 @@ class BasePlot(PlotAux):
             'title': '',
         }
 
-        self._create_chart(
+        await self._create_chart(
             data=chart_data,
             menu_path=menu_path,
             report_metadata=report_metadata,
@@ -1094,7 +1089,7 @@ class BasePlot(PlotAux):
                 )
 
     @logging_before_and_after(logging_level=logger.info)
-    def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
+    async def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
         """
         :param paths_order: example {
             'test/sub-path': 0,
@@ -1114,13 +1109,13 @@ class BasePlot(PlotAux):
             app_normalized_name = self._create_normalized_name(app_normalized_name)
             app_path_name = self._create_normalized_name(app_path_name)
 
-            app: Dict = self._get_app_by_name(
+            app: Dict = await self._get_app_by_name(
                 business_id=self.business_id,
                 name=app_normalized_name,
             )
             app_id: str = app['id']
 
-            reports: List[Dict] = self._get_app_reports(
+            reports: List[Dict] = await self._get_app_reports(
                 business_id=self.business_id,
                 app_id=app_id,
             )
@@ -1138,10 +1133,10 @@ class BasePlot(PlotAux):
                         )
 
     @logging_before_and_after(logging_level=logger.info)
-    def get_input_forms(self, menu_path: str) -> List[Dict]:
+    async def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
         target_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 component_type='FORM',
             )
@@ -1149,7 +1144,7 @@ class BasePlot(PlotAux):
 
         results: List[Dict] = []
         for report in target_reports:
-            result: List = self._get_report_dataset_data(
+            result: List = await self._get_report_dataset_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
@@ -1165,7 +1160,7 @@ class BasePlot(PlotAux):
         return results
 
     @logging_before_and_after(logging_level=logger.info)
-    def append_data_to_trend_chart(
+    async def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],
             component_type: str,
@@ -1193,14 +1188,14 @@ class BasePlot(PlotAux):
 
         if row and column:
             target_reports: List[Dict] = (
-                self._find_target_reports(
+                await self._find_target_reports(
                     menu_path=menu_path, grid=f'{row}, {column}',
                     component_type=component_type,
                 )
             )
         else:
             target_reports: List[Dict] = (
-                self._find_target_reports(
+                await self._find_target_reports(
                     menu_path=menu_path, order=order,
                     component_type=component_type,
                 )
@@ -1210,7 +1205,7 @@ class BasePlot(PlotAux):
         assert len(target_reports) == 1
 
         for report in target_reports:
-            self._append_report_data(
+            await self._append_report_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
@@ -1218,7 +1213,7 @@ class BasePlot(PlotAux):
             )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _create_dataset_charts(
+    async def _create_dataset_charts(
             self, menu_path: str, order: int,
             rows_size: int, cols_size: int,
             force_custom_field: bool = False,
@@ -1253,7 +1248,7 @@ class BasePlot(PlotAux):
         app_id: str = app['id']
 
         if overwrite:
-            self.delete(
+            await self.delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
@@ -1269,7 +1264,7 @@ class BasePlot(PlotAux):
         else:  # 'ECHARTS2'
             items: List[Dict[str]] = self._convert_input_data_to_db_items(items, sort)
 
-        report_dataset = self._create_report_and_dataset(
+        report_dataset = await self._create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
             report_metadata=report_metadata,
             items=items,
@@ -1294,7 +1289,7 @@ class BasePlot(PlotAux):
         return report_dataset
 
     @logging_before_and_after(logging_level=logger.info)
-    def delete(
+    async def delete(
             self, menu_path: str,
             tabs_index: Optional[str] = None,
             grid: Optional[str] = None,
@@ -1318,7 +1313,7 @@ class BasePlot(PlotAux):
             raise ValueError('Either Row and Column or Order must be specified')
 
         target_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 component_type=component_type,
                 by_component_type=by_component_type,
@@ -1326,7 +1321,9 @@ class BasePlot(PlotAux):
                 **kwargs,
             )
         )
-        business_reports = self._get_business_reports(business_id=self.business_id)
+
+        # TODO optimize this with concurrency
+        business_reports = await self._get_business_reports(business_id=self.business_id)
         for report in target_reports:
             report_id = report['id']
             app_id = report['appId']
@@ -1334,7 +1331,7 @@ class BasePlot(PlotAux):
             business_reports.remove(report)
             app_reports = [report for report in business_reports if report['appId'] == app_id]
 
-            self._delete_report(
+            await self._delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_id=report_id
@@ -1367,20 +1364,20 @@ class BasePlot(PlotAux):
 
             # Check if app can be deleted
             if not overwrite and len(app_reports) == 0:
-                self._delete_app(
+                await self._delete_app(
                     business_id=self.business_id,
                     app_id=app_id,
                 )
 
     @logging_before_and_after(logging_level=logger.info)
-    def delete_path(self, menu_path: str) -> None:
+    async def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
 
         If menu_path contains an "{App}/{Path}" then it removes the path
         otherwise it removes the whole app
         """
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app: Dict = self._get_app_by_name(
+        app: Dict = await self._get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
@@ -1389,15 +1386,15 @@ class BasePlot(PlotAux):
 
         app_id: str = app['id']
         if '/' not in menu_path:
-            self._delete_app(
+            await self._delete_app(
                 business_id=self.business_id,
                 app_id=app_id,
             )
             self._clear_or_create_all_local_state()
-            self._get_business_state(self.business_id)
+            await self._get_business_state(self.business_id)
             return
 
-        reports: List[Dict] = self._get_app_reports(
+        reports: List[Dict] = await self._get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -1410,9 +1407,10 @@ class BasePlot(PlotAux):
         else:
             target_reports: List[Dict] = reports
 
+        # TODO optimize this with concurrency
         for report in target_reports:
             report_id = report['id']
-            self._delete_report(
+            await self._delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_id=report_id
@@ -1431,15 +1429,14 @@ class BasePlot(PlotAux):
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
 
+    @async_auto_call_manager(sequential=True)
     @logging_before_and_after(logging_level=logger.info)
-    def clear_business(self):
+    async def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
-        for app in self.get_business_apps(self.business_id):
-            self._delete_app(
-                business_id=self.business_id,
-                app_id=app['id'],
-            )
-            logger.info(f'The app {app["name"]} has been deleted')
+        tasks = [self._delete_app(business_id=self.business_id, app_id=app['id'])
+                 for app in await self.get_business_apps(self.business_id)]
+
+        await asyncio.gather(*tasks)
         self._clear_or_create_all_local_state()
 
     # TODO pending add append_report_data to free Echarts
@@ -1883,6 +1880,7 @@ class PlotApi(BasePlot):
         self._tabs_group_modified.add(tabs_group_entry)
         self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
 
+    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def table(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -2234,7 +2232,7 @@ class PlotApi(BasePlot):
             )
             app: Dict = d['app']
         except ApiClientError:  # Business admin user
-            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
+            app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
             if not app:
                 app: Dict = await self._create_app(
                     business_id=self.business_id, name=name,
@@ -2270,7 +2268,7 @@ class PlotApi(BasePlot):
                 )
 
             if report_metadata.get('grid'):
-                self.delete(
+                await self.delete(
                     menu_path=menu_path,
                     grid=report_metadata.get('grid'),
                     by_component_type=False,
@@ -2278,7 +2276,7 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
             else:
-                self.delete(
+                await self.delete(
                     menu_path=menu_path,
                     order=order,
                     by_component_type=False,
@@ -2286,7 +2284,7 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
 
-        report: Dict = self._create_report(
+        report: Dict = await self._create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -2318,7 +2316,7 @@ class PlotApi(BasePlot):
             )
         )
 
-        self._update_report_data(
+        await self._update_report_data(
             business_id=self.business_id,
             app_id=app_id,
             report_id=report_id,

@@ -29,6 +29,8 @@ class IndentFormatter(logging.Formatter):
 
 def logging_before_and_after(logging_level: Callable, before: Optional[str] = None, after: Optional[str] = None):
     def decorator(func: Callable):
+
+        #Async version
         @wraps(func)
         async def awrapper(*args, **kwargs):
             underlined_text = '\033[4m' + func.__name__ + '\033[0m'
@@ -55,6 +57,8 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 
             return result
 
+        #Normal version
+        @wraps(func)
         def wrapper(*args, **kwargs):
             underlined_text = '\033[4m' + func.__name__ + '\033[0m'
             logging_level(f"Starting execution of function: {underlined_text}")

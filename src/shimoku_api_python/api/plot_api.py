@@ -192,9 +192,11 @@ class BasePlot(PlotAux):
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
 
-        await _get_business_apps_info(business_id)
-        await _get_business_reports_info(business_id)
-        await _get_business_tabs_info(business_id)
+        await asyncio.gather(
+            _get_business_apps_info(business_id),
+            _get_business_reports_info(business_id),
+            _get_business_tabs_info(business_id)
+        )
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod

@@ -6,6 +6,7 @@ from io import TextIOWrapper
 from functools import wraps
 from warnings import warn
 from inspect import stack
+import asyncio
 import psutil
 import time
 
@@ -29,7 +30,7 @@ class IndentFormatter(logging.Formatter):
 def logging_before_and_after(logging_level: Callable, before: Optional[str] = None, after: Optional[str] = None):
     def decorator(func: Callable):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        async def awrapper(*args, **kwargs):
             underlined_text = '\033[4m' + func.__name__ + '\033[0m'
             logging_level(f"Starting execution of function: {underlined_text}")
             initial_time = time.time()
@@ -37,7 +38,9 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
             initial_memory = process.memory_info().rss / 1024 ** 2
             if before:
                 logging_level(before)
-            result = func(*args, **kwargs)
+
+            result = await func(*args, **kwargs)
+
             if after:
                 logging_level(after)
 
@@ -52,7 +55,32 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 
             return result
 
-        return wrapper
+        def wrapper(*args, **kwargs):
+            underlined_text = '\033[4m' + func.__name__ + '\033[0m'
+            logging_level(f"Starting execution of function: {underlined_text}")
+            initial_time = time.time()
+            process = psutil.Process(os.getpid())
+            initial_memory = process.memory_info().rss / 1024 ** 2
+            if before:
+                logging_level(before)
+
+            result = func(*args, **kwargs)
+
+            if after:
+                logging_level(after)
+
+            time_spent = 1000*(time.time()-initial_time)
+            memory_spent = ''
+            if logging.root.isEnabledFor(logging.DEBUG):
+                memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
+            logging_level(
+                f"Finished execution of function: {underlined_text}, "
+                f"elapsed time: {time_spent:.2f} ms"
+                f"{memory_spent}")
+
+            return result
+
+        return wrapper if not asyncio.iscoroutinefunction(func) else awrapper
 
     return decorator
 

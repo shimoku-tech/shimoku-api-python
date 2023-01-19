@@ -7,9 +7,12 @@ import datetime as dt
 import pandas as pd
 import numpy as np
 import random
+import asyncio
 
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
+
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
 
 api_key: str = getenv('API_TOKEN')
@@ -290,26 +293,28 @@ def test_delete_path():
         menu_path=menu_path,
         order=1,
     )
-    app_types: List[Dict] = s.universe.get_universe_app_types()
+    s.plt.execute_task_pool()
+    app_types: List[Dict] = asyncio.run(s.universe.get_universe_app_types())
     app_type_id = max([
         app_type['id']
         for app_type in app_types
         if app_type['normalizedName'] == app_path
     ])
     assert app_type_id
-    apps: List[Dict] = s.business.get_business_apps(business_id)
+    apps: List[Dict] = asyncio.run(s.business.get_business_apps(business_id))
     app_id = max([
         app['id']
         for app in apps
         if app['type']['id'] == app_type_id
     ])
 
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    s.plt.execute_task_pool()
+    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=menu_path)
 
-    assert len(s.app.get_app_reports(business_id, app_id)) == 0
+    assert len(asyncio.run(s.app.get_app_reports(business_id, app_id))) == 0
 
     s.plt.line(
         data=data,
@@ -330,11 +335,12 @@ def test_delete_path():
         order=0,
     )
 
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    s.plt.execute_task_pool()
+    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
     assert len(reports) == 3
 
     s.plt.delete_path(menu_path=menu_path)
-    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=app_path)
@@ -343,7 +349,7 @@ def test_delete_path():
     class MyTestCase(unittest.TestCase):
         def check_reports_not_exists(self):
             with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
+                asyncio.run(s.app.get_app_reports(business_id, app_id))
     t = MyTestCase()
     t.check_reports_not_exists()
 
@@ -4154,12 +4160,12 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
+s.plt.clear_business()
 # test_tabs()
 # test_line()
 # test_funnel()
 # test_tree()
-# test_get_input_forms()
-# test_delete_path()
+
 # test_append_data_to_trend_chart()
 # test_iframe()
 # test_html()
@@ -4167,15 +4173,14 @@ if delete_paths:
 # test_table()
 # test_table_with_labels()
 # test_free_echarts()
-# test_input_form()
 # test_dynamic_and_conditional_input_form()
 # test_bentobox()
-# test_delete()
+test_delete()
 # test_bar_with_filters()
 # test_set_apps_orders()
 # test_set_sub_path_orders()
 # test_zero_centered_barchart()
-test_indicator()
+# test_indicator()
 # test_indicator_one_dict()
 # test_alert_indicator()
 # test_stockline()
@@ -4200,7 +4205,10 @@ test_indicator()
 # test_speed_gauge()
 # test_line()
 # test_scatter()
-
+# test_input_form()
+# test_get_input_forms()
+test_delete_path()
+s.plt.execute_task_pool()
 
 # TODO
 # test_cohorts()

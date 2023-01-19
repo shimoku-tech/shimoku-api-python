@@ -10,6 +10,8 @@ from shimoku_api_python.api.explorer_api import (
 )
 from shimoku_api_python.exceptions import ApiClientError
 
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
+
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
@@ -23,6 +25,20 @@ class AppMetadataApi(AppExplorerApi, ABC):
     _get_app_by_name = CascadeExplorerAPI.get_app_by_name
     _create_app = CascadeCreateExplorerAPI.create_app
     _get_business = BusinessExplorerApi.get_business
+
+    get_app = async_auto_call_manager(execute=True)(AppExplorerApi.get_app)
+    create_app = async_auto_call_manager(execute=True)(AppExplorerApi.create_app)
+    update_app = async_auto_call_manager(execute=True)(AppExplorerApi.update_app)
+
+    get_business_apps = async_auto_call_manager(execute=True)(AppExplorerApi.get_business_apps)
+    find_app_by_name_filter = async_auto_call_manager(execute=True)(AppExplorerApi.find_app_by_name_filter)
+    get_app_reports = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_reports)
+    get_app_report_ids = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_report_ids)
+    get_app_path_names = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_path_names)
+    get_app_reports_by_filter = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_reports_by_filter)
+    get_app_by_type = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_by_type)
+    get_app_type = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_type)
+    get_app_by_name = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_by_name)
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):

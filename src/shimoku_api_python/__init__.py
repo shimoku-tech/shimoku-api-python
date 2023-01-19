@@ -21,6 +21,7 @@ import shimoku_components_catalog.html_components
 logger = logging.getLogger(__name__)
 
 
+
 class Client(object):
 
     @logging_before_and_after(logging_level=logger.debug)

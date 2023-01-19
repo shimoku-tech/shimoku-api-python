@@ -82,7 +82,6 @@ class ApiClient(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     # @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
-    # @sync_fallback
     async def call_api(
             self, resource_path, method, path_params=None, query_params=None,
             header_params=None, body=None, collection_formats=None, **kwargs
@@ -214,7 +213,8 @@ class ApiClient(object):
     # @sync_fallback
     async def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
-
+        logger.debug(f'method:{method}, url: {url}, headers: {headers},'
+                     f'query params: {query_params}, body: {body}')
         if self.is_basic_auth:
             auth = ('user', self.api_key)
 

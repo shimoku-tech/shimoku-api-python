@@ -1,9 +1,10 @@
 import asyncio
 from functools import wraps
+from inspect import getmembers
 from typing import Callable, Tuple
 
 
-#TODO find a better way to handle this
+# TODO find a better way to handle this
 def clean_menu_path(menu_path: str) -> Tuple[str, str]:
     """Break the menu path in the apptype or app normalizedName
     and the path normalizedName if any"""
@@ -37,35 +38,49 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
 
     return name, path_name
 
+
 task_pool = []
-menu_paths = []
+app_names = []
+sequential = False
+
+
+def activate_sequential_execution():
+    global sequential
+    sequential = True
+
+
+def deactivate_sequential_execution():
+    global sequential
+    sequential = False
 
 
 def async_auto_call_manager(
-        sequential: bool = False, execute: bool = False, task_pool=task_pool, menu_paths=menu_paths,
-        get_or_create_app_and_app_type: Callable = None):
+        execute: bool = False, get_or_create_app_and_app_type: Callable = None):
     def decorator(async_func):
+
         async def execute_tasks(*args):
-            menu_path_tasks = [get_or_create_app_and_app_type(args[0], name=clean_menu_path(menu_path=menu_path)[0])
-                               for menu_path in menu_paths]
-            await asyncio.gather(*menu_path_tasks)
-            await asyncio.gather(*task_pool)
+            # TODO This solution has to be solved, passing the function complicates without necessity
+            if get_or_create_app_and_app_type:
+                # we need to create the apps before the tasks try to access them all at once
+                menu_path_tasks = [get_or_create_app_and_app_type(args[0], name=app_name) for app_name in app_names]
+                await asyncio.gather(*menu_path_tasks)
+            results = await asyncio.gather(*task_pool)
             task_pool.clear()
+            return results[-1]
 
         @wraps(async_func)
         def wrapper(*args, **kwargs):
-            nonlocal task_pool
-            nonlocal menu_paths
+
             if sequential:
-                if len(task_pool) > 0:
-                    asyncio.run(execute_tasks(*args))
                 return asyncio.run(async_func(*args, **kwargs))
-            else:
-                task_pool += [async_func(*args, **kwargs)]
-                if 'menu_path' in kwargs and kwargs['menu_path'] not in menu_paths:
-                    menu_paths += [kwargs['menu_path']]
-                if execute:
-                    asyncio.run(execute_tasks(*args))
+
+            global task_pool, app_names
+            task_pool.append(async_func(*args, **kwargs))
+            if 'menu_path' in kwargs:
+                app_name = clean_menu_path(menu_path=kwargs['menu_path'])[0]
+                app_names += [app_name] if app_name not in app_names else []
+            if execute:
+                return asyncio.run(execute_tasks(*args))
 
         return wrapper
 

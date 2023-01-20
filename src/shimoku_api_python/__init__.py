@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 import logging
 from shimoku_api_python.execution_logger import configure_logging, logging_before_and_after
-
+import shimoku_api_python.async_execution_pool
+from shimoku_api_python.async_execution_pool import activate_sequential_execution, deactivate_sequential_execution
 # import apis into sdk package
 from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
@@ -19,7 +20,6 @@ from shimoku_api_python.client import ApiClient
 import shimoku_components_catalog.html_components
 # from shimoku_api_python.configuration import Configuration
 logger = logging.getLogger(__name__)
-
 
 
 class Client(object):
@@ -53,6 +53,11 @@ class Client(object):
         self.plt = PlotApi(self._api_client, business_id=business_id)
         self.ai = AiAPI(self._api_client)
         self.html_components = shimoku_components_catalog.html_components
+
+        self.activate_sequential_execution = activate_sequential_execution
+        self.activate_async_execution = deactivate_sequential_execution
+
+        shimoku_api_python.async_execution_pool.app_metadata_api = self.app
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config={}):

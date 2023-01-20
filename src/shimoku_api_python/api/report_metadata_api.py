@@ -17,7 +17,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
     """
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
     @logging_before_and_after(logging_level=logger.debug)
     def _get_report_by_var(

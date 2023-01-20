@@ -19,18 +19,29 @@ logger = logging.getLogger(__name__)
 
 
 class DataExplorerApi:
-    get_report = ReportMetadataApi.get_report
-    _get_report_with_data = GetExplorerAPI._get_report_with_data
-    get_report_data = ReportMetadataApi.get_report_data
-    _update_report = ReportMetadataApi.update_report
-    _get_report_datasets = ReportDatasetExplorerApi.get_report_datasets
 
-    _create_report_entries = CreateExplorerAPI._create_report_entries
-    _create_data_points = DatasetExplorerApi.create_data_points
-    _create_dataset = DatasetExplorerApi.create_dataset
-    _create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
+    def __init__(self, api_client):
+        self.api_client = api_client
 
-    _delete_report_entries = DeleteExplorerApi.delete_report_entries
+        self.report_metadata_api = ReportMetadataApi(api_client)
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.report_dataset_explorer_api = ReportDatasetExplorerApi(api_client)
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.dataset_explorer_api = DatasetExplorerApi(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
+
+        self.get_report = self.report_metadata_api.get_report
+        self._get_report_with_data = self.get_explorer_api._get_report_with_data
+        self.get_report_data = self.report_metadata_api.get_report_data
+        self._update_report = self.report_metadata_api.update_report
+        self._get_report_datasets = self.report_dataset_explorer_api.get_report_datasets
+
+        self._create_report_entries = self.create_explorer_api._create_report_entries
+        self._create_data_points = self.dataset_explorer_api.create_data_points
+        self._create_dataset = self.dataset_explorer_api.create_dataset
+        self._create_reportdataset = self.report_dataset_explorer_api.create_reportdataset
+
+        self._delete_report_entries = self.delete_explorer_api.delete_report_entries
 
 
 class DataValidation:
@@ -193,7 +204,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
     """
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
     @logging_before_and_after(logging_level=logger.debug)
     def _transform_report_data_to_chart_data(
@@ -449,7 +460,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     'chartData': json.dumps(chart_data),
                 }
 
-            self._update_report(
+            await self._update_report(
                 business_id=business_id,
                 app_id=app_id,
                 report_id=report_id,
@@ -458,8 +469,8 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         else:  # Then it is a table
             item: Dict = {'reportId': report_id}
 
-            data: List[Dict] = await(
-                self.convert_dataframe_to_report_entry(
+            data: List[Dict] = (
+                self._convert_dataframe_to_report_entry(
                     report_id=report_id, df=report_data,
                 )
             )

@@ -10,6 +10,7 @@ import datetime as dt
 
 import pandas as pd
 from shimoku_api_python.api.explorer_api import FileExplorerApi, BusinessExplorerApi
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -19,11 +20,12 @@ logger = logging.getLogger(__name__)
 class BasicFileMetadataApi(FileExplorerApi, ABC):
     """
     """
-    _get_business = BusinessExplorerApi.get_business
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
-        self.api_client = api_client
+        super().__init__(api_client)
+        self.business_explorer_api = BusinessExplorerApi(api_client)
+        self.get_business = self.business_explorer_api.get_business
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
@@ -99,10 +101,10 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         return target_files
 
     @logging_before_and_after(logging_level=logger.debug)
-    def set_business(self, business_id: str):
+    async def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
-        _ = self._get_business(business_id)
+        _ = await self.get_business(business_id)
         self.business_id: str = business_id
 
     @logging_before_and_after(logging_level=logger.info)
@@ -256,9 +258,10 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             self.business_id: Optional[str] = None
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    def set_business(self, business_id: str):
-        super().set_business(business_id)
+    async def set_business(self, business_id: str):
+        await super().set_business(business_id)
 
     @logging_before_and_after(logging_level=logger.info)
     def get_all_files_by_app_name(self, app_name: str) -> List[Dict]:

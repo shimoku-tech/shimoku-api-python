@@ -10,26 +10,27 @@ from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
 
 
-class BusinessMetadataApi(BusinessExplorerApi, ABC):
+class BusinessMetadataApi(ABC):
     """
     """
-    get_business = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business)
-    get_universe_businesses = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_universe_businesses)
-    create_business = async_auto_call_manager(execute=True)(BusinessExplorerApi.create_business)
-    update_business = async_auto_call_manager(execute=True)(BusinessExplorerApi.update_business)
-
-    get_business_apps = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business_apps)
-    get_business_app_ids = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business_app_ids)
-    get_business_all_apps_with_filter = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business_all_apps_with_filter)
-
-    get_business_reports = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business_reports)
-    get_business_report_ids = async_auto_call_manager(execute=True)(BusinessExplorerApi.get_business_report_ids)
-
-    delete_business = async_auto_call_manager(execute=True)(BusinessExplorerApi.delete_business)
-    
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
+        self.business_explorer_api = BusinessExplorerApi(api_client)
+
         self.api_client = api_client
+        self.get_business = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business)
+        self.get_universe_businesses = async_auto_call_manager(execute=True)(self.business_explorer_api.get_universe_businesses)
+        self.create_business = async_auto_call_manager(execute=True)(self.business_explorer_api.create_business)
+        self.update_business = async_auto_call_manager(execute=True)(self.business_explorer_api.update_business)
+
+        self.get_business_apps = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_apps)
+        self.get_business_app_ids = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_app_ids)
+        self.get_business_all_apps_with_filter = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_all_apps_with_filter)
+
+        self.get_business_reports = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_reports)
+        self.get_business_report_ids = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_report_ids)
+
+        self.delete_business = async_auto_call_manager(execute=True)(self.business_explorer_api.delete_business)
 
     @logging_before_and_after(logging_level=logger.debug)
     def copy_business(self):

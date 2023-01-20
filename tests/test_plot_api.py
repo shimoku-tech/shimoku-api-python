@@ -33,6 +33,10 @@ s = shimoku.Client(
     verbosity=verbose
 )
 s.plt.set_business(business_id=business_id)
+s.app.set_business(business_id=business_id)
+s.io.set_business(business_id=business_id)
+
+
 delete_paths: bool = False
 
 
@@ -264,7 +268,8 @@ def test_set_new_business():
     print('test_set_new_business')
     name: str = 'new-business-test'
     prev_business_id: str = s.plt.business_id
-
+    bs = s.universe.get_universe_businesses()
+    print(bs)
     s.plt.set_new_business(name)
     bs = s.universe.get_universe_businesses()
     for b in bs:
@@ -293,28 +298,26 @@ def test_delete_path():
         menu_path=menu_path,
         order=1,
     )
-    s.plt.execute_task_pool()
-    app_types: List[Dict] = asyncio.run(s.universe.get_universe_app_types())
+    app_types: List[Dict] = s.universe.get_universe_app_types()
     app_type_id = max([
         app_type['id']
         for app_type in app_types
         if app_type['normalizedName'] == app_path
     ])
     assert app_type_id
-    apps: List[Dict] = asyncio.run(s.business.get_business_apps(business_id))
+    apps: List[Dict] = s.business.get_business_apps(business_id)
     app_id = max([
         app['id']
         for app in apps
         if app['type']['id'] == app_type_id
     ])
 
-    s.plt.execute_task_pool()
-    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=menu_path)
 
-    assert len(asyncio.run(s.app.get_app_reports(business_id, app_id))) == 0
+    assert len(s.app.get_app_reports(business_id, app_id)) == 0
 
     s.plt.line(
         data=data,
@@ -335,12 +338,11 @@ def test_delete_path():
         order=0,
     )
 
-    s.plt.execute_task_pool()
-    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
     assert len(reports) == 3
 
     s.plt.delete_path(menu_path=menu_path)
-    reports: List[Dict] = asyncio.run(s.app.get_app_reports(business_id, app_id))
+    reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=app_path)
@@ -349,7 +351,7 @@ def test_delete_path():
     class MyTestCase(unittest.TestCase):
         def check_reports_not_exists(self):
             with self.assertRaises(ApiClientError):
-                asyncio.run(s.app.get_app_reports(business_id, app_id))
+                s.app.get_app_reports(business_id, app_id)
     t = MyTestCase()
     t.check_reports_not_exists()
 
@@ -618,17 +620,11 @@ def test_table_download_csv():
 
         s.plt.delete_path('test/table-test-csv')
 
+
 def test_bar_with_filters():
     print('test_bar_with_filters')
     menu_path: str = 'test/multifilter-bar-test'
     # First reset
-    # TODO this is because of improvements required for multifilter Update!!
-    #  if we remove the delete_path() and we run this method twice it is going to fail!
-    s.plt.delete_path(menu_path)
-    s.plt.delete_path('multifilter bar test')
-    s.plt.delete_path(f'{menu_path}-bysize')
-    s.plt.delete_path('multifilter bar test bysize')
-
     data_ = pd.read_csv('../data/test_multifilter.csv')
     y: List[str] = [
         'Acné', 'Adeslas', 'Asisa',
@@ -3701,7 +3697,8 @@ def test_tabs():
         app_name, path_name = s.plt._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = s.plt._get_app_by_name(business_id=business_id, name=app_name)
+        s.plt.execute_task_pool()
+        app: Dict = asyncio.run(s.plt._get_app_by_name(business_id=business_id, name=app_name))
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, _tabs_index[0])
 
@@ -4162,52 +4159,52 @@ if delete_paths:
 
 s.plt.clear_business()
 # test_tabs()
-# test_line()
-# test_funnel()
-# test_tree()
-
-# test_append_data_to_trend_chart()
-# test_iframe()
-# test_html()
-# test_set_new_business()
-# test_table()
-# test_table_with_labels()
-# test_free_echarts()
-# test_dynamic_and_conditional_input_form()
-# test_bentobox()
-test_delete()
+test_line()
+test_funnel()
+test_tree()
+test_iframe()
+test_html()
+test_table()
+test_table_with_labels()
+test_free_echarts()
+test_dynamic_and_conditional_input_form()
+test_bentobox()
 # test_bar_with_filters()
-# test_set_apps_orders()
-# test_set_sub_path_orders()
-# test_zero_centered_barchart()
-# test_indicator()
-# test_indicator_one_dict()
-# test_alert_indicator()
-# test_stockline()
-# test_radar()
-# test_pie()
-# test_ux()
-# test_bar()
-# test_stacked_barchart()
-# test_stacked_horizontal_barchart()
-# test_stacked_area_chart()
-# test_shimoku_gauges()
-# test_gauge_indicators()
-# test_doughnut()
-# test_rose()
-# test_ring_gauge()
-# test_sunburst()
-# test_treemap()
-# test_heatmap()
-# test_sankey()
-# test_horizontal_barchart()
-# test_predictive_line()
-# test_speed_gauge()
-# test_line()
-# test_scatter()
-# test_input_form()
-# test_get_input_forms()
-test_delete_path()
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_zero_centered_barchart()
+test_indicator()
+test_indicator_one_dict()
+test_alert_indicator()
+test_stockline()
+test_radar()
+test_pie()
+test_ux()
+test_bar()
+test_stacked_barchart()
+test_stacked_horizontal_barchart()
+test_stacked_area_chart()
+test_shimoku_gauges()
+test_gauge_indicators()
+test_doughnut()
+test_rose()
+test_ring_gauge()
+test_sunburst()
+test_treemap()
+test_heatmap()
+test_sankey()
+test_horizontal_barchart()
+test_predictive_line()
+test_speed_gauge()
+test_line()
+test_scatter()
+test_input_form()
+test_get_input_forms()
+
+# test_set_new_business()
+# test_append_data_to_trend_chart()
+# test_delete()
+# test_delete_path()
 s.plt.execute_task_pool()
 
 # TODO

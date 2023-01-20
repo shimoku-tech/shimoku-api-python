@@ -33,78 +33,96 @@ logger = logging.getLogger(__name__)
 
 
 class PlotAux:
-    _get_business = BusinessExplorerApi.get_business
-    _get_business_apps = BusinessExplorerApi.get_business_apps
-    get_business_apps = BusinessExplorerApi.get_business_apps
-    _get_business_reports = BusinessExplorerApi.get_business_reports
+    def __init__(self, api_client):
+        self.business_explorer_api = BusinessExplorerApi(api_client=api_client)
+        self.universe_explorer_api = UniverseExplorerApi(api_client=api_client)
+        self.report_explorer_api = ReportExplorerApi(api_client=api_client)
+        self.app_explorer_api = AppExplorerApi(api_client=api_client)
+        self.cascade_explorer = CascadeExplorerAPI(api_client=api_client)
+        self.create_explorer_api = CreateExplorerAPI(api_client=api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client=api_client)
+        self.report_dataset_explorer_api = ReportDatasetExplorerApi(api_client=api_client)
+        self.dataset_explorer_api = DatasetExplorerApi(api_client=api_client)
+        self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client)
+        self.app_metadata_api = AppMetadataApi(api_client=api_client)
+        self.data_managing_api = DataManagingApi(api_client=api_client)
+        self.data_validation_api = DataValidation(api_client=api_client)
+        self.multi_create_api = MultiCreateApi(api_client=api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client=api_client)
 
-    get_universe_businesses = UniverseExplorerApi.get_universe_businesses
+        self.api_client = api_client
 
-    get_report = ReportExplorerApi.get_report
-    _get_report_with_data = ReportExplorerApi._get_report_with_data
-    _update_app = AppExplorerApi.update_app
-    _update_report = ReportExplorerApi.update_report
-    update_report = ReportExplorerApi.update_report
-    get_report_data = ReportExplorerApi.get_report_data
+        self.get_business = self.business_explorer_api.get_business
+        self.get_business_apps = self.business_explorer_api.get_business_apps
+        self.get_business_reports = self.business_explorer_api.get_business_reports
 
-    _find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
-    _find_app_type_by_name_filter = (
-        CascadeExplorerAPI.find_app_type_by_name_filter
-    )
-    # TODO this shit (methods with underscore _* and *) has to be fixed
-    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_by_type = CascadeExplorerAPI.get_app_by_type
-    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    get_report_datasets = CascadeExplorerAPI.get_report_datasets
-    get_dataset_data = CascadeExplorerAPI.get_dataset_data
-    _get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
+        self.get_universe_businesses = self.universe_explorer_api.get_universe_businesses
 
-    create_report = CreateExplorerAPI.create_report
-    _create_report = CreateExplorerAPI.create_report
-    _create_app_type = CreateExplorerAPI.create_app_type
-    _create_normalized_name = CreateExplorerAPI._create_normalized_name
-    _create_key_name = CreateExplorerAPI._create_key_name
-    _create_app = CreateExplorerAPI.create_app
-    _create_business = CreateExplorerAPI.create_business
-    create_dataset = CascadeCreateExplorerAPI.create_dataset
-    create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
-    _create_report_and_dataset = ReportDatasetExplorerApi.create_report_and_dataset
-    create_data_points = DatasetExplorerApi.create_data_points
+        self.get_report = self.report_explorer_api.get_report
+        self.get_report_with_data = self.report_explorer_api._get_report_with_data
 
-    _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
-    _get_or_create_app_and_apptype = AppMetadataApi.get_or_create_app_and_apptype
+        self.get_report_data = self.report_explorer_api.get_report_data
+        self.update_report = self.report_explorer_api.update_report
 
-    _update_report_data = DataManagingApi.update_report_data
-    _append_report_data = DataManagingApi.append_report_data
-    _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
-    _convert_input_data_to_db_items = DataManagingApi._convert_input_data_to_db_items
-    _is_report_data_empty = DataManagingApi._is_report_data_empty
-    _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
-    _create_report_entries = DataManagingApi._create_report_entries
+        self.update_app = self.app_explorer_api.update_app
 
-    _validate_table_data = DataValidation._validate_table_data
-    _validate_input_form_data = DataValidation._validate_input_form_data
-    _validate_tree_data = DataValidation._validate_tree_data
-    _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
+        self.find_app_by_name_filter = self.cascade_explorer.find_app_by_name_filter
+        self.find_app_type_by_name_filter = self.cascade_explorer.find_app_type_by_name_filter
+        # TODO this shit (methods with underscore _* and *) has to be fixed
+        self.get_universe_app_types = self.cascade_explorer.get_universe_app_types
+        self.get_app_reports = self.cascade_explorer.get_app_reports
+        self.get_app_by_type = self.cascade_explorer.get_app_by_type
+        self.get_app_by_name = self.cascade_explorer.get_app_by_name
+        self.find_business_by_name_filter = self.cascade_explorer.find_business_by_name_filter
+        self.get_report_datasets = self.cascade_explorer.get_report_datasets
+        self.get_dataset_data = self.cascade_explorer.get_dataset_data
+        self.get_report_dataset_data = self.cascade_explorer.get_report_dataset_data
 
-    _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
+        self.create_report = self.create_explorer_api.create_report
+        self.create_app_type = self.create_explorer_api.create_app_type
+        self.create_normalized_name = self.create_explorer_api._create_normalized_name
+        self.create_key_name = self.create_explorer_api._create_key_name
+        self.create_app = self.create_explorer_api.create_app
+        self.create_business = self.create_explorer_api.create_business
 
-    _delete_report = DeleteExplorerApi.delete_report
-    _delete_app = DeleteExplorerApi.delete_app
-    _delete_report_entries = DeleteExplorerApi.delete_report_entries
+        self.create_dataset = self.cascade_create_explorer_api.create_dataset
+
+        self.create_reportdataset = self.report_dataset_explorer_api.create_reportdataset
+        self.create_report_and_dataset = self.report_dataset_explorer_api.create_report_and_dataset
+
+        self.create_data_points = self.dataset_explorer_api.create_data_points
+
+        self.get_app_type_by_name = self.app_type_metadata_api.get_app_type_by_name
+        self.get_or_create_app_and_apptype = self.app_metadata_api.get_or_create_app_and_apptype
+
+        self.update_report_data = self.data_managing_api.update_report_data
+        self.append_report_data = self.data_managing_api.append_report_data
+        self.transform_report_data_to_chart_data = self.data_managing_api._transform_report_data_to_chart_data
+        self.convert_input_data_to_db_items = self.data_managing_api._convert_input_data_to_db_items
+        self.is_report_data_empty = self.data_managing_api._is_report_data_empty
+        self.convert_dataframe_to_report_entry = self.data_managing_api._convert_dataframe_to_report_entry
+        self.create_report_entries = self.data_managing_api._create_report_entries
+
+        self.validate_table_data = self.data_validation_api._validate_table_data
+        self.validate_input_form_data = self.data_validation_api._validate_input_form_data
+        self.validate_tree_data = self.data_validation_api._validate_tree_data
+        self.validate_data_is_pandarable = self.data_validation_api._validate_data_is_pandarable
+
+        self.create_app_type_and_app = self.multi_create_api.create_app_type_and_app
+
+        self.delete_report = self.delete_explorer_api.delete_report
+        self.delete_app = self.delete_explorer_api.delete_app
+        self.delete_report_entries = self.delete_explorer_api.delete_report_entries
 
 
-class BasePlot(PlotAux):
+class BasePlot:
 
     def __init__(self, api_client, **kwargs):
+        self._plot_aux = PlotAux(api_client)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     async def execute_task_pool(self):
         pass
 
@@ -137,8 +155,8 @@ class BasePlot(PlotAux):
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_business_state(self, business_id: str):
         @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_apps_info(business_id: str):
-            business_reports = await self._get_business_reports(business_id)
+        async def _get_business_apps_info():
+            business_reports = await self._plot_aux.get_business_reports(business_id)
             for report in business_reports:
                 app_id = report['appId']
                 path = report['path']
@@ -148,13 +166,13 @@ class BasePlot(PlotAux):
                     self._paths_last_order[(app_id, path)] = -1
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_reports_info(business_id: str):
-            business_reports = await self._get_business_reports(business_id)
+        async def _get_business_reports_info():
+            business_reports = await self._plot_aux.get_business_reports(business_id)
             self._report_order = {report['id']: report['order'] for report in business_reports}
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_tabs_info(business_id: str):
-            business_reports = await self._get_business_reports(business_id)
+        async def _get_business_tabs_info():
+            business_reports = await self._plot_aux.get_business_reports(business_id)
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
@@ -188,9 +206,9 @@ class BasePlot(PlotAux):
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
 
         await asyncio.gather(
-            _get_business_apps_info(business_id),
-            _get_business_reports_info(business_id),
-            _get_business_tabs_info(business_id)
+            _get_business_apps_info(),
+            _get_business_reports_info(),
+            _get_business_tabs_info()
         )
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
@@ -358,13 +376,13 @@ class BasePlot(PlotAux):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = await self._get_app_by_name(
+        app: Dict = await self._plot_aux.get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
         app_id: str = app['id']
 
-        reports: List[Dict] = await self._get_app_reports(
+        reports: List[Dict] = await self._plot_aux.get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -426,14 +444,15 @@ class BasePlot(PlotAux):
         return target_reports
 
     # TODO unused - deprecate it?
-    def _get_component_path_order(self, app_id: str, path_name: str) -> int:
+    @logging_before_and_after(logger.info)
+    async def _get_component_path_order(self, app_id: str, path_name: str) -> int:
         """Set an ascending report.pathOrder to new path created
 
         If a report in the same path exists take its path order
         otherwise find the higher report.pathOrder and set it +1
         as the report.pathOrder of the new path
         """
-        reports_ = self._get_app_reports(
+        reports_ = await self._plot_aux.get_app_reports(
             business_id=self.business_id,
             app_id=app_id,
         )
@@ -457,7 +476,7 @@ class BasePlot(PlotAux):
 
     # TABS
     @logging_before_and_after(logging_level=logger.debug)
-    def _update_tabs_group_metadata(self, business_id: str, app_id: str, path_name: str, group_name: str,
+    async def _update_tabs_group_metadata(self, business_id: str, app_id: str, path_name: str, group_name: str,
                                     order: Optional[int] = None, cols_size: Optional[str] = None):
         """Updates the tabs report metadata"""
         tabs_group_entry = (app_id, path_name, group_name)
@@ -478,7 +497,7 @@ class BasePlot(PlotAux):
             report_metadata['properties'] = '{"tabs":' + tabs + '}'
             self._tabs_group_modified.remove(tabs_group_entry)
 
-        self.update_report(
+        await self._plot_aux.update_report(
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,
@@ -486,7 +505,7 @@ class BasePlot(PlotAux):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
+    async def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
         """Creates a tab report and stores its id"""
         app_id, path_name, group_name = tabs_group_entry
         path_entry = (app_id, path_name)
@@ -498,7 +517,7 @@ class BasePlot(PlotAux):
             'reportType': 'TABS',
             'properties': '{}'
         }
-        report: Dict = self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -601,9 +620,6 @@ class BasePlot(PlotAux):
         :param data:
         :param menu_path:
         :param report_metadata:
-        :param row: Only required for Overwrite
-        :param column: Only required for Overwrite
-        :param report_type: Only required for Overwrite
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
@@ -614,7 +630,7 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
@@ -627,7 +643,7 @@ class BasePlot(PlotAux):
                 overwrite=True
             )
 
-        report: Dict = await self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -647,7 +663,7 @@ class BasePlot(PlotAux):
 
         try:
             if data:
-                await self._update_report_data(
+                await self._plot_aux.update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -655,7 +671,7 @@ class BasePlot(PlotAux):
                 )
         except ValueError:
             if not data.empty:
-                await self._update_report_data(
+                await self._plot_aux.update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -723,8 +739,8 @@ class BasePlot(PlotAux):
         :param filters: To create a filter for every specified column
         """
         cols: List[str] = [x] + y
-        self._validate_table_data(data, elements=cols)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=cols)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[cols]  # keep only x and y
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
@@ -789,7 +805,7 @@ class BasePlot(PlotAux):
         """
         Create chunks of the data to create N reports for every filter combination
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         filter_cols: List[str] = filters['filter_cols']
 
         select_filter: Dict[str, str] = {
@@ -1063,13 +1079,15 @@ class BasePlot(PlotAux):
     async def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
-        _ = await self._get_business(business_id)
+        _ = await self._plot_aux.get_business(business_id)
+        self._plot_aux.app_metadata_api.business_id = business_id
         self.business_id: str = business_id
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_new_business(self, name: str):
         """"""
-        business: Dict = await self._create_business(name=name)
+        business: Dict = await self._plot_aux.create_business(name=name)
         self.business_id: str = business['id']
 
     @async_auto_call_manager()
@@ -1078,7 +1096,7 @@ class BasePlot(PlotAux):
         """
         :param apps_order: example {'test': 0, 'more-test': 1}
         """
-        apps: List[Dict] = self.get_business_apps(business_id=self.business_id)
+        apps: List[Dict] = await self._plot_aux.get_business_apps(business_id=self.business_id)
 
         set_apps_tasks = []
 
@@ -1093,7 +1111,7 @@ class BasePlot(PlotAux):
 
             if new_app_order:
                 set_apps_tasks += [
-                    self._update_app(
+                    self._plot_aux.update_app(
                         business_id=self.business_id,
                         app_id=app_id,
                         app_metadata={'order': int(new_app_order)},
@@ -1120,33 +1138,38 @@ class BasePlot(PlotAux):
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
-            app_normalized_name = self._create_normalized_name(app_normalized_name)
-            app_path_name = self._create_normalized_name(app_path_name)
+            app_normalized_name = self._plot_aux.create_normalized_name(app_normalized_name)
+            app_path_name = self._plot_aux.create_normalized_name(app_path_name)
 
-            app: Dict = await self._get_app_by_name(
+            app: Dict = await self._plot_aux.get_app_by_name(
                 business_id=self.business_id,
                 name=app_normalized_name,
             )
             app_id: str = app['id']
 
-            reports: List[Dict] = await self._get_app_reports(
+            reports: List[Dict] = await self._plot_aux.get_app_reports(
                 business_id=self.business_id,
                 app_id=app_id,
             )
 
+            path_order_tasks = []
+
             for report in reports:
                 original_path_name: str = report.get('path')
                 if original_path_name:
-                    path_name: str = self._create_normalized_name(original_path_name)
+                    path_name: str = self._plot_aux.create_normalized_name(original_path_name)
                     if path_name == app_path_name:
-                        self.update_report(
-                            business_id=self.business_id,
-                            app_id=app_id,
-                            report_id=report['id'],
-                            report_metadata={'pathOrder': int(order)},
+                        path_order_tasks.append(
+                            self._plot_aux.update_report(
+                                business_id=self.business_id,
+                                app_id=app_id,
+                                report_id=report['id'],
+                                report_metadata={'pathOrder': int(order)},
+                            )
                         )
+            await asyncio.gather(*path_order_tasks)
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
@@ -1159,7 +1182,7 @@ class BasePlot(PlotAux):
 
         results: List[Dict] = []
         for report in target_reports:
-            result: List = await self._get_report_dataset_data(
+            result: List = await self._plot_aux.get_report_dataset_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
@@ -1174,6 +1197,7 @@ class BasePlot(PlotAux):
             results = results + [clean_result]
         return results
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -1195,8 +1219,8 @@ class BasePlot(PlotAux):
             )
 
         cols: List[str] = [x] + y
-        self._validate_table_data(data, elements=cols)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=cols)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[cols]  # keep only x and y
 
         df.rename(columns={x: 'xAxis'}, inplace=True)
@@ -1220,7 +1244,7 @@ class BasePlot(PlotAux):
         assert len(target_reports) == 1
 
         for report in target_reports:
-            await self._append_report_data(
+            await self._plot_aux.append_report_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
@@ -1244,7 +1268,7 @@ class BasePlot(PlotAux):
             real_time: bool = False,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         # TODO ojo debería no ser solo data tabular!!
-        df: pd.DataFrame = self._validate_data_is_pandarable(data)
+        df: pd.DataFrame = self._plot_aux.validate_data_is_pandarable(data)
 
         report_metadata: Dict = {'reportType': report_type}
 
@@ -1259,7 +1283,7 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
@@ -1272,14 +1296,14 @@ class BasePlot(PlotAux):
                 overwrite=True,
             )
 
-        items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
+        items: List[Dict] = self._plot_aux.transform_report_data_to_chart_data(report_data=df)
 
         if force_custom_field and len(items) == 1:  # 'FORM'
-            items: Dict = self._convert_input_data_to_db_items(items[0])
+            items: Dict = self._plot_aux.convert_input_data_to_db_items(items[0])
         else:  # 'ECHARTS2'
-            items: List[Dict[str]] = self._convert_input_data_to_db_items(items, sort)
+            items: List[Dict[str]] = self._plot_aux.convert_input_data_to_db_items(items, sort)
 
-        report_dataset = await self._create_report_and_dataset(
+        report_dataset = await self._plot_aux.create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
             report_metadata=report_metadata,
             items=items,
@@ -1338,7 +1362,7 @@ class BasePlot(PlotAux):
         )
 
         # TODO optimize this with concurrency
-        business_reports = await self._get_business_reports(business_id=self.business_id)
+        business_reports = await self._plot_aux.get_business_reports(business_id=self.business_id)
         for report in target_reports:
             report_id = report['id']
             app_id = report['appId']
@@ -1346,7 +1370,7 @@ class BasePlot(PlotAux):
             business_reports.remove(report)
             app_reports = [report for report in business_reports if report['appId'] == app_id]
 
-            await self._delete_report(
+            await self._plot_aux.delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_id=report_id
@@ -1379,12 +1403,12 @@ class BasePlot(PlotAux):
 
             # Check if app can be deleted
             if not overwrite and len(app_reports) == 0:
-                await self._delete_app(
+                await self._plot_aux.delete_app(
                     business_id=self.business_id,
                     app_id=app_id,
                 )
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     async def delete(
             self, menu_path: str,
             tabs_index: Optional[str] = None,
@@ -1402,7 +1426,7 @@ class BasePlot(PlotAux):
                 overwrite=overwrite
             )
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
@@ -1411,7 +1435,7 @@ class BasePlot(PlotAux):
         otherwise it removes the whole app
         """
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app: Dict = await self._get_app_by_name(
+        app: Dict = await self._plot_aux.get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
@@ -1420,7 +1444,7 @@ class BasePlot(PlotAux):
 
         app_id: str = app['id']
         if '/' not in menu_path:
-            await self._delete_app(
+            await self._plot_aux.delete_app(
                 business_id=self.business_id,
                 app_id=app_id,
             )
@@ -1428,7 +1452,7 @@ class BasePlot(PlotAux):
             await self._get_business_state(self.business_id)
             return
 
-        reports: List[Dict] = await self._get_app_reports(
+        reports: List[Dict] = await self._plot_aux.get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -1444,7 +1468,7 @@ class BasePlot(PlotAux):
         # TODO optimize this with concurrency
         for report in target_reports:
             report_id = report['id']
-            await self._delete_report(
+            await self._plot_aux.delete_report(
                 business_id=self.business_id,
                 app_id=app_id,
                 report_id=report_id
@@ -1463,12 +1487,12 @@ class BasePlot(PlotAux):
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
-        tasks = [self._delete_app(business_id=self.business_id, app_id=app['id'])
-                 for app in await self.get_business_apps(self.business_id)]
+        tasks = [self._plot_aux.delete_app(business_id=self.business_id, app_id=app['id'])
+                 for app in await self._plot_aux.get_business_apps(self.business_id)]
 
         await asyncio.gather(*tasks)
         self._clear_or_create_all_local_state()
@@ -1674,8 +1698,8 @@ class BasePlot(PlotAux):
             return df_.reset_index().to_dict(orient='records')
 
         async def _create_free_echarts(
-                data_: Union[str, DataFrame, List[Dict]],
-                sort: Dict,
+                _data: Union[str, DataFrame, List[Dict]],
+                sort: Optional[Dict] = None,
         ) -> Dict[str, Union[Dict, List[Dict]]]:
             if filters:
                 raise NotImplementedError
@@ -1685,7 +1709,7 @@ class BasePlot(PlotAux):
                 report_type='ECHARTS2',
                 menu_path=menu_path, order=order,
                 rows_size=rows_size, cols_size=cols_size, padding=padding,
-                data=data, bentobox_data=bentobox_data,
+                data=_data, bentobox_data=bentobox_data,
                 force_custom_field=False, sort=sort,
                 tabs_index=tabs_index
             )
@@ -1702,7 +1726,7 @@ class BasePlot(PlotAux):
                         data=data, filters=filters,
                     )
             ):
-                report_id = _create_free_echarts(data_=df_temp)
+                report_id = _create_free_echarts(_data=df_temp)
                 filter_element['reportId'] = [report_id]
                 filter_elements.append(filter_element)
 
@@ -1838,7 +1862,7 @@ class PlotApi(BasePlot):
             }
         }
 
-    @async_auto_call_manager(execute=True, get_or_create_app_and_app_type=AppMetadataApi.get_or_create_app_and_apptype)
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_business(self, business_id: str):
         await super().set_business(business_id)
@@ -1868,39 +1892,42 @@ class PlotApi(BasePlot):
             round_max -= 0.1
         return perc
 
+    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
-                                 last_in_order: Optional[bool] = True):
+    async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
+                                       last_in_order: Optional[bool] = True):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
         child_id = self._tabs_group_id[(app_id, path_name, child_tabs_group)]
         order = self._report_order[child_id]
         if last_in_order:
             order = self._tabs_last_order[(app_id, path_name, parent_tab_index[0])] + 1
-            self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
+            await self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
             self._report_order[child_id] = order
 
         self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    def update_tabs_group_metadata(self, group_name: str, menu_path: str, order: Optional[int] = None,
-                                   cols_size: Optional[int] = None):
+    async def update_tabs_group_metadata(self, group_name: str, menu_path: str, order: Optional[int] = None,
+                                         cols_size: Optional[int] = None):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
-        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
+        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
+    async def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, group_name)
         tabs_group_aux = {}
@@ -2236,7 +2263,7 @@ class PlotApi(BasePlot):
 
             return json.dumps(data_fields)
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
 
         if sort_table_by_col:
             try:
@@ -2261,16 +2288,16 @@ class PlotApi(BasePlot):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
         try:
-            d: Dict[str, Dict] = await self._create_app_type_and_app(
+            d: Dict[str, Dict] = await self._plot_aux.create_app_type_and_app(
                 business_id=self.business_id,
                 app_type_metadata={'name': name},
                 app_metadata={},
             )
             app: Dict = d['app']
         except ApiClientError:  # Business admin user
-            app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
+            app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=name)
             if not app:
-                app: Dict = await self._create_app(
+                app: Dict = await self._plot_aux.create_app(
                     business_id=self.business_id, name=name,
                 )
 
@@ -2320,7 +2347,7 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
 
-        report: Dict = await self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -2347,12 +2374,12 @@ class PlotApi(BasePlot):
         # We do not allow NaN values for report Entry
         df = df.fillna('')
         report_entries: List[Dict] = (
-            self._convert_dataframe_to_report_entry(
+            self._plot_aux.convert_dataframe_to_report_entry(
                 df=df, sorting_columns_map=extra_map,
             )
         )
 
-        await self._update_report_data(
+        await self._plot_aux.update_report_data(
             business_id=self.business_id,
             app_id=app_id,
             report_id=report_id,
@@ -3039,8 +3066,8 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        self._validate_table_data(data, elements=[x] + y)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         data_fields: Dict = {
             "key": x,
             "labels": {
@@ -3172,12 +3199,10 @@ class PlotApi(BasePlot):
         :param cols_size:
         :param padding:
         :param target_path:
-        :param set_title: the title of the set of indicators
         :param header:
         :param footer:
         :param color:
         :param align: to align center, left or right a component
-        :param multi_column: how many indicators are allowed by column
         :param real_time:
         :param bentobox_data:
         """
@@ -3195,8 +3220,8 @@ class PlotApi(BasePlot):
         extra_elements: List[str] = [footer, color, align, variant, target_path, background_image, icon, big_icon]
         extra_elements = [element for element in extra_elements if element]
 
-        self._validate_table_data(data, elements=mandatory_elements)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=mandatory_elements)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[mandatory_elements + extra_elements]  # keep only x and y
 
         cols_to_rename: Dict[str, str] = {
@@ -3299,9 +3324,8 @@ class PlotApi(BasePlot):
 
         return order
 
-    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def alert_indicator(
+    def alert_indicator(
             self, data: Union[str, DataFrame, List[Dict]],
             value: str, target_path: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3317,8 +3341,8 @@ class PlotApi(BasePlot):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
         elements = [element for element in elements if element]
-        self._validate_table_data(data, elements=elements)
-        return await self.indicator(
+        self._plot_aux.validate_table_data(data, elements=elements)
+        return self.indicator(
             data=data, value=value,
             menu_path=menu_path, row=row, column=column,
             order=order, cols_size=cols_size, rows_size=rows_size, padding=padding,
@@ -3347,8 +3371,8 @@ class PlotApi(BasePlot):
     ):
         """Create a Piechart
         """
-        self._validate_table_data(data, elements=[x, y])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x, y])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y]]  # keep only x and y
         df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
@@ -3408,8 +3432,8 @@ class PlotApi(BasePlot):
     ):
         """Create a RADAR
         """
-        self._validate_table_data(data, elements=[x] + y)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'name'}, inplace=True)
         data_fields: Dict = {
@@ -3459,7 +3483,7 @@ class PlotApi(BasePlot):
     ):
         """Create a Tree
         """
-        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -3501,7 +3525,7 @@ class PlotApi(BasePlot):
     ):
         """Create a Treemap
         """
-        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'title': title,
@@ -3544,7 +3568,7 @@ class PlotApi(BasePlot):
     ):
         """Create a Sunburst
         """
-        self._validate_tree_data(data[0], vals=['name', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -3624,7 +3648,7 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
@@ -3680,7 +3704,7 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
@@ -3742,7 +3766,7 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[source, target, value]]  # keep only x and y
         df.rename(
             columns={
@@ -3795,7 +3819,7 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
@@ -3907,8 +3931,8 @@ class PlotApi(BasePlot):
           ]
         }
         """
-        self._validate_table_data(data, elements=[name, value])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[name, value])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         title: str = (
             title if title
             else f'{df["name"].to_list()[0]}: {df["value"].to_list()[0]}'
@@ -4023,8 +4047,8 @@ class PlotApi(BasePlot):
         tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """"""
-        self._validate_table_data(data, elements=[name, value])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[name, value])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
@@ -4116,7 +4140,7 @@ class PlotApi(BasePlot):
                 ]
             }
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
 
         if 'sort_values' not in df.columns:
@@ -4138,7 +4162,6 @@ class PlotApi(BasePlot):
             }
         )
 
-    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     def rose(self,
         data: Union[str, List[Dict], pd.DataFrame],
@@ -4172,7 +4195,7 @@ class PlotApi(BasePlot):
                 ]
             }
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
 
         if 'sort_values' not in df.columns:
@@ -4469,7 +4492,7 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
-                df: DataFrame = self._validate_data_is_pandarable(data)
+                df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, name]]  # keep only x and y
         df.rename(
             columns={
@@ -4512,7 +4535,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4602,7 +4625,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4693,7 +4716,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4778,7 +4801,6 @@ class PlotApi(BasePlot):
     ):
         """
         :param data:
-        :param report_form_dataset_properties:
         :param menu_path:
         :param order:
         :param rows_size:
@@ -4787,7 +4809,7 @@ class PlotApi(BasePlot):
         :param bentobox_data:
         :param tabs_index:
         """
-        self._validate_input_form_data(report_dataset_properties)
+        self._plot_aux.validate_input_form_data(report_dataset_properties)
 
         if data is None:
             data = {}

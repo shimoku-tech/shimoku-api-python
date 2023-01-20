@@ -1,7 +1,7 @@
 import asyncio
 from functools import wraps
 from inspect import getmembers
-from typing import Callable, Tuple
+from typing import Tuple, Optional
 
 
 # TODO find a better way to handle this
@@ -42,6 +42,7 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
 task_pool = []
 app_names = []
 sequential = False
+app_metadata_api = None
 
 
 def activate_sequential_execution():
@@ -55,18 +56,22 @@ def deactivate_sequential_execution():
 
 
 def async_auto_call_manager(
-        execute: bool = False, get_or_create_app_and_app_type: Callable = None):
+        execute: Optional[bool] = False):
     def decorator(async_func):
 
-        async def execute_tasks(*args):
-            # TODO This solution has to be solved, passing the function complicates without necessity
-            if get_or_create_app_and_app_type:
-                # we need to create the apps before the tasks try to access them all at once
-                menu_path_tasks = [get_or_create_app_and_app_type(args[0], name=app_name) for app_name in app_names]
+        async def execute_tasks():
+            global app_metadata_api
+            # we need to create the apps before the tasks try to access them all at once
+            if app_names:
+                menu_path_tasks = [app_metadata_api.get_or_create_app_and_apptype(name=app_name)
+                                   for app_name in app_names]
                 await asyncio.gather(*menu_path_tasks)
-            results = await asyncio.gather(*task_pool)
+                app_names.clear()
+            await asyncio.gather(*(task_pool[:-1]))
+            result = await task_pool[-1]
             task_pool.clear()
-            return results[-1]
+
+            return result
 
         @wraps(async_func)
         def wrapper(*args, **kwargs):
@@ -76,11 +81,11 @@ def async_auto_call_manager(
 
             global task_pool, app_names
             task_pool.append(async_func(*args, **kwargs))
-            if 'menu_path' in kwargs:
+            if 'menu_path' in kwargs and 'delete' not in async_func.__name__:
                 app_name = clean_menu_path(menu_path=kwargs['menu_path'])[0]
                 app_names += [app_name] if app_name not in app_names else []
             if execute:
-                return asyncio.run(execute_tasks(*args))
+                return asyncio.run(execute_tasks())
 
         return wrapper
 

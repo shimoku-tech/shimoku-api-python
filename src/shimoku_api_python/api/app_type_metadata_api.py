@@ -16,7 +16,7 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
     @logging_before_and_after(logging_level=logger.debug)
     def rename_app_type_by_old_name(self, old_name: str, new_name) -> Dict:

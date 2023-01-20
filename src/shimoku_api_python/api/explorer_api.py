@@ -61,7 +61,7 @@ class GetExplorerAPI(object):
         )
         return app_data
 
-# TODO add new data & dataset logic!
+    # TODO add new data & dataset logic!
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_report_with_data(
         self,
@@ -285,11 +285,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
     @logging_before_and_after(logging_level=logger.debug)
     async def get_universe_businesses(self) -> List[Dict]:
         endpoint: str = f'businesses'
-        return await(
-            self.api_client.query_element(
-                endpoint=endpoint, method='GET',
-            )
-        )['items']
+        return (await self.api_client.query_element(endpoint=endpoint, method='GET'))['items']
 
     @logging_before_and_after(logging_level=logger.debug)
     async def find_business_by_name_filter(
@@ -770,12 +766,14 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
 
 class CreateExplorerAPI(object):
-    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
         self.api_client = api_client
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+
+        self._find_business_by_name_filter = self.cascade_explorer_api.find_business_by_name_filter
+        self._find_app_type_by_name_filter = self.cascade_explorer_api.find_app_type_by_name_filter
 
     @logging_before_and_after(logging_level=logger.debug)
     def _create_normalized_name(self, name: str) -> str:
@@ -1126,18 +1124,16 @@ class CreateExplorerAPI(object):
 
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
-    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
 
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update_business(self, business_id: str, business_data: Dict) -> Dict:
         """"""
         name = business_data.get('name')
         if name:
-            business: Dict = await self._find_business_by_name_filter(name=name)
+            business: Dict = await self.find_business_by_name_filter(name=name)
             if business:
                 raise ValueError(
                     f'Cannot Update | '
@@ -1154,7 +1150,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
         """"""
         name = app_type_metadata.get('name')
         if name:
-            _app_type: Dict = await self._find_app_type_by_name_filter(name=name)
+            _app_type: Dict = await self.find_app_type_by_name_filter(name=name)
             if _app_type:
                 raise ValueError(
                     f'Cannot Update | '
@@ -1253,17 +1249,20 @@ class MultiCascadeExplorerAPI(CascadeExplorerAPI):
 
 
 class CascadeCreateExplorerAPI(CreateExplorerAPI):
-    update_report = UpdateExplorerAPI.update_report
 
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
+
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+
+        self.update_report = self.update_explorer_api.update_report
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_app_from_app_type_normalized_name(self, app_type_name: str) -> Dict:
         """Create AppType and App if required and return the App component
         """
         try:
-            app_type: Dict = await self._create_app_type(name=app_type_name)
+            app_type: Dict = await self.create_app_type(name=app_type_name)
         except ValueError:  # It already exists then
             app_type: Dict = await(
                 self._find_app_type_by_name_filter(name=app_type_name)
@@ -1429,7 +1428,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         """Delete a Report, relocating reports underneath to avoid errors
         """
         reports: List[Dict] = await(
-            self._get_app_reports(
+            self.get_app_reports(
                 business_id=business_id,
                 app_id=app_id
             )
@@ -1538,18 +1537,20 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
 class MultiDeleteApi:
     """Get Businesses, Apps, Paths and Reports in any possible combination
     """
-    _get_business = GetExplorerAPI.get_business
-    _get_app_type = GetExplorerAPI.get_app_type
-    _get_app = GetExplorerAPI.get_app
+    def __init__(self, api_client):
+        self.api_client = api_client
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    _delete_business = DeleteExplorerApi.delete_business
-    _delete_app = DeleteExplorerApi.delete_app
-    _delete_app_type = DeleteExplorerApi.delete_app_type
-    _delete_report = DeleteExplorerApi.delete_report
-    _delete_dataset = DeleteExplorerApi.delete_dataset
+        self._get_business = self.get_explorer_api.get_business
+        self._get_app_type = self.get_explorer_api.get_app_type
+        self._get_app = self.get_explorer_api.get_app
 
-    def __init__(self):
-        return
+        self._delete_business = self.delete_explorer_api.delete_business
+        self._delete_app = self.delete_explorer_api.delete_app
+        self._delete_app_type = self.delete_explorer_api.delete_app_type
+        self._delete_report = self.delete_explorer_api.delete_report
+        self._delete_dataset = self.delete_explorer_api.delete_dataset
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _delete_business_and_app_type(
@@ -1614,16 +1615,19 @@ class MultiDeleteApi:
 class MultiCreateApi(MultiDeleteApi):
     """If some upper level elements are not created it does it
     """
-    _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    _get_app_by_type = CascadeExplorerAPI.get_app_by_type
+    def __init__(self, api_client):
+        super().__init__(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
 
-    _create_business = CascadeCreateExplorerAPI.create_business
-    _create_app_type = CascadeCreateExplorerAPI.create_app_type
-    _create_app = CascadeCreateExplorerAPI.create_app
-    _create_report = CascadeCreateExplorerAPI.create_report
+        self._get_app_type_by_name = self.cascade_explorer_api.get_app_type_by_name
+        self._get_universe_app_types = self.cascade_explorer_api.get_universe_app_types
+        self._get_app_by_type = self.cascade_explorer_api.get_app_by_type
 
-    def __init__(self):
-        super().__init__()
+        self._create_business = self.cascade_create_explorer_api.create_business
+        self._create_app_type = self.cascade_create_explorer_api.create_app_type
+        self._create_app = self.cascade_create_explorer_api.create_app
+        self._create_report = self.cascade_create_explorer_api.create_report
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_business_and_app(
@@ -1895,122 +1899,178 @@ class MultiCreateApi(MultiDeleteApi):
 
 class UniverseExplorerApi:
     """"""
-    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
-    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
+    def __init__(self, api_client):
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+
+        self.get_universe_businesses = self.cascade_explorer_api.get_universe_businesses
+        self.get_universe_app_types = self.cascade_explorer_api.get_universe_app_types
 
 
 class BusinessExplorerApi:
     """"""
-    get_business = GetExplorerAPI.get_business
-    get_universe_businesses = CascadeExplorerAPI.get_universe_businesses
-    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    create_business = CascadeCreateExplorerAPI.create_business
-    update_business = UpdateExplorerAPI.update_business
+    def __init__(self, api_client):
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    get_business_apps = CascadeExplorerAPI.get_business_apps
-    get_business_app_ids = CascadeExplorerAPI.get_business_app_ids
-    get_business_all_apps_with_filter = CascadeExplorerAPI.get_business_apps_with_filter
+        self.get_business = self.get_explorer_api.get_business
+        self.get_universe_businesses = self.cascade_explorer_api.get_universe_businesses
+        self._find_business_by_name_filter = self.cascade_explorer_api.find_business_by_name_filter
+        self.create_business = self.cascade_create_explorer_api.create_business
+        self.update_business = self.update_explorer_api.update_business
 
-    get_business_reports = CascadeExplorerAPI.get_business_reports
-    get_business_report_ids = CascadeExplorerAPI.get_business_report_ids
+        self.get_business_apps = self.cascade_explorer_api.get_business_apps
+        self.get_business_app_ids = self.cascade_explorer_api.get_business_app_ids
+        self.get_business_all_apps_with_filter = self.cascade_explorer_api.get_business_apps_with_filter
 
-    delete_business = DeleteExplorerApi.delete_business
+        self.get_business_reports = self.cascade_explorer_api.get_business_reports
+        self.get_business_report_ids = self.cascade_explorer_api.get_business_report_ids
+
+        self.delete_business = self.delete_explorer_api.delete_business
 
 
 class AppTypeExplorerApi:
     """"""
-    _create_normalized_name = CreateExplorerAPI._create_normalized_name
-    _create_key_name = CreateExplorerAPI._create_key_name
+    def __init__(self, api_client):
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    get_app_type = GetExplorerAPI.get_app_type
-    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    _find_app_type_by_name_filter = CascadeExplorerAPI.find_app_type_by_name_filter
-    create_app_type = CascadeCreateExplorerAPI.create_app_type
-    update_app_type = UpdateExplorerAPI.update_app_type
+        self._create_normalized_name = self.create_explorer_api._create_normalized_name
+        self._create_key_name = self.create_explorer_api._create_key_name
 
-    delete_app_type = DeleteExplorerApi.delete_app_type
+        self.get_app_type = self.get_explorer_api.get_app_type
+        self.get_universe_app_types = self.cascade_explorer_api.get_universe_app_types
+        self._find_app_type_by_name_filter = self.cascade_explorer_api.find_app_type_by_name_filter
+        self.create_app_type = self.cascade_create_explorer_api.create_app_type
+        self.update_app_type = self.update_explorer_api.update_app_type
+
+        self.delete_app_type = self.delete_explorer_api.delete_app_type
 
 
 class AppExplorerApi:
-    _create_normalized_name = CreateExplorerAPI._create_normalized_name
-    _create_key_name = CreateExplorerAPI._create_key_name
+    def __init__(self, api_client):
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.multi_cascade_explorer_api = MultiCascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    get_app = GetExplorerAPI.get_app
-    create_app = CascadeCreateExplorerAPI.create_app
-    update_app = UpdateExplorerAPI.update_app
+        self._create_normalized_name = self.create_explorer_api._create_normalized_name
+        self._create_key_name = self.create_explorer_api._create_key_name
 
-    _get_business_apps = CascadeExplorerAPI.get_business_apps
-    get_business_apps = CascadeExplorerAPI.get_business_apps
-    find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
-    get_app_reports = CascadeExplorerAPI.get_app_reports
-    get_app_report_ids = CascadeExplorerAPI.get_app_report_ids
-    get_app_path_names = CascadeExplorerAPI.get_app_path_names
-    get_app_reports_by_filter = MultiCascadeExplorerAPI.get_app_reports_by_filter
-    get_app_by_type = CascadeExplorerAPI.get_app_by_type
-    get_app_type = CascadeExplorerAPI.get_app_type
-    get_app_by_name = CascadeExplorerAPI.get_app_by_name
+        self.get_app = self.get_explorer_api.get_app
+        self.create_app = self.cascade_create_explorer_api.create_app
+        self.update_app = self.update_explorer_api.update_app
 
-    delete_app = DeleteExplorerApi.delete_app
+        self._get_business_apps = self.cascade_explorer_api.get_business_apps
+        self.get_business_apps = self.cascade_explorer_api.get_business_apps
+        self.find_app_by_name_filter = self.cascade_explorer_api.find_app_by_name_filter
+        self.get_app_reports = self.cascade_explorer_api.get_app_reports
+        self.get_app_report_ids = self.cascade_explorer_api.get_app_report_ids
+        self.get_app_path_names = self.cascade_explorer_api.get_app_path_names
+        self.get_app_reports_by_filter = self.multi_cascade_explorer_api.get_app_reports_by_filter
+        self.get_app_by_type = self.cascade_explorer_api.get_app_by_type
+        self.get_app_type = self.cascade_explorer_api.get_app_type
+        self.get_app_by_name = self.cascade_explorer_api.get_app_by_name
+
+        self.delete_app = self.delete_explorer_api.delete_app
 
 
 class ReportExplorerApi:
+    def __init__(self, api_client):
 
-    get_report = GetExplorerAPI.get_report
-    get_report_data = GetExplorerAPI.get_report_data
-    _get_report_with_data = GetExplorerAPI._get_report_with_data
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.multi_cascade_explorer_api = MultiCascadeExplorerAPI(api_client)
+        self.multi_create_api = MultiCreateApi(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    _get_app_reports = CascadeExplorerAPI.get_app_reports
+        self.get_report = self.get_explorer_api.get_report
+        self.get_report_data = self.get_explorer_api.get_report_data
+        self._get_report_with_data = self.get_explorer_api._get_report_with_data
 
-    create_report = CascadeCreateExplorerAPI.create_report
-    create_app_and_report = MultiCreateApi.create_app_and_report
+        self._get_app_reports = self.cascade_explorer_api.get_app_reports
 
-    update_report = UpdateExplorerAPI.update_report
+        self.create_report = self.cascade_create_explorer_api.create_report
+        self.create_app_and_report = self.multi_create_api.create_app_and_report
 
-    get_business_id_by_report = MultiCascadeExplorerAPI.get_business_id_by_report
+        self.update_report = self.update_explorer_api.update_report
 
-    delete_report = DeleteExplorerApi.delete_report
+        self.get_business_id_by_report = self.multi_cascade_explorer_api.get_business_id_by_report
+
+        self.delete_report = self.delete_explorer_api.delete_report
 
 
 class DatasetExplorerApi:
+    def __init__(self, api_client):
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    get_dataset = GetExplorerAPI.get_dataset
+        self.get_dataset = self.get_explorer_api.get_dataset
 
-    get_dataset_data = CascadeExplorerAPI.get_dataset_data
+        self.get_dataset_data = self.cascade_explorer_api.get_dataset_data
 
-    create_data_points = CreateExplorerAPI.create_data_points
-    create_dataset = CascadeCreateExplorerAPI.create_dataset
+        self.create_data_points = self.create_explorer_api.create_data_points
+        self.create_dataset = self.cascade_create_explorer_api.create_dataset
 
-    update_dataset = UpdateExplorerAPI.update_dataset
+        self.update_dataset = self.update_explorer_api.update_dataset
 
-    delete_dataset = DeleteExplorerApi.delete_dataset
+        self.delete_dataset = self.delete_explorer_api.delete_dataset
 
 
 class ReportDatasetExplorerApi:
+    def __init__(self, api_client):
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
+        self.multi_delete_explorer_api = MultiDeleteApi(api_client)
 
-    get_reportdataset = GetExplorerAPI.get_reportdataset
-    get_report_datasets = CascadeExplorerAPI.get_report_datasets
-    get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
+        self.get_reportdataset = self.get_explorer_api.get_reportdataset
+        self.get_report_datasets = self.cascade_explorer_api.get_report_datasets
+        self.get_report_dataset_data = self.cascade_explorer_api.get_report_dataset_data
 
-    create_reportdataset = CascadeCreateExplorerAPI.create_reportdataset
-    create_report_and_dataset = CascadeCreateExplorerAPI.create_report_and_dataset
+        self.create_reportdataset = self.cascade_create_explorer_api.create_reportdataset
+        self.create_report_and_dataset = self.cascade_create_explorer_api.create_report_and_dataset
 
-    update_reportdataset = UpdateExplorerAPI.update_reportdataset
+        self.update_reportdataset = self.update_explorer_api.update_reportdataset
 
-    delete_reportdataset = DeleteExplorerApi.delete_reportdataset
-    delete_report_and_dataset = MultiDeleteApi.delete_report_and_dataset
+        self.delete_reportdataset = self.delete_explorer_api.delete_reportdataset
+        self.delete_report_and_dataset = self.multi_delete_explorer_api.delete_report_and_dataset
 
 
 class FileExplorerApi:
-    _get_file = GetExplorerAPI.get_file
-    get_files = GetExplorerAPI.get_files
+    def __init__(self, api_client):
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
 
-    _create_file = CreateExplorerAPI.create_file
+        self._get_file = self.get_explorer_api.get_file
+        self.get_files = self.get_explorer_api.get_files
 
-    _delete_file = DeleteExplorerApi.delete_file
+        self._create_file = self.create_explorer_api.create_file
 
-    _get_business_apps = CascadeExplorerAPI.get_business_apps
-    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    get_business_apps = CascadeExplorerAPI.get_business_apps
+        self._delete_file = self.delete_explorer_api.delete_file
+
+        self._get_business_apps = self.cascade_explorer_api.get_business_apps
+        self._get_app_by_name = self.cascade_explorer_api.get_app_by_name
+        self.get_business_apps = self.cascade_explorer_api.get_business_apps
 
 
 class ExplorerApi(

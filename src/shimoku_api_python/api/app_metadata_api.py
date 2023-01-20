@@ -17,43 +17,46 @@ from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
 
 
-class AppMetadataApi(AppExplorerApi, ABC):
+class AppMetadataApi(ABC):
     """
     """
-    _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
-    # TODO this a prior is in AppExplorerApi why if I remove this line it does not work?
-    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    _create_app = CascadeCreateExplorerAPI.create_app
-    _get_business = BusinessExplorerApi.get_business
-
-    get_app = async_auto_call_manager(execute=True)(AppExplorerApi.get_app)
-    create_app = async_auto_call_manager(execute=True)(AppExplorerApi.create_app)
-    update_app = async_auto_call_manager(execute=True)(AppExplorerApi.update_app)
-
-    get_business_apps = async_auto_call_manager(execute=True)(AppExplorerApi.get_business_apps)
-    find_app_by_name_filter = async_auto_call_manager(execute=True)(AppExplorerApi.find_app_by_name_filter)
-    get_app_reports = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_reports)
-    get_app_report_ids = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_report_ids)
-    get_app_path_names = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_path_names)
-    get_app_reports_by_filter = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_reports_by_filter)
-    get_app_by_type = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_by_type)
-    get_app_type = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_type)
-    get_app_by_name = async_auto_call_manager(execute=True)(AppExplorerApi.get_app_by_name)
-
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
-        self.api_client = api_client
+
+        self.app_explorer_api = AppExplorerApi(api_client)
+        self.business_explorer_api = BusinessExplorerApi(api_client)
+        self.multi_create = MultiCreateApi(api_client)
+
+        self._create_app_type_and_app = self.multi_create.create_app_type_and_app
+        self._get_app_by_name = self.app_explorer_api.get_app_by_name
+        self._create_app = self.app_explorer_api.create_app
+        self._get_business = self.business_explorer_api.get_business
+
+        self.get_app = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app)
+        self.create_app = async_auto_call_manager(execute=True)(self.app_explorer_api.create_app)
+        self.update_app = async_auto_call_manager(execute=True)(self.app_explorer_api.update_app)
+
+        self.get_business_apps = async_auto_call_manager(execute=True)(self.app_explorer_api.get_business_apps)
+        self.find_app_by_name_filter = async_auto_call_manager(execute=True)(self.app_explorer_api.find_app_by_name_filter)
+        self.get_app_reports = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_reports)
+        self.get_app_report_ids = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_report_ids)
+        self.get_app_path_names = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_path_names)
+        self.get_app_reports_by_filter = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_reports_by_filter)
+        self.get_app_by_type = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_type)
+        self.get_app_type = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_type)
+        self.get_app_by_name = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_name)
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
         else:
             self.business_id: Optional[str] = None
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)
-    def set_business(self, business_id: str):
+    async def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
-        _ = self._get_business(business_id)
+        _ = await self._get_business(business_id)
         self.business_id: str = business_id
 
     @logging_before_and_after(logging_level=logger.debug)

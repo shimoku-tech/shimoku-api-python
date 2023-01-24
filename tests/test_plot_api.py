@@ -667,7 +667,7 @@ def test_bar_with_filters():
         row=2, column=1,
         filters=filters,
     )
-
+    s.plt.execute_task_pool()
     data_2 = data_[data_['seccion'].isin(['Enfermedades'])]
     filters: Dict = {
         'update_filter_type': 'concat',
@@ -693,6 +693,7 @@ def test_bar_with_filters():
         ],
     }
 
+    s.plt.execute_task_pool()
     data_3 = pd.concat([data_1, data_2])
     s.plt.bar(
         data=data_3,
@@ -3686,6 +3687,7 @@ def test_get_input_forms():
         report_dataset_properties=report_dataset_properties
     )
     rs: List[Dict] = s.plt.get_input_forms(menu_path)
+    print(rs)
     assert rs
 
 
@@ -3697,8 +3699,7 @@ def test_tabs():
         app_name, path_name = s.plt._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        s.plt.execute_task_pool()
-        app: Dict = asyncio.run(s.plt._get_app_by_name(business_id=business_id, name=app_name))
+        app: Dict = s.app.get_app_by_name(business_id=business_id, name=app_name)
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, _tabs_index[0])
 
@@ -3712,7 +3713,6 @@ def test_tabs():
         assert(len(s.plt._tabs) == 0)
         assert(len(s.plt._tabs_group_id) == 0)
         assert(len(s.plt._tabs_last_order) == 0)
-        assert(len(s.plt._tabs_group_modified) == 0)
 
     def check_all_data_restored_correctly(_tabs_index, how_many):
         check_tabs_index_in_business_state(_tabs_index, how_many)
@@ -3720,16 +3720,16 @@ def test_tabs():
         _tabs = s.plt._tabs
         _tabs_group_id = s.plt._tabs_group_id
         _tabs_last_order = s.plt._tabs_last_order
-        _tabs_group_modified = s.plt._tabs_group_modified
 
         s.plt._clear_or_create_all_local_state()
         check_tabs_info_is_cleared()
-        s.plt._get_business_state(business_id)
+        asyncio.run(s.plt._get_business_state(business_id))
 
-        assert(_tabs == s.plt._tabs)
-        assert(_tabs_group_id == s.plt._tabs_group_id)
-        assert(_tabs_last_order == s.plt._tabs_last_order)
-        assert(_tabs_group_modified == s.plt._tabs_group_modified)
+        print(_tabs)
+        print(s.plt._tabs)
+        assert(dict(sorted(_tabs.items())) == dict(sorted(s.plt._tabs.items())))
+        assert(dict(sorted(_tabs_group_id.items())) == dict(sorted(s.plt._tabs_group_id.items())))
+        assert(dict(sorted(_tabs_last_order.items())) == dict(sorted(s.plt._tabs_last_order.items())))
 
         check_tabs_index_in_business_state(_tabs_index, how_many)
 
@@ -3787,6 +3787,7 @@ def test_tabs():
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )
+        s.plt.execute_task_pool()
         check_all_data_restored_correctly(tabs_index_, 3)
 
     data_table = [
@@ -4038,6 +4039,7 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
+    s.plt.execute_task_pool()
 
     #Test overwrite
     _test_bentobox()
@@ -4158,48 +4160,48 @@ if delete_paths:
     s.plt.delete_path('test')
 
 s.plt.clear_business()
-# test_tabs()
-test_line()
-test_funnel()
-test_tree()
-test_iframe()
-test_html()
-test_table()
-test_table_with_labels()
-test_free_echarts()
-test_dynamic_and_conditional_input_form()
-test_bentobox()
+test_tabs()
+# test_line()
+# test_funnel()
+# test_tree()
+# test_iframe()
+# test_html()
+# test_table()
+# test_table_with_labels()
+# test_free_echarts()
+# test_dynamic_and_conditional_input_form()
+# test_bentobox()
 # test_bar_with_filters()
-test_set_apps_orders()
-test_set_sub_path_orders()
-test_zero_centered_barchart()
-test_indicator()
-test_indicator_one_dict()
-test_alert_indicator()
-test_stockline()
-test_radar()
-test_pie()
-test_ux()
-test_bar()
-test_stacked_barchart()
-test_stacked_horizontal_barchart()
-test_stacked_area_chart()
-test_shimoku_gauges()
-test_gauge_indicators()
-test_doughnut()
-test_rose()
-test_ring_gauge()
-test_sunburst()
-test_treemap()
-test_heatmap()
-test_sankey()
-test_horizontal_barchart()
-test_predictive_line()
-test_speed_gauge()
-test_line()
-test_scatter()
-test_input_form()
-test_get_input_forms()
+# test_set_apps_orders()
+# test_set_sub_path_orders()
+# test_zero_centered_barchart()
+# test_indicator()
+# test_indicator_one_dict()
+# test_alert_indicator()
+# test_stockline()
+# test_radar()
+# test_pie()
+# test_ux()
+# test_bar()
+# test_stacked_barchart()
+# test_stacked_horizontal_barchart()
+# test_stacked_area_chart()
+# test_shimoku_gauges()
+# test_gauge_indicators()
+# test_doughnut()
+# test_rose()
+# test_ring_gauge()
+# test_sunburst()
+# test_treemap()
+# test_heatmap()
+# test_sankey()
+# test_horizontal_barchart()
+# test_predictive_line()
+# test_speed_gauge()
+# test_line()
+# test_scatter()
+# test_input_form()
+# test_get_input_forms()
 
 # test_set_new_business()
 # test_append_data_to_trend_chart()

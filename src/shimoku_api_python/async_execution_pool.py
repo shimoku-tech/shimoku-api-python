@@ -41,8 +41,9 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
 
 task_pool = []
 app_names = []
+tabs_group_indexes = []
 sequential = False
-app_metadata_api = None
+plot_api = None
 
 
 def activate_sequential_execution():
@@ -60,16 +61,49 @@ def async_auto_call_manager(
     def decorator(async_func):
 
         async def execute_tasks():
-            global app_metadata_api
-            # we need to create the apps before the tasks try to access them all at once
-            if app_names:
-                menu_path_tasks = [app_metadata_api.get_or_create_app_and_apptype(name=app_name)
+            global plot_api
+
+            # We need to create the apps before the tasks try to access them all at once
+            if len(app_names) > 0:
+                menu_path_tasks = [plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
                                    for app_name in app_names]
                 await asyncio.gather(*menu_path_tasks)
                 app_names.clear()
+
+            # After the apps are created we need to create the tabs to not create multiple tabs
+            if len(tabs_group_indexes) > 0:
+                tabs_tasks = []
+                for tabs_group_pseudo_entry in tabs_group_indexes:
+                    app_name, path_name, group_name = tabs_group_pseudo_entry
+                    app = await plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                    app_id: str = app['id']
+                    tabs_group_entry = (app_id, path_name, group_name)
+                    if tabs_group_entry not in plot_api._tabs:
+                        tabs_tasks.append(plot_api._create_tabs_group(plot_api.business_id, tabs_group_entry))
+
+                await asyncio.gather(*tabs_tasks)
+
             await asyncio.gather(*(task_pool[:-1]))
             result = await task_pool[-1]
             task_pool.clear()
+
+            # After all the tasks have finished update the tabs to get all the charts
+            if len(tabs_group_indexes) > 0:
+                tabs_tasks = []
+                for tabs_group_pseudo_entry in tabs_group_indexes:
+                    app_name, path_name, group_name = tabs_group_pseudo_entry
+                    app = await plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                    app_id: str = app['id']
+                    tabs_tasks.append(
+                        plot_api._update_tabs_group_metadata(
+                            business_id=plot_api.business_id,
+                            app_id=app_id, path_name=path_name,
+                            group_name=group_name,
+                        )
+                    )
+
+                await asyncio.gather(*tabs_tasks)
+                tabs_group_indexes.clear()
 
             return result
 
@@ -79,11 +113,19 @@ def async_auto_call_manager(
             if sequential:
                 return asyncio.run(async_func(*args, **kwargs))
 
-            global task_pool, app_names
+            global task_pool, app_names, tabs_group_indexes
             task_pool.append(async_func(*args, **kwargs))
             if 'menu_path' in kwargs and 'delete' not in async_func.__name__:
-                app_name = clean_menu_path(menu_path=kwargs['menu_path'])[0]
+                app_name, path_name = clean_menu_path(menu_path=kwargs['menu_path'])
+                if not path_name:
+                    path_name = ''  # because of tabs
+
                 app_names += [app_name] if app_name not in app_names else []
+                if 'tabs_index' in kwargs:
+                    tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
+                    tabs_group_indexes += [tabs_group_pseudo_entry] \
+                        if tabs_group_pseudo_entry not in tabs_group_indexes else []
+
             if execute:
                 return asyncio.run(execute_tasks())
 

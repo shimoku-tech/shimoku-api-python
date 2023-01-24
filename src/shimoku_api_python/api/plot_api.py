@@ -128,10 +128,6 @@ class BasePlot:
 
     @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
-        # Clear or create apps info():
-        # Map to store the last order of a path
-        self._paths_last_order = dict()
-
         # Clear or create reports
         # Map to store reports order
         self._report_order = dict()
@@ -149,30 +145,17 @@ class BasePlot:
         # Map to store the last order of its reports
         self._tabs_last_order = dict()
 
-        # Flag tabs modifications
-        self._tabs_group_modified = set()
-
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_business_state(self, business_id: str):
-        @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_apps_info():
-            business_reports = await self._plot_aux.get_business_reports(business_id)
-            for report in business_reports:
-                app_id = report['appId']
-                path = report['path']
-                # We don't want to append infinitely, we just want to append plots in the current execution
-                # order = report['order']
-                if path not in self._paths_last_order:
-                    self._paths_last_order[(app_id, path)] = -1
+
+        business_reports = await self._plot_aux.get_business_reports(business_id)
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_reports_info():
-            business_reports = await self._plot_aux.get_business_reports(business_id)
+        def _get_business_reports_info():
             self._report_order = {report['id']: report['order'] for report in business_reports}
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def _get_business_tabs_info():
-            business_reports = await self._plot_aux.get_business_reports(business_id)
+        def _get_business_tabs_info():
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
@@ -205,11 +188,8 @@ class BasePlot:
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
 
-        await asyncio.gather(
-            _get_business_apps_info(),
-            _get_business_reports_info(),
-            _get_business_tabs_info()
-        )
+        _get_business_reports_info()
+        _get_business_tabs_info()
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -488,14 +468,13 @@ class BasePlot:
         if order:
             report_metadata['order'] = order
             self._report_order[report_id] = order
-        if tabs_group_entry in self._tabs_group_modified:
-            report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
-                                            str(self._tabs_last_order[tabs_group_entry])+'}'
-            tabs = json.dumps(
-                {tab_name: {'order': index, 'reportIds': report_ids_list}
-                 for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
-            report_metadata['properties'] = '{"tabs":' + tabs + '}'
-            self._tabs_group_modified.remove(tabs_group_entry)
+
+        report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
+                                        str(self._tabs_last_order[tabs_group_entry])+'}'
+        tabs = json.dumps(
+            {tab_name: {'order': index, 'reportIds': report_ids_list}
+             for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
+        report_metadata['properties'] = '{"tabs":' + tabs + '}'
 
         await self._plot_aux.update_report(
             business_id=business_id,
@@ -508,12 +487,11 @@ class BasePlot:
     async def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
         """Creates a tab report and stores its id"""
         app_id, path_name, group_name = tabs_group_entry
-        path_entry = (app_id, path_name)
 
         report_metadata: Dict[str, Any] = {
             'dataFields': "{'groupName': '" + group_name + "', 'lastOrder': 0 }",
             'path': path_name if path_name != "" else None,
-            'order': self._paths_last_order[path_entry]+1,
+            'order': 0,
             'reportType': 'TABS',
             'properties': '{}'
         }
@@ -522,9 +500,10 @@ class BasePlot:
             app_id=app_id,
             report_metadata=report_metadata,
         )
-        self._paths_last_order[path_entry] += 1
-        self._report_order[report['id']] = self._paths_last_order[path_entry]
+        self._report_order[report['id']] = 0
+        self._tabs_last_order[tabs_group_entry] = 0
         self._tabs_group_id[tabs_group_entry] = report['id']
+        self._tabs[tabs_group_entry] = {}
 
     @logging_before_and_after(logging_level=logger.debug)
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
@@ -559,9 +538,9 @@ class BasePlot:
             del self._report_in_tab[report_id]
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
-                       report_id: str, tabs_index: Tuple[str, str],
-                       order_of_chart: int):
+    async def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
+                             report_id: str, tabs_index: Tuple[str, str],
+                             order_of_chart: int):
         """This function creates an entry on the tabs tree. If there exists another chart in the same order in the tab
          as the one being created it returns its report_id, if not it returns None"""
 
@@ -581,15 +560,14 @@ class BasePlot:
         tab_entry = (app_id, path_name, tabs_index)
 
         if tabs_group_entry not in self._tabs:
-            self._create_tabs_group(business_id, tabs_group_entry)
+            await self._create_tabs_group(business_id, tabs_group_entry)
 
         self._report_in_tab[report_id] = tab_entry
-        self._tabs_group_modified.add(tabs_group_entry)
 
-        if not self._tabs.get(tabs_group_entry):
+        if len(self._tabs.get(tabs_group_entry)) == 0:
             self._tabs[tabs_group_entry] = {tab: [report_id]}
             self._tabs_last_order[tabs_group_entry] = order_of_chart
-            self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+            await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
             return
 
         # Check if it's order is greater than the last report
@@ -598,11 +576,11 @@ class BasePlot:
 
         if not self._tabs[tabs_group_entry].get(tab):
             self._tabs[tabs_group_entry][tab] = [report_id]
-            self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+            await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
             return
 
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
-        self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+        await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_chart(
@@ -651,15 +629,9 @@ class BasePlot:
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
-        path_entry = (app_id, path_name if path_name else '')
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         try:
             if data:
@@ -954,14 +926,14 @@ class BasePlot:
                 report_id = await self._create_trend_chart(data=df_temp, overwrite=True, **kwargs_)
                 filter_element['reportId'] = [report_id]
             else:
-                multifilter_tasks += [self._create_trend_chart(data=df_temp, overwrite=True, **kwargs_)]
+                multifilter_tasks += [self._create_trend_chart(data=df_temp, overwrite=False, **kwargs_)]
 
             filter_elements.append(filter_element)
             first_overwrite = False     # Just overwrite once to delete previous plots
 
         report_ids = await asyncio.gather(*multifilter_tasks)
         for i in range(1, len(filter_elements)):
-            filter_elements[i]['report_id'] = [report_ids[i]]
+            filter_elements[i]['reportId'] = [report_ids[i-1]]
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: Optional[int] = filters.get('row')
@@ -1314,16 +1286,9 @@ class BasePlot:
         )
         report_id: str = report_dataset['report']['id']
         self._report_order[report_id] = report_dataset['report']['order']
-        path_entry = (app_id, path_name if path_name else '')
-
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         return report_dataset
 
@@ -1892,6 +1857,7 @@ class PlotApi(BasePlot):
             round_max -= 0.1
         return perc
 
+    #TODO tabs have to be updated at the end of execution allways!!!
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
@@ -1908,7 +1874,7 @@ class PlotApi(BasePlot):
             await self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
             self._report_order[child_id] = order
 
-        self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
+        await self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -1940,8 +1906,7 @@ class PlotApi(BasePlot):
 
         assert(len(tabs_group) == len(tabs_group_aux))
         self._tabs[tabs_group_entry] = tabs_group_aux
-        self._tabs_group_modified.add(tabs_group_entry)
-        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
+        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
@@ -2354,18 +2319,10 @@ class PlotApi(BasePlot):
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
-        path_entry = (app_id, path_name if path_name else '')
-
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
-        #TODO adapt tabs to tables
         report_entry_filter_fields: Dict[str, List[str]] = {
             extra_map[extra_name]: values
             for extra_name, values in filter_fields.items()

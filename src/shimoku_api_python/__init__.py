@@ -57,7 +57,7 @@ class Client(object):
         self.activate_sequential_execution = activate_sequential_execution
         self.activate_async_execution = deactivate_sequential_execution
 
-        shimoku_api_python.async_execution_pool.app_metadata_api = self.app
+        shimoku_api_python.async_execution_pool.plot_api = self.plt
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config={}):

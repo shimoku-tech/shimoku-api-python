@@ -1750,7 +1750,7 @@ def test_radar():
 
 def test_indicator():
     print('test_indicator')
-    menu_path: str = 'test/indicator-test'
+    menu_path: str = 'test-indicators/indicator-test'
     data_ = [
         {
             "footer": "",
@@ -1911,7 +1911,7 @@ def test_indicator():
 
 def test_indicator_one_dict():
     print('test_indicator_one_dict')
-    menu_path: str = 'test/indicator-test-one-dict'
+    menu_path: str = 'test-indicators/indicator-test-one-dict'
     data_ = {
         "description": "",
         "title": "Estado",
@@ -1948,7 +1948,7 @@ def test_indicator_one_dict():
 
 def test_alert_indicator():
     print('test_alert_indicator')
-    menu_path: str = 'test/indicator-path-test'
+    menu_path: str = 'test-indicators/indicator-path-test'
     data_ = [
         {
             "description": "",
@@ -3750,6 +3750,7 @@ def test_get_input_forms():
 def test_tabs():
     print("test_tabs")
     menu_path = "test-tabs"
+    s.plt.delete_path(menu_path)
 
     def check_tabs_index_in_business_state(_tabs_index, how_many):
         app_name, path_name = s.plt._clean_menu_path(menu_path)
@@ -4216,7 +4217,6 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-s.activate_sequential_execution()
 s.plt.clear_business()
 
 # Charts
@@ -4227,7 +4227,6 @@ test_iframe()
 test_html()
 test_table()
 test_table_with_labels()
-test_dynamic_and_conditional_input_form()
 test_bentobox()
 test_zero_centered_barchart()
 test_indicator()
@@ -4247,27 +4246,25 @@ test_predictive_line()
 test_speed_gauge()
 test_line()
 test_scatter()
-
-s.activate_sequential_execution()
-# Free echarts
+#
+# # Free echarts
 test_stacked_barchart()
 test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
 test_gauge_indicators()
 test_free_echarts()
-
-s.activate_sequential_execution()
+#
 # Charts sequential needed
 test_bar_with_filters()
 test_bar()
 
-s.activate_sequential_execution()
 # Tabs
+# TODO make a version of the test with full concurrency
 test_tabs()
 
-s.activate_sequential_execution()
 # Others
+test_dynamic_and_conditional_input_form()
 test_input_form()
 test_get_input_forms()
 test_set_apps_orders()
@@ -4276,7 +4273,7 @@ test_set_new_business()
 test_append_data_to_trend_chart()
 test_delete()
 test_delete_path()
-s.activate_sequential_execution()
+s.plt.execute_task_pool()
 # TODO
 # test_cohorts()
 # test_themeriver()

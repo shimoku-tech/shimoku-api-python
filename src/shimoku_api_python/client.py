@@ -18,7 +18,6 @@ import logging
 from shimoku_api_python.execution_logger import logging_before_and_after, my_before_sleep
 
 logger = logging.getLogger(__name__)
-semaphore = asyncio.Semaphore(10)
 
 
 class ApiClient(object):
@@ -37,6 +36,10 @@ class ApiClient(object):
                 f'The namespace must be either "production", "staging" or "develop | '
                 f'namespace introduced: {environment}'
             )
+
+        # semaphor for async api calls
+        self.semaphore_limit = 10
+        self.semaphore = asyncio.Semaphore(self.semaphore_limit)
 
         self.host: str = f'{self.host}universe/{universe_id}/'
 
@@ -120,7 +123,7 @@ class ApiClient(object):
 
         # perform request and return response
         try:
-            async with semaphore:
+            async with self.semaphore:
                 return await self.request(
                     method, url, query_params,
                     headers=header_params, body=body,

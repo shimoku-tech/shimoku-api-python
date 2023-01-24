@@ -44,6 +44,7 @@ app_names = []
 tabs_group_indexes = []
 sequential = False
 plot_api = None
+api_client = None
 
 
 def activate_sequential_execution():
@@ -131,6 +132,7 @@ def async_auto_call_manager(
                         if tabs_group_pseudo_entry not in tabs_group_indexes else []
 
             if execute:
+                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
                 return asyncio.run(execute_tasks())
 
         return wrapper

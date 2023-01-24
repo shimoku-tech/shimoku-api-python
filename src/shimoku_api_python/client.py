@@ -15,9 +15,10 @@ from functools import wraps
 
 import aiohttp
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, my_before_sleep
 
 logger = logging.getLogger(__name__)
+semaphore = asyncio.Semaphore(10)
 
 
 class ApiClient(object):
@@ -81,7 +82,8 @@ class ApiClient(object):
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
     @logging_before_and_after(logging_level=logger.debug)
-    # @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16),
+           before_sleep=my_before_sleep)
     async def call_api(
             self, resource_path, method, path_params=None, query_params=None,
             header_params=None, body=None, collection_formats=None, **kwargs
@@ -118,11 +120,13 @@ class ApiClient(object):
 
         # perform request and return response
         try:
-            return await self.request(
-                method, url, query_params,
-                headers=header_params, body=body,
-            )
+            async with semaphore:
+                return await self.request(
+                    method, url, query_params,
+                    headers=header_params, body=body,
+                )
         except Exception as err:
+            logger.error(err)
             raise ApiClientError(err)
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -210,7 +214,6 @@ class ApiClient(object):
         return element_data
 
     @logging_before_and_after(logging_level=logger.debug)
-    # @sync_fallback
     async def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
         logger.debug(f'method:{method}, url: {url}, headers: {headers},'
@@ -238,6 +241,8 @@ class ApiClient(object):
                         data = await res.json()
                     else:
                         data = await res.text()
+                    logger.debug(data)
+
                 except Exception:
                     data = None
 

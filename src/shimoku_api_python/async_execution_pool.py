@@ -61,6 +61,7 @@ def async_auto_call_manager(
     def decorator(async_func):
 
         async def execute_tasks():
+            # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
             global plot_api
 
             # We need to create the apps before the tasks try to access them all at once
@@ -110,18 +111,21 @@ def async_auto_call_manager(
         @wraps(async_func)
         def wrapper(*args, **kwargs):
 
+            global task_pool, app_names, tabs_group_indexes
+
             if sequential:
+                if len(task_pool) > 0:
+                    asyncio.run(execute_tasks())
                 return asyncio.run(async_func(*args, **kwargs))
 
-            global task_pool, app_names, tabs_group_indexes
             task_pool.append(async_func(*args, **kwargs))
-            if 'menu_path' in kwargs and 'delete' not in async_func.__name__:
+            if kwargs.get('menu_path') and 'delete' not in async_func.__name__:
                 app_name, path_name = clean_menu_path(menu_path=kwargs['menu_path'])
                 if not path_name:
                     path_name = ''  # because of tabs
 
                 app_names += [app_name] if app_name not in app_names else []
-                if 'tabs_index' in kwargs:
+                if kwargs.get('tabs_index'):
                     tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
                     tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in tabs_group_indexes else []

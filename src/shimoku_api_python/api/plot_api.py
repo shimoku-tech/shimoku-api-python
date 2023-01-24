@@ -1062,7 +1062,7 @@ class BasePlot:
         business: Dict = await self._plot_aux.create_business(name=name)
         self.business_id: str = business['id']
 
-    @async_auto_call_manager()
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
         """
@@ -1091,7 +1091,7 @@ class BasePlot:
                 ]
         await asyncio.gather(*set_apps_tasks)
 
-    @async_auto_call_manager()
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
         """

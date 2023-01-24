@@ -27,6 +27,11 @@ class IndentFormatter(logging.Formatter):
         return out
 
 
+def my_before_sleep(retry_state):
+    msg = f'Retrying {retry_state.fn}: attempt {retry_state.attempt_number} ended with: {retry_state.outcome}'
+    logging.warning(msg)
+
+
 def logging_before_and_after(logging_level: Callable, before: Optional[str] = None, after: Optional[str] = None):
     def decorator(func: Callable):
 

@@ -3846,7 +3846,7 @@ def test_tabs():
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )
-        s.plt.execute_task_pool()
+        s.execute_task_pool()
         check_all_data_restored_correctly(tabs_index_, 3)
 
     data_table = [
@@ -4099,7 +4099,7 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
-    s.plt.execute_task_pool()
+    s.execute_task_pool()
 
     # Test overwrite
     _test_bentobox()
@@ -4222,57 +4222,57 @@ if delete_paths:
 s.plt.clear_business()
 
 # Charts
-# test_line()
-# test_funnel()
-# test_tree()
-# test_iframe()
-# test_html()
-# test_table()
-# test_table_with_labels()
-# test_bentobox()
-# test_zero_centered_barchart()
-# test_indicator()
-# test_indicator_one_dict()
-# test_alert_indicator()
-# test_stockline()
-# test_radar()
-# test_pie()
-# test_ux()
-# test_ring_gauge()
-# test_sunburst()
-# test_treemap()
-# test_heatmap()
-# test_sankey()
-# test_horizontal_barchart()
-# test_predictive_line()
-# test_speed_gauge()
-# test_line()
-# test_scatter()
-# #
-# # # Free echarts
-# test_stacked_barchart()
-# test_stacked_horizontal_barchart()
-# test_stacked_area_chart()
-# test_shimoku_gauges()
-# test_gauge_indicators()
-# test_free_echarts()
+test_line()
+test_funnel()
+test_tree()
+test_iframe()
+test_html()
+test_table()
+test_table_with_labels()
+test_bentobox()
+test_zero_centered_barchart()
+test_indicator()
+test_indicator_one_dict()
+test_alert_indicator()
+test_stockline()
+test_radar()
+test_pie()
+test_ux()
+test_ring_gauge()
+test_sunburst()
+test_treemap()
+test_heatmap()
+test_sankey()
+test_horizontal_barchart()
+test_predictive_line()
+test_speed_gauge()
+test_line()
+test_scatter()
 #
-# # Charts sequential needed
-# test_bar_with_filters()
-# test_bar()
-#
-# # Tabs
-# # TODO make a version of the test with full concurrency
-# test_tabs()
-#
-# # Others
-# test_dynamic_and_conditional_input_form()
-# test_input_form()
-# test_get_input_forms()
-# test_set_apps_orders()
-# test_set_sub_path_orders()
-# test_set_new_business()
-# test_append_data_to_trend_chart()
+# # Free echarts
+test_stacked_barchart()
+test_stacked_horizontal_barchart()
+test_stacked_area_chart()
+test_shimoku_gauges()
+test_gauge_indicators()
+test_free_echarts()
+
+# Charts sequential needed
+test_bar_with_filters()
+test_bar()
+
+# Tabs
+# TODO make a version of the test with full concurrency
+test_tabs()
+
+# Others
+test_dynamic_and_conditional_input_form()
+test_input_form()
+test_get_input_forms()
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_set_new_business()
+test_append_data_to_trend_chart()
 test_delete()
 test_delete_path()
 s.execute_task_pool()

@@ -481,7 +481,7 @@ class BasePlot:
         if isinstance(just_labels, bool):
             self._tabs_group_properties[tabs_group_entry]['variant'] = 'solidRounded' if just_labels else 'enclosedSolidRounded'
         if isinstance(sticky, bool):
-            self._tabs_group_properties[tabs_group_entry]['sticky'] = str(sticky).lower()
+            self._tabs_group_properties[tabs_group_entry]['sticky'] = sticky
 
         report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
                                         str(self._tabs_last_order[tabs_group_entry])+'}'
@@ -492,7 +492,7 @@ class BasePlot:
         tabs_group_properties = self._tabs_group_properties[tabs_group_entry]
         report_metadata['properties'] = '{"tabs":' + tabs + \
                                         ', "variant": "' + tabs_group_properties['variant'] + '"' \
-                                        ', "sticky": ' + tabs_group_properties['sticky'] + '}'
+                                        ', "sticky": ' + ('true' if tabs_group_properties['sticky'] else 'false')+ '}'
 
         await self._plot_aux.update_report(
             business_id=business_id,

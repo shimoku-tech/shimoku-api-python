@@ -65,6 +65,14 @@ def async_auto_call_manager(
             # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
             global plot_api
 
+            # if just one task its the same as sequential
+            if len(task_pool) == 1:
+                result = await task_pool[0]
+                task_pool.clear()
+                app_names.clear()
+                tabs_group_indexes.clear()
+                return result
+
             # We need to create the apps before the tasks try to access them all at once
             if len(app_names) > 0:
                 menu_path_tasks = [plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
@@ -85,11 +93,10 @@ def async_auto_call_manager(
 
                 await asyncio.gather(*tabs_tasks)
 
-            await asyncio.gather(*(task_pool[:-1]))
-            result = await task_pool[-1]
+            await asyncio.gather(*task_pool)
             task_pool.clear()
 
-            # After all the tasks have finished update the tabs to get all the charts
+            # After all the tasks have finished update the tabs to get all the charts correctly
             if len(tabs_group_indexes) > 0:
                 tabs_tasks = []
                 for tabs_group_pseudo_entry in tabs_group_indexes:
@@ -107,8 +114,6 @@ def async_auto_call_manager(
                 await asyncio.gather(*tabs_tasks)
                 tabs_group_indexes.clear()
 
-            return result
-
         @wraps(async_func)
         def wrapper(*args, **kwargs):
 
@@ -117,6 +122,11 @@ def async_auto_call_manager(
             if sequential:
                 if len(task_pool) > 0:
                     asyncio.run(execute_tasks())
+                return asyncio.run(async_func(*args, **kwargs))
+
+            if execute:
+                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
+                asyncio.run(execute_tasks())
                 return asyncio.run(async_func(*args, **kwargs))
 
             task_pool.append(async_func(*args, **kwargs))
@@ -131,9 +141,6 @@ def async_auto_call_manager(
                     tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in tabs_group_indexes else []
 
-            if execute:
-                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
-                return asyncio.run(execute_tasks())
 
         return wrapper
 

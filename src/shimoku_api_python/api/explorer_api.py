@@ -445,7 +445,12 @@ class CascadeExplorerAPI(GetExplorerAPI):
                 endpoint=endpoint, method='GET',
             )
         )
-        reports = reports_raw.get('items')
+        try:
+            reports = reports_raw.get('items')
+        except AttributeError:
+            logger.warning('Reports json should have an "items" field')
+            reports = None
+
         if not reports:
             return []
         return reports
@@ -1063,15 +1068,18 @@ class CreateExplorerAPI(object):
             print()
 
         with tqdm.tqdm(total=len(items), unit=' report entries', disable=(log_level > logging.INFO)) as progress_bar:
+            query_tasks = []
             for chunk in range(0, len(items), batch_size):
-                await self.api_client.query_element(
+                query_tasks.append(
+                    self.api_client.query_element(
                     method='POST', endpoint=endpoint,
-                    **{'body_params': items[chunk:chunk + batch_size]},
+                    **{'body_params': items[chunk:chunk + batch_size],
+                       'progress_bar': (progress_bar, len(items[chunk:chunk + batch_size]))},
+                    )
                 )
-                progress_bar.update(len(items[chunk:chunk + batch_size]))
-                await asyncio.sleep(.25)
                 if log_level == logging.DEBUG:
                     print()
+            await asyncio.gather(*query_tasks)
 
         logger.info("Table data uploaded")
 

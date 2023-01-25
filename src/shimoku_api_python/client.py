@@ -214,6 +214,11 @@ class ApiClient(object):
                 collection_formats=collection_formats
             )
         )
+
+        if kwargs.get('progress_bar'):
+            progress_bar, how_much = kwargs.get('progress_bar')
+            progress_bar.update(how_much)
+
         return element_data
 
     @logging_before_and_after(logging_level=logger.debug)

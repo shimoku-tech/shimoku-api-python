@@ -97,7 +97,7 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 def configure_logging(verbosity: Optional[str] = None, channel: Optional[TextIOWrapper] = stdout):
 
     verbosity = verbosity.upper()
-    if verbosity not in ['DEBUG', 'INFO']:
+    if verbosity not in ['DEBUG', 'INFO', 'WARNING']:
         raise ValueError(f"Invalid value for verbosity, only 'DEBUG' and 'INFO' are permitted, "
                          f"the value provided is: {verbosity}")
 

@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 class PlotAux:
-    def __init__(self, api_client):
+    def __init__(self, api_client, app_metadata_api):
         self.business_explorer_api = BusinessExplorerApi(api_client=api_client)
         self.universe_explorer_api = UniverseExplorerApi(api_client=api_client)
         self.report_explorer_api = ReportExplorerApi(api_client=api_client)
@@ -44,7 +44,7 @@ class PlotAux:
         self.report_dataset_explorer_api = ReportDatasetExplorerApi(api_client=api_client)
         self.dataset_explorer_api = DatasetExplorerApi(api_client=api_client)
         self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client)
-        self.app_metadata_api = AppMetadataApi(api_client=api_client)
+        self.app_metadata_api = app_metadata_api
         self.data_managing_api = DataManagingApi(api_client=api_client)
         self.data_validation_api = DataValidation(api_client=api_client)
         self.multi_create_api = MultiCreateApi(api_client=api_client)
@@ -117,14 +117,10 @@ class PlotAux:
 
 class BasePlot:
 
-    def __init__(self, api_client, **kwargs):
-        self._plot_aux = PlotAux(api_client)
+    def __init__(self, api_client, app_metadata_api, **kwargs):
+        self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
-
-    @async_auto_call_manager(execute=True)
-    async def execute_task_pool(self):
-        pass
 
     @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
@@ -144,6 +140,9 @@ class BasePlot:
 
         # Map to store the last order of its reports
         self._tabs_last_order = dict()
+
+        # Map to store tabs properties
+        self._tabs_group_properties = dict()
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_business_state(self, business_id: str):
@@ -172,6 +171,8 @@ class BasePlot:
                 self._tabs_last_order[tabs_group_entry] = last_order
                 try:
                     tabs_group = properties['tabs']
+                    self._tabs_group_properties[tabs_group_entry] = {'sticky': properties['sticky'],
+                                                                     'variant': properties['variant']}
                 except KeyError:
                     warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
                     continue
@@ -456,25 +457,42 @@ class BasePlot:
 
     # TABS
     @logging_before_and_after(logging_level=logger.debug)
-    async def _update_tabs_group_metadata(self, business_id: str, app_id: str, path_name: str, group_name: str,
-                                    order: Optional[int] = None, cols_size: Optional[str] = None):
+    async def _update_tabs_group_metadata(
+            self, business_id: str, app_id: str, path_name: str, group_name: str,
+            order: Optional[int] = None, cols_size: Optional[str] = None,
+            bentobox_data: Optional[Dict] = None, padding: Optional[str] = None,
+            rows_size: Optional[int] = None, just_labels: Optional[bool] = None, sticky: Optional[bool] = None
+    ):
         """Updates the tabs report metadata"""
         tabs_group_entry = (app_id, path_name, group_name)
         report_metadata: Dict[str, Any] = {}
         report_id = self._tabs_group_id[tabs_group_entry]
-
+        if bentobox_data:
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+        if rows_size:
+            report_metadata['sizeRows'] = rows_size
         if cols_size:
             report_metadata['sizeColumns'] = cols_size
+        if padding:
+            report_metadata['sizePadding'] = padding
         if order:
             report_metadata['order'] = order
             self._report_order[report_id] = order
+        if isinstance(just_labels, bool):
+            self._tabs_group_properties[tabs_group_entry]['variant'] = 'solidRounded' if just_labels else 'enclosedSolidRounded'
+        if isinstance(sticky, bool):
+            self._tabs_group_properties[tabs_group_entry]['sticky'] = str(sticky).lower()
 
         report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
                                         str(self._tabs_last_order[tabs_group_entry])+'}'
         tabs = json.dumps(
             {tab_name: {'order': index, 'reportIds': report_ids_list}
              for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
-        report_metadata['properties'] = '{"tabs":' + tabs + '}'
+
+        tabs_group_properties = self._tabs_group_properties[tabs_group_entry]
+        report_metadata['properties'] = '{"tabs":' + tabs + \
+                                        ', "variant": "' + tabs_group_properties['variant'] + '"' \
+                                        ', "sticky": ' + tabs_group_properties['sticky'] + '}'
 
         await self._plot_aux.update_report(
             business_id=business_id,
@@ -504,6 +522,7 @@ class BasePlot:
         self._tabs_last_order[tabs_group_entry] = 0
         self._tabs_group_id[tabs_group_entry] = report['id']
         self._tabs[tabs_group_entry] = {}
+        self._tabs_group_properties[tabs_group_entry] = {'sticky': 'false', 'variant': 'enclosedSolidRounded'}
 
     @logging_before_and_after(logging_level=logger.debug)
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
@@ -1326,19 +1345,27 @@ class BasePlot:
             )
         )
 
-        # TODO optimize this with concurrency
         business_reports = await self._plot_aux.get_business_reports(business_id=self.business_id)
+        delete_report_tasks = []
+        delete_app_tasks = []
         for report in target_reports:
             report_id = report['id']
             app_id = report['appId']
 
-            business_reports.remove(report)
+            # Check if the report has been deleted by another task
+            if report in business_reports:
+                business_reports.remove(report)
+            else:
+                continue
+
             app_reports = [report for report in business_reports if report['appId'] == app_id]
 
-            await self._plot_aux.delete_report(
-                business_id=self.business_id,
-                app_id=app_id,
-                report_id=report_id
+            delete_report_tasks.append(
+                self._plot_aux.delete_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
             )
             try:  # It should always exist
                 del self._report_order[report_id]
@@ -1354,9 +1381,16 @@ class BasePlot:
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
 
-                child_report_ids = [report_id_in_tab
-                                    for tabs_list in self._tabs[tabs_group_entry].values()
-                                    for report_id_in_tab in tabs_list]
+                try:
+                    child_report_ids = [report_id_in_tab
+                                        for tabs_list in self._tabs[tabs_group_entry].values()
+                                        for report_id_in_tab in tabs_list]
+                except KeyError:
+                    self._clear_or_create_all_local_state()
+                    await self._get_business_state(self.business_id)
+                    child_report_ids = [report_id_in_tab
+                                        for tabs_list in self._tabs[tabs_group_entry].values()
+                                        for report_id_in_tab in tabs_list]
 
                 # Add linked reports to the deletion queue
                 target_reports += [report for report in app_reports if report['id'] in child_report_ids]
@@ -1368,10 +1402,14 @@ class BasePlot:
 
             # Check if app can be deleted
             if not overwrite and len(app_reports) == 0:
-                await self._plot_aux.delete_app(
-                    business_id=self.business_id,
-                    app_id=app_id,
+                delete_app_tasks.append(
+                    self._plot_aux.delete_app(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                    )
                 )
+        await asyncio.gather(*delete_report_tasks)
+        await asyncio.gather(*delete_app_tasks)
 
     @async_auto_call_manager(execute=True)
     async def delete(
@@ -1760,12 +1798,11 @@ class PlotApi(BasePlot):
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, **kwargs):
-        super().__init__(api_client)
+    def __init__(self, api_client, app_metadata_api, **kwargs):
+        super().__init__(api_client, app_metadata_api=app_metadata_api)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
             asyncio.run(self._get_business_state(self.business_id))
-            print(self)
         else:
             self.business_id: Optional[str] = None
 
@@ -1878,14 +1915,19 @@ class PlotApi(BasePlot):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_tabs_group_metadata(self, group_name: str, menu_path: str, order: Optional[int] = None,
-                                         cols_size: Optional[int] = None):
+    async def update_tabs_group_metadata(
+            self, group_name: str, menu_path: str, order: Optional[int] = None,
+            cols_size: Optional[int] = None, bentobox_data: Optional[Dict] = None,
+            padding: Optional[str] = None, rows_size: Optional[int] = None,
+            just_labels: Optional[bool] = None, sticky: Optional[bool] = None
+    ):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
         app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
-        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
+        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size,
+                                               bentobox_data, padding, rows_size, just_labels, sticky)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -3216,6 +3258,8 @@ class PlotApi(BasePlot):
                 raise ValueError(f'{extra_element} is not solved')
 
         len_df = len(df)
+        padding_right = None
+        padding_left = None
         if vertical and (len_df > 1 or isinstance(vertical, str)):
             if bentobox_data:
                 raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
@@ -3246,11 +3290,13 @@ class PlotApi(BasePlot):
         else:
             cols_size = cols_size//len_df
             if cols_size < 2:
-                raise ValueError('You must not provide more than 6 indicators when using the horizontal configuration')
+                raise ValueError(f'The calculation of the individual cols_size for each indicator '
+                                 f'is too small (cols_size/len(df)): {cols_size}')
 
         last_index = df.index[-1]
 
         for index, df_row in df.iterrows():
+
             if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 

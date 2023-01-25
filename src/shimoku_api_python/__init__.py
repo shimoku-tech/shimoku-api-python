@@ -2,7 +2,8 @@ from __future__ import absolute_import
 import logging
 from shimoku_api_python.execution_logger import configure_logging, logging_before_and_after
 import shimoku_api_python.async_execution_pool
-from shimoku_api_python.async_execution_pool import activate_sequential_execution, deactivate_sequential_execution
+from shimoku_api_python.async_execution_pool import activate_sequential_execution, deactivate_sequential_execution, \
+    async_auto_call_manager
 # import apis into sdk package
 from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
@@ -41,7 +42,6 @@ class Client(object):
             universe_id=universe_id,
             environment=environment,
         )
-
         self.ping = PingApi(self._api_client)
         self.universe = UniverseMetadataApi(self._api_client)
         self.business = BusinessMetadataApi(self._api_client)
@@ -50,7 +50,7 @@ class Client(object):
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client, business_id=business_id)
-        self.plt = PlotApi(self._api_client, business_id=business_id)
+        self.plt = PlotApi(self._api_client, business_id=business_id, app_metadata_api=self.app)
         self.ai = AiAPI(self._api_client)
         self.html_components = shimoku_components_catalog.html_components
 
@@ -63,3 +63,7 @@ class Client(object):
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config={}):
         self._api_client.set_config(config)
+
+    @async_auto_call_manager(execute=True)
+    async def execute_task_pool(self):
+        pass

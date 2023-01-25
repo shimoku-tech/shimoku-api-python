@@ -1349,6 +1349,11 @@ class BasePlot:
         delete_report_tasks = []
         delete_app_tasks = []
         for report in target_reports:
+
+            # Don't overwrite tabs
+            if overwrite and report['reportType'] == 'TABS':
+                continue
+
             report_id = report['id']
             app_id = report['appId']
 
@@ -1894,8 +1899,7 @@ class PlotApi(BasePlot):
             round_max -= 0.1
         return perc
 
-    #TODO tabs have to be updated at the end of execution allways!!!
-    @async_auto_call_manager()
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
                                        last_in_order: Optional[bool] = True):
@@ -1906,8 +1910,11 @@ class PlotApi(BasePlot):
         app_id = app['id']
         child_id = self._tabs_group_id[(app_id, path_name, child_tabs_group)]
         order = self._report_order[child_id]
+        parent_tabs_group_entry = (app_id, path_name, parent_tab_index[0])
+        if parent_tabs_group_entry not in self._tabs:
+            await self._create_tabs_group(self.business_id, parent_tabs_group_entry)
         if last_in_order:
-            order = self._tabs_last_order[(app_id, path_name, parent_tab_index[0])] + 1
+            order = self._tabs_last_order[parent_tabs_group_entry] + 1
             await self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
             self._report_order[child_id] = order
 

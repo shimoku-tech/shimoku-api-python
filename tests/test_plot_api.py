@@ -3749,7 +3749,7 @@ def test_get_input_forms():
     assert rs
 
 
-def test_tabs():
+def test_tabs(check_data=True):
     print("test_tabs")
     menu_path = "test-tabs"
     s.plt.delete_path(menu_path)
@@ -3846,8 +3846,10 @@ def test_tabs():
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )
-        s.execute_task_pool()
-        check_all_data_restored_correctly(tabs_index_, 3)
+
+        if check_data:
+            s.execute_task_pool()
+            check_all_data_restored_correctly(tabs_index_, 3)
 
     data_table = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
@@ -3892,7 +3894,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_all_data_restored_correctly(tabs_index, 2)
+    if check_data:
+        s.execute_task_pool()
+        check_all_data_restored_correctly(tabs_index, 2)
 
     s.plt.bar(
         data=data,
@@ -3993,7 +3997,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_tabs_index_in_business_state(tabs_index, 1)
+    if check_data:
+        s.execute_task_pool()
+        check_tabs_index_in_business_state(tabs_index, 1)
 
     for i in range(5):
         s.plt.indicator(data={
@@ -4122,7 +4128,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_all_data_restored_correctly(tabs_index, 2)
+    if check_data:
+        s.execute_task_pool()
+        check_all_data_restored_correctly(tabs_index, 2)
 
     tabs_index = ("Deepness 0", "Input Form")
     s.plt.input_form(
@@ -4180,7 +4188,9 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
-        check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
+        if check_data:
+            s.execute_task_pool()
+            check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
 
     # Test if cascade deletion works correctly
     s.plt.delete(
@@ -4262,10 +4272,10 @@ test_bar_with_filters()
 test_bar()
 
 # Tabs
-# TODO make a version of the test with full concurrency
 test_tabs()
+test_tabs(check_data=False)
 
-# Others
+# # Others
 test_dynamic_and_conditional_input_form()
 test_input_form()
 test_get_input_forms()

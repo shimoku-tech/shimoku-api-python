@@ -32,6 +32,7 @@ class BusinessMetadataApi(ABC):
 
         self.delete_business = async_auto_call_manager(execute=True)(self.business_explorer_api.delete_business)
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)
     def copy_business(self):
         """Having a business make a copy of all its apps and reports

@@ -548,13 +548,7 @@ class BasePlot:
                                if report != report_id]
         self._tabs[tab_group_entry][tab_name] = removed_report_list
 
-        if len(removed_report_list) == 0:
-            del self._tabs[tab_group_entry][tab_name]
-
-            if len(self._tabs[tab_group_entry].items()) == 0:
-                self._delete_tabs_group(tab_group_entry)
-        else:
-            del self._report_in_tab[report_id]
+        del self._report_in_tab[report_id]
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,

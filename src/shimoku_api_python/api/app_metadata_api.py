@@ -46,6 +46,8 @@ class AppMetadataApi(ABC):
         self.get_app_type = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_type)
         self.get_app_by_name = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_name)
 
+        self.delete_app = async_auto_call_manager(execute=True)(self.app_explorer_api.delete_app)
+
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
         else:
@@ -59,15 +61,16 @@ class AppMetadataApi(ABC):
         _ = await self._get_business(business_id)
         self.business_id: str = business_id
 
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)
-    def __resolve_app_id(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> str:
+    async def __resolve_app_id(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> str:
         """"""
         if app_id:
             return app_id
         if not app_name:
             raise Exception("Either an app_id or an app_name has to be provided")
 
-        return self._get_app_by_name(self.business_id, app_name)['id']
+        return (await self._get_app_by_name(self.business_id, app_name))['id']
 
     @logging_before_and_after(logging_level=logger.debug)
     def has_app_report(self, app_id: Optional[str] = None, app_name: Optional[str] = None) -> bool:

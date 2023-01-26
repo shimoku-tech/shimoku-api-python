@@ -2,10 +2,11 @@
 from os import getenv
 from typing import Dict, List
 import unittest
+import asyncio
 
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
-
+from tenacity import RetryError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -14,6 +15,7 @@ app_id: str = getenv('APP_ID')
 app_name: str = getenv('APP_NAME')
 app_type_id: str = getenv('APP_TYPE_ID')
 environment: str = getenv('ENVIRONMENT')
+verbosity: str = getenv('VERBOSITY')
 app_element: Dict[str, str] = dict(
     business_id=business_id,
     app_id=app_id,
@@ -27,7 +29,8 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
-    business_id=business_id
+    business_id=business_id,
+    verbosity=verbosity,
 )
 
 
@@ -42,7 +45,7 @@ def test_get_app():
 def test_get_fake_app():
     class MyTestCase(unittest.TestCase):
         def test_fake_app(self):
-            with self.assertRaises(ApiClientError):
+            with self.assertRaises(RetryError):
                 app_id_: str = 'this is a test'
                 s.app.get_app(
                     business_id=business_id,
@@ -90,7 +93,7 @@ def test_update_app():
 def test_create_app_without_apptype_fails():
     class MyTestCase(unittest.TestCase):
         def check_app_creation_fails(self):
-            with self.assertRaises(ApiClientError):
+            with self.assertRaises(TypeError):
                 app: Dict = (
                     s.app.create_app(
                         business_id=business_id,
@@ -108,7 +111,7 @@ def test_create_and_delete_app():
         s.app.create_app(
             business_id=business_id,
             app_type_id=app_type_id,
-            name='Test app',
+            name='Testing app',
         )
     )
     app_id_: str = app['id']
@@ -131,7 +134,7 @@ def test_create_and_delete_app():
     # Check it does not exists anymore
     class MyTestCase(unittest.TestCase):
         def check_app_not_exists(self):
-            with self.assertRaises(ApiClientError):
+            with self.assertRaises(RetryError):
                 s.app.get_app(business_id=business_id, app_id=app_id_)
 
     t = MyTestCase()
@@ -263,6 +266,7 @@ def test_hide_and_show_breadcrumbs():
         app_updated: Dict = s.app.get_app(**app_element)
         assert not app_updated[col_var]
 
+
 def test_hide_and_show_show_history_navigation():
     col_var: str = 'showHistoryNavigation'
     app: Dict = s.app.get_app(**app_element)
@@ -312,7 +316,7 @@ def test_get_app_by_name():
         name=name
     )
     assert app
-    assert app["normalizedName"] == s.plt._create_normalized_name(name)
+    assert app["normalizedName"] == s.plt._plot_aux.create_normalized_name(name)
 
     name = "test-app-to-get-name"
     app: Dict = s.app.get_app_by_name(
@@ -320,7 +324,7 @@ def test_get_app_by_name():
         name=name
     )
     assert app
-    assert app["normalizedName"] == s.plt._create_normalized_name(name)
+    assert app["normalizedName"] == s.plt._plot_aux.create_normalized_name(name)
 
     s.app.delete_app(
         business_id=business_id,
@@ -336,7 +340,7 @@ def test_has_app_report():
 test_get_app()
 test_get_fake_app()
 test_update_app()
-# test_create_app_without_apptype_fails()
+test_create_app_without_apptype_fails()
 test_create_and_delete_app()
 test_get_app_reports()
 test_get_app_report_ids()
@@ -348,3 +352,5 @@ test_hide_and_show_path()
 test_hide_and_show_show_history_navigation()
 test_get_app_by_name()
 test_has_app_report()
+
+s.execute_task_pool()

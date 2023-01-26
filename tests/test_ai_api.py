@@ -76,3 +76,5 @@ def test_predictive_table():
 
 test_predict_categorical()
 test_predictive_table()
+
+s.execute_task_pool()

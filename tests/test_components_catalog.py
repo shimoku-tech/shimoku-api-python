@@ -17,6 +17,7 @@ api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
+verbosity: str = getenv('VERBOSITY')
 
 
 s = shimoku.Client(
@@ -24,6 +25,7 @@ s = shimoku.Client(
     universe_id=universe_id,
     environment=environment,
     business_id=business_id,
+    verbosity=verbosity
 )
 
 
@@ -68,3 +70,5 @@ for component_function in components:
     print(f'passed {component_function.__name__}')
     html = component_function(**call_parameters)
     s.plt.html(html=html, menu_path=f"Components test/{component_function.__name__}", order=0)
+
+s.execute_task_pool()

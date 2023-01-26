@@ -1,7 +1,6 @@
 import asyncio
 from functools import wraps
-from inspect import getmembers
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Callable
 
 
 # TODO find a better way to handle this
@@ -58,14 +57,15 @@ def deactivate_sequential_execution():
 
 
 def async_auto_call_manager(
-        execute: Optional[bool] = False):
-    def decorator(async_func):
+        execute: Optional[bool] = False) -> Callable:
+
+    def decorator(async_func: Callable) -> Callable:
 
         async def execute_tasks():
             # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
             global plot_api
 
-            # if just one task its the same as sequential
+            # if just one task it's the same as sequential
             if len(task_pool) == 1:
                 result = await task_pool[0]
                 task_pool.clear()
@@ -140,7 +140,6 @@ def async_auto_call_manager(
                     tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
                     tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in tabs_group_indexes else []
-
 
         return wrapper
 

@@ -1020,25 +1020,28 @@ class CreateExplorerAPI(object):
         :param dataset_id:
         :param items:
         """
+        # TODO see if this can be batch accelerated like report entries
         endpoint: str = (
             f'business/{business_id}/'
             f'dataSet/{dataset_id}/'
             f'data'
         )
 
-        # Don't use concurrency to not overload the Api
-        data: List[Dict] = []
-        for item in items:
-            datum: Dict = await (
-                self.api_client.query_element(
-                    method='POST', endpoint=endpoint,
-                    **{'body_params': item},
+        log_level = logger.getEffectiveLevel()
+        data_points_tasks = []
+        len_items = len(items)
+        with tqdm.tqdm(total=len_items, unit=' data points', disable=(log_level > logging.INFO or len_items < 50)) as progress_bar:
+            for item in items:
+                data_points_tasks.append(
+                    self.api_client.query_element(
+                        method='POST', endpoint=endpoint,
+                        **{'body_params': item,
+                           'progress_bar': (progress_bar, 1)},
+                    )
                 )
-            )
-            await asyncio.sleep(.25)
-            data = data + [datum]
+            result = await asyncio.gather(*data_points_tasks)
 
-        return data
+        return result
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_report_entries(
@@ -1077,8 +1080,8 @@ class CreateExplorerAPI(object):
                        'progress_bar': (progress_bar, len(items[chunk:chunk + batch_size]))},
                     )
                 )
-                if log_level == logging.DEBUG:
-                    print()
+            if log_level == logging.DEBUG:
+                print()
             await asyncio.gather(*query_tasks)
 
         logger.info("Table data uploaded")

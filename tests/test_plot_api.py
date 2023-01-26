@@ -4258,8 +4258,8 @@ test_predictive_line()
 test_speed_gauge()
 test_line()
 test_scatter()
-#
-# # Free echarts
+
+# Free echarts
 test_stacked_barchart()
 test_stacked_horizontal_barchart()
 test_stacked_area_chart()

@@ -2295,19 +2295,20 @@ class PlotApi(BasePlot):
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        try:
-            d: Dict[str, Dict] = await self._plot_aux.create_app_type_and_app(
-                business_id=self.business_id,
-                app_type_metadata={'name': name},
-                app_metadata={},
+        # TODO investigate what to do with this
+        # try:
+        #     d: Dict[str, Dict] = await self._plot_aux.create_app_type_and_app(
+        #         business_id=self.business_id,
+        #         app_type_metadata={'name': name},
+        #         app_metadata={},
+        #     )
+        #     app: Dict = d['app']
+        # except ApiClientError:  # Business admin user
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=name)
+        if not app:
+            app: Dict = await self._plot_aux.create_app(
+                business_id=self.business_id, name=name,
             )
-            app: Dict = d['app']
-        except ApiClientError:  # Business admin user
-            app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=name)
-            if not app:
-                app: Dict = await self._plot_aux.create_app(
-                    business_id=self.business_id, name=name,
-                )
 
         app_id: str = app['id']
 

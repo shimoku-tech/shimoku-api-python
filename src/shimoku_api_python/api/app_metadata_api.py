@@ -172,17 +172,18 @@ class AppMetadataApi(ABC):
     @logging_before_and_after(logging_level=logger.debug)
     async def get_or_create_app_and_apptype(self, name: str) -> Dict:
         """Try to create an App and AppType if they exist instead retrieve them"""
-        try:
-            d: Dict[str, Dict] = await self._create_app_type_and_app(
-                business_id=self.business_id,
-                app_type_metadata={'name': name},
-                app_metadata={},
+        # TODO investigate what to do with this
+        # try:
+        #     d: Dict[str, Dict] = await self._create_app_type_and_app(
+        #         business_id=self.business_id,
+        #         app_type_metadata={'name': name},
+        #         app_metadata={},
+        #     )
+        #     app: Dict = d['app']
+        # except ApiClientError:  # Business admin user
+        app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
+        if not app:
+            app: Dict = await self._create_app(
+                business_id=self.business_id, name=name,
             )
-            app: Dict = d['app']
-        except ApiClientError:  # Business admin user
-            app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
-            if not app:
-                app: Dict = await self._create_app(
-                    business_id=self.business_id, name=name,
-                )
         return app

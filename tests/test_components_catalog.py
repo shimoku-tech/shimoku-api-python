@@ -28,8 +28,6 @@ s = shimoku.Client(
     verbosity=verbosity
 )
 
-
-
 components = [f for _, f in s.html_components.__dict__.items() if callable(f)]
 
 parameters = dict(

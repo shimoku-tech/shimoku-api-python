@@ -391,7 +391,8 @@ class DataManagingApi(DataExplorerApi, DataValidation):
         else:
             return data_entries
 
-# TODO pending add append_report_data to free Echarts
+    # TODO pending add append_report_data to free Echarts
+
     @logging_before_and_after(logging_level=logger.debug)
     async def append_report_data(
         self, business_id: str, app_id: str,

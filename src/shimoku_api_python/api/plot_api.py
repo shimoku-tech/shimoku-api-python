@@ -4366,7 +4366,7 @@ class PlotApi(BasePlot):
             self, menu_path: str, order: int, value: int,
             title: Optional[str] = "", description: Optional[str] = "",
             cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
-            color: Optional[Union[str, int]] = 1,
+            color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None
     ):
         bentobox_id = str(uuid.uuid1())
         bentobox_data = {
@@ -4397,6 +4397,7 @@ class PlotApi(BasePlot):
             footer='description',
             align='align',
             bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
         )
 
         data_gauge = [{'value': value}]
@@ -4478,6 +4479,7 @@ class PlotApi(BasePlot):
             order=order+1, rows_size=10, cols_size=5,
             padding='2, 0, 1, 0',
             bentobox_data=bentobox_data,
+            tabs_index=tabs_index
         )
 
     @logging_before_and_after(logging_level=logger.info)

@@ -56,6 +56,7 @@ def deactivate_sequential_execution():
     sequential = False
 
 
+#TODO check that no two reports collide at the same time
 def async_auto_call_manager(
         execute: Optional[bool] = False) -> Callable:
 

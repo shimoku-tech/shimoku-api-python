@@ -27,6 +27,7 @@ s = shimoku.Client(
     business_id=business_id,
     verbosity=verbosity
 )
+s.activate_async_execution()
 
 components = [f for _, f in s.html_components.__dict__.items() if callable(f)]
 

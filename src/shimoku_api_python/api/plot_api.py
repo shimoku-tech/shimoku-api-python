@@ -1467,13 +1467,15 @@ class BasePlot:
         else:
             target_reports: List[Dict] = reports
 
-        # TODO optimize this with concurrency
+        delete_tasks = []
         for report in target_reports:
             report_id = report['id']
-            await self._plot_aux.delete_report(
-                business_id=self.business_id,
-                app_id=app_id,
-                report_id=report_id
+            delete_tasks.append(
+                self._plot_aux.delete_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
             )
             del self._report_order[report_id]
 
@@ -1488,6 +1490,8 @@ class BasePlot:
 
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
+
+        await asyncio.gather(*delete_tasks)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

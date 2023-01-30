@@ -45,10 +45,6 @@ class BasicFileMetadataApi(ABC):
         else:
             self.business_id: Optional[str] = None
 
-    @async_auto_call_manager(execute=True)
-    async def execute_task_pool(self):
-        pass
-
     @staticmethod
     @logging_before_and_after(logging_level=logger.debug)
     def _encode_file_name(

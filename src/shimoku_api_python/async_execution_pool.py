@@ -1,6 +1,7 @@
 import asyncio
 from functools import wraps
 from typing import Tuple, Optional, Callable
+import logging
 
 
 # TODO find a better way to handle this
@@ -41,9 +42,14 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
 task_pool = []
 app_names = []
 tabs_group_indexes = []
-sequential = False
+list_for_conflicts = []
+# By default set to true, to make the user aware that it is using the async configuration
+# (they will have to explicitly state it in their code)
+sequential = True
 plot_api = None
 api_client = None
+logger = logging.getLogger(__name__)
+
 
 
 def activate_sequential_execution():
@@ -56,7 +62,6 @@ def deactivate_sequential_execution():
     sequential = False
 
 
-#TODO check that no two reports collide at the same time
 def async_auto_call_manager(
         execute: Optional[bool] = False) -> Callable:
 
@@ -72,6 +77,7 @@ def async_auto_call_manager(
                 task_pool.clear()
                 app_names.clear()
                 tabs_group_indexes.clear()
+                list_for_conflicts.clear()
                 return result
 
             # We need to create the apps before the tasks try to access them all at once
@@ -96,6 +102,7 @@ def async_auto_call_manager(
 
             await asyncio.gather(*task_pool)
             task_pool.clear()
+            list_for_conflicts.clear()
 
             # After all the tasks have finished update the tabs to get all the charts correctly
             if len(tabs_group_indexes) > 0:
@@ -136,11 +143,30 @@ def async_auto_call_manager(
                 if not path_name:
                     path_name = ''  # because of tabs
 
+                list_for_conflicts_entry = app_name + path_name
+
                 app_names += [app_name] if app_name not in app_names else []
                 if kwargs.get('tabs_index'):
+                    list_for_conflicts_entry += kwargs['tabs_index'][0] + kwargs['tabs_index'][1]
                     tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
                     tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in tabs_group_indexes else []
+
+                if kwargs.get('order'):
+                    list_for_conflicts_entry += str(kwargs.get('order'))
+
+                    if list_for_conflicts_entry in list_for_conflicts:
+                        print(list_for_conflicts)
+                        task_pool.clear()
+                        app_names.clear()
+                        tabs_group_indexes.clear()
+                        list_for_conflicts.clear()
+                        error_message = 'Report order collision, two reports with the same order can not be executed ' \
+                                        'at the same time'
+                        logger.error(error_message)
+                        raise RuntimeError(error_message)
+                    else:
+                        list_for_conflicts.append(list_for_conflicts_entry)
 
         return wrapper
 

@@ -177,7 +177,7 @@ def test_ux():
             "value": "455"
         },
     ]
-    s.plt.indicator(
+    next_order = s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         order=1,
@@ -190,8 +190,9 @@ def test_ux():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=2, rows_size=1, cols_size=6,
+        order=next_order, rows_size=1, cols_size=6,
     )
+    next_order += 1
 
     ###################
 
@@ -203,10 +204,10 @@ def test_ux():
             "target_path": 'www.shimoku.com',
         },
     ]
-    s.plt.alert_indicator(
+    next_order = s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        order=3, rows_size=2, cols_size=12,
+        order=next_order, rows_size=2, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -227,10 +228,10 @@ def test_ux():
             "target_path": 'www.shimoku.com',
         },
     ]
-    s.plt.alert_indicator(
+    next_order = s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        order=4,
+        order=next_order,
         value='value',
         header='title',
         footer='description',
@@ -241,7 +242,7 @@ def test_ux():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=5, rows_size=1, cols_size=4,
+        order=next_order, rows_size=1, cols_size=4,
     )
 
 
@@ -306,7 +307,7 @@ def test_delete_path():
     app_id = max([
         app['id']
         for app in apps
-        if app['type']['id'] == app_type_id
+        if not app['type'] or app['type']['id'] == app_type_id
     ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
@@ -373,7 +374,7 @@ def test_delete():
     candidate_app_ids = [
         app['id']
         for app in apps
-        if app['type']['id'] == app_type_id
+        if not app['type'] or app['type']['id'] == app_type_id
     ]
     if candidate_app_ids:
         app_id = max(candidate_app_ids)
@@ -4224,11 +4225,102 @@ def test_gauge_indicators():
         title='Bruxismo',
     )
 
+def test_same_position_charts():
+    print('same position charts')
+    menu_path = 'test-same-position'
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict path 1',
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict path 2',
+        order=1,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict tabs',
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+        tabs_index=('tabs', '1')
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict tabs',
+        order=1,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+        tabs_index=('tabs', '2')
+    )
+    s.execute_task_pool()
+
+    class MyTestCase(unittest.TestCase):
+        def check_order_conflict_path(self):
+            with self.assertRaises(RuntimeError):
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=0,
+                    value=83,
+                    description='Síntomas coincidientes | Mareo, Dolor cervical',
+                    title='Sobrecarga muscular en cervicales y espalda',
+                )
+
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=1,
+                    value=31, color=2,
+                    description='Síntomas coincidientes | Dolor cervical',
+                    title='Bruxismo',
+                )
+                s.execute_task_pool()
+
+        def check_order_conflict_tabs(self):
+            with self.assertRaises(RuntimeError):
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=0,
+                    value=83,
+                    description='Síntomas coincidientes | Mareo, Dolor cervical',
+                    title='Sobrecarga muscular en cervicales y espalda',
+                    tabs_index=('conflict', 'conflict')
+                )
+
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=1,
+                    value=31, color=2,
+                    description='Síntomas coincidientes | Dolor cervical',
+                    title='Bruxismo',
+                    tabs_index=('conflict', 'conflict')
+                )
+                s.execute_task_pool()
+
+    t = MyTestCase()
+    t.check_order_conflict_path()
+    t.check_order_conflict_tabs()
+
+    s.plt.delete_path(menu_path + '/no conflict tabs')
+    s.plt.delete_path(menu_path + '/no conflict path 1')
+    s.plt.delete_path(menu_path + '/no conflict path 2')
+
+    assert not len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
+
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
+s.activate_async_execution()
 s.plt.clear_business()
 
 # Charts
@@ -4256,7 +4348,6 @@ test_sankey()
 test_horizontal_barchart()
 test_predictive_line()
 test_speed_gauge()
-test_line()
 test_scatter()
 
 # Free echarts
@@ -4273,9 +4364,10 @@ test_bar()
 
 # Tabs
 test_tabs()
+s.execute_task_pool()
 test_tabs(check_data=False)
 
-# # Others
+# Others
 test_dynamic_and_conditional_input_form()
 test_input_form()
 test_get_input_forms()
@@ -4285,6 +4377,7 @@ test_set_new_business()
 test_append_data_to_trend_chart()
 test_delete()
 test_delete_path()
+test_same_position_charts()
 s.execute_task_pool()
 
 # TODO

@@ -2,7 +2,6 @@
 from os import getenv
 from typing import Dict, List
 import unittest
-import tenacity
 
 import datetime as dt
 import pandas as pd
@@ -13,13 +12,13 @@ import asyncio
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
 
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
 verbose: str = getenv('VERBOSITY')
+async_execution: bool = getenv('ASYNC_EXECUTION') == 'TRUE'
 
 config = {
     'access_token': api_key,
@@ -29,7 +28,8 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
-    verbosity=verbose
+    verbosity=verbose,
+    async_execution=async_execution
 )
 s.plt.set_business(business_id=business_id)
 s.app.set_business(business_id=business_id)
@@ -362,7 +362,7 @@ def test_delete():
         menu_path=menu_path,
         order=0,
     )
-    s.execute_task_pool()
+    s.run()
     app_types: List[Dict] = s.universe.get_universe_app_types()
     app_type_id = max([
         app_type['id']
@@ -3849,7 +3849,7 @@ def test_tabs(check_data=True):
         )
 
         if check_data:
-            s.execute_task_pool()
+            s.run()
             check_all_data_restored_correctly(tabs_index_, 3)
 
     data_table = [
@@ -3896,7 +3896,7 @@ def test_tabs(check_data=True):
     )
 
     if check_data:
-        s.execute_task_pool()
+        s.run()
         check_all_data_restored_correctly(tabs_index, 2)
 
     s.plt.bar(
@@ -3999,7 +3999,7 @@ def test_tabs(check_data=True):
     )
 
     if check_data:
-        s.execute_task_pool()
+        s.run()
         check_tabs_index_in_business_state(tabs_index, 1)
 
     for i in range(5):
@@ -4106,7 +4106,7 @@ def test_tabs(check_data=True):
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
-    s.execute_task_pool()
+    s.run()
 
     # Test overwrite
     _test_bentobox()
@@ -4130,7 +4130,7 @@ def test_tabs(check_data=True):
     )
 
     if check_data:
-        s.execute_task_pool()
+        s.run()
         check_all_data_restored_correctly(tabs_index, 2)
 
     tabs_index = ("Deepness 0", "Input Form")
@@ -4190,7 +4190,7 @@ def test_tabs(check_data=True):
             child_tabs_group=f"Deepness {i}"
         )
         if check_data:
-            s.execute_task_pool()
+            s.run()
             check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
 
     # Test if cascade deletion works correctly
@@ -4262,7 +4262,7 @@ def test_same_position_charts():
         title='Bruxismo',
         tabs_index=('tabs', '2')
     )
-    s.execute_task_pool()
+    s.run()
 
     class MyTestCase(unittest.TestCase):
         def check_order_conflict_path(self):
@@ -4282,7 +4282,7 @@ def test_same_position_charts():
                     description='Síntomas coincidientes | Dolor cervical',
                     title='Bruxismo',
                 )
-                s.execute_task_pool()
+                s.run()
 
         def check_order_conflict_tabs(self):
             with self.assertRaises(RuntimeError):
@@ -4303,7 +4303,7 @@ def test_same_position_charts():
                     title='Bruxismo',
                     tabs_index=('conflict', 'conflict')
                 )
-                s.execute_task_pool()
+                s.run()
 
     t = MyTestCase()
     t.check_order_conflict_path()
@@ -4320,7 +4320,6 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-s.activate_async_execution()
 s.plt.clear_business()
 
 # Charts
@@ -4364,7 +4363,7 @@ test_bar()
 
 # Tabs
 test_tabs()
-s.execute_task_pool()
+s.run()
 test_tabs(check_data=False)
 
 # Others
@@ -4378,7 +4377,7 @@ test_append_data_to_trend_chart()
 test_delete()
 test_delete_path()
 test_same_position_charts()
-s.execute_task_pool()
+s.run()
 
 # TODO
 # test_cohorts()

@@ -28,7 +28,7 @@ class Client(object):
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, universe_id: str, environment: str = 'production',
                  access_token: str = '', config={}, business_id: str = '',
-                 verbosity: str = None):
+                 verbosity: str = None, async_execution: bool = False):
 
         self.configure_logging = configure_logging
         if verbosity:
@@ -57,6 +57,9 @@ class Client(object):
         self.activate_sequential_execution = activate_sequential_execution
         self.activate_async_execution = deactivate_sequential_execution
 
+        if async_execution:
+            self.activate_async_execution()
+
         shimoku_api_python.async_execution_pool.plot_api = self.plt
         shimoku_api_python.async_execution_pool.api_client = self._api_client
 
@@ -65,5 +68,5 @@ class Client(object):
         self._api_client.set_config(config)
 
     @async_auto_call_manager(execute=True)
-    async def execute_task_pool(self):
+    async def run(self):
         pass

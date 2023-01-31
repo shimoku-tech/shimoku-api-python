@@ -307,7 +307,7 @@ def test_delete_path():
     app_id = max([
         app['id']
         for app in apps
-        if not app['type'] or app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
@@ -374,7 +374,7 @@ def test_delete():
     candidate_app_ids = [
         app['id']
         for app in apps
-        if not app['type'] or app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ]
     if candidate_app_ids:
         app_id = max(candidate_app_ids)
@@ -764,6 +764,79 @@ def test_bar_with_filters():
     if delete_paths:
         s.plt.delete_path(menu_path)
         s.plt.delete_path(menu_path=f'{menu_path}-bysize')
+
+
+def test_bar_with_filters_with_aggregation_methods():
+    print("test_bar_with_filters_with_aggregation_methods")
+    menu_path = "test2/bar-with-filters-with-aggregation-methods"
+    data = [
+        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 1, 'food rating': 10, 'Location': "Barcelona",
+         'Fav Food': "pizza", 'Fav Drink': "water"},
+        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 2, 'food rating': 8, 'Location': "Barcelona",
+         'Fav Food': "sushi", 'Fav Drink': "fanta"},
+        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 10, 'Location': "Madrid",
+         'Fav Food': "pasta", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 4, 'food rating': 5, 'Location': "Madrid",
+         'Fav Food': "pizza", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 5, 'food rating': 7, 'Location': "Madrid",
+         'Fav Food': "sushi", 'Fav Drink': "water"},
+
+        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 5, 'food rating': 6, 'Location': "Andorra",
+         'Fav Food': "pizza", 'Fav Drink': "water"},
+        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 4, 'food rating': 0, 'Location': "Paris",
+         'Fav Food': "sushi", 'Fav Drink': "fanta"},
+        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 5, 'Location': "Paris",
+         'Fav Food': "pasta", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 2, 'food rating': 9, 'Location': "Andorra",
+         'Fav Food': "pizza", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 1, 'food rating': 8, 'Location': "Andorra",
+         'Fav Food': "sushi", 'Fav Drink': "water"},
+    ]
+    filters = {'order': 0,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink']
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=1,
+        rows_size=2, cols_size=9,
+        filters=filters
+    )
+
+    filters = {'order': 2,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
+               'get_all': True
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=3,
+        rows_size=2, cols_size=9,
+        filters=filters,
+        aggregation_func={"food rating": [np.sum, np.mean],
+                          "Restaurant rating": [np.mean, np.amax, np.amin]}
+    )
+
+    filters = {'order': 4,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
+               'get_all': ["Location", "Fav Drink"],
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=5,
+        rows_size=2, cols_size=9,
+        filters=filters,
+        aggregation_func=np.mean,
+    )
+    if delete_paths:
+        s.plt.delete_path(menu_path=menu_path)
 
 
 def test_bar():
@@ -1311,6 +1384,241 @@ def test_heatmap():
         data=data_, x='xAxis', y='yAxis', value='value',
         menu_path=menu_path,
         order=1, rows_size=2, cols_size=12,
+    )
+
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
+
+
+def test_heatmap_with_filters():
+    print('test_heatmap_with_filters')
+    menu_path: str = 'test/heatmap-with-filters-test'
+    data_ = [
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "6 p.m",
+            "value": 10
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "12 p.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "6 a.m",
+            "value": 10
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "6 p.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "12 p.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "6 a.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "6 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "12 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "6 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 a.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "6 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 p.m",
+            "value": 1
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "6 a.m",
+            "value": 6
+        },
+
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "12 a.m",
+            "value": 6
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "6 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "12 p.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "6 a.m",
+            "value": 15
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "6 p.m",
+            "value": 6
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "12 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "6 a.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "6 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "12 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "6 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "12 a.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "6 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "6 a.m",
+            "value": 10
+        }
+    ]
+    filters: Dict = {
+        'order': 0,
+        'filter_cols': ['Filter']
+    }
+    s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path=menu_path,
+        order=1,
+        filters=filters
+    )
+    filters: Dict = {
+        'order': 2,
+        'filter_cols': ['Filter'],
+        'get_all': True
+    }
+    s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path=menu_path,
+        order=3, rows_size=2, cols_size=12,
+        filters=filters,
+        aggregation_func=np.mean
     )
 
     if delete_paths:
@@ -4357,7 +4665,9 @@ test_shimoku_gauges()
 test_gauge_indicators()
 test_free_echarts()
 
-# Charts sequential needed
+# Filters and sequential needed
+test_heatmap_with_filters()
+test_bar_with_filters_with_aggregation_methods()
 test_bar_with_filters()
 test_bar()
 

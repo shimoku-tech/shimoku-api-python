@@ -1,5 +1,5 @@
 """"""
-from typing import List, Dict, Optional, Union, Tuple, Any, Iterable
+from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import json
 from itertools import product
 
@@ -212,6 +212,10 @@ class BasePlot:
     def _validate_filters(filters: Dict) -> None:
         # Check the filters is built properly
         try:
+            filters = filters.copy()
+            if "get_all" in filters.keys():
+                del filters["get_all"]
+
             if filters.get('update_filter_type'):
                 cols: List[str] = ['row', 'column', 'filter_cols', 'update_filter_type']
                 assert sorted(list(filters.keys())) == sorted(cols)
@@ -686,6 +690,7 @@ class BasePlot:
             overwrite: bool = True,
             report_metadata: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
+            aggregation_func: Optional[Callable] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
@@ -723,11 +728,41 @@ class BasePlot:
         :param option_modifications:
         :param filters: To create a filter for every specified column
         """
-        cols: List[str] = [x] + y
+        if isinstance(x, str):
+            x: List[str] = [x]
+
+        if isinstance(y, str):
+            y: List[str] = [y]
+
+        cols: List[str] = x + y
+
         self._plot_aux.validate_table_data(data, elements=cols)
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[cols]  # keep only x and y
-        df.rename(columns={x: 'xAxis'}, inplace=True)
+
+        if any(df[x].duplicated()):
+
+            if not aggregation_func:
+                raise ValueError("There are duplicate entries in the data provided but the "
+                                 "aggregation function has not been defined.")
+
+            # Aggregate grouped object
+            df = df.groupby(x).agg(aggregation_func).reset_index()
+
+            # Multindexed columns in pandas is stored as a tuple, so we just need to join with a space to make it
+            # one level indexed column
+            if any(isinstance(elem, Tuple) for elem in df.columns):
+                df.columns = [
+                    " ".join(col) if len(col[1]) > 0 else col[0]
+                    for col in df.columns
+                ]
+
+        #https://stackoverflow.com/questions/42099312/how-to-create-an-infinite-iterator-to-generate-an-incrementing-alphabet-pattern
+        def __column_name_generator():
+            for p in product(['x', 'y', 'z'], repeat=1):
+                yield ''.join(p)
+
+        df.rename(columns={x_col: letter+'Axis' for x_col, letter in zip(x, __column_name_generator())}, inplace=True)
 
         # Default
         option_modifications_temp = {"legend": {"type": "scroll"}}
@@ -785,24 +820,33 @@ class BasePlot:
 
     @logging_before_and_after(logging_level=logger.debug)
     def _create_multifilter_reports(
-            self, data: Union[str, DataFrame, List[Dict]], filters: Dict,
+            self, indices: List[str], values: List[str], data: Union[str, DataFrame, List[Dict]], filters: Dict
     ) -> Iterable:
         """
         Create chunks of the data to create N reports for every filter combination
         """
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         filter_cols: List[str] = filters['filter_cols']
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)[indices + filter_cols + values]
 
         select_filter: Dict[str, str] = {
             v: f'Select{index + 1}'
             for index, v in enumerate(filter_cols)
         }
 
+        if "get_all" not in filters:
+            filters["get_all"] = []
+        elif isinstance(filters["get_all"], bool) and filters["get_all"]:
+            filters["get_all"] = [filt_col for filt_col in filter_cols]
+
         # Create all combinations
         # https://stackoverflow.com/questions/18497604/combining-all-combinations-of-two-lists-into-a-dict-of-special-form
         d: Dict = {}
+        uuid_str = uuid.uuid1()
         for filter_name in filter_cols:
             d[filter_name] = df[filter_name].unique().tolist()
+            if len(d[filter_name]) > 1 and filter_name in filters["get_all"]:
+                d[filter_name] += [uuid_str]
 
         filter_combinations = [
             dict(zip((list(d.keys())), row))
@@ -813,17 +857,22 @@ class BasePlot:
             df_temp = df.copy()
             filter_element: Dict = {}
             for filter_, value in filter_combination.items():
-                filter_element[select_filter[filter_]] = value
-                df_temp = df_temp[df_temp[filter_] == value]
+                if value != uuid_str:
+                    filter_element[select_filter[filter_]] = value
+                    df_temp = df_temp[df_temp[filter_] == value]
+                else:
+                    filter_element[select_filter[filter_]] = "All"
+                    df_temp[filter_] = "All"
 
                 if df_temp.empty:
                     break
 
+            # Get rid of NaN columns based on the filters
+            drop_cols = [col for col in df_temp.columns if df_temp[col].count() == 0]
+            df_temp = df_temp.drop(drop_cols, axis=1).fillna(0)
+
             if df_temp.empty:
                 continue
-
-            # Get rid of NaN columns based on the filters
-            df_temp = df_temp.dropna(axis=1)
 
             yield df_temp, filter_element
 
@@ -919,6 +968,12 @@ class BasePlot:
         """"""
         filter_elements: List[Dict] = []
         self._validate_filters(filters=filters)
+        x = kwargs['x']
+        y = kwargs['y']
+        if isinstance(x, str):
+            x = [x]
+        if isinstance(y, str):
+            y = [y]
         tabs_index = kwargs.get("tabs_index")
 
         multifilter_tasks = []
@@ -926,15 +981,22 @@ class BasePlot:
         # We are going to save all the reports one by one
         for df_temp, filter_element in (
                 self._create_multifilter_reports(
-                    data=data, filters=filters,
+                    indices=x, values=y, data=data, filters=filters,
                 )
         ):
             kwargs_: Dict = kwargs.copy()
-            cols: List[str] = df_temp.columns
+            cols: List[str] = df_temp.columns.to_list()
+
             kwargs_['y'] = [
-                value for value in kwargs_['y']
-                if value in cols
+                value for value in cols
+                if value not in x + filters["filter_cols"]
             ]
+            if len(kwargs_['y']) == 0:
+                continue
+
+            if not kwargs_['aggregation_func']:
+                kwargs_['aggregation_func'] = np.sum
+
             if first_overwrite:
                 report_id = await self._create_trend_chart(data=df_temp, overwrite=True, **kwargs_)
                 filter_element['reportId'] = [report_id]
@@ -2476,6 +2538,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a barchart
         """
@@ -2538,6 +2601,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 
@@ -2557,6 +2621,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2605,6 +2670,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -2624,6 +2690,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2675,6 +2742,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -2694,6 +2762,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         if not option_modifications:
@@ -2733,6 +2802,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 
@@ -2754,6 +2824,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         :param data:
@@ -2807,6 +2878,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -2825,6 +2897,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2931,6 +3004,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -2949,6 +3023,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -3053,6 +3128,7 @@ class PlotApi(BasePlot):
             bentobox_data=bentobox_data,
             filters=filters,
             tabs_index=tabs_index,
+            aggregation_func=aggregation_func
         )
 
     @async_auto_call_manager()
@@ -3120,6 +3196,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         try:
@@ -3140,6 +3217,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='scatter',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -3655,6 +3733,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -3683,7 +3762,7 @@ class PlotApi(BasePlot):
         return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
-                x=x, y=[y, value],
+                x=[x, y], y=value,
                 menu_path=menu_path, row=row, column=column,
                 order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
@@ -3693,6 +3772,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
@@ -3711,6 +3791,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -3747,6 +3828,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 

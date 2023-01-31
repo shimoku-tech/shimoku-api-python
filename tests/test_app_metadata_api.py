@@ -353,4 +353,4 @@ test_hide_and_show_show_history_navigation()
 test_get_app_by_name()
 test_has_app_report()
 
-s.execute_task_pool()
+s.run()

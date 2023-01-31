@@ -70,4 +70,4 @@ for component_function in components:
     html = component_function(**call_parameters)
     s.plt.html(html=html, menu_path=f"Components test/{component_function.__name__}", order=0)
 
-s.execute_task_pool()
+s.run()

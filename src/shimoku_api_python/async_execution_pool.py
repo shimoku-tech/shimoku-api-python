@@ -127,14 +127,10 @@ def async_auto_call_manager(
 
             global task_pool, app_names, tabs_group_indexes
 
-            if sequential:
+            if sequential or execute:
+                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
                 if len(task_pool) > 0:
                     asyncio.run(execute_tasks())
-                return asyncio.run(async_func(*args, **kwargs))
-
-            if execute:
-                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
-                asyncio.run(execute_tasks())
                 return asyncio.run(async_func(*args, **kwargs))
 
             task_pool.append(async_func(*args, **kwargs))
@@ -156,7 +152,6 @@ def async_auto_call_manager(
                     list_for_conflicts_entry += str(kwargs.get('order'))
 
                     if list_for_conflicts_entry in list_for_conflicts:
-                        print(list_for_conflicts)
                         task_pool.clear()
                         app_names.clear()
                         tabs_group_indexes.clear()

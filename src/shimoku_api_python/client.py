@@ -211,7 +211,7 @@ class ApiClient(object):
                 _return_http_data_only=params.get('_return_http_data_only'),
                 _preload_content=params.get('_preload_content', True),
                 _request_timeout=params.get('_request_timeout'),
-                collection_formats=collection_formats
+                collection_formats=collection_formats,
             )
         )
 
@@ -241,23 +241,43 @@ class ApiClient(object):
                 " `POST`, `PATCH`, `PUT` or `DELETE`."
             )
 
+        next_token = None
+        data_res = {}
         async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-            async with session.request(
-                    method, url, params=query_params, json=body, headers=headers) as res:
-                try:
-                    if 'application/json' in res.headers.get('content-type'):
-                        data = await res.json()
-                    else:
-                        data = await res.text()
-                    logger.debug(data)
 
-                except Exception:
-                    data = None
+            while True:  # loop until nextToken is None
 
-                if res.ok:
-                    return data
-                else:
-                    raise ApiClientError(data)
+                async with session.request(
+                        method, url+(f'?nextToken={next_token}' if next_token else '?limit=100'),
+                        params=query_params, json=body, headers=headers) as res:
+                    try:
+                        if 'application/json' in res.headers.get('content-type'):
+                            data = await res.json()
+                        else:
+                            data = await res.text()
+
+                        if not res.ok:
+                            raise ApiClientError(data)
+
+                        if data.get('items'):
+                            next_token = data.get('nextToken')
+                            if data_res.get('items'):
+                                data_res['items'].extend(data.get('items'))
+                            else:
+                                data_res = data
+                        else:
+                            data_res = data
+                            next_token = None
+
+                        logger.debug(data)
+
+                    except Exception as e:
+                        raise ApiClientError(e)
+
+                if not next_token:
+                    break
+
+        return data_res
 
     def raw_request(self, **kwargs):
         return requests.request(**kwargs)

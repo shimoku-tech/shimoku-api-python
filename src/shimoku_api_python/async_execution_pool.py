@@ -2,6 +2,8 @@ import asyncio
 from functools import wraps
 from typing import Tuple, Optional, Callable
 import logging
+from IPython.lib import backgroundjobs as bg
+import time
 
 
 # TODO find a better way to handle this
@@ -43,13 +45,12 @@ task_pool = []
 app_names = []
 tabs_group_indexes = []
 list_for_conflicts = []
-# By default set to true, to make the user aware that it is using the async configuration
+# By default, set to true, to make the user aware that it is using the async configuration
 # (they will have to explicitly state it in their code)
 sequential = True
 plot_api = None
 api_client = None
 logger = logging.getLogger(__name__)
-
 
 
 def activate_sequential_execution():
@@ -62,8 +63,19 @@ def deactivate_sequential_execution():
     sequential = False
 
 
-def async_auto_call_manager(
-        execute: Optional[bool] = False) -> Callable:
+def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
+    """
+    Example:
+        @async_auto_call_manager(execute=True)
+        async def my_function():
+            pass
+
+    Decorator to manage the async execution of the tasks in the task pool, it's used to avoid making the user manage
+    the async behavior of the functions, the syntax when calling the function is the same as the normal one, but it
+    will be executed asynchronously when executing the task pool.
+
+    :params execute: If True, the function will be executed immediately, otherwise it will be added to the task pool
+    """
 
     def decorator(async_func: Callable) -> Callable:
 
@@ -128,12 +140,35 @@ def async_auto_call_manager(
             global task_pool, app_names, tabs_group_indexes
 
             if sequential or execute:
-                api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
-                if len(task_pool) > 0:
-                    asyncio.run(execute_tasks())
-                return asyncio.run(async_func(*args, **kwargs))
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    loop = None
+
+                if loop and loop.is_running():
+                    # We are in a jupyter notebook, so we need to execute in a different loop
+                    jobs = bg.BackgroundJobManager()
+                    if len(task_pool) > 0:
+                        logger.info('Executing task pool')
+                        job = jobs.new(asyncio.run, execute_tasks())
+                        while not job.finished:
+                            time.sleep(0.1)
+
+                    job = jobs.new(asyncio.run, async_func(*args, **kwargs))
+                    while not job.finished:
+                        time.sleep(0.1)
+
+                    return job.result
+                else:
+                    api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
+                    if len(task_pool) > 0:
+                        logger.info('Executing task pool')
+                        asyncio.run(execute_tasks())
+                    return asyncio.run(async_func(*args, **kwargs))
 
             task_pool.append(async_func(*args, **kwargs))
+            logger.info(f'{async_func.__name__} added to the task pool')
+
             if kwargs.get('menu_path') and 'delete' not in async_func.__name__:
                 app_name, path_name = clean_menu_path(menu_path=kwargs['menu_path'])
                 if not path_name:

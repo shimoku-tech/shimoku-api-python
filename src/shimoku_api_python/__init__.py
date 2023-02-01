@@ -59,6 +59,8 @@ class Client(object):
 
         if async_execution:
             self.activate_async_execution()
+        else:
+            self.activate_sequential_execution()
 
         shimoku_api_python.async_execution_pool.plot_api = self.plt
         shimoku_api_python.async_execution_pool.api_client = self._api_client

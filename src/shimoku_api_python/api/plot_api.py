@@ -1,7 +1,10 @@
 """"""
+import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable
 import json
 from itertools import product
+
+from IPython.lib import backgroundjobs as bg
 
 import json5
 import datetime as dt
@@ -1805,7 +1808,15 @@ class PlotApi(BasePlot):
         super().__init__(api_client, app_metadata_api=app_metadata_api)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
-            asyncio.run(self._get_business_state(self.business_id))
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # We are in a jupyter notebook, so we need to execute in a different loop
+                jobs = bg.BackgroundJobManager()
+                job = jobs.new(asyncio.run, self._get_business_state(self.business_id))
+                while not job.finished:
+                    time.sleep(0.1)
+            else:
+                asyncio.run(self._get_business_state(self.business_id))
         else:
             self.business_id: Optional[str] = None
 

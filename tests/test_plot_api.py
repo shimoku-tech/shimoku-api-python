@@ -307,10 +307,11 @@ def test_delete_path():
     app_id = max([
         app['id']
         for app in apps
-        if not app['type'] or app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    print(len(reports))
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=menu_path)
@@ -374,7 +375,7 @@ def test_delete():
     candidate_app_ids = [
         app['id']
         for app in apps
-        if not app['type'] or app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ]
     if candidate_app_ids:
         app_id = max(candidate_app_ids)

@@ -51,7 +51,7 @@ class Client(object):
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client, business_id=business_id)
         self.plt = PlotApi(self._api_client, business_id=business_id, app_metadata_api=self.app)
-        self.ai = AiAPI(self._api_client)
+        self.ai = AiAPI(self.plt)
         self.html_components = shimoku_components_catalog.html_components
 
         self.activate_sequential_execution = activate_sequential_execution

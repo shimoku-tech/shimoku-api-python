@@ -78,14 +78,10 @@ def with_retries(
     return wrapper if not _func else wrapper(_func)
 
 
-class AiPlotAdapter(BasePlot):
-    _table = PlotApi.table
-
-
-class AiAPI(AiPlotAdapter):
+class AiAPI:
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, **kwargs):
-        self.api_client = api_client
+    def __init__(self, plot_api: PlotApi, **kwargs):
+        self._plot_api = plot_api
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
@@ -308,7 +304,7 @@ class AiAPI(AiPlotAdapter):
         if extra_search_columns:
             search_columns = search_columns + extra_search_columns
 
-        self._table(
+        self._plot_api.table(
             data=df_result,
             menu_path=menu_path,
             order=order,

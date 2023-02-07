@@ -3,7 +3,9 @@ import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import json
 from itertools import product
+import functools
 from copy import deepcopy
+from math import log10, ceil, floor
 
 from IPython.lib import backgroundjobs as bg
 
@@ -156,10 +158,10 @@ class BasePlot:
 
         # Map to store tabs properties
         self._tabs_group_properties = dict()
-        
+
         # Map to store modal report ids by modal entry
         self._modal_id_by_entry = dict()
-        
+
         # Map to store modal report properties by report id
         self._modal_properties = dict()
 
@@ -216,7 +218,7 @@ class BasePlot:
                         if report_id in self._report_order:
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
-        
+
         @logging_before_and_after(logging_level=logger.debug)
         def _get_business_modals_info():
             business_modals = [report for report in business_reports if report['reportType'] == 'MODAL']
@@ -224,11 +226,11 @@ class BasePlot:
             self._modal_properties = {
                 report['id']: json.loads(report['properties'].replace("'", '"').replace('None', 'null'))
                 for report in business_modals}
-            
+
             self._modal_id_by_entry = {
-                (report['appId'], 
-                 report['path'] if report['path'] else '', 
-                 self._modal_properties[report['id']]['name']): report['id'] 
+                (report['appId'],
+                 report['path'] if report['path'] else '',
+                 self._modal_properties[report['id']]['name']): report['id']
                 for report in business_modals}
 
             self._report_in_modal = {
@@ -388,7 +390,7 @@ class BasePlot:
             )
 
         return report_metadata
-    
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_report(self, business_id: str, app_id: str, report_metadata: Dict,
                              real_time: bool, modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]]) -> Dict:
@@ -423,7 +425,7 @@ class BasePlot:
             )
 
         return report
-    
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _delete_report(self, business_id: str, app_id: str, report: Dict) -> None:
         """Delete a report"""
@@ -487,7 +489,7 @@ class BasePlot:
             log_error(logger,
                       'Adding a report to a modal and to a tab at the same time is not permitted.',
                       RuntimeError)
-        
+
         report_dataset: Dict = await self._plot_aux.create_report_and_dataset(
             business_id=business_id, app_id=app_id,
             report_metadata=report_metadata,
@@ -519,7 +521,7 @@ class BasePlot:
             await self._insert_in_tab(
                 self.business_id, app_id, path_name, report_id, tabs_index, order
             )
-        
+
         return report_dataset
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -853,14 +855,14 @@ class BasePlot:
             'reportType': 'MODAL',
             'properties': '{"open": false, "reportIds": [], "width": 60, "height": 50, "name": "%s"}' % modal_name,
         }
-        
+
         modal = await self._create_report(business_id, app_id, report_metadata,
                                           real_time=False, modal_name=None, tabs_index=None)
 
         self._modal_id_by_entry[modal_entry] = modal['id']
         self._modal_properties[modal['id']] = {
             'open': False, 'reportIds': [], 'width': 60, 'height': 50, 'name': modal_name}
-        
+
     @logging_before_and_after(logging_level=logger.debug)
     def _delete_modal(self, modal_entry: Tuple[str, str, str]):
         """Deletes a modal in the given app and path"""
@@ -882,17 +884,17 @@ class BasePlot:
                 await self._create_modal(business_id, modal_entry)
 
         return self._modal_id_by_entry[modal_entry]
-        
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _update_modal(self, business_id: str, modal_entry: Tuple[str, str, str],
-                            open_by_default: Optional[bool] = None, width: Optional[int] = None, 
+                            open_by_default: Optional[bool] = None, width: Optional[int] = None,
                             height: Optional[int] = None):
         """Updates the properties of a modal in the given app and path"""
         app_id, _, _ = modal_entry
-        
+
         modal_id = await self._get_or_create_modal(business_id, modal_entry)
         modal_properties = self._modal_properties[modal_id]
-        
+
         modal_properties['open'] = open_by_default if open_by_default is not None else modal_properties['open']
         modal_properties['width'] = width if width is not None else modal_properties['width']
         modal_properties['height'] = height if height is not None else modal_properties['height']
@@ -901,7 +903,7 @@ class BasePlot:
             business_id=business_id, app_id=app_id, report_id=modal_id,
             report_metadata={'properties': json.dumps(modal_properties)}
         )
-        
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _add_report_to_modal(self, business_id: str, modal_entry: Tuple[str, str, str], report_id: str):
         """Adds a report to a modal in the given app and path"""
@@ -915,7 +917,7 @@ class BasePlot:
         self._report_in_modal[report_id] = modal_entry[2]
         self._modal_properties[modal_id]['reportIds'].append(report_id)
         await self._update_modal(business_id, modal_entry)
-        
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _remove_report_from_modal(self, business_id: str, modal_entry: Tuple[str, str, str], report_id: str):
         """Removes a report from a modal in the given app and path"""
@@ -924,11 +926,11 @@ class BasePlot:
             logger.warning("Modal does not exist, can't remove report from it.")
             return
         modal_id = self._modal_id_by_entry[modal_entry]
-        
+
         if report_id not in self._modal_properties[modal_id]['reportIds']:
             logger.warning("Report not in modal, can't remove it.")
             return
-        
+
         self._modal_properties[modal_id]['reportIds'].remove(report_id)
 
         if report_id in self._report_in_modal:
@@ -3279,134 +3281,6 @@ class PlotApi(BasePlot):
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def line_with_confidence_area(
-            self, data: Union[str, DataFrame, List[Dict]],
-            x: str, y: str,  # above_band_name: str, below_band_name: str,
-            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[str] = None,
-            title: Optional[str] = None,  # second layer
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
-            aggregation_func: Optional[Callable] = None,
-    ):
-        """
-        https://echarts.apache.org/examples/en/editor.html?c=line-stack
-
-        option = {
-          title: {
-            text: 'Stacked Line'
-          },
-          tooltip: {
-            trigger: 'axis'
-          },
-          legend: {
-            data: ['Email', 'Union Ads', 'Video Ads', 'Direct', 'Search Engine']
-          },
-          grid: {
-            left: '3%',
-            right: '4%',
-            bottom: '3%',
-            containLabel: true
-          },
-          toolbox: {
-            feature: {
-              saveAsImage: {}
-            }
-          },
-          xAxis: {
-            type: 'category',
-            boundaryGap: false,
-            data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-          },
-          yAxis: {
-            type: 'value'
-          },
-          series: [
-            {
-              name: 'Email',
-              type: 'line',
-              stack: 'Total',
-              data: [120, 132, 101, 134, 90, 230, 210]
-            },
-            {
-              name: 'Union Ads',
-              type: 'line',
-              stack: 'Total',
-              lineStyle: {
-                opacity: 0
-              },
-              stack: 'confidence-band',
-              symbol: 'none',
-              data: [220, 182, 191, 234, 290, 330, 310]
-            },
-            {
-              name: 'Video Ads',
-              type: 'line',
-              stack: 'Total',
-              data: [150, 232, 201, 154, 190, 330, 410]
-            },
-            {
-              name: 'Direct',
-              type: 'line',
-              data: [320, 332, 301, 334, 390, 330, 320]
-            },
-            {
-              name: 'Search Engine',
-              type: 'line',
-              lineStyle: {
-                opacity: 0
-              },
-              areaStyle: {
-                color: '#ccc'
-              },
-              stack: 'confidence-band',
-              symbol: 'none',
-              data: [820, 932, 901, 934, 1290, 1330, 1320]
-            }
-          ]
-        };
-
-        """
-        option_modifications = {
-            'series': [{
-                'smooth': True,
-                'lineStyle': {
-                    'opacity': 0
-                },
-                'areaStyle': {
-                    'color': '#ccc'
-                },
-                'stack': 'confidence-band',
-                'symbol': 'none',
-            }, ],
-        }
-
-        return await self._create_trend_charts(
-            data=data, filters=filters,
-            **dict(
-                x=x, y=[y],
-                menu_path=menu_path, row=row, column=column,
-                order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
-                title=title, subtitle=subtitle,
-                x_axis_name=x_axis_name,
-                y_axis_name=y_axis_name,
-                option_modifications=option_modifications,
-                bentobox_data=bentobox_data,
-                echart_type='line',
-                tabs_index=tabs_index,
-                modal_name=modal_name,
-                aggregation_func=aggregation_func,
-            )
-        )
-
-    @async_auto_call_manager()
-    @logging_before_and_after(logging_level=logger.info)
     async def scatter_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
@@ -4910,7 +4784,6 @@ class PlotApi(BasePlot):
                             'fontFamily': 'Rubik',
                             'offsetCenter': ['0', '30'],
                         },
-                        'data': data,
                         'detail': {
                             'fontSize': 24,
                             'fontFamily': 'Rubik',
@@ -4979,11 +4852,11 @@ class PlotApi(BasePlot):
 
     @logging_before_and_after(logging_level=logger.info)
     def gauge_indicator(
-            self, menu_path: str, order: int, value: int,
-            title: Optional[str] = "", description: Optional[str] = "",
-            cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
-            color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
+        self, menu_path: str, order: int, value: int,
+        title: Optional[str] = "", description: Optional[str] = "",
+        cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
+        color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
     ):
         bentobox_id = str(uuid.uuid1())
         bentobox_data = {
@@ -5074,7 +4947,6 @@ class PlotApi(BasePlot):
                         'fontSize': 16,
                         'fontFamily': 'Rubik',
                     },
-                    'data': data_gauge,
                     'detail': {
                         'fontSize': 24,
                         'fontFamily': 'Rubik',
@@ -5103,20 +4975,20 @@ class PlotApi(BasePlot):
 
     @logging_before_and_after(logging_level=logger.info)
     def themeriver(
-            self, data: Union[str, DataFrame, List[Dict]],
-            x: str, y: str, name: str,  # first layer
-            menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
-            order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
-            padding: Optional[str] = None,
-            title: Optional[str] = None,  # second layer
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
+        self, data: Union[str, DataFrame, List[Dict]],
+        x: str, y: str, name: str,  # first layer
+        menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
+        order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
     ):
         """
                 df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -5145,21 +5017,21 @@ class PlotApi(BasePlot):
 
     @logging_before_and_after(logging_level=logger.info)
     def stacked_barchart(
-            self, data: Union[str, DataFrame, List[Dict]],
-            menu_path: str,
-            x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[str] = None,
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
-            show_values: Optional[List] = None,
-            calculate_percentages: bool = False,
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str,
+        x: str,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        subtitle: Optional[str] = None,
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,show_values: Optional[List] = None,
+        calculate_percentages: bool = False,
     ):
         """Create a stacked barchart
         """
@@ -5173,7 +5045,7 @@ class PlotApi(BasePlot):
 
         if not option_modifications:
             option_modifications = {
-                'subtitle': subtitle if subtitle else '',
+                'title':{'text': title if title else ''},
                 'legend': {
                     'show': True,
                     'type': 'scroll',
@@ -5239,21 +5111,20 @@ class PlotApi(BasePlot):
 
     @logging_before_and_after(logging_level=logger.info)
     def stacked_horizontal_barchart(
-            self, data: Union[str, DataFrame, List[Dict]],
-            menu_path: str,
-            x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[str] = None,
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
-            show_values: Optional[List] = None,
-            calculate_percentages: bool = False,
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str,
+        x: str,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,show_values: Optional[List] = None,
+        calculate_percentages: bool = False,
     ):
         """Create a stacked barchart
         """
@@ -5267,7 +5138,7 @@ class PlotApi(BasePlot):
 
         if not option_modifications:
             option_modifications = {
-                'subtitle': subtitle if subtitle else '',
+                'title':{'text': title if title else ''},
                 'legend': {
                     'show': True,
                     'type': 'scroll',
@@ -5334,21 +5205,20 @@ class PlotApi(BasePlot):
 
     @logging_before_and_after(logging_level=logger.info)
     def stacked_area_chart(
-            self, data: Union[str, DataFrame, List[Dict]],
-            menu_path: str,
-            x: str,
-            order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
-            padding: Optional[str] = None,
-            subtitle: Optional[str] = None,
-            x_axis_name: Optional[str] = None,
-            y_axis_name: Optional[str] = None,
-            option_modifications: Optional[Dict] = None,  # third layer
-            filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None,
-            modal_name: Optional[str] = None,
-            show_values: Optional[List] = None,
-            calculate_percentages: bool = False,
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str,
+        x: str,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,show_values: Optional[List] = None,
+        calculate_percentages: bool = False,
     ):
         """Create a stacked barchart
         """
@@ -5362,7 +5232,7 @@ class PlotApi(BasePlot):
 
         if not option_modifications:
             option_modifications = {
-                'subtitle': subtitle if subtitle else '',
+                'title':{'text': title if title else ''},
                 'legend': {
                     'show': True,
                     'type': 'scroll',
@@ -5378,7 +5248,6 @@ class PlotApi(BasePlot):
                     'fontFamily': 'Rubik',
                     'name': x_axis_name if x_axis_name else "",
                     'nameLocation': 'middle',
-                    'boundaryGap': False,
                 },
                 'yAxis': {
                     'name': y_axis_name if y_axis_name else "",
@@ -5421,6 +5290,2364 @@ class PlotApi(BasePlot):
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
             modal_name=modal_name,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def line_and_bar_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', bar_names: Optional[List[str]] = None, line_names: Optional[List[str]] = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        bar_axis_name: Optional[str] = None,
+        line_axis_name: Optional[str] = None,
+        bar_suffix: Optional[str] = None,
+        line_suffix: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+    ):
+        if bar_names is None:
+            bar_names = ['bar']
+
+        if line_names is None:
+            line_names = ['line']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x]+bar_names+line_names].fillna(0)
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        max_bars = df[bar_names].max().max()
+        pow_10 = floor(log10(abs(max_bars)))
+        max_bars = ceil(max_bars / 10 ** pow_10) * 10 ** pow_10
+        bar_interval = abs(max_bars)/(5 if 1000 > max_bars > 0.01 else 10)
+
+        longest_value_bars = max(len(str(max_bars)), len(str(bar_interval)))
+
+        max_lines = df[line_names].max().max()
+        pow_10 = floor(log10(abs(max_lines)))
+        max_lines = ceil(max_lines / 10 ** pow_10) * 10 ** pow_10
+        line_interval = abs(max_lines)/(5 if 1000 > max_lines > 0.01 else 10)
+
+        longest_value_lines = max(len(str(max_lines)), len(str(line_interval)))
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'crossStyle': {
+                            'color': '#999'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'icon': 'circle'
+                },
+                'xAxis':    {
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'axisPointer': {'type': 'shadow'},
+                    'type': 'category',
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'yAxis': [
+                    {
+                        'name': bar_axis_name if bar_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'axisLabel': {
+                            'formatter': '{value}'+bar_suffix
+                        },
+                        'nameLocation': 'middle',
+                        'nameGap': 24+7*(longest_value_bars+int(len(bar_suffix))),
+                        'alignTicks': True,
+                        'axisLine': {
+                            'show': True,
+                            'lineStyle': {
+                                'color': f'var(--chart-C1)'
+                            }
+                        },
+                        'splitNumber': 5,
+                        'interval': bar_interval,
+                        'max': max_bars,
+                    },
+                    {
+                        'name': line_axis_name if line_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'axisLabel': {
+                            'formatter': '{value}'+line_suffix
+                        },
+                        'nameLocation': 'middle',
+                        'nameGap': 24+7*(longest_value_lines+int(len(line_suffix))),
+                        'axisLine': {
+                            'show': True,
+                            'lineStyle': {
+                                'color': f'var(--chart-C{len(bar_names)+2})'
+                            }
+                        },
+                        'splitNumber': 5,
+                        'interval': line_interval,
+                        'max': max_lines,
+                    }
+                ],
+                'grid': {
+                    'up': '3%',
+                    'left': '3%',
+                    'right': '4%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_bottom,
+                'series':
+                    [
+                        {
+                            'name': name,
+                            'type': 'bar',
+                            'itemStyle': {
+                                'color': f'var(--chart-C{index + 1})',
+                                'borderRadius': [9, 9, 0, 0]
+                            },
+                            'emphasis':
+                                {
+                                    'itemStyle': {
+                                        'color': f'var(--chart-C{index + 1})',
+                                        'borderRadius': [9, 9, 0, 0]
+                                    }
+                                },
+                            'smooth': True,
+                        } for name, index in zip(bar_names, range(len(bar_names)))
+                    ] + [
+                        {
+                            'name': name,
+                            'type': 'line',
+                            'yAxisIndex': 1,
+                            'itemStyle': {
+                                'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                'borderRadius': [9, 9, 0, 0]
+                            },
+                            'emphasis':
+                                {
+                                    'itemStyle': {
+                                        'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                        'borderRadius': [9, 9, 0, 0]
+                                    },
+                                    'lineStyle': {
+                                        'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                    }
+                                },
+                            'smooth': True,
+                        } for name, index in zip(line_names, range(len(line_names)))
+                    ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def top_bottom_area_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', top_names: str = None, bottom_names: str = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+       ):
+        if top_names is None:
+            top_names = ['up']
+
+        if bottom_names is None:
+            bottom_names = ['down']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x] + top_names + bottom_names].fillna(0)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_top,
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#505765'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'dataZoom': [
+                    {
+                        'show': True,
+                        'realtime': True,
+                    },
+                    {
+                        'type': 'inside',
+                        'realtime': True,
+                    }
+                ],
+                'xAxis': [
+                    {
+                        'name': x_axis_name if x_axis_name else "",
+                        'type': 'category',
+                        'boundaryGap': True,
+                        'axisLine': {'onZero': False},
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': top_axis_name if top_axis_name else "",
+                        'type': 'value'
+                    },
+                    {
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'nameLocation': 'start',
+                        'alignTicks': True,
+                        'type': 'value',
+                        'inverse': True
+                    }
+                ],
+                'series': [
+                    {
+                        'name': bottom_name,
+                        'type': 'line',
+                        'areaStyle': {'opacity': 0.7 if len(bottom_names) == 1 else 0.3},
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            },
+                        },
+                    } for bottom_name in bottom_names
+                ] + [
+                    {
+                        'name': up_name,
+                        'type': 'line',
+                        'yAxisIndex': 1,
+                        'areaStyle': {'opacity': 0.7 if len(top_names) == 1 else 0.3},
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            }
+                        },
+                    } for up_name in top_names
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def top_bottom_line_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', top_names: str = None, bottom_names: str = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        ):
+        if top_names is None:
+            top_names = ['up']
+
+        if bottom_names is None:
+            bottom_names = ['down']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x] + top_names + bottom_names].fillna(0)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'grid': [
+                    {
+                        'left': 60,
+                        'right': 50,
+                        'height': '35%'
+                    },
+                    {
+                        'left': 60,
+                        'right': 50,
+                        'top': '55%',
+                        'height': '35%'
+                    }
+                ],
+                'toolbox': self._default_toolbox_options_top,
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#505765'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'dataZoom': [
+                    {
+                        'show': True,
+                        'realtime': True,
+                        'xAxisIndex': [0, 1]
+                    },
+                    {
+                        'type': 'inside',
+                        'realtime': True,
+                        'xAxisIndex': [0, 1]
+                    }
+                ],
+                'xAxis': [
+                    {
+                        'name': x_axis_name if x_axis_name else "",
+                        'type': 'category',
+                        'boundaryGap': False,
+                        'axisLine': {'onZero': True},
+                    },
+                    {
+                        'gridIndex': 1,
+                        'type': 'category',
+                        'boundaryGap': False,
+                        'axisLine': {'onZero': True},
+                        'position': 'top'
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': top_axis_name if top_axis_name else "",
+                        'type': 'value',
+                        'nameLocation': 'middle',
+                        'nameGap': 40,
+                    },
+                    {
+                        'gridIndex': 1,
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'alignTicks': True,
+                        'type': 'value',
+                        'inverse': True,
+                        'nameLocation': 'middle',
+                        'nameGap': 40,
+                    }
+                ],
+                'series': [
+                    {
+                        'name': bottom_name,
+                        'type': 'line',
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            },
+                        },
+                    } for bottom_name in bottom_names
+                ] + [
+                    {
+                        'name': up_name,
+                        'type': 'line',
+                        'yAxisIndex': 1,
+                        'xAxisIndex': 1,
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            }
+                        },
+                    } for up_name in top_names
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def x_axes_tandem_chart(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, top_x: Optional[str] = None, bottom_x: Optional[str] = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        y_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        begin_as_bar: bool = False,
+        ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'none',
+                    'axisPointer': {
+                        'type': 'cross'
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'grid': {
+                    'up': '8%',
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '9%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_bottom,
+                'xAxis': [
+                    {
+                        'type': 'category',
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'nameGap': 35,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                                'color': 'var(--chart-C2)'
+                            }
+                        },
+                        'axisPointer': {
+                            'label': {
+                            }
+                        },
+                    },
+                    {
+                        'type': 'category',
+                        'name': top_axis_name if top_axis_name else "",
+                        'nameGap': 35,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                                'color': 'var(--chart-C1)'
+                            }
+                        },
+                        'axisPointer': {
+                            'label': {
+                            }
+                        },
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': y_axis_name if y_axis_name else "",
+                        'nameGap': 40,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                            }
+                        },
+                        'type': 'value'
+                    }
+                ],
+                'series': [
+                    {
+                        'name': top_x,
+                        'type': 'bar' if begin_as_bar else 'line',
+                        'xAxisIndex': 1,
+                        'smooth': True,
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'encode': {
+                            'x': 0,
+                            'y': 2,
+                        },
+                        'itemStyle': {
+                            'borderRadius': [9, 9, 0, 0],
+                            'opacity': 0.9,
+                        }
+                    },
+                    {
+                        'name': bottom_x,
+                        'type': 'bar' if begin_as_bar else 'line',
+                        'smooth': True,
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'encode': {
+                            'x': 1,
+                            'y': 3,
+                        },
+                        'itemStyle': {
+                            'borderRadius': [9, 9, 0, 0],
+                            'opacity': 0.9,
+                        }
+                    }
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def scatter_with_effect(
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', y: str = 'y',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        effect_points: Optional[List] = None,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+        df = df[[x, y]].dropna()
+        matrix = df.values
+
+        toolbox = deepcopy(self._default_toolbox_options_top)
+        toolbox['feature'].pop('magicType')
+
+        if not option_modifications:
+            option_modifications = {
+                'title':{'text': title if title else ''},
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '15%',
+                    'containLabel': True
+                },
+                'xAxis': {
+                    'type': 'value',
+                    'scale': True,
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'nameGap': 30,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'scale': True,
+                    'fontFamily': 'Rubik',
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'toolbox': toolbox,
+                'dataZoom': [{'show': True},{'type': 'inside'}],
+                'series': [
+                    {
+                        'data': [(point if isinstance(point, list) else list(matrix[point]))
+                                 for point in effect_points],
+                        'type': 'effectScatter',
+                        'symbolSize': 20,
+                    },
+                    {
+                        'type': 'scatter',
+                        'itemStyle': {
+                            'color': 'var(--chart-C2)',
+                        },
+                    }
+                ]
+            }
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def waterfall(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, xAxis: str = 'x', positive: str = 'Income', negative: str = 'Expenses',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        show_balance: Optional[bool] = False,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df['Base'] = (df[positive].cumsum() - df[negative].cumsum()).shift(1).fillna(0)
+        df['Value'] = df[positive] - df[negative]
+        df['Balance'] = df['Base'] + df['Value']
+        df['VisibleNegBase'] = 0
+        df['VisiblePosBase'] = 0
+
+        df['Positive'] = df['Value'].apply(lambda x: x if x > 0 else 0)
+        df['Negative'] = df['Value'].apply(lambda x: abs(x) if x < 0 else 0)
+
+        def change_sign(row):
+            if row['Base'] < 0:
+                if row['Base'] + row['Positive'] > 0:
+                    row['VisiblePosBase'] = -(row['Positive']-(row['Base'] + row['Positive']))
+                    row['Positive'] = row['Base'] + row['Positive']
+                    row['Base'] = 0
+                    return row
+                else:
+                    row['Positive'] = -row['Positive']
+                    row['Negative'] = -row['Negative']
+            else:
+                if row['Base'] - row['Negative'] < 0:
+                    row['VisibleNegBase'] = row['Negative']+(row['Base'] - row['Negative'])
+                    row['Negative'] = row['Base'] - row['Negative']
+                    row['Base'] = 0
+                    return row
+
+            row['Base'] = row['Base'] - row['Positive'] if row['Base'] < 0 else row['Base'] - row['Negative']
+            return row
+
+        df = df.apply(change_sign, axis=1)
+
+        toolbox = deepcopy(self._default_toolbox_options_top)
+        toolbox['feature'].pop('magicType')
+
+        df = df[[xAxis, 'Balance', 'Base', 'VisibleNegBase', 'VisiblePosBase', 'Negative', 'Positive']].fillna(0)
+        if not option_modifications:
+            option_modifications = \
+                {
+                    'title': {'text': title if title else ''},
+                    'tooltip': {
+                        'trigger': 'axis',
+                        'axisPointer': {
+                            'type': 'shadow'
+                        },
+                    },
+                    'legend': {
+                        'data': [positive, negative] + (['Balance'] if show_balance else []),
+                        'show': True,
+                        'type': 'scroll',
+                        'itemGap': 16,
+                        'icon': 'circle'
+                    },
+                    'grid': {
+                        'left': '3%',
+                        'right': '3%',
+                        'bottom': '17%',
+                        'containLabel': True
+                    },
+                    'dataZoom': [{'show': True}, {'type': 'inside'}],
+                    'toolbox': toolbox,
+                    'xAxis': {
+                        'type': 'category',
+                        'fontFamily': 'Rubik',
+                        'name': x_axis_name if x_axis_name else "",
+                        'nameLocation': 'middle',
+                        'nameGap': 35,
+                    },
+                    'yAxis': {
+                        'name': y_axis_name if y_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'nameLocation': 'middle',
+                        'nameGap': int(24+7*(df['Balance'].astype(str).apply(len).max())),
+                    },
+                    'series': [
+                        {
+                            'name': 'Balance',
+                            'step': 'end',
+                            'symbol': 'none',
+                            'type': 'line',
+                            'itemStyle': {
+                                'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                                },
+                                'lineStyle': {
+                                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                                }
+                            },
+                            'zlevel': 0,
+                            'tooltip': {'show': show_balance},
+                        },
+                        {
+                            'name': 'Placeholder',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderColor': 'transparent',
+                                'color': 'transparent'
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderColor': 'transparent',
+                                    'color': 'transparent'
+                                }
+                            },
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': 'Negative visible Base',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'silent': True,
+                            'itemStyle': {
+                                'color': f'var(--chart-C6)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C6)',
+                                },
+                            },
+                            'zlevel': 1,
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': 'Positive visible Base',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'silent': True,
+                            'itemStyle': {
+                                'color': f'var(--chart-C2)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C2)',
+                                },
+                            },
+                            'zlevel': 1,
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': negative,
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderRadius': [0, 0, 9, 9],
+                                'color': f'var(--chart-C6)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderRadius': [0, 0, 9, 9],
+                                    'color': f'var(--chart-C6)',
+                                },
+                            },
+                            'zlevel': 1,
+                        },
+                        {
+                            'name': positive,
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderRadius': [9, 9, 0, 0],
+                                'color': f'var(--chart-C2)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderRadius': [9, 9, 0, 0],
+                                    'color': f'var(--chart-C2)',
+                                },
+                            },
+                            'zlevel': 1,
+                        },
+                    ]
+                }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def segmented_line_chart(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', y: str = 'y',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        marking_lines: Optional[List[int]] = None,
+        range_colors: Optional[List[str]] = None,
+        range_labels: Optional[List[str]] = None,
+    ):
+        """
+        :param data: DataFrame or list of dicts
+        :param menu_path: path to the menu item
+        :param x: name of the column with x values
+        :param y: name of the column with y values
+        :param order: order of the chart in the menu
+        :param rows_size: number of rows the chart will occupy
+        :param cols_size: number of columns the chart will occupy
+        :param padding: padding of the chart
+        :param title: title of the chart
+        :param x_axis_name: name of the x axis
+        :param y_axis_name: name of the y axis
+        :param option_modifications: dict with modifications to the default options
+        :param filters: dict with filters
+        :param bentobox_data: dict with bentobox data
+        :param tabs_index: tuple with tabs index
+        :param marking_lines: list of values to mark with lines
+        :param range_colors: list of colors to use for the ranges
+        :param range_labels: list of labels to use for the ranges
+        :return:
+        """
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        max_range_label = max([len(x) for x in range_labels]) if range_labels else df[y].astype(str).apply(len).max()
+
+        if not marking_lines:
+            marking_lines = [0]
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {
+                    'text': title if title else "",
+                },
+                'tooltip': {
+                    'trigger': 'axis'
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'nameLocation': 'middle',
+                    'nameGap': 40,
+                },
+                'toolbox': self._default_toolbox_options_top,
+                'grid': {
+                    'left': '3%',
+                    'right': f'{9+max_range_label//3}%',
+                    'bottom': '17%',
+                    'containLabel': True
+                },
+                'dataZoom': [{'type': 'inside'}, {'show': True}],
+                'visualMap': {
+                    'top': 50,
+                    'right': 10,
+                    'itemSymbol': 'circle',
+                    'outOfRange': {'color': '#999'},
+                    'pieces': [{'min': marking_lines[i], 'max': marking_lines[i+1]} for i in range(len(marking_lines)-1)] +
+                    [{'min': marking_lines[-1]}],
+                },
+                'series': {
+                    'type': 'line',
+                    'smooth': len(df) <= 100,
+                    'encode': {
+                        'x': 0,
+                        'y': 2,
+                    },
+                    'markLine': {
+                        'data': [{'yAxis': val} for val in marking_lines],
+                        'itemStyle': {
+                            'color': 'var(--chart-C5)',
+                            'opacity': 0.5
+                        },
+                    }
+                }
+            }
+
+        if range_colors:
+            option_modifications['visualMap']['color'] = range_colors[::-1]
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+            df = df[[x, 'sort_values', y]]
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def line_with_confidence_area(self,
+         data: Union[str, DataFrame, List[Dict]],
+         menu_path: str, x: str = 'x', lower: str = 'l', y: str = 'y', upper: str = 'u',
+         order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+         padding: Optional[str] = None,
+         title: Optional[str] = None,  # second layer
+         x_axis_name: Optional[str] = None,
+         y_axis_name: Optional[str] = None,
+         option_modifications: Optional[Dict] = None,
+         filters: Optional[Dict] = None,
+         bentobox_data: Optional[Dict] = None,
+         tabs_index: Optional[Tuple[str, str]] = None,
+         percentages: bool = False,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x, lower, upper, y]].fillna(0)
+
+        toolbox = deepcopy(self._default_toolbox_options_bottom)
+        toolbox['feature'].pop('magicType')
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#ccc',
+                            'borderColor': '#aaa',
+                            'borderWidth': 1,
+                            'shadowBlur': 0,
+                            'shadowOffsetX': 0,
+                            'shadowOffsetY': 0,
+                            'color': '#222'
+                        }
+                    },
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'boundaryGap': True,
+                    'nameGap': 35,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'splitNumber': 3,
+                    'boundaryGap': True,
+                    'nameLocation': 'middle',
+                    'nameGap': 60,
+                    'axisLabel': {
+                        'formatter': '{value}%' if percentages else '{value}'
+                    },
+                    'axisPointer': {
+                        'label': {
+                            'formatter': '{value}%' if percentages else '{value}'
+                        }
+                    },
+                },
+                'grid': {
+                    'left': '3%',
+                    'right': '3%',
+                    'bottom': '12%',
+                    'containLabel': True
+                },
+                'toolbox': toolbox,
+                'series': [
+                    {
+                        'name': 'L',
+                        'type': 'line',
+                        'lineStyle': {
+                            'color': '#000',
+                            'opacity': 0.1
+                        },
+                        'areaStyle': {
+                            'color': '#000',
+                            'opacity': 0.1,
+                            'origin': 'end'
+                        },
+                        'symbol': 'none'
+                    },
+                    {
+                        'name': 'U',
+                        'silent': True,
+                        'type': 'line',
+                        'lineStyle': {
+                             'color': '#000',
+                             'opacity': 0.1
+                        },
+                        'areaStyle': {
+                            'color': '#000',
+                            'opacity': 0.1,
+                            'origin': 'start'
+                        },
+                        'symbol': 'none'
+                    },
+                    {
+                        'type': 'line',
+                        'itemStyle': {
+                            'color': 'var(--chart-C1)'
+                        },
+                        'emphasis': {
+                            'lineStyle': {
+                                'color': 'var(--chart-C1)'
+                            }
+                        },
+                        'showSymbol': False
+                    }
+                ]
+            }
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def line_and_bar_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', bar_names: Optional[List[str]] = None, line_names: Optional[List[str]] = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        bar_axis_name: Optional[str] = None,
+        line_axis_name: Optional[str] = None,
+        bar_suffix: Optional[str] = None,
+        line_suffix: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+    ):
+        if bar_names is None:
+            bar_names = ['bar']
+
+        if line_names is None:
+            line_names = ['line']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x]+bar_names+line_names].fillna(0)
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        max_bars = df[bar_names].max().max()
+        pow_10 = floor(log10(abs(max_bars)))
+        max_bars = ceil(max_bars / 10 ** pow_10) * 10 ** pow_10
+        bar_interval = abs(max_bars)/(5 if 1000 > max_bars > 0.01 else 10)
+
+        longest_value_bars = max(len(str(max_bars)), len(str(bar_interval)))
+
+        max_lines = df[line_names].max().max()
+        pow_10 = floor(log10(abs(max_lines)))
+        max_lines = ceil(max_lines / 10 ** pow_10) * 10 ** pow_10
+        line_interval = abs(max_lines)/(5 if 1000 > max_lines > 0.01 else 10)
+
+        longest_value_lines = max(len(str(max_lines)), len(str(line_interval)))
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'crossStyle': {
+                            'color': '#999'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'icon': 'circle'
+                },
+                'xAxis':    {
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'axisPointer': {'type': 'shadow'},
+                    'type': 'category',
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'yAxis': [
+                    {
+                        'name': bar_axis_name if bar_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'axisLabel': {
+                            'formatter': '{value}'+bar_suffix
+                        },
+                        'nameLocation': 'middle',
+                        'nameGap': 24+7*(longest_value_bars+int(len(bar_suffix))),
+                        'alignTicks': True,
+                        'axisLine': {
+                            'show': True,
+                            'lineStyle': {
+                                'color': f'var(--chart-C1)'
+                            }
+                        },
+                        'splitNumber': 5,
+                        'interval': bar_interval,
+                        'max': max_bars,
+                    },
+                    {
+                        'name': line_axis_name if line_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'axisLabel': {
+                            'formatter': '{value}'+line_suffix
+                        },
+                        'nameLocation': 'middle',
+                        'nameGap': 24+7*(longest_value_lines+int(len(line_suffix))),
+                        'axisLine': {
+                            'show': True,
+                            'lineStyle': {
+                                'color': f'var(--chart-C{len(bar_names)+2})'
+                            }
+                        },
+                        'splitNumber': 5,
+                        'interval': line_interval,
+                        'max': max_lines,
+                    }
+                ],
+                'grid': {
+                    'up': '3%',
+                    'left': '3%',
+                    'right': '4%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_bottom,
+                'series':
+                    [
+                        {
+                            'name': name,
+                            'type': 'bar',
+                            'itemStyle': {
+                                'color': f'var(--chart-C{index + 1})',
+                                'borderRadius': [9, 9, 0, 0]
+                            },
+                            'emphasis':
+                                {
+                                    'itemStyle': {
+                                        'color': f'var(--chart-C{index + 1})',
+                                        'borderRadius': [9, 9, 0, 0]
+                                    }
+                                },
+                            'smooth': True,
+                        } for name, index in zip(bar_names, range(len(bar_names)))
+                    ] + [
+                        {
+                            'name': name,
+                            'type': 'line',
+                            'yAxisIndex': 1,
+                            'itemStyle': {
+                                'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                'borderRadius': [9, 9, 0, 0]
+                            },
+                            'emphasis':
+                                {
+                                    'itemStyle': {
+                                        'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                        'borderRadius': [9, 9, 0, 0]
+                                    },
+                                    'lineStyle': {
+                                        'color': f'var(--chart-C{len(bar_names)+index+1})',
+                                    }
+                                },
+                            'smooth': True,
+                        } for name, index in zip(line_names, range(len(line_names)))
+                    ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def top_bottom_area_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', top_names: str = None, bottom_names: str = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+       ):
+        if top_names is None:
+            top_names = ['up']
+
+        if bottom_names is None:
+            bottom_names = ['down']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x] + top_names + bottom_names].fillna(0)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '10%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_top,
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#505765'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'dataZoom': [
+                    {
+                        'show': True,
+                        'realtime': True,
+                    },
+                    {
+                        'type': 'inside',
+                        'realtime': True,
+                    }
+                ],
+                'xAxis': [
+                    {
+                        'name': x_axis_name if x_axis_name else "",
+                        'type': 'category',
+                        'boundaryGap': True,
+                        'axisLine': {'onZero': False},
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': top_axis_name if top_axis_name else "",
+                        'type': 'value'
+                    },
+                    {
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'nameLocation': 'start',
+                        'alignTicks': True,
+                        'type': 'value',
+                        'inverse': True
+                    }
+                ],
+                'series': [
+                    {
+                        'name': bottom_name,
+                        'type': 'line',
+                        'areaStyle': {'opacity': 0.7 if len(bottom_names) == 1 else 0.3},
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            },
+                        },
+                    } for bottom_name in bottom_names
+                ] + [
+                    {
+                        'name': up_name,
+                        'type': 'line',
+                        'yAxisIndex': 1,
+                        'areaStyle': {'opacity': 0.7 if len(top_names) == 1 else 0.3},
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            }
+                        },
+                    } for up_name in top_names
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def top_bottom_line_charts(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', top_names: str = None, bottom_names: str = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        ):
+        if top_names is None:
+            top_names = ['up']
+
+        if bottom_names is None:
+            bottom_names = ['down']
+
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x] + top_names + bottom_names].fillna(0)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'grid': [
+                    {
+                        'left': 60,
+                        'right': 50,
+                        'height': '35%'
+                    },
+                    {
+                        'left': 60,
+                        'right': 50,
+                        'top': '55%',
+                        'height': '35%'
+                    }
+                ],
+                'toolbox': self._default_toolbox_options_top,
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#505765'
+                        }
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'dataZoom': [
+                    {
+                        'show': True,
+                        'realtime': True,
+                        'xAxisIndex': [0, 1]
+                    },
+                    {
+                        'type': 'inside',
+                        'realtime': True,
+                        'xAxisIndex': [0, 1]
+                    }
+                ],
+                'xAxis': [
+                    {
+                        'name': x_axis_name if x_axis_name else "",
+                        'type': 'category',
+                        'boundaryGap': False,
+                        'axisLine': {'onZero': True},
+                    },
+                    {
+                        'gridIndex': 1,
+                        'type': 'category',
+                        'boundaryGap': False,
+                        'axisLine': {'onZero': True},
+                        'position': 'top'
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': top_axis_name if top_axis_name else "",
+                        'type': 'value',
+                        'nameLocation': 'middle',
+                        'nameGap': 40,
+                    },
+                    {
+                        'gridIndex': 1,
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'alignTicks': True,
+                        'type': 'value',
+                        'inverse': True,
+                        'nameLocation': 'middle',
+                        'nameGap': 40,
+                    }
+                ],
+                'series': [
+                    {
+                        'name': bottom_name,
+                        'type': 'line',
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            },
+                        },
+                    } for bottom_name in bottom_names
+                ] + [
+                    {
+                        'name': up_name,
+                        'type': 'line',
+                        'yAxisIndex': 1,
+                        'xAxisIndex': 1,
+                        'lineStyle': {
+                            'width': 1
+                        },
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'markArea': {
+                            'silent': True,
+                            'itemStyle': {
+                                'opacity': 0.3
+                            }
+                        },
+                    } for up_name in top_names
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def x_axes_tandem_chart(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, top_x: Optional[str] = None, bottom_x: Optional[str] = None,
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        y_axis_name: Optional[str] = None,
+        top_axis_name: Optional[str] = None, bottom_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        begin_as_bar: bool = False,
+        ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'none',
+                    'axisPointer': {
+                        'type': 'cross'
+                    }
+                },
+                'legend': {
+                    'show': True,
+                    'type': 'scroll',
+                    'itemGap': 16,
+                    'icon': 'circle'
+                },
+                'grid': {
+                    'up': '8%',
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '9%',
+                    'containLabel': True
+                },
+                'toolbox': self._default_toolbox_options_bottom,
+                'xAxis': [
+                    {
+                        'type': 'category',
+                        'name': bottom_axis_name if bottom_axis_name else "",
+                        'nameGap': 35,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                                'color': 'var(--chart-C2)'
+                            }
+                        },
+                        'axisPointer': {
+                            'label': {
+                            }
+                        },
+                    },
+                    {
+                        'type': 'category',
+                        'name': top_axis_name if top_axis_name else "",
+                        'nameGap': 35,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                                'color': 'var(--chart-C1)'
+                            }
+                        },
+                        'axisPointer': {
+                            'label': {
+                            }
+                        },
+                    }
+                ],
+                'yAxis': [
+                    {
+                        'name': y_axis_name if y_axis_name else "",
+                        'nameGap': 40,
+                        'nameLocation': 'middle',
+                        'axisLine': {
+                            'lineStyle': {
+                                'show': True,
+                            }
+                        },
+                        'type': 'value'
+                    }
+                ],
+                'series': [
+                    {
+                        'name': top_x,
+                        'type': 'bar' if begin_as_bar else 'line',
+                        'xAxisIndex': 1,
+                        'smooth': True,
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'encode': {
+                            'x': 0,
+                            'y': 2,
+                        },
+                        'itemStyle': {
+                            'borderRadius': [9, 9, 0, 0],
+                            'opacity': 0.9,
+                        }
+                    },
+                    {
+                        'name': bottom_x,
+                        'type': 'bar' if begin_as_bar else 'line',
+                        'smooth': True,
+                        'emphasis': {
+                            'focus': 'series'
+                        },
+                        'encode': {
+                            'x': 1,
+                            'y': 3,
+                        },
+                        'itemStyle': {
+                            'borderRadius': [9, 9, 0, 0],
+                            'opacity': 0.9,
+                        }
+                    }
+                ]
+            }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def scatter_with_effect(
+        self, data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', y: str = 'y',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        effect_points: Optional[List] = None,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+        df = df[[x, y]].dropna()
+        matrix = df.values
+
+        toolbox = deepcopy(self._default_toolbox_options_top)
+        toolbox['feature'].pop('magicType')
+
+        if not option_modifications:
+            option_modifications = {
+                'title':{'text': title if title else ''},
+                'grid': {
+                    'left': '2%',
+                    'right': '2%',
+                    'bottom': '15%',
+                    'containLabel': True
+                },
+                'xAxis': {
+                    'type': 'value',
+                    'scale': True,
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'nameGap': 30,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'scale': True,
+                    'fontFamily': 'Rubik',
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'toolbox': toolbox,
+                'dataZoom': [{'show': True},{'type': 'inside'}],
+                'series': [
+                    {
+                        'data': [(point if isinstance(point, list) else list(matrix[point]))
+                                 for point in effect_points],
+                        'type': 'effectScatter',
+                        'symbolSize': 20,
+                    },
+                    {
+                        'type': 'scatter',
+                        'itemStyle': {
+                            'color': 'var(--chart-C2)',
+                        },
+                    }
+                ]
+            }
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def waterfall(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, xAxis: str = 'x', positive: str = 'Income', negative: str = 'Expenses',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        show_balance: Optional[bool] = False,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df['Base'] = (df[positive].cumsum() - df[negative].cumsum()).shift(1).fillna(0)
+        df['Value'] = df[positive] - df[negative]
+        df['Balance'] = df['Base'] + df['Value']
+        df['VisibleNegBase'] = 0
+        df['VisiblePosBase'] = 0
+
+        df['Positive'] = df['Value'].apply(lambda x: x if x > 0 else 0)
+        df['Negative'] = df['Value'].apply(lambda x: abs(x) if x < 0 else 0)
+
+        def change_sign(row):
+            if row['Base'] < 0:
+                if row['Base'] + row['Positive'] > 0:
+                    row['VisiblePosBase'] = -(row['Positive']-(row['Base'] + row['Positive']))
+                    row['Positive'] = row['Base'] + row['Positive']
+                    row['Base'] = 0
+                    return row
+                else:
+                    row['Positive'] = -row['Positive']
+                    row['Negative'] = -row['Negative']
+            else:
+                if row['Base'] - row['Negative'] < 0:
+                    row['VisibleNegBase'] = row['Negative']+(row['Base'] - row['Negative'])
+                    row['Negative'] = row['Base'] - row['Negative']
+                    row['Base'] = 0
+                    return row
+
+            row['Base'] = row['Base'] - row['Positive'] if row['Base'] < 0 else row['Base'] - row['Negative']
+            return row
+
+        df = df.apply(change_sign, axis=1)
+
+        toolbox = deepcopy(self._default_toolbox_options_top)
+        toolbox['feature'].pop('magicType')
+
+        df = df[[xAxis, 'Balance', 'Base', 'VisibleNegBase', 'VisiblePosBase', 'Negative', 'Positive']].fillna(0)
+        if not option_modifications:
+            option_modifications = \
+                {
+                    'title': {'text': title if title else ''},
+                    'tooltip': {
+                        'trigger': 'axis',
+                        'axisPointer': {
+                            'type': 'shadow'
+                        },
+                    },
+                    'legend': {
+                        'data': [positive, negative] + (['Balance'] if show_balance else []),
+                        'show': True,
+                        'type': 'scroll',
+                        'itemGap': 16,
+                        'icon': 'circle'
+                    },
+                    'grid': {
+                        'left': '3%',
+                        'right': '3%',
+                        'bottom': '17%',
+                        'containLabel': True
+                    },
+                    'dataZoom': [{'show': True}, {'type': 'inside'}],
+                    'toolbox': toolbox,
+                    'xAxis': {
+                        'type': 'category',
+                        'fontFamily': 'Rubik',
+                        'name': x_axis_name if x_axis_name else "",
+                        'nameLocation': 'middle',
+                        'nameGap': 35,
+                    },
+                    'yAxis': {
+                        'name': y_axis_name if y_axis_name else "",
+                        'type': 'value',
+                        'fontFamily': 'Rubik',
+                        'nameLocation': 'middle',
+                        'nameGap': int(24+7*(df['Balance'].astype(str).apply(len).max())),
+                    },
+                    'series': [
+                        {
+                            'name': 'Balance',
+                            'step': 'end',
+                            'symbol': 'none',
+                            'type': 'line',
+                            'itemStyle': {
+                                'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                                },
+                                'lineStyle': {
+                                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                                }
+                            },
+                            'zlevel': 0,
+                            'tooltip': {'show': show_balance},
+                        },
+                        {
+                            'name': 'Placeholder',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderColor': 'transparent',
+                                'color': 'transparent'
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderColor': 'transparent',
+                                    'color': 'transparent'
+                                }
+                            },
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': 'Negative visible Base',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'silent': True,
+                            'itemStyle': {
+                                'color': f'var(--chart-C6)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C6)',
+                                },
+                            },
+                            'zlevel': 1,
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': 'Positive visible Base',
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'silent': True,
+                            'itemStyle': {
+                                'color': f'var(--chart-C2)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'color': f'var(--chart-C2)',
+                                },
+                            },
+                            'zlevel': 1,
+                            'tooltip': {'show': False},
+                        },
+                        {
+                            'name': negative,
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderRadius': [0, 0, 9, 9],
+                                'color': f'var(--chart-C6)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderRadius': [0, 0, 9, 9],
+                                    'color': f'var(--chart-C6)',
+                                },
+                            },
+                            'zlevel': 1,
+                        },
+                        {
+                            'name': positive,
+                            'type': 'bar',
+                            'stack': 'Total',
+                            'itemStyle': {
+                                'borderRadius': [9, 9, 0, 0],
+                                'color': f'var(--chart-C2)',
+                            },
+                            'emphasis': {
+                                'itemStyle': {
+                                    'borderRadius': [9, 9, 0, 0],
+                                    'color': f'var(--chart-C2)',
+                                },
+                            },
+                            'zlevel': 1,
+                        },
+                    ]
+                }
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def segmented_line_chart(self,
+        data: Union[str, DataFrame, List[Dict]],
+        menu_path: str, x: str = 'x', y: str = 'y',
+        order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+        padding: Optional[str] = None,
+        title: Optional[str] = None,  # second layer
+        x_axis_name: Optional[str] = None,
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,
+        filters: Optional[Dict] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        marking_lines: Optional[List[int]] = None,
+        range_colors: Optional[List[str]] = None,
+        range_labels: Optional[List[str]] = None,
+    ):
+        """
+        :param data: DataFrame or list of dicts
+        :param menu_path: path to the menu item
+        :param x: name of the column with x values
+        :param y: name of the column with y values
+        :param order: order of the chart in the menu
+        :param rows_size: number of rows the chart will occupy
+        :param cols_size: number of columns the chart will occupy
+        :param padding: padding of the chart
+        :param title: title of the chart
+        :param x_axis_name: name of the x axis
+        :param y_axis_name: name of the y axis
+        :param option_modifications: dict with modifications to the default options
+        :param filters: dict with filters
+        :param bentobox_data: dict with bentobox data
+        :param tabs_index: tuple with tabs index
+        :param marking_lines: list of values to mark with lines
+        :param range_colors: list of colors to use for the ranges
+        :param range_labels: list of labels to use for the ranges
+        :return:
+        """
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        max_range_label = max([len(x) for x in range_labels]) if range_labels else df[y].astype(str).apply(len).max()
+
+        if not marking_lines:
+            marking_lines = [0]
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {
+                    'text': title if title else "",
+                },
+                'tooltip': {
+                    'trigger': 'axis'
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'nameGap': 35,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'nameLocation': 'middle',
+                    'nameGap': 40,
+                },
+                'toolbox': self._default_toolbox_options_top,
+                'grid': {
+                    'left': '3%',
+                    'right': f'{9+max_range_label//3}%',
+                    'bottom': '17%',
+                    'containLabel': True
+                },
+                'dataZoom': [{'type': 'inside'}, {'show': True}],
+                'visualMap': {
+                    'top': 50,
+                    'right': 10,
+                    'itemSymbol': 'circle',
+                    'outOfRange': {'color': '#999'},
+                    'pieces': [{'min': marking_lines[i], 'max': marking_lines[i+1]} for i in range(len(marking_lines)-1)] +
+                    [{'min': marking_lines[-1]}],
+                },
+                'series': {
+                    'type': 'line',
+                    'smooth': len(df) <= 100,
+                    'encode': {
+                        'x': 0,
+                        'y': 2,
+                    },
+                    'markLine': {
+                        'data': [{'yAxis': val} for val in marking_lines],
+                        'itemStyle': {
+                            'color': 'var(--chart-C5)',
+                            'opacity': 0.5
+                        },
+                    }
+                }
+            }
+
+        if range_colors:
+            option_modifications['visualMap']['color'] = range_colors[::-1]
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+            df = df[[x, 'sort_values', y]]
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            sort={
+                'field': 'sort_values',
+                'direction': 'asc',
+            }
+        )
+
+    @logging_before_and_after(logging_level=logger.info)
+    def line_with_confidence_area(self,
+         data: Union[str, DataFrame, List[Dict]],
+         menu_path: str, x: str = 'x', lower: str = 'l', y: str = 'y', upper: str = 'u',
+         order: Optional[int] = None, rows_size: Optional[int] = 3, cols_size: int = 12,
+         padding: Optional[str] = None,
+         title: Optional[str] = None,  # second layer
+         x_axis_name: Optional[str] = None,
+         y_axis_name: Optional[str] = None,
+         option_modifications: Optional[Dict] = None,
+         filters: Optional[Dict] = None,
+         bentobox_data: Optional[Dict] = None,
+         tabs_index: Optional[Tuple[str, str]] = None,
+         percentages: bool = False,
+    ):
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+
+        df = df[[x, lower, upper, y]].fillna(0)
+
+        toolbox = deepcopy(self._default_toolbox_options_bottom)
+        toolbox['feature'].pop('magicType')
+
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {'text': title if title else ''},
+                'tooltip': {
+                    'trigger': 'axis',
+                    'axisPointer': {
+                        'type': 'cross',
+                        'animation': False,
+                        'label': {
+                            'backgroundColor': '#ccc',
+                            'borderColor': '#aaa',
+                            'borderWidth': 1,
+                            'shadowBlur': 0,
+                            'shadowOffsetX': 0,
+                            'shadowOffsetY': 0,
+                            'color': '#222'
+                        }
+                    },
+                },
+                'xAxis': {
+                    'type': 'category',
+                    'fontFamily': 'Rubik',
+                    'name': x_axis_name if x_axis_name else "",
+                    'nameLocation': 'middle',
+                    'boundaryGap': True,
+                    'nameGap': 35,
+                },
+                'yAxis': {
+                    'name': y_axis_name if y_axis_name else "",
+                    'type': 'value',
+                    'fontFamily': 'Rubik',
+                    'splitNumber': 3,
+                    'boundaryGap': True,
+                    'nameLocation': 'middle',
+                    'nameGap': 60,
+                    'axisLabel': {
+                        'formatter': '{value}%' if percentages else '{value}'
+                    },
+                    'axisPointer': {
+                        'label': {
+                            'formatter': '{value}%' if percentages else '{value}'
+                        }
+                    },
+                },
+                'grid': {
+                    'left': '3%',
+                    'right': '3%',
+                    'bottom': '12%',
+                    'containLabel': True
+                },
+                'toolbox': toolbox,
+                'series': [
+                    {
+                        'name': 'L',
+                        'type': 'line',
+                        'lineStyle': {
+                            'color': '#000',
+                            'opacity': 0.1
+                        },
+                        'areaStyle': {
+                            'color': '#000',
+                            'opacity': 0.1,
+                            'origin': 'end'
+                        },
+                        'symbol': 'none'
+                    },
+                    {
+                        'name': 'U',
+                        'silent': True,
+                        'type': 'line',
+                        'lineStyle': {
+                             'color': '#000',
+                             'opacity': 0.1
+                        },
+                        'areaStyle': {
+                            'color': '#000',
+                            'opacity': 0.1,
+                            'origin': 'start'
+                        },
+                        'symbol': 'none'
+                    },
+                    {
+                        'type': 'line',
+                        'itemStyle': {
+                            'color': 'var(--chart-C1)'
+                        },
+                        'emphasis': {
+                            'lineStyle': {
+                                'color': 'var(--chart-C1)'
+                            }
+                        },
+                        'showSymbol': False
+                    }
+                ]
+            }
+
+        self.free_echarts(
+            menu_path=menu_path,
+            data=df,
+            options=option_modifications,
+            order=order,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            padding=padding,
+            filters=filters,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',

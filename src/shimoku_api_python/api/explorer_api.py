@@ -1134,40 +1134,49 @@ class CreateExplorerAPI(object):
     @logging_before_and_after(logging_level=logger.debug)
     async def create_data_points(
             self, business_id: str, app_id: str, dataset_id: str,
-            items: List[str],
-    ) -> List[Dict]:
+            items: List[str], batch_size: int = 100,
+    ) -> None:
         """Create new row in Data (equivalent to reportEntry)
 
         :param business_id: UUID of the business
         :param app_id: UUID of the app
         :param dataset_id: UUID of the dataset
         :param items: A list of dicts with the data to be inserted
+        :param batch_size: The number of items to send in a single request
 
         :return: A list of dicts with the data inserted
         """
-        # TODO see if this can be batch accelerated like report entries
+
+        if batch_size >= 1000:
+            raise ValueError('batch_size must be less than 1000')
+
         endpoint: str = (
             f'business/{business_id}/'
             f'app/{app_id}/'
             f'dataSet/{dataset_id}/'
-            f'data'
+            f'data/batch'
         )
 
         log_level = logger.getEffectiveLevel()
-        data_points_tasks = []
-        len_items = len(items)
-        with tqdm.tqdm(total=len_items, unit=' data points', disable=(log_level > logging.INFO or len_items < 50)) as progress_bar:
-            for item in items:
-                data_points_tasks.append(
+        if log_level >= logging.INFO and len(items) > 1000:
+            logger.info("Uploading data points")
+            print()
+
+        with tqdm.tqdm(total=len(items), unit=' data points', disable=(log_level > logging.INFO
+                                                                       or len(items) <= 1000)) as progress_bar:
+            query_tasks = []
+            for chunk in range(0, len(items), batch_size):
+                query_tasks.append(
                     self.api_client.query_element(
-                        method='POST', endpoint=endpoint,
-                        **{'body_params': item,
-                           'progress_bar': (progress_bar, 1)},
+                    method='POST', endpoint=endpoint,
+                    **{'body_params': items[chunk:chunk + batch_size],
+                       'progress_bar': (progress_bar, len(items[chunk:chunk + batch_size]))},
                     )
                 )
-            result = await asyncio.gather(*data_points_tasks)
+            await asyncio.gather(*query_tasks)
 
-        return result
+        if len(items) > 1000:
+            logger.info('Data points successfully uploaded')
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_report_entries(
@@ -1206,8 +1215,6 @@ class CreateExplorerAPI(object):
                        'progress_bar': (progress_bar, len(items[chunk:chunk + batch_size]))},
                     )
                 )
-            if log_level == logging.DEBUG:
-                print()
             await asyncio.gather(*query_tasks)
 
         logger.info("Table data uploaded")

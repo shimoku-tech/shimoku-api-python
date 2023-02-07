@@ -7,6 +7,7 @@ import datetime as dt
 import pandas as pd
 import numpy as np
 import random
+import asyncio
 
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
@@ -16,7 +17,8 @@ api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
-
+verbose: str = getenv('VERBOSITY')
+async_execution: bool = getenv('ASYNC_EXECUTION') == 'TRUE'
 
 config = {
     'access_token': api_key,
@@ -26,10 +28,14 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
+    verbosity=verbose,
+    async_execution=async_execution
 )
 s.plt.set_business(business_id=business_id)
-delete_paths: bool = False
+s.app.set_business(business_id=business_id)
+s.io.set_business(business_id=business_id)
 
+delete_paths: bool = False
 
 data = [
     {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
@@ -171,7 +177,7 @@ def test_ux():
             "value": "455"
         },
     ]
-    s.plt.indicator(
+    next_order = s.plt.indicator(
         data=data_,
         menu_path=menu_path,
         order=1,
@@ -184,8 +190,9 @@ def test_ux():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=2, rows_size=1, cols_size=6,
+        order=next_order, rows_size=1, cols_size=6,
     )
+    next_order += 1
 
     ###################
 
@@ -197,10 +204,10 @@ def test_ux():
             "target_path": 'www.shimoku.com',
         },
     ]
-    s.plt.alert_indicator(
+    next_order = s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        order=3, rows_size=2, cols_size=12,
+        order=next_order, rows_size=2, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -221,10 +228,10 @@ def test_ux():
             "target_path": 'www.shimoku.com',
         },
     ]
-    s.plt.alert_indicator(
+    next_order = s.plt.alert_indicator(
         data=data_,
         menu_path=menu_path,
-        order=4,
+        order=next_order,
         value='value',
         header='title',
         footer='description',
@@ -235,7 +242,7 @@ def test_ux():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=5, rows_size=1, cols_size=4,
+        order=next_order, rows_size=1, cols_size=4,
     )
 
 
@@ -259,7 +266,8 @@ def test_set_new_business():
     print('test_set_new_business')
     name: str = 'new-business-test'
     prev_business_id: str = s.plt.business_id
-
+    bs = s.universe.get_universe_businesses()
+    print(bs)
     s.plt.set_new_business(name)
     bs = s.universe.get_universe_businesses()
     for b in bs:
@@ -299,28 +307,31 @@ def test_delete_path():
     app_id = max([
         app['id']
         for app in apps
-        if app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ])
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
+    print(len(reports))
     assert len(reports) == 2
 
     s.plt.delete_path(menu_path=menu_path)
 
     assert len(s.app.get_app_reports(business_id, app_id)) == 0
+    for i in range(10):
+        s.plt.line(
+            data=data,
+            x='date', y=['x', 'y'],
+            menu_path=menu_path,
+            order=i
+        )
 
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        order=0
-    )
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path_2,
         order=0,
     )
+
     s.plt.line(
         data=data,
         x='date', y=['x', 'y'],
@@ -329,7 +340,7 @@ def test_delete_path():
     )
 
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
-    assert len(reports) == 3
+    assert len(reports) == 12
 
     s.plt.delete_path(menu_path=menu_path)
     reports: List[Dict] = s.app.get_app_reports(business_id, app_id)
@@ -338,12 +349,7 @@ def test_delete_path():
     s.plt.delete_path(menu_path=app_path)
 
     # Check it does not exist anymore
-    class MyTestCase(unittest.TestCase):
-        def check_reports_not_exists(self):
-            with self.assertRaises(ApiClientError):
-                s.app.get_app_reports(business_id, app_id)
-    t = MyTestCase()
-    t.check_reports_not_exists()
+    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
 
 
 def test_delete():
@@ -357,7 +363,7 @@ def test_delete():
         menu_path=menu_path,
         order=0,
     )
-
+    s.run()
     app_types: List[Dict] = s.universe.get_universe_app_types()
     app_type_id = max([
         app_type['id']
@@ -369,7 +375,7 @@ def test_delete():
     candidate_app_ids = [
         app['id']
         for app in apps
-        if app['type']['id'] == app_type_id
+        if app['normalizedName'] == app_path
     ]
     if candidate_app_ids:
         app_id = max(candidate_app_ids)
@@ -473,35 +479,6 @@ def test_table():
         order=1,
         search_columns=search_columns,
     )
-
-    # Test search columns with filters and sorting works
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/table-test',
-        order=1,
-        filter_columns=filter_columns,
-        sort_table_by_col={'date': 'asc'},
-        search_columns=search_columns,
-    )
-
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/sorted-table-test',
-        row=1, column=1,
-        filter_columns=filter_columns,
-        sort_table_by_col={'date': 'asc'},
-    )
-
-    s.plt.table(
-        title="Test-table",
-        data=data_,
-        menu_path='test/table-test',
-        row=1, column=1,
-        filter_columns=filter_columns,
-    )
-
     if delete_paths:
         s.plt.delete(
             menu_path='test/table-test',
@@ -524,41 +501,102 @@ def test_table():
         s.plt.delete_path('test/table-test')
         s.plt.delete_path('test/sorted-table-test')
 
+
 def test_table_with_labels():
     print("test_table_with_labels")
     menu_path = 'test/table-test-with-labels'
 
     data_ = [
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
-        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'   , 'name2': 'Ana'   , 'name3': 'Ana'   },
-        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura' , 'name2': 'Laura' , 'name3': 'Laura' },
-        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
-        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'  , 'name2': 'Jose'  , 'name3': 'Jose'  },
-        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),'z': round(100 * random.random(), 1),'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge' , 'name2': 'Jorge' , 'name3': 'Jorge' },
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Ana', 'name2': 'Ana', 'name3': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'Z',
+         'name': 'Laura', 'name2': 'Laura', 'name3': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'W',
+         'name': 'Audrey', 'name2': 'Audrey', 'name3': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'B', 'filtB': 'W',
+         'name': 'Jose', 'name2': 'Jose', 'name3': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': round(100 * random.random(), 10),
+         'z': round(100 * random.random(), 1), 'a': round(100 * random.random(), 1), 'filtA': 'A', 'filtB': 'Z',
+         'name': 'Jorge', 'name2': 'Jorge', 'name3': 'Jorge'},
 
     ]
 
@@ -573,44 +611,45 @@ def test_table_with_labels():
         sort_table_by_col={'date': 'asc'},
         search_columns=search_columns,
         label_columns={
-                    "x": {5: "#666666",
-                          6: "#4287f5",
-                          4: ("#42F548", "rounded", "filled"),
-                          7: [255, 0, 0],
-                          3: ([0, 255, 0], "filled"),
-                          },
-                    "y": {
-                        (0, 25): "red",
-                        (25, 50): "orange",
-                        (50, 75): ("yellow", 'rounded', 'outlined'),
-                        (75, np.inf): ("green", "filled", "rounded")
-                    },
-                    "z": {
-                        (0, 25): [100, 100, 100],
-                        (25, 50): ("yellow", 'filled'),
-                        (50, 75): "orange",
-                        (75, np.inf): "red"
-                    },
-                    "a": {
-                        (0, 25): ([100, 100, 100], 'rectangle', 'filled'),
-                        (25, 50): "yellow",
-                        (50, 75): "orange",
-                        (75, np.inf): "red"
-                    },
-                    "filtA": ("#666666", "filled"),
-                    "filtB": [125, 54, 200],
-                    "name":  ("warning", 'filled', 'rounded'),
-                    "name2": {
-                        'Ana'   : ('active', 'rounded', 'filled'),
-                        'Laura' : ("error", "filled", "rounded"),
-                        'Audrey': ("warning", 'filled', 'rounded'),
-                        'Jose'  : ("caution", "outlined"),
-                        'Jorge' : ("main", "rounded")
-                    },
-                    "name3": "neutral"
-                    },
+            "x": {5: "#666666",
+                  6: "#4287f5",
+                  4: ("#42F548", "rounded", "filled"),
+                  7: [255, 0, 0],
+                  3: ([0, 255, 0], "filled"),
+                  },
+            "y": {
+                (0, 25): "red",
+                (25, 50): "orange",
+                (50, 75): ("yellow", 'rounded', 'outlined'),
+                (75, np.inf): ("green", "filled", "rounded")
+            },
+            "z": {
+                (0, 25): [100, 100, 100],
+                (25, 50): ("yellow", 'filled'),
+                (50, 75): "orange",
+                (75, np.inf): "red"
+            },
+            "a": {
+                (0, 25): ([100, 100, 100], 'rectangle', 'filled'),
+                (25, 50): "yellow",
+                (50, 75): "orange",
+                (75, np.inf): "red"
+            },
+            "filtA": ("#666666", "filled"),
+            "filtB": [125, 54, 200],
+            "name": ("warning", 'filled', 'rounded'),
+            "name2": {
+                'Ana': ('active', 'rounded', 'filled'),
+                'Laura': ("error", "filled", "rounded"),
+                'Audrey': ("warning", 'filled', 'rounded'),
+                'Jose': ("caution", "outlined"),
+                'Jorge': ("main", "rounded")
+            },
+            "name3": "neutral"
+        },
         value_suffixes={'y': '%', 'z': '°'}
     )
+
 
 def test_table_download_csv():
     print('test_table_download_csv')
@@ -639,17 +678,11 @@ def test_table_download_csv():
 
         s.plt.delete_path('test/table-test-csv')
 
+
 def test_bar_with_filters():
     print('test_bar_with_filters')
     menu_path: str = 'test/multifilter-bar-test'
     # First reset
-    # TODO this is because of improvements required for multifilter Update!!
-    #  if we remove the delete_path() and we run this method twice it is going to fail!
-    s.plt.delete_path(menu_path)
-    s.plt.delete_path('multifilter bar test')
-    s.plt.delete_path(f'{menu_path}-bysize')
-    s.plt.delete_path('multifilter bar test bysize')
-
     data_ = pd.read_csv('../data/test_multifilter.csv')
     y: List[str] = [
         'Acné', 'Adeslas', 'Asisa',
@@ -664,6 +697,7 @@ def test_bar_with_filters():
 
     data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
 
+    s.activate_sequential_execution()
     filters: Dict = {
         'order': 0,
         'filter_cols': [
@@ -726,20 +760,94 @@ def test_bar_with_filters():
         row=2, column=2,
         filters=filters,
     )
+    s.activate_async_execution()
 
     if delete_paths:
         s.plt.delete_path(menu_path)
         s.plt.delete_path(menu_path=f'{menu_path}-bysize')
 
 
+def test_bar_with_filters_with_aggregation_methods():
+    print("test_bar_with_filters_with_aggregation_methods")
+    menu_path = "test2/bar-with-filters-with-aggregation-methods"
+    data = [
+        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 1, 'food rating': 10, 'Location': "Barcelona",
+         'Fav Food': "pizza", 'Fav Drink': "water"},
+        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 2, 'food rating': 8, 'Location': "Barcelona",
+         'Fav Food': "sushi", 'Fav Drink': "fanta"},
+        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 10, 'Location': "Madrid",
+         'Fav Food': "pasta", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 4, 'food rating': 5, 'Location': "Madrid",
+         'Fav Food': "pizza", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 5, 'food rating': 7, 'Location': "Madrid",
+         'Fav Food': "sushi", 'Fav Drink': "water"},
+
+        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 5, 'food rating': 6, 'Location': "Andorra",
+         'Fav Food': "pizza", 'Fav Drink': "water"},
+        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 4, 'food rating': 0, 'Location': "Paris",
+         'Fav Food': "sushi", 'Fav Drink': "fanta"},
+        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 5, 'Location': "Paris",
+         'Fav Food': "pasta", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 2, 'food rating': 9, 'Location': "Andorra",
+         'Fav Food': "pizza", 'Fav Drink': "wine"},
+        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 1, 'food rating': 8, 'Location': "Andorra",
+         'Fav Food': "sushi", 'Fav Drink': "water"},
+    ]
+    filters = {'order': 0,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink']
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=1,
+        rows_size=2, cols_size=9,
+        filters=filters
+    )
+
+    filters = {'order': 2,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
+               'get_all': True
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=3,
+        rows_size=2, cols_size=9,
+        filters=filters,
+        aggregation_func={"food rating": [np.sum, np.mean],
+                          "Restaurant rating": [np.mean, np.amax, np.amin]}
+    )
+
+    filters = {'order': 4,
+               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
+               'get_all': ["Location", "Fav Drink"],
+               }
+
+    s.plt.bar(
+        data=data,
+        x='date', y=['Restaurant rating', 'food rating'],
+        menu_path=menu_path,
+        order=5,
+        rows_size=2, cols_size=9,
+        filters=filters,
+        aggregation_func=np.mean,
+    )
+    if delete_paths:
+        s.plt.delete_path(menu_path=menu_path)
+
+
 def test_bar():
     print('test_bar')
     menu_path = 'test/bar-test'
     data_ = [{'date': dt.date(2021, 1, 1), 'x': 50000000, 'y': 5},
-            {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
-            {'date': dt.date(2021, 1, 3), 'x': 40000000, 'y': 5},
-            {'date': dt.date(2021, 1, 4), 'x': 70000000, 'y': 5},
-            {'date': dt.date(2021, 1, 5), 'x': 30000000, 'y': 5}]
+             {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
+             {'date': dt.date(2021, 1, 3), 'x': 40000000, 'y': 5},
+             {'date': dt.date(2021, 1, 4), 'x': 70000000, 'y': 5},
+             {'date': dt.date(2021, 1, 5), 'x': 30000000, 'y': 5}]
     s.plt.bar(
         data=data_,
         x='date', y=['x', 'y'],
@@ -802,7 +910,7 @@ def test_bar():
 
 def test_stacked_barchart():
     print("test_stacked_barchart")
-    menu_path = 'test/stacked_distribution'
+    menu_path = 'test-free-echarts/stacked_distribution'
     data_ = pd.read_csv('../data/test_stack_distribution.csv')
 
     s.plt.stacked_barchart(
@@ -826,7 +934,7 @@ def test_stacked_barchart():
 
 def test_stacked_horizontal_barchart():
     print("test_horizontal_stacked_barchart")
-    menu_path = 'test/horizontal_stacked_distribution'
+    menu_path = 'test-free-echarts/horizontal_stacked_distribution'
     data_ = pd.read_csv('../data/test_stack_distribution.csv')
 
     s.plt.stacked_horizontal_barchart(
@@ -850,7 +958,7 @@ def test_stacked_horizontal_barchart():
 
 def test_stacked_area_chart():
     print("test_area_chart")
-    menu_path = 'test/stacked-area-chart'
+    menu_path = 'test-free-echarts/stacked-area-chart'
     data_ = [
         {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
         {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
@@ -1293,8 +1401,243 @@ def test_heatmap():
         s.plt.delete_path(menu_path)
 
 
+def test_heatmap_with_filters():
+    print('test_heatmap_with_filters')
+    menu_path: str = 'test/heatmap-with-filters-test'
+    data_ = [
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "6 p.m",
+            "value": 10
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "12 p.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Lunes",
+            "yAxis": "6 a.m",
+            "value": 10
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "12 a.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "6 p.m",
+            "value": 9
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "12 p.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Martes",
+            "yAxis": "6 a.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "6 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "12 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Miercoles",
+            "yAxis": "6 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 a.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "6 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 p.m",
+            "value": 1
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "6 a.m",
+            "value": 6
+        },
+
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "12 a.m",
+            "value": 6
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "6 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "12 p.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Lunes",
+            "yAxis": "6 a.m",
+            "value": 15
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "6 p.m",
+            "value": 6
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "12 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Martes",
+            "yAxis": "6 a.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "12 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "6 p.m",
+            "value": 7
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "12 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Miercoles",
+            "yAxis": "6 a.m",
+            "value": 2
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "12 a.m",
+            "value": 8
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "6 p.m",
+            "value": 0
+        },
+        {
+            "Filter": "Option 1",
+            "xAxis": "Jueves",
+            "yAxis": "12 p.m",
+            "value": 4
+        },
+        {
+            "Filter": "Option 2",
+            "xAxis": "Jueves",
+            "yAxis": "6 a.m",
+            "value": 10
+        }
+    ]
+    filters: Dict = {
+        'order': 0,
+        'filter_cols': ['Filter']
+    }
+    s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path=menu_path,
+        order=1,
+        filters=filters
+    )
+    filters: Dict = {
+        'order': 2,
+        'filter_cols': ['Filter'],
+        'get_all': True
+    }
+    s.plt.heatmap(
+        data=data_, x='xAxis', y='yAxis', value='value',
+        menu_path=menu_path,
+        order=3, rows_size=2, cols_size=12,
+        filters=filters,
+        aggregation_func=np.mean
+    )
+
+    if delete_paths:
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            row=1, column=1,
+        )
+        s.plt.delete(
+            menu_path=menu_path,
+            component_type='heatmap',
+            order=1
+        )
+        s.plt.delete_path(menu_path)
+
+
 def test_doughnut():
-    menu_path = 'test/doughnut'
+    menu_path = 'test-free-echarts/doughnut'
     print('test_doughnut')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
@@ -1317,7 +1660,7 @@ def test_doughnut():
 
 
 def test_rose():
-    menu_path = 'test/rose'
+    menu_path = 'test-free-echarts/rose'
     print('test_rose')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
@@ -1341,7 +1684,7 @@ def test_rose():
 
 def test_shimoku_gauges():
     print("test_shimoku_gauges")
-    menu_path: str = 'test/shimoku-gauges'
+    menu_path: str = 'test-free-echarts/shimoku-gauges'
     df = pd.read_csv('../data/test_stack_distribution.csv')
     gauges_data = pd.DataFrame(columns=["name", "value", "color"])
     df_transposed = df.transpose().reset_index().drop(0)
@@ -1470,42 +1813,42 @@ def test_sunburst():
             "name": "Root 1",
             "children": [
                 {
-                 "name": "Children A",
-                 "value": 15,
-                 "children": [
-                  {
-                   "name": "Children A1",
-                   "value": 2
-                  },
-                  {
-                   "name": "Children AA1",
-                   "value": 5,
-                   "children": [
-                    {
-                     "name": "Children AAA1",
-                     "value": 2
-                    }
-                   ]
-                  },
-                  {
-                   "name": "Children A2",
-                   "value": 4
-                  }
-                 ]
+                    "name": "Children A",
+                    "value": 15,
+                    "children": [
+                        {
+                            "name": "Children A1",
+                            "value": 2
+                        },
+                        {
+                            "name": "Children AA1",
+                            "value": 5,
+                            "children": [
+                                {
+                                    "name": "Children AAA1",
+                                    "value": 2
+                                }
+                            ]
+                        },
+                        {
+                            "name": "Children A2",
+                            "value": 4
+                        }
+                    ]
                 },
                 {
-                 "name": "Children B",
-                 "value": 10,
-                 "children": [
-                  {
-                   "name": "Children B1",
-                   "value": 5
-                  },
-                  {
-                   "name": "Children B2",
-                   "value": 1
-                  }
-                 ]
+                    "name": "Children B",
+                    "value": 10,
+                    "children": [
+                        {
+                            "name": "Children B1",
+                            "value": 5
+                        },
+                        {
+                            "name": "Children B2",
+                            "value": 1
+                        }
+                    ]
                 }
             ]
         },
@@ -1513,17 +1856,17 @@ def test_sunburst():
             "name": "Root 2",
             "children": [
                 {
-                 "name": "Children A1",
-                 "children": [
-                  {
-                   "name": "Children AA1",
-                   "value": 1
-                  },
-                  {
-                   "name": "Children AA2",
-                   "value": 2
-                  }
-                 ]
+                    "name": "Children A1",
+                    "children": [
+                        {
+                            "name": "Children AA1",
+                            "value": 1
+                        },
+                        {
+                            "name": "Children AA2",
+                            "value": 2
+                        }
+                    ]
                 }
             ]
         }
@@ -1719,7 +2062,7 @@ def test_radar():
 
 def test_indicator():
     print('test_indicator')
-    menu_path: str = 'test/indicator-test'
+    menu_path: str = 'test-indicators/indicator-test'
     data_ = [
         {
             "footer": "",
@@ -1755,7 +2098,7 @@ def test_indicator():
         color='col'
     )
     order = s.plt.indicator(
-        data=data_+data_[2:],
+        data=data_ + data_[2:],
         menu_path=menu_path,
         order=order,
         value='val',
@@ -1816,8 +2159,8 @@ def test_indicator():
     )
 
     order = s.plt.indicator(
-        data=data_+data_,
-        menu_path=menu_path+'-vertical',
+        data=data_ + data_,
+        menu_path=menu_path + '-vertical',
         order=0, rows_size=1, cols_size=6,
         value='value',
         header='title',
@@ -1875,19 +2218,19 @@ def test_indicator():
     )
     if delete_paths:
         s.plt.delete_path(menu_path)
-        s.plt.delete_path(menu_path+'-vertical')
+        s.plt.delete_path(menu_path + '-vertical')
 
 
 def test_indicator_one_dict():
     print('test_indicator_one_dict')
-    menu_path: str = 'test/indicator-test-one-dict'
+    menu_path: str = 'test-indicators/indicator-test-one-dict'
     data_ = {
-            "description": "",
-            "title": "Estado",
-            "value": "Abierto",
-            "align": "center",
-            "color": "warning"
-        }
+        "description": "",
+        "title": "Estado",
+        "value": "Abierto",
+        "align": "center",
+        "color": "warning"
+    }
 
     order = s.plt.indicator(
         data=data_,
@@ -1917,7 +2260,7 @@ def test_indicator_one_dict():
 
 def test_alert_indicator():
     print('test_alert_indicator')
-    menu_path: str = 'test/indicator-path-test'
+    menu_path: str = 'test-indicators/indicator-path-test'
     data_ = [
         {
             "description": "",
@@ -2317,6 +2660,7 @@ def test_cohorts():
 
 def test_free_echarts():
     # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
+    app_name = 'test-free-echarts'
     raw_options = """
         {title: {
             text: 'Stacked Area Chart'
@@ -2402,7 +2746,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=0, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=line-marker
@@ -2487,7 +2831,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=1, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=line-style
@@ -2522,7 +2866,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=2, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=bar-y-category-stack
@@ -2602,7 +2946,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=3, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=bar-waterfall2
@@ -2613,7 +2957,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=4, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=pie-roseType-simple
@@ -2657,7 +3001,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=5, rows_size=2, cols_size=12,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=pie-borderRadius
@@ -2708,7 +3052,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=6, rows_size=4, cols_size=8,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=radar
@@ -2750,7 +3094,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=7, rows_size=3, cols_size=8,
     )
     # https://echarts.apache.org/examples/en/editor.html?c=gauge-speed
@@ -2809,7 +3153,7 @@ def test_free_echarts():
     """
     s.plt.free_echarts(
         raw_options=raw_options,
-        menu_path='test/raw-free-echarts',
+        menu_path=f'{app_name}/raw-free-echarts',
         order=8, rows_size=3, cols_size=8,
     )
     # TODO pendings
@@ -2836,7 +3180,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=0, rows_size=2, cols_size=12,
     )
 
@@ -2848,13 +3192,13 @@ def test_free_echarts():
         {'Mon': 820, 'Tue': 932, 'Wed': 901, 'Thu': 934},  # , 'Fri': 1290, 'Sat': 1330, 'Sun': 1320}
     ]
     data = [
-            {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-            {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-            {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
-            {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
-            {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-            {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-            {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
+        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
     ]
     options = {
         'title': {'text': 'Stacked Area Chart'},
@@ -2880,8 +3224,8 @@ def test_free_echarts():
             'containLabel': True
         },
         'xAxis': [{
-          'type': 'category',
-          'boundaryGap': False,
+            'type': 'category',
+            'boundaryGap': False,
         }],
         'yAxis': [{'type': 'value'}],
         'series': [{
@@ -2919,7 +3263,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=1, rows_size=2, cols_size=12,
         sort={
             'field': 'sort_values',
@@ -2995,7 +3339,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=2, rows_size=2, cols_size=6,
         sort={
             'field': 'sort_values',
@@ -3061,7 +3405,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=3, rows_size=2, cols_size=6,
         sort={
             'field': 'sort_values',
@@ -3107,11 +3451,11 @@ def test_free_echarts():
                 },
                 'labelLine': {'show': False},
             }]
-        }
+    }
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=4, rows_size=2, cols_size=6,
     )
 
@@ -3134,7 +3478,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=5, rows_size=2, cols_size=6,
     )
 
@@ -3214,7 +3558,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=6, rows_size=2, cols_size=7,
     )
 
@@ -3234,7 +3578,7 @@ def test_free_echarts():
     s.plt.free_echarts(
         data=data,
         options=options,
-        menu_path='test/free-echarts',
+        menu_path=f'{app_name}/free-echarts',
         order=7, rows_size=2, cols_size=5,
     )
 
@@ -3439,88 +3783,88 @@ def test_free_echarts():
 
 def test_input_form():
     report_dataset_properties = {
-      'fields': [
-        {
-          'title': 'Personal information',
-          'fields': [
+        'fields': [
             {
-                'mapping': 'name',
-                'fieldName': 'name',
-                'inputType': 'text',
-              },
-              {
-                'mapping': 'surname',
-                'fieldName': 'surname',
-                'inputType': 'text',
-              },
-            {
-              'mapping': 'age',
-              'fieldName': 'age',
-              'inputType': 'number',
-            },
-            {
-                'mapping': 'tel',
-                'fieldName': 'phone',
-                'inputType': 'tel',
-              },
-              {
-                'mapping': 'gender',
-                'fieldName': 'Gender',
-                'inputType': 'radio',
-                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
-              },
-            {
-                'mapping': 'email',
-                'fieldName': 'email',
-                'inputType': 'email',
-              },
+                'title': 'Personal information',
+                'fields': [
+                    {
+                        'mapping': 'name',
+                        'fieldName': 'name',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'surname',
+                        'fieldName': 'surname',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'age',
+                        'fieldName': 'age',
+                        'inputType': 'number',
+                    },
+                    {
+                        'mapping': 'tel',
+                        'fieldName': 'phone',
+                        'inputType': 'tel',
+                    },
+                    {
+                        'mapping': 'gender',
+                        'fieldName': 'Gender',
+                        'inputType': 'radio',
+                        'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+                    },
+                    {
+                        'mapping': 'email',
+                        'fieldName': 'email',
+                        'inputType': 'email',
+                    },
 
-          ],
-        },
-        {
-          'title': 'Other data',
-          'fields': [
-            {
-              'mapping': 'skills',
-              'fieldName': 'Skills',
-              'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
-              'inputType': 'checkbox',
+                ],
             },
             {
-                'mapping': 'birthDay',
-                'fieldName': 'Birthday',
-                'inputType': 'date',
-              },
-              {
-                'mapping': 'onCompany',
-                'fieldName': 'Time on Shimoku',
-                'inputType': 'dateRange',
-              },
-              {
-                'mapping': 'hobbies',
-                'fieldName': 'Hobbies',
-                'inputType': 'select',
-                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
-              },
-              {
-                'mapping': 'textField2',
-                'fieldName': 'Test Text',
-                'inputType': 'text',
-              },
-              {
-                'mapping': 'objectives',
-                'fieldName': 'Objetivos',
-                'inputType': 'multiSelect',
-                'options': ['sleep', 'close eyes', 'awake']
-              },
-              {
-                'mapping': 'voice',
-                'fieldName': 'Audio recorder',
-                'inputType': 'audio',
-              }
-          ],
-        },
-      ],
+                'title': 'Other data',
+                'fields': [
+                    {
+                        'mapping': 'skills',
+                        'fieldName': 'Skills',
+                        'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                        'inputType': 'checkbox',
+                    },
+                    {
+                        'mapping': 'birthDay',
+                        'fieldName': 'Birthday',
+                        'inputType': 'date',
+                    },
+                    {
+                        'mapping': 'onCompany',
+                        'fieldName': 'Time on Shimoku',
+                        'inputType': 'dateRange',
+                    },
+                    {
+                        'mapping': 'hobbies',
+                        'fieldName': 'Hobbies',
+                        'inputType': 'select',
+                        'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+                    },
+                    {
+                        'mapping': 'textField2',
+                        'fieldName': 'Test Text',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'objectives',
+                        'fieldName': 'Objetivos',
+                        'inputType': 'multiSelect',
+                        'options': ['sleep', 'close eyes', 'awake']
+                    },
+                    {
+                        'mapping': 'voice',
+                        'fieldName': 'Audio recorder',
+                        'inputType': 'audio',
+                    }
+                ],
+            },
+        ],
     }
     s.plt.input_form(
         menu_path='test/input-form', order=0,
@@ -3538,17 +3882,17 @@ def test_dynamic_and_conditional_input_form():
             'fieldName': f'Country {i}',
             'inputType': 'select',
             'options': ['España', 'Colombia']
-          },
-          {
-            'dependsOn': f'Country {i}',
-            'mapping': 'city',
-            'fieldName': f'City {i}',
-            'inputType': 'select',
-            'options': {
-                'España': ['Madrid', 'Barcelona'],
-                'Colombia': ['Bogotá', 'Medellin']
+        },
+            {
+                'dependsOn': f'Country {i}',
+                'mapping': 'city',
+                'fieldName': f'City {i}',
+                'inputType': 'select',
+                'options': {
+                    'España': ['Madrid', 'Barcelona'],
+                    'Colombia': ['Bogotá', 'Medellin']
+                }
             }
-          }
         ] for i in range(4)}
 
     form_groups['Personal information'] = \
@@ -3634,95 +3978,97 @@ def test_get_input_forms():
     print('test_get_input_forms')
     menu_path: str = 'test/input-form-to-get'
     report_dataset_properties = {
-      'fields': [
-        {
-          'title': 'Personal information',
-          'fields': [
+        'fields': [
             {
-                'mapping': 'name',
-                'fieldName': 'name',
-                'inputType': 'text',
-              },
-              {
-                'mapping': 'surname',
-                'fieldName': 'surname',
-                'inputType': 'text',
-              },
-            {
-              'mapping': 'age',
-              'fieldName': 'age',
-              'inputType': 'number',
-            },
-            {
-                'mapping': 'tel',
-                'fieldName': 'phone',
-                'inputType': 'tel',
-              },
-              {
-                'mapping': 'gender',
-                'fieldName': 'Gender',
-                'inputType': 'radio',
-                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
-              },
-            {
-                'mapping': 'email',
-                'fieldName': 'email',
-                'inputType': 'email',
-              },
+                'title': 'Personal information',
+                'fields': [
+                    {
+                        'mapping': 'name',
+                        'fieldName': 'name',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'surname',
+                        'fieldName': 'surname',
+                        'inputType': 'text',
+                    },
+                    {
+                        'mapping': 'age',
+                        'fieldName': 'age',
+                        'inputType': 'number',
+                    },
+                    {
+                        'mapping': 'tel',
+                        'fieldName': 'phone',
+                        'inputType': 'tel',
+                    },
+                    {
+                        'mapping': 'gender',
+                        'fieldName': 'Gender',
+                        'inputType': 'radio',
+                        'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+                    },
+                    {
+                        'mapping': 'email',
+                        'fieldName': 'email',
+                        'inputType': 'email',
+                    },
 
-          ],
-        },
-        {
-          'title': 'Other data',
-          'fields': [
-            {
-              'mapping': 'skills',
-              'fieldName': 'Skills',
-              'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
-              'inputType': 'checkbox',
+                ],
             },
             {
-                'mapping': 'birthDay',
-                'fieldName': 'Birthday',
-                'inputType': 'date',
-              },
-              {
-                'mapping': 'onCompany',
-                'fieldName': 'Time on Shimoku',
-                'inputType': 'dateRange',
-              },
-              {
-                'mapping': 'hobbies',
-                'fieldName': 'Hobbies',
-                'inputType': 'select',
-                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
-              },
-              {
-                'mapping': 'textField2',
-                'fieldName': 'Test Text',
-                'inputType': 'text',
-              },
-          ],
-        },
-      ],
+                'title': 'Other data',
+                'fields': [
+                    {
+                        'mapping': 'skills',
+                        'fieldName': 'Skills',
+                        'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                        'inputType': 'checkbox',
+                    },
+                    {
+                        'mapping': 'birthDay',
+                        'fieldName': 'Birthday',
+                        'inputType': 'date',
+                    },
+                    {
+                        'mapping': 'onCompany',
+                        'fieldName': 'Time on Shimoku',
+                        'inputType': 'dateRange',
+                    },
+                    {
+                        'mapping': 'hobbies',
+                        'fieldName': 'Hobbies',
+                        'inputType': 'select',
+                        'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+                    },
+                    {
+                        'mapping': 'textField2',
+                        'fieldName': 'Test Text',
+                        'inputType': 'text',
+                    },
+                ],
+            },
+        ],
     }
     s.plt.input_form(
         menu_path=menu_path, order=0,
         report_dataset_properties=report_dataset_properties
     )
     rs: List[Dict] = s.plt.get_input_forms(menu_path)
+    print(rs)
     assert rs
 
 
-def test_tabs():
+def test_tabs(check_data=True):
     print("test_tabs")
     menu_path = "test-tabs"
+    s.plt.delete_path(menu_path)
 
     def check_tabs_index_in_business_state(_tabs_index, how_many):
         app_name, path_name = s.plt._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = s.plt._get_app_by_name(business_id=business_id, name=app_name)
+        app: Dict = s.app.get_app_by_name(business_id=business_id, name=app_name)
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, _tabs_index[0])
 
@@ -3733,10 +4079,9 @@ def test_tabs():
         assert (tabs_group_entry in s.plt._tabs_last_order)
 
     def check_tabs_info_is_cleared():
-        assert(len(s.plt._tabs) == 0)
-        assert(len(s.plt._tabs_group_id) == 0)
-        assert(len(s.plt._tabs_last_order) == 0)
-        assert(len(s.plt._tabs_group_modified) == 0)
+        assert (len(s.plt._tabs) == 0)
+        assert (len(s.plt._tabs_group_id) == 0)
+        assert (len(s.plt._tabs_last_order) == 0)
 
     def check_all_data_restored_correctly(_tabs_index, how_many):
         check_tabs_index_in_business_state(_tabs_index, how_many)
@@ -3744,16 +4089,16 @@ def test_tabs():
         _tabs = s.plt._tabs
         _tabs_group_id = s.plt._tabs_group_id
         _tabs_last_order = s.plt._tabs_last_order
-        _tabs_group_modified = s.plt._tabs_group_modified
 
         s.plt._clear_or_create_all_local_state()
         check_tabs_info_is_cleared()
-        s.plt._get_business_state(business_id)
+        asyncio.run(s.plt._get_business_state(business_id))
 
-        assert(_tabs == s.plt._tabs)
-        assert(_tabs_group_id == s.plt._tabs_group_id)
-        assert(_tabs_last_order == s.plt._tabs_last_order)
-        assert(_tabs_group_modified == s.plt._tabs_group_modified)
+        print(_tabs)
+        print(s.plt._tabs)
+        assert (dict(sorted(_tabs.items())) == dict(sorted(s.plt._tabs.items())))
+        assert (dict(sorted(_tabs_group_id.items())) == dict(sorted(s.plt._tabs_group_id.items())))
+        assert (dict(sorted(_tabs_last_order.items())) == dict(sorted(s.plt._tabs_last_order.items())))
 
         check_tabs_index_in_business_state(_tabs_index, how_many)
 
@@ -3811,7 +4156,10 @@ def test_tabs():
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )
-        check_all_data_restored_correctly(tabs_index_, 3)
+
+        if check_data:
+            s.run()
+            check_all_data_restored_correctly(tabs_index_, 3)
 
     data_table = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
@@ -3856,7 +4204,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_all_data_restored_correctly(tabs_index, 2)
+    if check_data:
+        s.run()
+        check_all_data_restored_correctly(tabs_index, 2)
 
     s.plt.bar(
         data=data,
@@ -3957,7 +4307,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_tabs_index_in_business_state(tabs_index, 1)
+    if check_data:
+        s.run()
+        check_tabs_index_in_business_state(tabs_index, 1)
 
     for i in range(5):
         s.plt.indicator(data={
@@ -3991,13 +4343,14 @@ def test_tabs():
         )
 
         if i > 1:
-            s.plt.change_tabs_group_internal_order(f"Deepness {i}", menu_path, ['Indicators 2', 'Indicators 1', 'Indicators 2'])
+            s.plt.change_tabs_group_internal_order(f"Deepness {i}", menu_path,
+                                                   ['Indicators 2', 'Indicators 1', 'Indicators 2'])
 
     data_bar = [{'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
-             {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
-             {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
-             {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
-             {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5}]
+                {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
+                {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5},
+                {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5},
+                {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5}]
 
     s.plt.bar(
         data=data_bar,
@@ -4062,8 +4415,9 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
+    s.run()
 
-    #Test overwrite
+    # Test overwrite
     _test_bentobox()
     _test_bentobox(("Deepness 1", "Bento box"))
     tabs_index = ("Deepness 0", "line test")
@@ -4084,7 +4438,9 @@ def test_tabs():
         tabs_index=tabs_index
     )
 
-    check_all_data_restored_correctly(tabs_index, 2)
+    if check_data:
+        s.run()
+        check_all_data_restored_correctly(tabs_index, 2)
 
     tabs_index = ("Deepness 0", "Input Form")
     s.plt.input_form(
@@ -4113,7 +4469,7 @@ def test_tabs():
             "color": "warning"
         },
             menu_path=menu_path,
-            order=i*2,
+            order=i * 2,
             value='value',
             header='title',
             footer='description',
@@ -4142,7 +4498,9 @@ def test_tabs():
             parent_tab_index=(f"Deepness {i - 1}", "Indicators 1"),
             child_tabs_group=f"Deepness {i}"
         )
-        check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
+        if check_data:
+            s.run()
+            check_all_data_restored_correctly((f"Deepness {i - 1}", "Indicators 1"), 2)
 
     # Test if cascade deletion works correctly
     s.plt.delete(
@@ -4156,10 +4514,9 @@ def test_tabs():
     s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
 
 
-
 def test_gauge_indicators():
     print('test_gauge_indicator')
-    menu_path = 'test/gauge-indicator'
+    menu_path = 'test-free-echarts/gauge-indicator'
 
     s.plt.gauge_indicator(
         menu_path=menu_path,
@@ -4177,31 +4534,112 @@ def test_gauge_indicators():
         title='Bruxismo',
     )
 
+def test_same_position_charts():
+    print('same position charts')
+    menu_path = 'test-same-position'
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict path 1',
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict path 2',
+        order=1,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict tabs',
+        order=0,
+        value=83,
+        description='Síntomas coincidientes | Mareo, Dolor cervical',
+        title='Sobrecarga muscular en cervicales y espalda',
+        tabs_index=('tabs', '1')
+    )
+
+    s.plt.gauge_indicator(
+        menu_path=menu_path+'/no conflict tabs',
+        order=1,
+        value=31, color=2,
+        description='Síntomas coincidientes | Dolor cervical',
+        title='Bruxismo',
+        tabs_index=('tabs', '2')
+    )
+    s.run()
+
+    class MyTestCase(unittest.TestCase):
+        def check_order_conflict_path(self):
+            with self.assertRaises(RuntimeError):
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=0,
+                    value=83,
+                    description='Síntomas coincidientes | Mareo, Dolor cervical',
+                    title='Sobrecarga muscular en cervicales y espalda',
+                )
+
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=1,
+                    value=31, color=2,
+                    description='Síntomas coincidientes | Dolor cervical',
+                    title='Bruxismo',
+                )
+                s.run()
+
+        def check_order_conflict_tabs(self):
+            with self.assertRaises(RuntimeError):
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=0,
+                    value=83,
+                    description='Síntomas coincidientes | Mareo, Dolor cervical',
+                    title='Sobrecarga muscular en cervicales y espalda',
+                    tabs_index=('conflict', 'conflict')
+                )
+
+                s.plt.gauge_indicator(
+                    menu_path=menu_path + '/conflict',
+                    order=1,
+                    value=31, color=2,
+                    description='Síntomas coincidientes | Dolor cervical',
+                    title='Bruxismo',
+                    tabs_index=('conflict', 'conflict')
+                )
+                s.run()
+
+    t = MyTestCase()
+    t.check_order_conflict_path()
+    t.check_order_conflict_tabs()
+
+    s.plt.delete_path(menu_path + '/no conflict tabs')
+    s.plt.delete_path(menu_path + '/no conflict path 1')
+    s.plt.delete_path(menu_path + '/no conflict path 2')
+
+    assert not len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
+
 
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-test_tabs()
+s.plt.clear_business()
+
+# Charts
 test_line()
 test_funnel()
 test_tree()
-test_get_input_forms()
-test_delete_path()
-test_append_data_to_trend_chart()
 test_iframe()
 test_html()
-test_set_new_business()
 test_table()
 test_table_with_labels()
-test_free_echarts()
-test_input_form()
-test_dynamic_and_conditional_input_form()
 test_bentobox()
-test_delete()
-test_bar_with_filters()
-test_set_apps_orders()
-test_set_sub_path_orders()
 test_zero_centered_barchart()
 test_indicator()
 test_indicator_one_dict()
@@ -4210,14 +4648,6 @@ test_stockline()
 test_radar()
 test_pie()
 test_ux()
-test_bar()
-test_stacked_barchart()
-test_stacked_horizontal_barchart()
-test_stacked_area_chart()
-test_shimoku_gauges()
-test_gauge_indicators()
-test_doughnut()
-test_rose()
 test_ring_gauge()
 test_sunburst()
 test_treemap()
@@ -4226,9 +4656,39 @@ test_sankey()
 test_horizontal_barchart()
 test_predictive_line()
 test_speed_gauge()
-test_line()
 test_scatter()
 
+# Free echarts
+test_stacked_barchart()
+test_stacked_horizontal_barchart()
+test_stacked_area_chart()
+test_shimoku_gauges()
+test_gauge_indicators()
+test_free_echarts()
+
+# Filters and sequential needed
+test_heatmap_with_filters()
+test_bar_with_filters_with_aggregation_methods()
+test_bar_with_filters()
+test_bar()
+
+# Tabs
+test_tabs()
+s.run()
+test_tabs(check_data=False)
+
+# Others
+test_dynamic_and_conditional_input_form()
+test_input_form()
+test_get_input_forms()
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_set_new_business()
+test_append_data_to_trend_chart()
+test_delete()
+test_delete_path()
+test_same_position_charts()
+s.run()
 
 # TODO
 # test_cohorts()

@@ -1,5 +1,5 @@
 """"""
-
+import asyncio
 from abc import ABC
 from typing import List, Dict, Optional, Union, Any, Callable
 import re
@@ -10,15 +10,35 @@ import datetime as dt
 
 import pandas as pd
 from shimoku_api_python.api.explorer_api import FileExplorerApi, BusinessExplorerApi
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
+
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
 
 
-class BasicFileMetadataApi(FileExplorerApi, ABC):
+class BasicFileMetadataApi(ABC):
     """
     """
-    _get_business = BusinessExplorerApi.get_business
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
-        self.api_client = api_client
+        self.file_explorer_api = FileExplorerApi(api_client)
+        self.business_explorer_api = BusinessExplorerApi(api_client)
+
+        self.get_business = self.business_explorer_api.get_business
+
+        self._get_file = self.file_explorer_api._get_file
+        self.async_get_files = self.file_explorer_api.get_files
+        self.get_files = async_auto_call_manager(execute=True)(self.file_explorer_api.get_files)
+
+        self._create_file = self.file_explorer_api._create_file
+
+        self._delete_file = self.file_explorer_api._delete_file
+
+        self.async_get_business_apps = self.file_explorer_api.get_business_apps
+        self._get_app_by_name = self.file_explorer_api._get_app_by_name
+        self.get_business_apps = async_auto_call_manager(execute=True)(self.file_explorer_api.get_business_apps)
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
@@ -26,6 +46,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             self.business_id: Optional[str] = None
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _encode_file_name(
             file_name: str, date: dt.date, chunk: Optional[int] = None
     ) -> str:
@@ -36,6 +57,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         )
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _decode_file_name(file_name: str) -> str:
         """Decode the file name into its components
         """
@@ -50,6 +72,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             raise ValueError('Invalid file name has multiple times "_date:" or "_chunk:"')
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_file_date(file_name: str) -> Optional[dt.date]:
         try:
             date_iso: str = file_name.split('_date:')[1].split('_chunk:')[0]
@@ -58,10 +81,12 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         return dt.datetime.strptime(date_iso, '%Y-%m-%d').date()
 
     # TODO applies only to dataframes
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_file_chunk(self):
         raise NotImplementedError('Not implemented yet')
 
-    def _get_files_by_string_matching(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_files_by_string_matching(
             self, string_match: str,
             app_name: Optional[str] = None,
             allow_reserved_words: bool = False,
@@ -72,7 +97,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                     'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
                 )
 
-        apps: List[Dict] = self._get_business_apps(self.business_id)
+        apps: List[Dict] = await self.async_get_business_apps(self.business_id)
         target_files: List[Dict] = []
         for app in apps:
             app_id: str = app['id']
@@ -81,26 +106,28 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 if app['name'] != app_name:
                     continue
 
-            files: List[Dict] = self.get_files(business_id=self.business_id, app_id=app_id)
+            files: List[Dict] = await self.async_get_files(business_id=self.business_id, app_id=app_id)
             for file_metadata in files:
                 if string_match in file_metadata['name']:
                     target_files.append(file_metadata)
 
         return target_files
 
-    def set_business(self, business_id: str):
+    @logging_before_and_after(logging_level=logger.debug)
+    async def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
-        _ = self._get_business(business_id)
+        _ = await self.get_business(business_id)
         self.business_id: str = business_id
 
-    def get_files_by_name_prefix(
+    @logging_before_and_after(logging_level=logger.info)
+    async def async_get_files_by_name_prefix(
             self, name_prefix: str,
             app_name: Optional[str] = None,
             allow_reserved_words: bool = False,
     ) -> List[Dict]:
         target_files: List[Dict] = list()
-        files: List[Dict] = self._get_files_by_string_matching(
+        files: List[Dict] = await self._get_files_by_string_matching(
             string_match=name_prefix,
             app_name=app_name,
             allow_reserved_words=allow_reserved_words,
@@ -110,7 +137,17 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 target_files.append(file)
         return target_files
 
-    def get_file_by_name(
+    @async_auto_call_manager(execute=True)
+    async def get_files_by_name_prefix(
+            self, name_prefix: str,
+            app_name: Optional[str] = None,
+            allow_reserved_words: bool = False,
+    ) -> List[Dict]:
+        return await self.async_get_files_by_name_prefix(name_prefix, app_name, allow_reserved_words)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_file_by_name(
             self, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
@@ -122,7 +159,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                     'Reserved keywords "_date:" and "chunk:" are not allowed in file name'
                 )
 
-        apps: List[Dict] = self._get_business_apps(self.business_id)
+        apps: List[Dict] = await self.async_get_business_apps(self.business_id)
         target_files: List[Dict] = []
         app_id = None
         for app in apps:
@@ -132,7 +169,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
                 if app['name'] != app_name:
                     continue
 
-            files: List[Dict] = self.get_files(business_id=self.business_id, app_id=app_id)
+            files: List[Dict] = await self.async_get_files(business_id=self.business_id, app_id=app_id)
             for file_metadata in files:
                 if file_name == file_metadata['name']:
                     target_files.append(file_metadata)
@@ -145,37 +182,45 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             raise ValueError(f'File not found | file_name: {file_name}')
 
         if get_file_object:
-            return self._get_file(
+            return await self._get_file(
                 business_id=self.business_id,
                 app_id=app_id,
                 file_id=file['id'],
             )
         return file
 
-    def delete_files_by_name_prefix(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_files_by_name_prefix(
             self, name_prefix: str,
             app_name: Optional[str] = None,
     ):
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._get_app_by_name(business_id=self.business_id, name=app_name)
         if not app:
             raise ValueError(f'App not found | App name: {app_name}')
 
         app_id: str = app['id']
         app_name: str = app['name']
 
-        files_metadata: List[Dict] = self.get_files_by_name_prefix(
+        files_metadata: List[Dict] = await self.async_get_files_by_name_prefix(
             app_name=app_name,
             name_prefix=name_prefix,
         )
 
+        delete_tasks = []
         for file_metadata in files_metadata:
-            self._delete_file(
-                business_id=self.business_id,
-                app_id=app_id,
-                file_id=file_metadata['id'],
+            delete_tasks.append(
+                self._delete_file(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    file_id=file_metadata['id'],
+                )
             )
 
-    def post_object(
+        await asyncio.gather(*delete_tasks)
+
+    @logging_before_and_after(logging_level=logger.info)
+    async def async_post_object(
             self, app_name: str,
             file_name: str,
             object_data: bytes,
@@ -184,7 +229,7 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
             content_type: str = 'text/csv',
             date: Optional[dt.date] = dt.date.today(),
     ) -> Dict:
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._get_app_by_name(business_id=self.business_id, name=app_name)
         if not app:
             raise ValueError(f'App not found | App name: {app_name}')
 
@@ -204,33 +249,52 @@ class BasicFileMetadataApi(FileExplorerApi, ABC):
         }
 
         if overwrite:
-            app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+            app: Dict = await self._get_app_by_name(business_id=self.business_id, name=app_name)
             if not app:
                 raise ValueError(f'App not found | App name: {app_name}')
 
-            fs: List[Dict] = self.get_files_by_name_prefix(
+            fs: List[Dict] = await self.async_get_files_by_name_prefix(
                 app_name=app_name,
                 name_prefix=file_metadata['name'],
                 allow_reserved_words=True
             )
-            for f in fs:
-                self._delete_file(
-                    business_id=self.business_id,
-                    app_id=app['id'],
-                    file_id=f['id'],
-                )
 
-        return self._create_file(
+            delete_tasks = []
+            for f in fs:
+                delete_tasks.append(
+                    self._delete_file(
+                        business_id=self.business_id,
+                        app_id=app['id'],
+                        file_id=f['id'],
+                    )
+                )
+            await asyncio.gather(*delete_tasks)
+
+        return await self._create_file(
             business_id=self.business_id,
             app_id=app_id,
             file_metadata=file_metadata,
             file_object=object_data,
         )
 
+    @async_auto_call_manager(execute=True)
+    async def post_object(
+            self, app_name: str,
+            file_name: str,
+            object_data: bytes,
+            overwrite: bool = True,
+            force_name: bool = False,
+            content_type: str = 'text/csv',
+            date: Optional[dt.date] = dt.date.today(),
+    ) -> Dict:
+        return await self.async_post_object(app_name, file_name, object_data, overwrite, force_name, content_type, date)
+
 
 class FileMetadataApi(BasicFileMetadataApi, ABC):
     """
     """
+
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, **kwargs):
         super().__init__(api_client, **kwargs)
 
@@ -239,12 +303,16 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             self.business_id: Optional[str] = None
 
-    def set_business(self, business_id: str):
-        super().set_business(business_id)
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_business(self, business_id: str):
+        await super().set_business(business_id)
 
-    def get_all_files_by_app_name(self, app_name: str) -> List[Dict]:
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_all_files_by_app_name(self, app_name: str) -> List[Dict]:
         """"""
-        apps: List[Dict] = self._get_business_apps(self.business_id)
+        apps: List[Dict] = await self.async_get_business_apps(self.business_id)
         files: List[Dict] = []
         for app in apps:
             app_id: str = app['id']
@@ -252,11 +320,13 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             if app['name'] != app_name:
                 continue
 
-            files: List[Dict] = self.get_files(business_id=self.business_id, app_id=app_id)
+            files: List[Dict] = await self.async_get_files(business_id=self.business_id, app_id=app_id)
             break
         return files
 
-    def get_all_files_by_creation_date(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_all_files_by_creation_date(
             self, datetime: dt.datetime,
             app_name: Optional[str] = None,
             force_name: bool = False,
@@ -264,7 +334,9 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """Get all files from a target creation date"""
         raise NotImplementedError
 
-    def get_file_by_creation_date(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_file_by_creation_date(
             self, file_name: str,
             date: dt.date,
             app_name: Optional[str] = None,
@@ -273,32 +345,38 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """Get a specific file from a target creation date"""
         raise NotImplementedError
 
-    def get_last_created_target_file(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_last_created_target_file(
             self, file_name: str,
             app_name: Optional[str] = None,
     ) -> Dict:
         """Get a specific file from a target creation date"""
         raise NotImplementedError
 
-    def get_all_files_by_date(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_all_files_by_date(
             self, date: dt.date,
             app_name: Optional[str] = None,
     ) -> List[Dict]:
         """Get all files from a target date"""
         datetime_str: str = date.isoformat()
-        return self._get_files_by_string_matching(
+        return await self._get_files_by_string_matching(
             string_match=datetime_str,
             app_name=app_name,
         )
 
-    def get_file_by_date(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_file_by_date(
             self, file_name: str,
             date: dt.date,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
     ) -> Any:
         """Get a specific file from a target date"""
-        files: List[Dict] = self.get_files_by_name_prefix(
+        files: List[Dict] = await self.async_get_files_by_name_prefix(
             app_name=app_name,
             name_prefix=file_name,
         )
@@ -319,7 +397,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             if get_file_object:  # return List[Object]
                 try:
                     app: Dict = [
-                        app for app in self._get_business_apps(self.business_id)
+                        app for app in (await self.async_get_business_apps(self.business_id))
                         if app['name'] == app_name
                     ][0]
                 except IndexError:
@@ -327,7 +405,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
                 results: List[bytes] = []
                 for file in target_files:
-                    result = self._get_file(
+                    result = await self._get_file(
                         business_id=self.business_id,
                         app_id=app['id'],
                         file_id=file['id'],
@@ -339,17 +417,19 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         else:
             raise ValueError('Multiple files found for the same date')
 
-    def get_files_with_max_date(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_files_with_max_date(
             self, file_name: str,
             app_name: Optional[str] = None,
             get_file_object: bool = False,
     ) -> Any:
         """Get a specific file with maximum date"""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._get_app_by_name(business_id=self.business_id, name=app_name)
         if not app:
             raise ValueError(f'App not found | App name: {app_name}')
 
-        files: List[Dict] = self.get_files_by_name_prefix(
+        files: List[Dict] = await self.async_get_files_by_name_prefix(
             name_prefix=file_name,
             app_name=app_name,
         )
@@ -373,7 +453,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         if get_file_object:  # return List[bytes]
             results: List[bytes] = []
             for target_file in target_files:
-                result = self._get_file(
+                result = await self._get_file(
                     business_id=self.business_id,
                     app_id=app['id'],
                     file_id=target_file['id'],
@@ -384,6 +464,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
             return target_files
 
     # TODO pending implementation
+    @logging_before_and_after(logging_level=logger.info)
     def replace_file_name(
             self, app_name: str, old_name: str, new_name: str
     ) -> Dict:
@@ -424,6 +505,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_object(
             self, app_name: str,
             file_name: str,
@@ -443,12 +525,13 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                 get_file_object=True,
             )
 
-    def post_dataframe(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def post_dataframe(
             self, app_name: str, file_name: str, df: pd.DataFrame,
             force_name: bool = False, split_by_size: bool = True
     ) -> Union[Dict, List[Dict]]:
         """
-        :param self.business_id:
         :param app_name:
         :param file_name:
         :param df:
@@ -458,11 +541,11 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         if split_by_size:
             len_df: int = len(df)
             bytes_size_df: int = df.memory_usage(deep=True).sum()
-            bytes_size_df: int = bytes_size_df / 1024 / 1024
+            bytes_size_df: int = bytes_size_df // 1024 // 1024
             if bytes_size_df > 5:
-                objects: List[Dict] = []
                 total_chunks: int = int(bytes_size_df / 5)
                 chunk_rows: int = int(len_df / total_chunks)
+                posting_tasks = []
                 for chunk in range(total_chunks + 1):
                     df_temp: pd.DataFrame = df.iloc[chunk*chunk_rows:(chunk+1)*chunk_rows]
                     dataframe_binary: bytes = df_temp.to_csv(index=False).encode('utf-8')
@@ -473,23 +556,25 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                         final_file_name: str = self._encode_file_name(
                             file_name=file_name, date=dt.date.today(), chunk=chunk
                         )
-                    object = self.post_object(
-                        app_name=app_name,
-                        file_name=final_file_name,
-                        object_data=dataframe_binary,
-                        force_name=True,
+                    posting_tasks.append(
+                        self.async_post_object(
+                            app_name=app_name,
+                            file_name=final_file_name,
+                            object_data=dataframe_binary,
+                            force_name=True,
+                        )
                     )
-                    objects = objects + [object]
-                return objects
+                return list(await asyncio.gather(*posting_tasks))
 
         dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
 
-        return self.post_object(
+        return await self.async_post_object(
             app_name=app_name,
             file_name=file_name,
             object_data=dataframe_binary,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_dataframe(
             self, app_name: str, file_name: str,
             get_last_date: bool = True, parse_name: bool = True,
@@ -523,7 +608,7 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
                     df = pd.concat([df, pd.read_csv(StringIO(binary.decode('utf-8')))])
             else:
                 dataset_names: List[Dict] = (
-                    self.get_files_by_name_prefix(
+                    self.async_get_files_by_name_prefix(
                         app_name=app_name,
                         name_prefix=file_name,
                     )
@@ -548,7 +633,9 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
 
         return df.reset_index(drop=True)
 
-    def post_ai_model(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def post_ai_model(
             self, app_name: str, model_name: str, model: Callable,
     ) -> Dict:
         """
@@ -559,12 +646,13 @@ class FileMetadataApi(BasicFileMetadataApi, ABC):
         """
         model_binary: bytes = pickle.dumps(model)
 
-        return self.post_object(
+        return await self.async_post_object(
             app_name=app_name,
             file_name=model_name,
             object_data=model_binary,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def get_ai_model(
             self, app_name: str, model_name: str,
     ) -> Any:

@@ -3,20 +3,27 @@ Used as base Mailchimp:
 https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py
 """
 
-
 from typing import List, Dict
 
 import datetime
 import requests
 import json
+import asyncio
 from tenacity import retry, wait_exponential, stop_after_attempt
-import random
 from shimoku_api_python.exceptions import ApiClientError
+from functools import wraps
+
+import aiohttp
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after, my_before_sleep
+
+logger = logging.getLogger(__name__)
 
 
 class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, universe_id: str, environment: str, config={}):
         if environment == 'production':
             self.host = 'https://api.shimoku.io/external/v1/'
@@ -29,6 +36,10 @@ class ApiClient(object):
                 f'The namespace must be either "production", "staging" or "develop | '
                 f'namespace introduced: {environment}'
             )
+
+        # semaphor for async api calls
+        self.semaphore_limit = 10
+        self.semaphore = asyncio.Semaphore(self.semaphore_limit)
 
         self.host: str = f'{self.host}universe/{universe_id}/'
 
@@ -51,6 +62,7 @@ class ApiClient(object):
 
         # Default vars
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_config(self, config={}):
         """Set all config values"""
         # Basic Auth
@@ -72,8 +84,10 @@ class ApiClient(object):
 
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16))
-    def call_api(
+    @logging_before_and_after(logging_level=logger.debug)
+    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16),
+           before_sleep=my_before_sleep)
+    async def call_api(
             self, resource_path, method, path_params=None, query_params=None,
             header_params=None, body=None, collection_formats=None, **kwargs
     ):
@@ -83,8 +97,7 @@ class ApiClient(object):
         header_params.update(self.default_headers)
         if header_params:
             header_params = self.sanitize_for_serialization(header_params)
-            header_params = dict(self.parameters_to_tuples(header_params,
-                                                           collection_formats))
+            header_params = dict(self.parameters_to_tuples(header_params, collection_formats))
 
         # path parameters
         if path_params:
@@ -110,26 +123,16 @@ class ApiClient(object):
 
         # perform request and return response
         try:
-            res = self.request(
-                method, url, query_params,
-                headers=header_params, body=body,
-            )
+            async with self.semaphore:
+                return await self.request(
+                    method, url, query_params,
+                    headers=header_params, body=body,
+                )
         except Exception as err:
+            logger.error(err)
             raise ApiClientError(err)
 
-        try:
-            if 'application/json' in res.headers.get('content-type'):
-                data = res.json()
-            else:
-                data = res.text
-        except Exception:
-            data = None
-
-        if res.ok:
-            return data
-        else:
-            raise ApiClientError(data)
-
+    @logging_before_and_after(logging_level=logger.debug)
     def set_http_info(self, **kwargs):  # noqa: E501
         """
         This method makes a synchronous HTTP request by default. To make an
@@ -174,8 +177,9 @@ class ApiClient(object):
             auth_settings, params, collection_formats,
         )
 
-    def query_element(
-        self, method: str, endpoint: str, **kwargs
+    @logging_before_and_after(logging_level=logger.debug)
+    async def query_element(
+            self, method: str, endpoint: str, **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
@@ -192,7 +196,7 @@ class ApiClient(object):
         if endpoint in params:
             path_params[endpoint] = params[endpoint]  # noqa: E501
 
-        element_data: Dict = (
+        element_data: Dict = await (
             self.call_api(
                 endpoint, method,
                 path_params,
@@ -207,63 +211,73 @@ class ApiClient(object):
                 _return_http_data_only=params.get('_return_http_data_only'),
                 _preload_content=params.get('_preload_content', True),
                 _request_timeout=params.get('_request_timeout'),
-                collection_formats=collection_formats
+                collection_formats=collection_formats,
             )
         )
+
+        if kwargs.get('progress_bar'):
+            progress_bar, how_much = kwargs.get('progress_bar')
+            progress_bar.update(how_much)
+
         return element_data
 
-    def request(self, method, url, query_params=None, headers=None, body=None):
+    @logging_before_and_after(logging_level=logger.debug)
+    async def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
-
+        logger.debug(f'method:{method}, url: {url}, headers: {headers},'
+                     f'query params: {query_params}, body: {body}')
         if self.is_basic_auth:
             auth = ('user', self.api_key)
 
-        if self.is_oauth:
-            if headers:
-                headers.update({'Authorization': 'Bearer ' + self.access_token})
-            else:
-                headers = {'Authorization': 'Bearer ' + self.access_token}
+        if self.is_basic_auth:
+            auth = aiohttp.BasicAuth('user', self.api_key)
+        elif self.is_oauth:
+            headers = headers or {}
+            headers.update({'Authorization': 'Bearer ' + self.access_token})
 
-        if method == "GET":
-            return requests.get(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "HEAD":
-            return requests.head(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "OPTIONS":
-            return requests.options(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        elif method == "POST":
-            return requests.post(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "PUT":
-            return requests.put(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "PATCH":
-            return requests.patch(
-                url, data=json.dumps(body), params=query_params,
-                headers=headers, auth=auth, timeout=self.timeout
-            )
-        elif method == "DELETE":
-            return requests.delete(
-                url, params=query_params, headers=headers,
-                auth=auth, timeout=self.timeout
-            )
-        else:
+        if method not in ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'POST', 'PUT', 'PATCH']:
             raise ValueError(
                 "http method must be `GET`, `HEAD`, `OPTIONS`,"
                 " `POST`, `PATCH`, `PUT` or `DELETE`."
             )
+
+        next_token = None
+        data_res = {}
+        async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+
+            while True:  # loop until nextToken is None
+
+                async with session.request(
+                        method, url+(f'?nextToken={next_token}' if next_token else '?limit=100'),
+                        params=query_params, json=body, headers=headers) as res:
+                    try:
+                        if 'application/json' in res.headers.get('content-type'):
+                            data = await res.json()
+                        else:
+                            data = await res.text()
+
+                        if not res.ok:
+                            raise ApiClientError(data)
+
+                        if data.get('items'):
+                            next_token = data.get('nextToken')
+                            if data_res.get('items'):
+                                data_res['items'].extend(data.get('items'))
+                            else:
+                                data_res = data
+                        else:
+                            data_res = data
+                            next_token = None
+
+                        logger.debug(data)
+
+                    except Exception as e:
+                        raise ApiClientError(e)
+
+                if not next_token:
+                    break
+
+        return data_res
 
     def raw_request(self, **kwargs):
         return requests.request(**kwargs)

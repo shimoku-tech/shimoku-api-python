@@ -2,6 +2,7 @@
 from os import getenv
 from typing import Dict, List
 import unittest
+import asyncio
 
 import pandas as pd
 import datetime as dt
@@ -13,13 +14,14 @@ api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
-
+verbosity: str = getenv('VERBOSITY')
 
 s = shimoku.Client(
-    config={'access_token': api_key},
+    access_token=api_key,
     universe_id=universe_id,
     environment=environment,
-    business_id=business_id
+    business_id=business_id,
+    verbosity=verbosity
 )
 
 
@@ -40,10 +42,10 @@ def test_create_file():
     apps = s.business.get_business_apps(business_id)
     app_id = [app for app in apps if app['name'] == 'test'][0]['id']
 
-    file = s.io._create_file(
+    file = asyncio.run(s.io._create_file(
         business_id=business_id, app_id=app_id,
         file_metadata=file_metadata, file_object=file_object,
-    )
+    ))
     assert file
 
 
@@ -67,11 +69,11 @@ def test_get_file():
 
     files = s.io.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        file_ = s.io._get_file(
+        file_ = asyncio.run(s.io._get_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
-        )
+        ))
         try:
             assert file_
             break
@@ -89,11 +91,11 @@ def test_delete_file():
 
     files = s.io.get_files(business_id=business_id, app_id=app_id)
     for file in files:
-        s.io._delete_file(
+        asyncio.run(s.io._delete_file(
             business_id=business_id,
             app_id=app_id,
             file_id=file['id'],
-        )
+        ))
 
     files = s.io.get_files(business_id=business_id, app_id=app_id)
     assert not files
@@ -129,22 +131,22 @@ def test_get_all_files_by_app_name():
 def test_get_files_by_string_matching():
     test_create_file()
 
-    files: List[Dict] = s.io._get_files_by_string_matching(string_match='hello')
+    files: List[Dict] = asyncio.run(s.io._get_files_by_string_matching(string_match='hello'))
     assert files
 
-    files: List[Dict] = s.io._get_files_by_string_matching(
+    files: List[Dict] = asyncio.run(s.io._get_files_by_string_matching(
         string_match='hello', app_name='test',
-    )
+    ))
     assert files
 
-    files: List[Dict] = s.io._get_files_by_string_matching(
+    files: List[Dict] = asyncio.run(s.io._get_files_by_string_matching(
         string_match='fail', app_name='test',
-    )
+    ))
     assert not files
 
-    files: List[Dict] = s.io._get_files_by_string_matching(
+    files: List[Dict] = asyncio.run(s.io._get_files_by_string_matching(
         string_match='hello', app_name='fail'
-    )
+    ))
     assert not files
 
     test_delete_file()

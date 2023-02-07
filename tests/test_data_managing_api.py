@@ -2,6 +2,7 @@
 import json
 from os import getenv
 from typing import Dict, List
+import asyncio
 
 import datetime as dt
 
@@ -10,11 +11,12 @@ import pandas as pd
 import shimoku_api_python as shimoku
 
 
-api_key: str = getenv('API_TOKEN')
+access_token: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 app_id: str = getenv('APP_ID')
 report_id: str = getenv('REPORT_ID')
+verbosity: str = getenv('VERBOSITY')
 report_element: Dict[str, str] = dict(
     business_id=business_id,
     app_id=app_id,
@@ -22,15 +24,12 @@ report_element: Dict[str, str] = dict(
 )
 
 
-config = {
-    'access_token': api_key,
-}
-
 s = shimoku.Client(
-    config=config,
+    access_token=access_token,
     universe_id=universe_id,
+    business_id=business_id,
+    verbosity=verbosity
 )
-
 
 # Fixtures
 data: Dict = {
@@ -43,7 +42,7 @@ data_json: str = json.dumps(data_oriented)
 
 
 def test_get_report_data():
-    data_: List[Dict] = (
+    data_: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -54,7 +53,7 @@ def test_get_report_data():
 
 
 def test_update_report_data():
-    original_data: List[Dict] = (
+    original_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -62,14 +61,14 @@ def test_update_report_data():
         )
     )
 
-    s.data.update_report_data(
+    asyncio.run(s.data.update_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
-        report_data=data,
-    )
+        report_data=data_oriented,
+    ))
 
-    new_data: List[Dict] = (
+    new_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -81,14 +80,14 @@ def test_update_report_data():
 
     # Revert it
 
-    s.data.update_report_data(
+    asyncio.run(s.data.update_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
         report_data=original_data,
-    )
+    ))
 
-    restored_data: List[Dict] = (
+    restored_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -100,7 +99,7 @@ def test_update_report_data():
 
 
 def test_append_report_data():
-    original_data: List[Dict] = (
+    original_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -108,28 +107,28 @@ def test_append_report_data():
         )
     )
 
-    s.data.append_report_data(
+    asyncio.run(s.data.append_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
         report_data=data,
-    )
+    ))
 
-    s.data.append_report_data(
+    asyncio.run(s.data.append_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
         report_data=df,
-    )
+    ))
 
-    s.data.append_report_data(
+    asyncio.run(s.data.append_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
         report_data=data_json,
-    )
+    ))
 
-    new_data: List[Dict] = (
+    new_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,
@@ -139,14 +138,14 @@ def test_append_report_data():
 
     assert new_data
 
-    s.data.update_report_data(
+    asyncio.run(s.data.update_report_data(
         business_id=business_id,
         app_id=app_id,
         report_id=report_id,
         report_data=original_data,
-    )
+    ))
 
-    restored_data: List[Dict] = (
+    restored_data: List[Dict] = asyncio.run(
         s.data.get_report_data(
             business_id=business_id,
             app_id=app_id,

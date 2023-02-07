@@ -1,9 +1,10 @@
 """"""
-from sys import stdout
+import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
-import logging
 import json
 from itertools import product
+
+from IPython.lib import backgroundjobs as bg
 
 import json5
 import datetime as dt
@@ -25,94 +26,107 @@ from .explorer_api import (
 from .data_managing_api import DataManagingApi
 from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
+import asyncio
 
+from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logging.basicConfig(
-    stream=stdout,
-    datefmt='%Y-%m-%d %H:%M',
-    format='%(asctime)s | %(levelname)s | %(message)s'
-)
 
 
 class PlotAux:
-    _get_business = BusinessExplorerApi.get_business
-    _get_business_apps = BusinessExplorerApi.get_business_apps
-    get_business_apps = BusinessExplorerApi.get_business_apps
-    _get_business_reports = BusinessExplorerApi.get_business_reports
+    def __init__(self, api_client, app_metadata_api):
+        self.business_explorer_api = BusinessExplorerApi(api_client=api_client)
+        self.universe_explorer_api = UniverseExplorerApi(api_client=api_client)
+        self.report_explorer_api = ReportExplorerApi(api_client=api_client)
+        self.app_explorer_api = AppExplorerApi(api_client=api_client)
+        self.cascade_explorer = CascadeExplorerAPI(api_client=api_client)
+        self.create_explorer_api = CreateExplorerAPI(api_client=api_client)
+        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client=api_client)
+        self.report_dataset_explorer_api = ReportDatasetExplorerApi(api_client=api_client)
+        self.dataset_explorer_api = DatasetExplorerApi(api_client=api_client)
+        self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client)
+        self.app_metadata_api = app_metadata_api
+        self.data_managing_api = DataManagingApi(api_client=api_client)
+        self.data_validation_api = DataValidation(api_client=api_client)
+        self.multi_create_api = MultiCreateApi(api_client=api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client=api_client)
 
-    get_universe_businesses = UniverseExplorerApi.get_universe_businesses
+        self.api_client = api_client
 
-    get_report = ReportExplorerApi.get_report
-    _get_report_with_data = ReportExplorerApi._get_report_with_data
-    _update_app = AppExplorerApi.update_app
-    _update_report = ReportExplorerApi.update_report
-    update_report = ReportExplorerApi.update_report
-    get_report_data = ReportExplorerApi.get_report_data
+        self.get_business = self.business_explorer_api.get_business
+        self.get_business_apps = self.business_explorer_api.get_business_apps
+        self.get_business_reports = self.business_explorer_api.get_business_reports
 
-    _find_app_by_name_filter = CascadeExplorerAPI.find_app_by_name_filter
-    _find_app_type_by_name_filter = (
-        CascadeExplorerAPI.find_app_type_by_name_filter
-    )
-    # TODO this shit (methods with underscore _* and *) has to be fixed
-    get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    _get_universe_app_types = CascadeExplorerAPI.get_universe_app_types
-    get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_reports = CascadeExplorerAPI.get_app_reports
-    _get_app_by_type = CascadeExplorerAPI.get_app_by_type
-    _get_app_by_name = CascadeExplorerAPI.get_app_by_name
-    _find_business_by_name_filter = CascadeExplorerAPI.find_business_by_name_filter
-    get_report_datasets = CascadeExplorerAPI.get_report_datasets
-    get_dataset_data = CascadeExplorerAPI.get_dataset_data
-    _get_report_dataset_data = CascadeExplorerAPI.get_report_dataset_data
+        self.get_universe_businesses = self.universe_explorer_api.get_universe_businesses
 
-    create_report = CreateExplorerAPI.create_report
-    _create_report = CreateExplorerAPI.create_report
-    _create_app_type = CreateExplorerAPI.create_app_type
-    _create_normalized_name = CreateExplorerAPI._create_normalized_name
-    _create_key_name = CreateExplorerAPI._create_key_name
-    _create_app = CreateExplorerAPI.create_app
-    _create_business = CreateExplorerAPI.create_business
-    create_dataset = CascadeCreateExplorerAPI.create_dataset
-    create_reportdataset = ReportDatasetExplorerApi.create_reportdataset
-    _create_report_and_dataset = ReportDatasetExplorerApi.create_report_and_dataset
-    create_data_points = DatasetExplorerApi.create_data_points
+        self.get_report = self.report_explorer_api.get_report
+        self.get_report_with_data = self.report_explorer_api._get_report_with_data
 
-    _get_app_type_by_name = AppTypeMetadataApi.get_app_type_by_name
-    _get_or_create_app_and_apptype = AppMetadataApi.get_or_create_app_and_apptype
+        self.get_report_data = self.report_explorer_api.get_report_data
+        self.update_report = self.report_explorer_api.update_report
 
-    _update_report_data = DataManagingApi.update_report_data
-    _append_report_data = DataManagingApi.append_report_data
-    _transform_report_data_to_chart_data = DataManagingApi._transform_report_data_to_chart_data
-    _convert_input_data_to_db_items = DataManagingApi._convert_input_data_to_db_items
-    _is_report_data_empty = DataManagingApi._is_report_data_empty
-    _convert_dataframe_to_report_entry = DataManagingApi._convert_dataframe_to_report_entry
-    _create_report_entries = DataManagingApi._create_report_entries
+        self.update_app = self.app_explorer_api.update_app
 
-    _validate_table_data = DataValidation._validate_table_data
-    _validate_input_form_data = DataValidation._validate_input_form_data
-    _validate_tree_data = DataValidation._validate_tree_data
-    _validate_data_is_pandarable = DataValidation._validate_data_is_pandarable
+        self.find_app_by_name_filter = self.cascade_explorer.find_app_by_name_filter
+        self.find_app_type_by_name_filter = self.cascade_explorer.find_app_type_by_name_filter
+        # TODO this shit (methods with underscore _* and *) has to be fixed
+        self.get_universe_app_types = self.cascade_explorer.get_universe_app_types
+        self.get_app_reports = self.cascade_explorer.get_app_reports
+        self.get_app_by_type = self.cascade_explorer.get_app_by_type
+        self.get_app_by_name = self.cascade_explorer.get_app_by_name
+        self.find_business_by_name_filter = self.cascade_explorer.find_business_by_name_filter
+        self.get_report_datasets = self.cascade_explorer.get_report_datasets
+        self.get_dataset_data = self.cascade_explorer.get_dataset_data
+        self.get_report_dataset_data = self.cascade_explorer.get_report_dataset_data
 
-    _create_app_type_and_app = MultiCreateApi.create_app_type_and_app
+        self.create_report = self.create_explorer_api.create_report
+        self.create_app_type = self.create_explorer_api.create_app_type
+        self.create_normalized_name = self.create_explorer_api._create_normalized_name
+        self.create_key_name = self.create_explorer_api._create_key_name
+        self.create_app = self.create_explorer_api.create_app
+        self.create_business = self.create_explorer_api.create_business
 
-    _delete_report = DeleteExplorerApi.delete_report
-    _delete_app = DeleteExplorerApi.delete_app
-    _delete_report_entries = DeleteExplorerApi.delete_report_entries
+        self.create_dataset = self.cascade_create_explorer_api.create_dataset
+
+        self.create_reportdataset = self.report_dataset_explorer_api.create_reportdataset
+        self.create_report_and_dataset = self.report_dataset_explorer_api.create_report_and_dataset
+
+        self.create_data_points = self.dataset_explorer_api.create_data_points
+
+        self.get_app_type_by_name = self.app_type_metadata_api.get_app_type_by_name
+        self.get_or_create_app_and_apptype = self.app_metadata_api.get_or_create_app_and_apptype
+
+        self.update_report_data = self.data_managing_api.update_report_data
+        self.append_report_data = self.data_managing_api.append_report_data
+        self.transform_report_data_to_chart_data = self.data_managing_api._transform_report_data_to_chart_data
+        self.convert_input_data_to_db_items = self.data_managing_api._convert_input_data_to_db_items
+        self.is_report_data_empty = self.data_managing_api._is_report_data_empty
+        self.convert_dataframe_to_report_entry = self.data_managing_api._convert_dataframe_to_report_entry
+        self.create_report_entries = self.data_managing_api._create_report_entries
+
+        self.validate_table_data = self.data_validation_api._validate_table_data
+        self.validate_input_form_data = self.data_validation_api._validate_input_form_data
+        self.validate_tree_data = self.data_validation_api._validate_tree_data
+        self.validate_data_is_pandarable = self.data_validation_api._validate_data_is_pandarable
+
+        self.create_app_type_and_app = self.multi_create_api.create_app_type_and_app
+
+        self.delete_report = self.delete_explorer_api.delete_report
+        self.delete_app = self.delete_explorer_api.delete_app
+        self.delete_report_entries = self.delete_explorer_api.delete_report_entries
 
 
-class BasePlot(PlotAux):
+class BasePlot:
 
-    def __init__(self, api_client, **kwargs):
+    def __init__(self, api_client, app_metadata_api, **kwargs):
+        self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
-        # Clear or create apps info():
-        # Map to store the last order of a path
-        self._paths_last_order = dict()
-
         # Clear or create reports
         # Map to store reports order
         self._report_order = dict()
@@ -130,26 +144,20 @@ class BasePlot(PlotAux):
         # Map to store the last order of its reports
         self._tabs_last_order = dict()
 
-        # Flag tabs modifications
-        self._tabs_group_modified = set()
+        # Map to store tabs properties
+        self._tabs_group_properties = dict()
 
-    def _get_business_state(self, business_id: str):
-        def _get_business_apps_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
-            for report in business_reports:
-                app_id = report['appId']
-                path = report['path']
-                # We don't want to append infinitely, we just want to append plots in the current execution
-                # order = report['order']
-                if path not in self._paths_last_order:
-                    self._paths_last_order[(app_id, path)] = -1
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_business_state(self, business_id: str):
 
-        def _get_business_reports_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
+        business_reports = await self._plot_aux.get_business_reports(business_id)
+
+        @logging_before_and_after(logging_level=logger.debug)
+        def _get_business_reports_info():
             self._report_order = {report['id']: report['order'] for report in business_reports}
 
-        def _get_business_tabs_info(business_id: str):
-            business_reports = self._get_business_reports(business_id)
+        @logging_before_and_after(logging_level=logger.debug)
+        def _get_business_tabs_info():
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
@@ -166,6 +174,8 @@ class BasePlot(PlotAux):
                 self._tabs_last_order[tabs_group_entry] = last_order
                 try:
                     tabs_group = properties['tabs']
+                    self._tabs_group_properties[tabs_group_entry] = {'sticky': properties['sticky'],
+                                                                     'variant': properties['variant']}
                 except KeyError:
                     warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
                     continue
@@ -182,9 +192,8 @@ class BasePlot(PlotAux):
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
 
-        _get_business_apps_info(business_id)
-        _get_business_reports_info(business_id)
-        _get_business_tabs_info(business_id)
+        _get_business_reports_info()
+        _get_business_tabs_info()
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -206,6 +215,10 @@ class BasePlot(PlotAux):
     def _validate_filters(filters: Dict) -> None:
         # Check the filters is built properly
         try:
+            filters = filters.copy()
+            if "get_all" in filters.keys():
+                del filters["get_all"]
+
             if filters.get('update_filter_type'):
                 cols: List[str] = ['row', 'column', 'filter_cols', 'update_filter_type']
                 assert sorted(list(filters.keys())) == sorted(cols)
@@ -285,6 +298,7 @@ class BasePlot(PlotAux):
         return name, path_name
 
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _fill_report_metadata(
             path_name: str, report_metadata: Dict,
             order: Optional[int] = None,
@@ -318,7 +332,8 @@ class BasePlot(PlotAux):
 
         return report_metadata
 
-    def _find_target_reports(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _find_target_reports(
             self, menu_path: str,
             grid: Optional[str] = None,
             order: Optional[int] = None,
@@ -349,13 +364,13 @@ class BasePlot(PlotAux):
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = self._get_app_by_name(
+        app: Dict = await self._plot_aux.get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
         app_id: str = app['id']
 
-        reports: List[Dict] = self._get_app_reports(
+        reports: List[Dict] = await self._plot_aux.get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -417,14 +432,15 @@ class BasePlot(PlotAux):
         return target_reports
 
     # TODO unused - deprecate it?
-    def _get_component_path_order(self, app_id: str, path_name: str) -> int:
+    @logging_before_and_after(logger.info)
+    async def _get_component_path_order(self, app_id: str, path_name: str) -> int:
         """Set an ascending report.pathOrder to new path created
 
         If a report in the same path exists take its path order
         otherwise find the higher report.pathOrder and set it +1
         as the report.pathOrder of the new path
         """
-        reports_ = self._get_app_reports(
+        reports_ = await self._plot_aux.get_app_reports(
             business_id=self.business_id,
             app_id=app_id,
         )
@@ -447,55 +463,75 @@ class BasePlot(PlotAux):
             return order_temp + 1
 
     # TABS
-    def _update_tabs_group_metadata(self, business_id: str, app_id: str, path_name: str, group_name: str,
-                                    order: Optional[int] = None, cols_size: Optional[str] = None):
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _update_tabs_group_metadata(
+            self, business_id: str, app_id: str, path_name: str, group_name: str,
+            order: Optional[int] = None, cols_size: Optional[str] = None,
+            bentobox_data: Optional[Dict] = None, padding: Optional[str] = None,
+            rows_size: Optional[int] = None, just_labels: Optional[bool] = None, sticky: Optional[bool] = None
+    ):
         """Updates the tabs report metadata"""
         tabs_group_entry = (app_id, path_name, group_name)
         report_metadata: Dict[str, Any] = {}
         report_id = self._tabs_group_id[tabs_group_entry]
-
+        if bentobox_data:
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+        if rows_size:
+            report_metadata['sizeRows'] = rows_size
         if cols_size:
             report_metadata['sizeColumns'] = cols_size
+        if padding:
+            report_metadata['sizePadding'] = padding
         if order:
             report_metadata['order'] = order
             self._report_order[report_id] = order
-        if tabs_group_entry in self._tabs_group_modified:
-            report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
-                                            str(self._tabs_last_order[tabs_group_entry])+'}'
-            tabs = json.dumps(
-                {tab_name: {'order': index, 'reportIds': report_ids_list}
-                 for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
-            report_metadata['properties'] = '{"tabs":' + tabs + '}'
-            self._tabs_group_modified.remove(tabs_group_entry)
+        if isinstance(just_labels, bool):
+            self._tabs_group_properties[tabs_group_entry]['variant'] = 'solidRounded' if just_labels else 'enclosedSolidRounded'
+        if isinstance(sticky, bool):
+            self._tabs_group_properties[tabs_group_entry]['sticky'] = sticky
 
-        self.update_report(
+        report_metadata['dataFields'] = '{"groupName": "' + group_name + '", "lastOrder": ' + \
+                                        str(self._tabs_last_order[tabs_group_entry])+'}'
+        tabs = json.dumps(
+            {tab_name: {'order': index, 'reportIds': report_ids_list}
+             for index, (tab_name, report_ids_list) in enumerate(self._tabs[tabs_group_entry].items())})
+
+        tabs_group_properties = self._tabs_group_properties[tabs_group_entry]
+        report_metadata['properties'] = '{"tabs":' + tabs + \
+                                        ', "variant": "' + tabs_group_properties['variant'] + '"' \
+                                        ', "sticky": ' + ('true' if tabs_group_properties['sticky'] else 'false')+ '}'
+
+        await self._plot_aux.update_report(
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,
             report_metadata=report_metadata,
         )
 
-    def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
         """Creates a tab report and stores its id"""
         app_id, path_name, group_name = tabs_group_entry
-        path_entry = (app_id, path_name)
 
         report_metadata: Dict[str, Any] = {
             'dataFields': "{'groupName': '" + group_name + "', 'lastOrder': 0 }",
             'path': path_name if path_name != "" else None,
-            'order': self._paths_last_order[path_entry]+1,
+            'order': 0,
             'reportType': 'TABS',
             'properties': '{}'
         }
-        report: Dict = self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=business_id,
             app_id=app_id,
             report_metadata=report_metadata,
         )
-        self._paths_last_order[path_entry] += 1
-        self._report_order[report['id']] = self._paths_last_order[path_entry]
+        self._report_order[report['id']] = 0
+        self._tabs_last_order[tabs_group_entry] = 0
         self._tabs_group_id[tabs_group_entry] = report['id']
+        self._tabs[tabs_group_entry] = {}
+        self._tabs_group_properties[tabs_group_entry] = {'sticky': 'false', 'variant': 'enclosedSolidRounded'}
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
         """Given a tabs_group_entry deletes all the information related to it in the tabs data structures"""
         del self._tabs[tabs_group_entry]
@@ -506,6 +542,7 @@ class BasePlot(PlotAux):
         if self._tabs_group_id.get(tabs_group_entry):
             del self._tabs_group_id[tabs_group_entry]
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _delete_report_id_from_tab(self, report_id: str):
         """Given a report_id it is deleted from all the data structures of tabs
            :report_id: report UUID
@@ -518,17 +555,12 @@ class BasePlot(PlotAux):
                                if report != report_id]
         self._tabs[tab_group_entry][tab_name] = removed_report_list
 
-        if len(removed_report_list) == 0:
-            del self._tabs[tab_group_entry][tab_name]
+        del self._report_in_tab[report_id]
 
-            if len(self._tabs[tab_group_entry].items()) == 0:
-                self._delete_tabs_group(tab_group_entry)
-        else:
-            del self._report_in_tab[report_id]
-
-    def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
-                       report_id: str, tabs_index: Tuple[str, str],
-                       order_of_chart: int):
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _insert_in_tab(self, business_id: str, app_id: str, path_name: str,
+                             report_id: str, tabs_index: Tuple[str, str],
+                             order_of_chart: int):
         """This function creates an entry on the tabs tree. If there exists another chart in the same order in the tab
          as the one being created it returns its report_id, if not it returns None"""
 
@@ -548,15 +580,14 @@ class BasePlot(PlotAux):
         tab_entry = (app_id, path_name, tabs_index)
 
         if tabs_group_entry not in self._tabs:
-            self._create_tabs_group(business_id, tabs_group_entry)
+            await self._create_tabs_group(business_id, tabs_group_entry)
 
         self._report_in_tab[report_id] = tab_entry
-        self._tabs_group_modified.add(tabs_group_entry)
 
-        if not self._tabs.get(tabs_group_entry):
+        if len(self._tabs.get(tabs_group_entry)) == 0:
             self._tabs[tabs_group_entry] = {tab: [report_id]}
             self._tabs_last_order[tabs_group_entry] = order_of_chart
-            self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+            await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
             return
 
         # Check if it's order is greater than the last report
@@ -565,13 +596,14 @@ class BasePlot(PlotAux):
 
         if not self._tabs[tabs_group_entry].get(tab):
             self._tabs[tabs_group_entry][tab] = [report_id]
-            self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+            await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
             return
 
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
-        self._update_tabs_group_metadata(business_id, app_id, path_name, group)
+        await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
-    def _create_chart(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, report_metadata: Dict,
             order: Optional[int] = None,
@@ -586,9 +618,6 @@ class BasePlot(PlotAux):
         :param data:
         :param menu_path:
         :param report_metadata:
-        :param row: Only required for Overwrite
-        :param column: Only required for Overwrite
-        :param report_type: Only required for Overwrite
         :param overwrite: Whether to Update (delete) any report in
             the same menu_path and grid position or not
         """
@@ -599,11 +628,11 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = self._get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
-            self.delete(
+            await self.async_delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
@@ -612,7 +641,7 @@ class BasePlot(PlotAux):
                 overwrite=True
             )
 
-        report: Dict = self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
@@ -620,19 +649,13 @@ class BasePlot(PlotAux):
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
-        path_entry = (app_id, path_name if path_name else '')
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         try:
             if data:
-                self._update_report_data(
+                await self._plot_aux.update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -640,7 +663,7 @@ class BasePlot(PlotAux):
                 )
         except ValueError:
             if not data.empty:
-                self._update_report_data(
+                await self._plot_aux.update_report_data(
                     business_id=self.business_id,
                     app_id=app_id,
                     report_id=report_id,
@@ -649,7 +672,8 @@ class BasePlot(PlotAux):
 
         return report_id
 
-    def _create_trend_chart(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_trend_chart(
             self, echart_type: str,
             data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
@@ -668,7 +692,8 @@ class BasePlot(PlotAux):
             filters: Optional[Dict] = None,
             overwrite: bool = True,
             report_metadata: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
+            aggregation_func: Optional[Callable] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
@@ -706,11 +731,41 @@ class BasePlot(PlotAux):
         :param option_modifications:
         :param filters: To create a filter for every specified column
         """
-        cols: List[str] = [x] + y
-        self._validate_table_data(data, elements=cols)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        if isinstance(x, str):
+            x: List[str] = [x]
+
+        if isinstance(y, str):
+            y: List[str] = [y]
+
+        cols: List[str] = x + y
+
+        self._plot_aux.validate_table_data(data, elements=cols)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[cols]  # keep only x and y
-        df.rename(columns={x: 'xAxis'}, inplace=True)
+
+        if any(df[x].duplicated()):
+
+            if not aggregation_func:
+                raise ValueError("There are duplicate entries in the data provided but the "
+                                 "aggregation function has not been defined.")
+
+            # Aggregate grouped object
+            df = df.groupby(x).agg(aggregation_func).reset_index()
+
+            # Multindexed columns in pandas is stored as a tuple, so we just need to join with a space to make it
+            # one level indexed column
+            if any(isinstance(elem, Tuple) for elem in df.columns):
+                df.columns = [
+                    " ".join(col) if len(col[1]) > 0 else col[0]
+                    for col in df.columns
+                ]
+
+        #https://stackoverflow.com/questions/42099312/how-to-create-an-infinite-iterator-to-generate-an-incrementing-alphabet-pattern
+        def __column_name_generator():
+            for p in product(['x', 'y', 'z'], repeat=1):
+                yield ''.join(p)
+
+        df.rename(columns={x_col: letter+'Axis' for x_col, letter in zip(x, __column_name_generator())}, inplace=True)
 
         # Default
         option_modifications_temp = {"legend": {"type": "scroll"}}
@@ -758,7 +813,7 @@ class BasePlot(PlotAux):
         if filters:
             raise NotImplementedError
 
-        return self._create_chart(
+        return await self._create_chart(
             data=df,
             menu_path=menu_path, overwrite=overwrite,
             report_metadata=report_metadata, order=order,
@@ -766,25 +821,35 @@ class BasePlot(PlotAux):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _create_multifilter_reports(
-            self, data: Union[str, DataFrame, List[Dict]], filters: Dict,
+            self, indices: List[str], values: List[str], data: Union[str, DataFrame, List[Dict]], filters: Dict
     ) -> Iterable:
         """
         Create chunks of the data to create N reports for every filter combination
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         filter_cols: List[str] = filters['filter_cols']
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)[indices + filter_cols + values]
 
         select_filter: Dict[str, str] = {
             v: f'Select{index + 1}'
             for index, v in enumerate(filter_cols)
         }
 
+        if "get_all" not in filters:
+            filters["get_all"] = []
+        elif isinstance(filters["get_all"], bool) and filters["get_all"]:
+            filters["get_all"] = [filt_col for filt_col in filter_cols]
+
         # Create all combinations
         # https://stackoverflow.com/questions/18497604/combining-all-combinations-of-two-lists-into-a-dict-of-special-form
         d: Dict = {}
+        uuid_str = uuid.uuid1()
         for filter_name in filter_cols:
             d[filter_name] = df[filter_name].unique().tolist()
+            if len(d[filter_name]) > 1 and filter_name in filters["get_all"]:
+                d[filter_name] += [uuid_str]
 
         filter_combinations = [
             dict(zip((list(d.keys())), row))
@@ -795,21 +860,27 @@ class BasePlot(PlotAux):
             df_temp = df.copy()
             filter_element: Dict = {}
             for filter_, value in filter_combination.items():
-                filter_element[select_filter[filter_]] = value
-                df_temp = df_temp[df_temp[filter_] == value]
+                if value != uuid_str:
+                    filter_element[select_filter[filter_]] = value
+                    df_temp = df_temp[df_temp[filter_] == value]
+                else:
+                    filter_element[select_filter[filter_]] = "All"
+                    df_temp[filter_] = "All"
 
                 if df_temp.empty:
                     break
 
+            # Get rid of NaN columns based on the filters
+            drop_cols = [col for col in df_temp.columns if df_temp[col].count() == 0]
+            df_temp = df_temp.drop(drop_cols, axis=1).fillna(0)
+
             if df_temp.empty:
                 continue
 
-            # Get rid of NaN columns based on the filters
-            df_temp = df_temp.dropna(axis=1)
-
             yield df_temp, filter_element
 
-    def _update_filter_report(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _update_filter_report(
             self, filter_row: Optional[int],
             filter_column: Optional[int],
             filter_order: Optional[int],
@@ -820,7 +891,7 @@ class BasePlot(PlotAux):
     ) -> None:
         """"""
         filter_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 grid=f'{filter_row}, {filter_column}',
                 order=filter_order,
@@ -884,7 +955,7 @@ class BasePlot(PlotAux):
             'title': '',
         }
 
-        self._create_chart(
+        await self._create_chart(
             data=chart_data,
             menu_path=menu_path,
             report_metadata=report_metadata,
@@ -892,34 +963,55 @@ class BasePlot(PlotAux):
             tabs_index=tabs_index,
         )
 
-    def _create_trend_charts_with_filters(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_trend_charts_with_filters(
             self, data: Union[str, DataFrame, List[Dict]],
             filters: Dict, **kwargs,
     ):
         """"""
         filter_elements: List[Dict] = []
         self._validate_filters(filters=filters)
+        x = kwargs['x']
+        y = kwargs['y']
+        if isinstance(x, str):
+            x = [x]
+        if isinstance(y, str):
+            y = [y]
         tabs_index = kwargs.get("tabs_index")
 
+        multifilter_tasks = []
         first_overwrite = True
         # We are going to save all the reports one by one
         for df_temp, filter_element in (
                 self._create_multifilter_reports(
-                    data=data, filters=filters,
+                    indices=x, values=y, data=data, filters=filters,
                 )
         ):
             kwargs_: Dict = kwargs.copy()
-            cols: List[str] = df_temp.columns
+            cols: List[str] = df_temp.columns.to_list()
+
             kwargs_['y'] = [
-                value for value in kwargs_['y']
-                if value in cols
+                value for value in cols
+                if value not in x + filters["filter_cols"]
             ]
-            report_id = self._create_trend_chart(
-                data=df_temp, overwrite=first_overwrite, **kwargs_,
-            )
-            filter_element['reportId'] = [report_id]
+            if len(kwargs_['y']) == 0:
+                continue
+
+            if not kwargs_['aggregation_func']:
+                kwargs_['aggregation_func'] = np.sum
+
+            if first_overwrite:
+                report_id = await self._create_trend_chart(data=df_temp, overwrite=True, **kwargs_)
+                filter_element['reportId'] = [report_id]
+            else:
+                multifilter_tasks += [self._create_trend_chart(data=df_temp, overwrite=False, **kwargs_)]
+
             filter_elements.append(filter_element)
             first_overwrite = False     # Just overwrite once to delete previous plots
+
+        report_ids = await asyncio.gather(*multifilter_tasks)
+        for i in range(1, len(filter_elements)):
+            filter_elements[i]['reportId'] = [report_ids[i-1]]
 
         update_filter_type: Optional[str] = filters.get('update_filter_type')
         filter_row: Optional[int] = filters.get('row')
@@ -936,7 +1028,7 @@ class BasePlot(PlotAux):
                     f'update_filter_type must be one of both: "concat" or "append" | '
                     f'Value provided: {update_filter_type}'
                 )
-            self._update_filter_report(
+            await self._update_filter_report(
                 filter_row=filter_row,
                 filter_column=filter_column,
                 filter_order=filter_order,
@@ -958,7 +1050,7 @@ class BasePlot(PlotAux):
             else:
                 raise ValueError('Either row and column or order must be provided')
 
-            self._create_chart(
+            await self._create_chart(
                 data=filter_elements,
                 menu_path=kwargs['menu_path'],
                 report_metadata=report_metadata,
@@ -967,7 +1059,8 @@ class BasePlot(PlotAux):
                 tabs_index=tabs_index,
             )
 
-    def _create_trend_charts(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_trend_charts(
             self, data: Union[str, DataFrame, List[Dict]],
             filters: Optional[Dict], **kwargs,
     ):
@@ -983,12 +1076,13 @@ class BasePlot(PlotAux):
         }
         """
         if filters:
-            self._create_trend_charts_with_filters(
+            await self._create_trend_charts_with_filters(
                 data=data, filters=filters, **kwargs
             )
         else:
-            self._create_trend_chart(data=data, **kwargs)
+            await self._create_trend_chart(data=data, **kwargs)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _set_data_fields(
             self, title: str, subtitle: str,
             x_axis_name: str, y_axis_name: str,
@@ -1031,22 +1125,30 @@ class BasePlot(PlotAux):
 
         return data_fields
 
-    def set_business(self, business_id: str):
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_business(self, business_id: str):
         """"""
         # If the business id does not exists it raises an ApiClientError
-        _ = self._get_business(business_id)
+        _ = await self._plot_aux.get_business(business_id)
+        self._plot_aux.app_metadata_api.business_id = business_id
         self.business_id: str = business_id
 
-    def set_new_business(self, name: str):
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_new_business(self, name: str):
         """"""
-        business: Dict = self._create_business(name=name)
+        business: Dict = await self._plot_aux.create_business(name=name)
         self.business_id: str = business['id']
 
-    def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_apps_orders(self, apps_order: Dict[str, int]) -> None:
         """
         :param apps_order: example {'test': 0, 'more-test': 1}
         """
-        apps: List[Dict] = self.get_business_apps(business_id=self.business_id)
+        apps: List[Dict] = await self._plot_aux.get_business_apps(business_id=self.business_id)
+
+        set_apps_tasks = []
 
         for app in apps:
             app_id: str = app['id']
@@ -1058,13 +1160,18 @@ class BasePlot(PlotAux):
                 new_app_order: Union[str, int] = apps_order.get(app_name_)
 
             if new_app_order:
-                self._update_app(
-                    business_id=self.business_id,
-                    app_id=app_id,
-                    app_metadata={'order': int(new_app_order)},
-                )
+                set_apps_tasks += [
+                    self._plot_aux.update_app(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                        app_metadata={'order': int(new_app_order)},
+                    )
+                ]
+        await asyncio.gather(*set_apps_tasks)
 
-    def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_sub_path_orders(self, paths_order: Dict[str, int]) -> None:
         """
         :param paths_order: example {
             'test/sub-path': 0,
@@ -1081,36 +1188,43 @@ class BasePlot(PlotAux):
             if not app_path_name:
                 raise ValueError('To order Apps use set_apps_order() instead!')
 
-            app_normalized_name = self._create_normalized_name(app_normalized_name)
-            app_path_name = self._create_normalized_name(app_path_name)
+            app_normalized_name = self._plot_aux.create_normalized_name(app_normalized_name)
+            app_path_name = self._plot_aux.create_normalized_name(app_path_name)
 
-            app: Dict = self._get_app_by_name(
+            app: Dict = await self._plot_aux.get_app_by_name(
                 business_id=self.business_id,
                 name=app_normalized_name,
             )
             app_id: str = app['id']
 
-            reports: List[Dict] = self._get_app_reports(
+            reports: List[Dict] = await self._plot_aux.get_app_reports(
                 business_id=self.business_id,
                 app_id=app_id,
             )
 
+            path_order_tasks = []
+
             for report in reports:
                 original_path_name: str = report.get('path')
                 if original_path_name:
-                    path_name: str = self._create_normalized_name(original_path_name)
+                    path_name: str = self._plot_aux.create_normalized_name(original_path_name)
                     if path_name == app_path_name:
-                        self.update_report(
-                            business_id=self.business_id,
-                            app_id=app_id,
-                            report_id=report['id'],
-                            report_metadata={'pathOrder': int(order)},
+                        path_order_tasks.append(
+                            self._plot_aux.update_report(
+                                business_id=self.business_id,
+                                app_id=app_id,
+                                report_id=report['id'],
+                                report_metadata={'pathOrder': int(order)},
+                            )
                         )
+            await asyncio.gather(*path_order_tasks)
 
-    def get_input_forms(self, menu_path: str) -> List[Dict]:
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_input_forms(self, menu_path: str) -> List[Dict]:
         """"""
         target_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 component_type='FORM',
             )
@@ -1118,7 +1232,7 @@ class BasePlot(PlotAux):
 
         results: List[Dict] = []
         for report in target_reports:
-            result: List = self._get_report_dataset_data(
+            result: List = await self._plot_aux.get_report_dataset_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
@@ -1133,7 +1247,9 @@ class BasePlot(PlotAux):
             results = results + [clean_result]
         return results
 
-    def append_data_to_trend_chart(
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def append_data_to_trend_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],
             component_type: str,
@@ -1153,22 +1269,22 @@ class BasePlot(PlotAux):
             )
 
         cols: List[str] = [x] + y
-        self._validate_table_data(data, elements=cols)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=cols)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[cols]  # keep only x and y
 
         df.rename(columns={x: 'xAxis'}, inplace=True)
 
         if row and column:
             target_reports: List[Dict] = (
-                self._find_target_reports(
+                await self._find_target_reports(
                     menu_path=menu_path, grid=f'{row}, {column}',
                     component_type=component_type,
                 )
             )
         else:
             target_reports: List[Dict] = (
-                self._find_target_reports(
+                await self._find_target_reports(
                     menu_path=menu_path, order=order,
                     component_type=component_type,
                 )
@@ -1178,14 +1294,15 @@ class BasePlot(PlotAux):
         assert len(target_reports) == 1
 
         for report in target_reports:
-            self._append_report_data(
+            await self._plot_aux.append_report_data(
                 business_id=self.business_id,
                 app_id=report['appId'],
                 report_id=report['id'],
                 report_data=df,
             )
 
-    def _create_dataset_charts(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_dataset_charts(
             self, menu_path: str, order: int,
             rows_size: int, cols_size: int,
             force_custom_field: bool = False,
@@ -1193,7 +1310,7 @@ class BasePlot(PlotAux):
             padding: Optional[str] = None,
             report_type: str = 'ECHARTS2',
             overwrite: bool = True,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
             options: Optional[Dict] = None,
             report_dataset_properties: Optional[Dict] = None,
@@ -1201,7 +1318,7 @@ class BasePlot(PlotAux):
             real_time: bool = False,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         # TODO ojo debería no ser solo data tabular!!
-        df: pd.DataFrame = self._validate_data_is_pandarable(data)
+        df: pd.DataFrame = self._plot_aux.validate_data_is_pandarable(data)
 
         report_metadata: Dict = {'reportType': report_type}
 
@@ -1216,11 +1333,11 @@ class BasePlot(PlotAux):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = self._get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
         app_id: str = app['id']
 
         if overwrite:
-            self.delete(
+            await self.async_delete(
                 menu_path=menu_path,
                 by_component_type=False,
                 order=report_metadata.get('order'),
@@ -1229,14 +1346,14 @@ class BasePlot(PlotAux):
                 overwrite=True,
             )
 
-        items: List[Dict] = self._transform_report_data_to_chart_data(report_data=df)
+        items: List[Dict] = self._plot_aux.transform_report_data_to_chart_data(report_data=df)
 
         if force_custom_field and len(items) == 1:  # 'FORM'
-            items: Dict = self._convert_input_data_to_db_items(items[0])
+            items: Dict = self._plot_aux.convert_input_data_to_db_items(items[0])
         else:  # 'ECHARTS2'
-            items: List[Dict[str]] = self._convert_input_data_to_db_items(items, sort)
+            items: List[Dict[str]] = self._plot_aux.convert_input_data_to_db_items(items, sort)
 
-        report_dataset = self._create_report_and_dataset(
+        report_dataset = await self._plot_aux.create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
             report_metadata=report_metadata,
             items=items,
@@ -1247,20 +1364,14 @@ class BasePlot(PlotAux):
         )
         report_id: str = report_dataset['report']['id']
         self._report_order[report_id] = report_dataset['report']['order']
-        path_entry = (app_id, path_name if path_name else '')
-
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         return report_dataset
 
-    def delete(
+    @logging_before_and_after(logging_level=logger.debug)
+    async def async_delete(
             self, menu_path: str,
             tabs_index: Optional[str] = None,
             grid: Optional[str] = None,
@@ -1284,7 +1395,7 @@ class BasePlot(PlotAux):
             raise ValueError('Either Row and Column or Order must be specified')
 
         target_reports: List[Dict] = (
-            self._find_target_reports(
+            await self._find_target_reports(
                 menu_path=menu_path,
                 component_type=component_type,
                 by_component_type=by_component_type,
@@ -1292,18 +1403,33 @@ class BasePlot(PlotAux):
                 **kwargs,
             )
         )
-        business_reports = self._get_business_reports(business_id=self.business_id)
+
+        business_reports = await self._plot_aux.get_business_reports(business_id=self.business_id)
+        delete_report_tasks = []
+        delete_app_tasks = []
         for report in target_reports:
+
+            # Don't overwrite tabs
+            if overwrite and report['reportType'] == 'TABS':
+                continue
+
             report_id = report['id']
             app_id = report['appId']
 
-            business_reports.remove(report)
+            # Check if the report has been deleted by another task
+            if report in business_reports:
+                business_reports.remove(report)
+            else:
+                continue
+
             app_reports = [report for report in business_reports if report['appId'] == app_id]
 
-            self._delete_report(
-                business_id=self.business_id,
-                app_id=app_id,
-                report_id=report_id
+            delete_report_tasks.append(
+                self._plot_aux.delete_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
             )
             try:  # It should always exist
                 del self._report_order[report_id]
@@ -1319,9 +1445,16 @@ class BasePlot(PlotAux):
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
 
-                child_report_ids = [report_id_in_tab
-                                    for tabs_list in self._tabs[tabs_group_entry].values()
-                                    for report_id_in_tab in tabs_list]
+                try:
+                    child_report_ids = [report_id_in_tab
+                                        for tabs_list in self._tabs[tabs_group_entry].values()
+                                        for report_id_in_tab in tabs_list]
+                except KeyError:
+                    self._clear_or_create_all_local_state()
+                    await self._get_business_state(self.business_id)
+                    child_report_ids = [report_id_in_tab
+                                        for tabs_list in self._tabs[tabs_group_entry].values()
+                                        for report_id_in_tab in tabs_list]
 
                 # Add linked reports to the deletion queue
                 target_reports += [report for report in app_reports if report['id'] in child_report_ids]
@@ -1333,19 +1466,43 @@ class BasePlot(PlotAux):
 
             # Check if app can be deleted
             if not overwrite and len(app_reports) == 0:
-                self._delete_app(
-                    business_id=self.business_id,
-                    app_id=app_id,
+                delete_app_tasks.append(
+                    self._plot_aux.delete_app(
+                        business_id=self.business_id,
+                        app_id=app_id,
+                    )
                 )
+        await asyncio.gather(*delete_report_tasks)
+        await asyncio.gather(*delete_app_tasks)
 
-    def delete_path(self, menu_path: str) -> None:
+    @async_auto_call_manager(execute=True)
+    async def delete(
+            self, menu_path: str,
+            tabs_index: Optional[str] = None,
+            grid: Optional[str] = None,
+            order: Optional[int] = None,
+            row: Optional[int] = None,
+            column: Optional[int] = None,
+            component_type: Optional[str] = None,
+            by_component_type: bool = True,
+            overwrite: bool = False,
+    ):
+        await self.async_delete(
+                menu_path=menu_path, tabs_index=tabs_index, grid=grid, order=order, row=row,
+                column=column, component_type=component_type, by_component_type=by_component_type,
+                overwrite=overwrite
+            )
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_path(self, menu_path: str) -> None:
         """In cascade delete an App or Path and all the reports within it
 
         If menu_path contains an "{App}/{Path}" then it removes the path
         otherwise it removes the whole app
         """
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app: Dict = self._get_app_by_name(
+        app: Dict = await self._plot_aux.get_app_by_name(
             business_id=self.business_id,
             name=name,
         )
@@ -1354,15 +1511,15 @@ class BasePlot(PlotAux):
 
         app_id: str = app['id']
         if '/' not in menu_path:
-            self._delete_app(
+            await self._plot_aux.delete_app(
                 business_id=self.business_id,
                 app_id=app_id,
             )
             self._clear_or_create_all_local_state()
-            self._get_business_state(self.business_id)
+            await self._get_business_state(self.business_id)
             return
 
-        reports: List[Dict] = self._get_app_reports(
+        reports: List[Dict] = await self._plot_aux.get_app_reports(
             business_id=self.business_id, app_id=app_id,
         )
 
@@ -1375,12 +1532,15 @@ class BasePlot(PlotAux):
         else:
             target_reports: List[Dict] = reports
 
+        delete_tasks = []
         for report in target_reports:
             report_id = report['id']
-            self._delete_report(
-                business_id=self.business_id,
-                app_id=app_id,
-                report_id=report_id
+            delete_tasks.append(
+                self._plot_aux.delete_report(
+                    business_id=self.business_id,
+                    app_id=app_id,
+                    report_id=report_id
+                )
             )
             del self._report_order[report_id]
 
@@ -1396,17 +1556,22 @@ class BasePlot(PlotAux):
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
 
-    def clear_business(self):
+        await asyncio.gather(*delete_tasks)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
-        for app in self.get_business_apps(self.business_id):
-            self._delete_app(
-                business_id=self.business_id,
-                app_id=app['id'],
-            )
+        tasks = [self._plot_aux.delete_app(business_id=self.business_id, app_id=app['id'])
+                 for app in await self._plot_aux.get_business_apps(self.business_id)]
+
+        await asyncio.gather(*tasks)
         self._clear_or_create_all_local_state()
 
     # TODO pending add append_report_data to free Echarts
-    def free_echarts(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def free_echarts(
             self, menu_path: str,
             data: Optional[Union[str, DataFrame, List[Dict]]] = None,
             options: Optional[Dict] = None,
@@ -1418,7 +1583,7 @@ class BasePlot(PlotAux):
             padding: Optional[str] = None,
             overwrite: bool = True,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
             real_time: bool = False,
     ):
@@ -1603,25 +1768,25 @@ class BasePlot(PlotAux):
             df_.columns = cols
             return df_.reset_index().to_dict(orient='records')
 
-        def _create_free_echarts(
-                data_: Union[str, DataFrame, List[Dict]],
-                sort: Dict,
+        async def _create_free_echarts(
+                _data: Union[str, DataFrame, List[Dict]],
+                sort: Optional[Dict] = None,
         ) -> Dict[str, Union[Dict, List[Dict]]]:
             if filters:
                 raise NotImplementedError
 
-            return self._create_dataset_charts(
+            return await self._create_dataset_charts(
                 options=options,
                 report_type='ECHARTS2',
                 menu_path=menu_path, order=order,
                 rows_size=rows_size, cols_size=cols_size, padding=padding,
-                data=data, bentobox_data=bentobox_data,
+                data=_data, bentobox_data=bentobox_data,
                 force_custom_field=False, sort=sort,
                 tabs_index=tabs_index
             )
 
         # TODO many things in common with _create_trend_charts_with_filters() unify!!
-        def _create_free_echarts_with_filters():
+        async def _create_free_echarts_with_filters():
             """"""
             filter_elements: List[Dict] = []
             self._validate_filters(filters=filters)
@@ -1632,7 +1797,7 @@ class BasePlot(PlotAux):
                         data=data, filters=filters,
                     )
             ):
-                report_id = _create_free_echarts(data_=df_temp)
+                report_id = _create_free_echarts(_data=df_temp)
                 filter_element['reportId'] = [report_id]
                 filter_elements.append(filter_element)
 
@@ -1651,7 +1816,7 @@ class BasePlot(PlotAux):
                         f'update_filter_type must be one of both: "concat" or "append" | '
                         f'Value provided: {update_filter_type}'
                     )
-                self._update_filter_report(
+                await self._update_filter_report(
                     filter_row=filter_row,
                     filter_column=filter_column,
                     filter_order=filter_order,
@@ -1672,7 +1837,7 @@ class BasePlot(PlotAux):
                 else:
                     raise ValueError('Either row and column or order must be provided')
 
-                self._create_chart(
+                await self._create_chart(
                     data=filter_elements,
                     menu_path=menu_path,
                     report_metadata=report_metadata,
@@ -1691,19 +1856,29 @@ class BasePlot(PlotAux):
             raise ValueError('If "options" is provided "data" must be provided too')
 
         if filters:
-            _create_free_echarts_with_filters()
+            await _create_free_echarts_with_filters()
         else:
-            _create_free_echarts(data, sort=sort)
+            await _create_free_echarts(data, sort=sort)
 
 
 class PlotApi(BasePlot):
     """
     """
-    def __init__(self, api_client, **kwargs):
-        super().__init__(api_client)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def __init__(self, api_client, app_metadata_api, **kwargs):
+        super().__init__(api_client, app_metadata_api=app_metadata_api)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
-            self._get_business_state(self.business_id)
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # We are in a jupyter notebook, so we need to execute in a different loop
+                jobs = bg.BackgroundJobManager()
+                job = jobs.new(asyncio.run, self._get_business_state(self.business_id))
+                while not job.finished:
+                    time.sleep(0.1)
+            else:
+                asyncio.run(self._get_business_state(self.business_id))
         else:
             self.business_id: Optional[str] = None
 
@@ -1765,13 +1940,16 @@ class PlotApi(BasePlot):
             }
         }
 
-    def set_business(self, business_id: str):
-        super().set_business(business_id)
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_business(self, business_id: str):
+        await super().set_business(business_id)
         self._clear_or_create_all_local_state()
-        self._get_business_state(self.business_id)
+        await self._get_business_state(self.business_id)
 
     # TODO both of this functions are auxiliary, and don't make sense here, find a better place for them
     @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
     def _calculate_percentages_from_list(numbers, round_digits_min):
         def max_precision():
             max_p = 0
@@ -1792,36 +1970,50 @@ class PlotApi(BasePlot):
             round_max -= 0.1
         return perc
 
-    def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
-                                 last_in_order: Optional[bool] = True):
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
+                                       last_in_order: Optional[bool] = True):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
         child_id = self._tabs_group_id[(app_id, path_name, child_tabs_group)]
         order = self._report_order[child_id]
+        parent_tabs_group_entry = (app_id, path_name, parent_tab_index[0])
+        if parent_tabs_group_entry not in self._tabs:
+            await self._create_tabs_group(self.business_id, parent_tabs_group_entry)
         if last_in_order:
-            order = self._tabs_last_order[(app_id, path_name, parent_tab_index[0])] + 1
-            self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
+            order = self._tabs_last_order[parent_tabs_group_entry] + 1
+            await self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
             self._report_order[child_id] = order
 
-        self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
+        await self._insert_in_tab(self.business_id, app_id, path_name, child_id, parent_tab_index, order)
 
-    def update_tabs_group_metadata(self, group_name: str, menu_path: str, order: Optional[int] = None,
-                                   cols_size: Optional[int] = None):
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def update_tabs_group_metadata(
+            self, group_name: str, menu_path: str, order: Optional[int] = None,
+            cols_size: Optional[int] = None, bentobox_data: Optional[Dict] = None,
+            padding: Optional[str] = None, rows_size: Optional[int] = None,
+            just_labels: Optional[bool] = None, sticky: Optional[bool] = None
+    ):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
-        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size)
+        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size,
+                                               bentobox_data, padding, rows_size, just_labels, sticky)
 
-    def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = self._get_app_by_name(business_id=self.business_id, name=app_name)
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, group_name)
         tabs_group_aux = {}
@@ -1834,11 +2026,11 @@ class PlotApi(BasePlot):
 
         assert(len(tabs_group) == len(tabs_group_aux))
         self._tabs[tabs_group_entry] = tabs_group_aux
-        self._tabs_group_modified.add(tabs_group_entry)
-        self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
+        await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name)
 
-
-    def table(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def table(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None,
@@ -2156,7 +2348,7 @@ class PlotApi(BasePlot):
 
             return json.dumps(data_fields)
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
 
         if sort_table_by_col:
             try:
@@ -2180,19 +2372,20 @@ class PlotApi(BasePlot):
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        try:
-            d: Dict[str, Dict] = self._create_app_type_and_app(
-                business_id=self.business_id,
-                app_type_metadata={'name': name},
-                app_metadata={},
+        # TODO investigate what to do with this
+        # try:
+        #     d: Dict[str, Dict] = await self._plot_aux.create_app_type_and_app(
+        #         business_id=self.business_id,
+        #         app_type_metadata={'name': name},
+        #         app_metadata={},
+        #     )
+        #     app: Dict = d['app']
+        # except ApiClientError:  # Business admin user
+        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=name)
+        if not app:
+            app: Dict = await self._plot_aux.create_app(
+                business_id=self.business_id, name=name,
             )
-            app: Dict = d['app']
-        except ApiClientError:  # Business admin user
-            app: Dict = self._get_app_by_name(business_id=self.business_id, name=name)
-            if not app:
-                app: Dict = self._create_app(
-                    business_id=self.business_id, name=name,
-                )
 
         app_id: str = app['id']
 
@@ -2224,7 +2417,7 @@ class PlotApi(BasePlot):
                 )
 
             if report_metadata.get('grid'):
-                self.delete(
+                await self.async_delete(
                     menu_path=menu_path,
                     grid=report_metadata.get('grid'),
                     by_component_type=False,
@@ -2232,7 +2425,7 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
             else:
-                self.delete(
+                await self.async_delete(
                     menu_path=menu_path,
                     order=order,
                     by_component_type=False,
@@ -2240,25 +2433,17 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
 
-        report: Dict = self._create_report(
+        report: Dict = await self._plot_aux.create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
         )
         report_id: str = report['id']
         self._report_order[report_id] = order
-        path_entry = (app_id, path_name if path_name else '')
-
-        if path_entry not in self._paths_last_order:
-            self._paths_last_order[path_entry] = -1
-
-        if not tabs_index and order and order > self._paths_last_order[path_entry]:
-            self._paths_last_order[path_entry] = order
 
         if tabs_index:
-            self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
-        #TODO adapt tabs to tables
         report_entry_filter_fields: Dict[str, List[str]] = {
             extra_map[extra_name]: values
             for extra_name, values in filter_fields.items()
@@ -2267,25 +2452,27 @@ class PlotApi(BasePlot):
         # We do not allow NaN values for report Entry
         df = df.fillna('')
         report_entries: List[Dict] = (
-            self._convert_dataframe_to_report_entry(
+            self._plot_aux.convert_dataframe_to_report_entry(
                 df=df, sorting_columns_map=extra_map,
             )
         )
 
-        self._update_report_data(
+        await self._plot_aux.update_report_data(
             business_id=self.business_id,
             app_id=app_id,
             report_id=report_id,
             report_data=report_entries,
         )
 
-    def html(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def html(
             self, html: str, menu_path: str,
             title: Optional[str] = None,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         report_metadata: Dict = {
@@ -2301,7 +2488,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=[{'value': html}],
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -2309,14 +2496,16 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
-    def iframe(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def iframe(
             self, menu_path: str, url: str,
             row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
             padding: Optional[str] = None,
             title: Optional[str] = None,
             height: Optional[int] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         report_metadata: Dict = {
@@ -2336,7 +2525,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=[],
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -2344,7 +2533,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def bar(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def bar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2356,8 +2547,9 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a barchart
         """
@@ -2407,7 +2599,7 @@ class PlotApi(BasePlot):
                 # 'dataZoom': True,
             }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -2420,10 +2612,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 
-    def horizontal_barchart(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def horizontal_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2435,8 +2630,9 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2472,7 +2668,7 @@ class PlotApi(BasePlot):
             },
         }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -2485,10 +2681,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def zero_centered_barchart(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def zero_centered_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: List[str], y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2500,8 +2699,9 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
         https://echarts.apache.org/examples/en/editor.html?c=bar-y-category
@@ -2540,7 +2740,7 @@ class PlotApi(BasePlot):
                 'xAxis': {'boundaryGap': True, "axisLabel": {"margin": 12}, 'nameGap': 24},
             },
         }
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -2553,10 +2753,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def line(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2568,8 +2771,9 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # thid layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         if not option_modifications:
@@ -2596,7 +2800,7 @@ class PlotApi(BasePlot):
                 'dataZoom': True,
                 'optionModifications': {'series': {'smooth': True}}
             }
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -2609,10 +2813,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 
-    def predictive_line(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def predictive_line(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str,
@@ -2626,8 +2833,9 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         :param data:
@@ -2668,7 +2876,7 @@ class PlotApi(BasePlot):
             }
         }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -2681,10 +2889,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def line_with_confidence_area(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def line_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2695,8 +2906,9 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2790,7 +3002,7 @@ class PlotApi(BasePlot):
             }, ],
         }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=[y],
@@ -2803,10 +3015,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def scatter_with_confidence_area(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def scatter_with_confidence_area(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # above_band_name: str, below_band_name: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2817,8 +3032,9 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """
         https://echarts.apache.org/examples/en/editor.html?c=line-stack
@@ -2912,7 +3128,7 @@ class PlotApi(BasePlot):
             }, ],
         }
 
-        return self._create_trend_chart(
+        return await self._create_trend_chart(
             data=data, x=x, y=[y], menu_path=menu_path,
             row=row, column=column,
             title=title, subtitle=subtitle,
@@ -2923,9 +3139,12 @@ class PlotApi(BasePlot):
             bentobox_data=bentobox_data,
             filters=filters,
             tabs_index=tabs_index,
+            aggregation_func=aggregation_func
         )
 
-    def stockline(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def stockline(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2939,8 +3158,8 @@ class PlotApi(BasePlot):
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        self._validate_table_data(data, elements=[x] + y)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         data_fields: Dict = {
             "key": x,
             "labels": {
@@ -2964,7 +3183,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -2972,7 +3191,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
-    def scatter(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def scatter(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -2984,8 +3205,9 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
         try:
@@ -2993,7 +3215,7 @@ class PlotApi(BasePlot):
         except Exception:
             raise ValueError(f'y provided has {len(y)} it has to have 2 or 3 dimensions')
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -3006,10 +3228,12 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='scatter',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def bubble_chart(
+    @logging_before_and_after(logging_level=logger.info)
+    async def bubble_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str], z: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3021,7 +3245,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,  # to create filters
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
@@ -3038,6 +3262,7 @@ class PlotApi(BasePlot):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def indicator(
             self, data: Union[str, DataFrame, List[Dict], Dict], value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3054,7 +3279,7 @@ class PlotApi(BasePlot):
             background_image: Optional[str] = None,
             vertical: Union[bool, str] = False,
             real_time: bool = False,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
@@ -3068,15 +3293,20 @@ class PlotApi(BasePlot):
         :param cols_size:
         :param padding:
         :param target_path:
-        :param set_title: the title of the set of indicators
         :param header:
         :param footer:
         :param color:
         :param align: to align center, left or right a component
-        :param multi_column: how many indicators are allowed by column
         :param real_time:
         :param bentobox_data:
         """
+
+        @async_auto_call_manager()
+        @logging_before_and_after(logging_level=logger.info)
+        async def single_indicator(**kwargs):
+            # Necessary for time logging and correct execution pool handling
+            await self._create_chart(**kwargs)
+
         mandatory_elements: List[str] = [
             header, value
         ]
@@ -3084,8 +3314,8 @@ class PlotApi(BasePlot):
         extra_elements: List[str] = [footer, color, align, variant, target_path, background_image, icon, big_icon]
         extra_elements = [element for element in extra_elements if element]
 
-        self._validate_table_data(data, elements=mandatory_elements)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=mandatory_elements)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[mandatory_elements + extra_elements]  # keep only x and y
 
         cols_to_rename: Dict[str, str] = {
@@ -3123,6 +3353,8 @@ class PlotApi(BasePlot):
                 raise ValueError(f'{extra_element} is not solved')
 
         len_df = len(df)
+        padding_right = None
+        padding_left = None
         if vertical and (len_df > 1 or isinstance(vertical, str)):
             if bentobox_data:
                 raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
@@ -3153,10 +3385,13 @@ class PlotApi(BasePlot):
         else:
             cols_size = cols_size//len_df
             if cols_size < 2:
-                raise ValueError('You must not provide more than 6 indicators when using the horizontal configuration')
+                raise ValueError(f'The calculation of the individual cols_size for each indicator '
+                                 f'is too small (cols_size/len(df)): {cols_size}')
 
         last_index = df.index[-1]
+
         for index, df_row in df.iterrows():
+
             if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
@@ -3173,7 +3408,7 @@ class PlotApi(BasePlot):
 
             report_metadata['properties'] = json.dumps(df_row.to_dict())
 
-            self._create_chart(
+            single_indicator(
                 data=[df_row.to_dict()],
                 menu_path=menu_path,
                 order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3187,6 +3422,7 @@ class PlotApi(BasePlot):
 
         return order
 
+    @logging_before_and_after(logging_level=logger.info)
     def alert_indicator(
             self, data: Union[str, DataFrame, List[Dict]],
             value: str, target_path: str,
@@ -3197,13 +3433,13 @@ class PlotApi(BasePlot):
             footer: Optional[str] = None,
             color: Optional[str] = None,
             vertical: Optional[bool] = False,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
         elements = [element for element in elements if element]
-        self._validate_table_data(data, elements=elements)
+        self._plot_aux.validate_table_data(data, elements=elements)
         return self.indicator(
             data=data, value=value,
             menu_path=menu_path, row=row, column=column,
@@ -3216,7 +3452,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
-    def pie(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def pie(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str,  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3226,13 +3464,13 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Piechart
         """
-        self._validate_table_data(data, elements=[x, y])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x, y])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y]]  # keep only x and y
         df.rename(columns={x: 'name', y: 'value'}, inplace=True)
 
@@ -3267,7 +3505,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3275,7 +3513,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def radar(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def radar(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: List[str],  # first layer
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3285,13 +3525,13 @@ class PlotApi(BasePlot):
             # subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a RADAR
         """
-        self._validate_table_data(data, elements=[x] + y)
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[x] + y)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x] + y]  # keep only x and y
         df.rename(columns={x: 'name'}, inplace=True)
         data_fields: Dict = {
@@ -3317,7 +3557,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3325,7 +3565,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def tree(
+    @logging_before_and_after(logging_level=logger.info)
+    @async_auto_call_manager()
+    async def tree(
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
@@ -3334,12 +3576,12 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Tree
         """
-        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -3357,7 +3599,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3365,7 +3607,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def treemap(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def treemap(
             self, data: Union[str, List[Dict]],
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
             order: Optional[int] = None, rows_size: Optional[int] = None, cols_size: int = 12,
@@ -3374,12 +3618,12 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Treemap
         """
-        self._validate_tree_data(data[0], vals=['name', 'value', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'value', 'children'])
 
         report_metadata: Dict = {
             'title': title,
@@ -3397,7 +3641,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3405,7 +3649,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def sunburst(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def sunburst(
             self, data: List[Dict],
             name: str, children: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3415,12 +3661,12 @@ class PlotApi(BasePlot):
             subtitle: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """Create a Sunburst
         """
-        self._validate_tree_data(data[0], vals=['name', 'children'])
+        self._plot_aux.validate_tree_data(data[0], vals=['name', 'children'])
 
         report_metadata: Dict = {
             'reportType': 'ECHARTS',
@@ -3438,7 +3684,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3446,7 +3692,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def candlestick(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def candlestick(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3458,13 +3706,13 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=y,
@@ -3480,7 +3728,9 @@ class PlotApi(BasePlot):
             )
         )
 
-    def heatmap(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def heatmap(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3492,11 +3742,12 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
@@ -3519,10 +3770,10 @@ class PlotApi(BasePlot):
             'visualMap': 'piecewise'
         }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
-                x=x, y=[y, value],
+                x=[x, y], y=value,
                 menu_path=menu_path, row=row, column=column,
                 order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
                 title=title, subtitle=subtitle,
@@ -3532,10 +3783,13 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func,
             )
         )
 
-    def cohort(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def cohort(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3546,11 +3800,12 @@ class PlotApi(BasePlot):
             x_axis_name: Optional[str] = None,
             y_axis_name: Optional[str] = None,
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            aggregation_func: Optional[Callable] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, value]]  # keep only x and y
         df.rename(columns={x: 'xAxis', y: 'yAxis', value: 'value'}, inplace=True)
 
@@ -3571,7 +3826,7 @@ class PlotApi(BasePlot):
             },
         }
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=x, y=[y, value],
@@ -3584,14 +3839,20 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                aggregation_func=aggregation_func
             )
         )
 
-    def predictive_cohort(self):
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def predictive_cohort(self):
         """"""
         raise NotImplementedError
 
-    def sankey(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def sankey(
             self, data: Union[str, DataFrame, List[Dict]],
             source: str, target: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3603,11 +3864,11 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[source, target, value]]  # keep only x and y
         df.rename(
             columns={
@@ -3634,7 +3895,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3642,7 +3903,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def funnel(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def funnel(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
             menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3654,11 +3917,11 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """"""
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
@@ -3668,7 +3931,7 @@ class PlotApi(BasePlot):
             inplace=True,
         )
 
-        return self._create_trend_charts(
+        return await self._create_trend_charts(
             data=data, filters=filters,
             **dict(
                 x=name, y=[value],
@@ -3684,7 +3947,9 @@ class PlotApi(BasePlot):
             )
         )
 
-    def speed_gauge(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def speed_gauge(
             self, data: Union[str, DataFrame, List[Dict]],
             name: str, value: str,
             menu_path: str,
@@ -3698,7 +3963,7 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """
@@ -3768,8 +4033,8 @@ class PlotApi(BasePlot):
           ]
         }
         """
-        self._validate_table_data(data, elements=[name, value])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[name, value])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         title: str = (
             title if title
             else f'{df["name"].to_list()[0]}: {df["value"].to_list()[0]}'
@@ -3858,7 +4123,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3866,7 +4131,9 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
-    def ring_gauge(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def ring_gauge(
         self, data: Union[str, DataFrame, List[Dict]],
         name: str, value: str,
         menu_path: str, row: Optional[int] = None, column: Optional[int] = None,  # report creation
@@ -3882,8 +4149,8 @@ class PlotApi(BasePlot):
         tabs_index: Optional[Tuple[str, str]] = None,
     ) -> str:
         """"""
-        self._validate_table_data(data, elements=[name, value])
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        self._plot_aux.validate_table_data(data, elements=[name, value])
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name, value]]  # keep only x and y
         df.rename(
             columns={
@@ -3915,7 +4182,7 @@ class PlotApi(BasePlot):
         if row and column:
             report_metadata['grid'] = f'{row}, {column}'
 
-        return self._create_chart(
+        return await self._create_chart(
             data=data,
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
@@ -3923,6 +4190,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def doughnut(self,
         data: Union[str, List[Dict], pd.DataFrame],
         menu_path: str, order: int,
@@ -3974,7 +4242,7 @@ class PlotApi(BasePlot):
                 ]
             }
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
 
         if 'sort_values' not in df.columns:
@@ -3996,6 +4264,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def rose(self,
         data: Union[str, List[Dict], pd.DataFrame],
         menu_path: str, order: int,
@@ -4028,7 +4297,7 @@ class PlotApi(BasePlot):
                 ]
             }
 
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[name_field, value_field]].rename(columns={name_field: 'name', value_field: 'value'})
 
         if 'sort_values' not in df.columns:
@@ -4050,6 +4319,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def shimoku_gauge(self,
         value: Union[int, float], menu_path: str, order: int,
         name: Optional[str] = None, color: Optional[Union[str, int]] = 1,
@@ -4151,6 +4421,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def shimoku_gauges_group(
         self, gauges_data: Union[pd.DataFrame, List[Dict]], order: int, menu_path: str,
         rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
@@ -4187,11 +4458,12 @@ class PlotApi(BasePlot):
             )
         return order+1
 
+    @logging_before_and_after(logging_level=logger.info)
     def gauge_indicator(
             self, menu_path: str, order: int, value: int,
             title: Optional[str] = "", description: Optional[str] = "",
             cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
-            color: Optional[Union[str, int]] = 1,
+            color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None
     ):
         bentobox_id = str(uuid.uuid1())
         bentobox_data = {
@@ -4222,6 +4494,7 @@ class PlotApi(BasePlot):
             footer='description',
             align='align',
             bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
         )
 
         data_gauge = [{'value': value}]
@@ -4303,8 +4576,10 @@ class PlotApi(BasePlot):
             order=order+1, rows_size=10, cols_size=5,
             padding='2, 0, 1, 0',
             bentobox_data=bentobox_data,
+            tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def themeriver(
             self, data: Union[str, DataFrame, List[Dict]],
             x: str, y: str, name: str,  # first layer
@@ -4317,11 +4592,11 @@ class PlotApi(BasePlot):
             y_axis_name: Optional[str] = None,
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
-                df: DataFrame = self._validate_data_is_pandarable(data)
+                df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         df = df[[x, y, name]]  # keep only x and y
         df.rename(
             columns={
@@ -4345,6 +4620,7 @@ class PlotApi(BasePlot):
         """
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4363,7 +4639,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4434,6 +4710,7 @@ class PlotApi(BasePlot):
             }
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_horizontal_barchart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4452,7 +4729,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4524,6 +4801,7 @@ class PlotApi(BasePlot):
 
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def stacked_area_chart(
             self, data: Union[str, DataFrame, List[Dict]],
             menu_path: str,
@@ -4542,7 +4820,7 @@ class PlotApi(BasePlot):
     ):
         """Create a stacked barchart
         """
-        df: DataFrame = self._validate_data_is_pandarable(data)
+        df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
         value_columns = [col for col in df.columns if col != x]
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
@@ -4614,18 +4892,19 @@ class PlotApi(BasePlot):
             }
         )
 
-    def input_form(
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def input_form(
             self, report_dataset_properties: Dict, menu_path: str,
             data: Optional[Union[str, DataFrame, List[Dict]]] = None,
             order: Optional[int] = None,
             rows_size: Optional[int] = 3, cols_size: int = 12,
             padding: Optional[str] = None,
-            bentobox_data: Optional[Dict] = None, 
+            bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
     ):
         """
         :param data:
-        :param report_form_dataset_properties:
         :param menu_path:
         :param order:
         :param rows_size:
@@ -4634,7 +4913,7 @@ class PlotApi(BasePlot):
         :param bentobox_data:
         :param tabs_index:
         """
-        self._validate_input_form_data(report_dataset_properties)
+        self._plot_aux.validate_input_form_data(report_dataset_properties)
 
         if data is None:
             data = {}
@@ -4681,8 +4960,8 @@ class PlotApi(BasePlot):
                     else:
                         data[field_name] = ''  # default is text
 
-# TODO y esto tambien lo podría usar el método free_echarts!!
-        return self._create_dataset_charts(
+        # TODO y esto tambien lo podría usar el método free_echarts!!
+        return await self._create_dataset_charts(
             report_dataset_properties=report_dataset_properties,
             options={},
             report_type='FORM',
@@ -4693,6 +4972,7 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index
         )
 
+    @logging_before_and_after(logging_level=logger.info)
     def generate_input_form_groups(
         self, menu_path: str, order: int,
         form_groups: Dict, dynamic_sequential_show: Optional[bool] = False,

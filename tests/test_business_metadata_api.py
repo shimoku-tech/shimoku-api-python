@@ -7,11 +7,13 @@ import unittest
 import shimoku_api_python as shimoku
 from shimoku_api_python.exceptions import ApiClientError
 
+from tenacity import RetryError
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
+verbosity: str = getenv('VERBOSITY')
 
 
 config = {
@@ -22,6 +24,7 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
+    verbosity=verbosity,
 )
 
 
@@ -33,7 +36,7 @@ def test_get_business():
 def test_get_fake_business():
     class MyTestCase(unittest.TestCase):
         def test_fake_business(self):
-            with self.assertRaises(ApiClientError):
+            with self.assertRaises(RetryError):
                 business_id_: str = 'this is a test'
                 s.business.get_business(
                     business_id=business_id_,
@@ -76,7 +79,7 @@ def test_create_and_delete_business():
 
     class MyBusinessDeletedCase(unittest.TestCase):
         def test_business_deleted(self):
-            with self.assertRaises(ApiClientError):
+            with self.assertRaises(RetryError):
                 s.business.get_business(
                     business_id=business_id_,
                 )

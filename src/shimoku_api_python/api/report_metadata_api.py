@@ -7,14 +7,19 @@ import datetime as dt
 
 from shimoku_api_python.api.explorer_api import ReportExplorerApi
 
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
+
 
 class ReportMetadataApi(ReportExplorerApi, ABC):
     """
     """
-
+    @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client):
-        self.api_client = api_client
+        super().__init__(api_client)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def _get_report_by_var(
         self, business_id: str, app_id: str,
         var_name: str, var_value: str,
@@ -47,6 +52,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
                     result: List[Dict] = [report]
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
     def has_report_data(
         self, business_id: str, app_id: str, report_id: str
     ) -> bool:
@@ -61,12 +67,14 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         else:
             return False
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_target_report_any_data(
         self, business_id: str, app_id: str, report_id: str
     ) -> List[str]:
         """Retrieve a subset of the chartData"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_last_update(
         self, business_id: str, app_id: str, report_id: str,
     ) -> dt.datetime:
@@ -79,6 +87,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         # TODO check it returns dt.date
         return report['updatedAt']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_report_data_fields(
         self, business_id: str, app_id: str, report_id: str,
     ) -> Dict:
@@ -91,6 +100,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         )
         return report['dataFields']
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_by_path(
         self, business_id: str, app_id: str,
         path: str,
@@ -109,6 +119,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_in_same_path(
         self, business_id: str, app_id: str, report_id: str,
     ) -> List[Dict]:
@@ -137,6 +148,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         else:
             return []
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_by_title(
         self, business_id: str, app_id: str,
         title: str, path: Optional[str] = None,
@@ -157,6 +169,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_by_external_id(
         self, business_id: str, app_id: str,
         external_id: str, path: Optional[str] = None,
@@ -177,6 +190,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_by_grid_position(
         self, business_id: str, app_id: str,
         row: int, column: int, path: Optional[str] = None,
@@ -199,6 +213,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_reports_by_chart_type(
         self, business_id: str, app_id: str,
         chart_type: str, path: Optional[str] = None,
@@ -220,7 +235,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
-    # TODO pending
+    @logging_before_and_after(logging_level=logger.debug)# TODO pending
     def get_reports_by_path_grid_and_type(
         self, business_id: str, app_id: str,
         grid: str, chart_type: str, path: str,
@@ -228,6 +243,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         """"""
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_title(
         self, business_id: str, app_id: str, report_id: str,
         title: str,
@@ -243,6 +259,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_external_id(
         self, business_id: str, app_id: str, report_id: str,
         new_external_id: str,
@@ -257,6 +274,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_grid_position(
         self, business_id: str, app_id: str, report_id: str,
         row: int, column: int,
@@ -272,6 +290,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_chart_type(
         self, business_id: str, app_id: str, report_id: str,
         report_type: str,
@@ -288,6 +307,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_description(
         self, business_id: str, app_id: str, report_id: str,
         description: str,
@@ -303,6 +323,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def update_report_smart_filter(
         self, business_id: str, app_id: str, report_id: str,
         smart_filter: Dict,
@@ -318,6 +339,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             )
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def change_report_grid_position(
         self, business_id: str, app_id: str, grid: str,
         report_id: Optional[str] = None,
@@ -383,6 +405,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             report_data=report_data,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def fetch_filter_report(
         self, business_id: str, app_id: str, report_id: str,
     ) -> Dict:
@@ -404,6 +427,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             if report_id in filter_report_candidate:
                 return # TODO pensarlo mejor
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_filter_report(
         self, business_id: str, app_id: str,
         report_id: Optional[str] = None,
@@ -426,6 +450,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
                 'Either report_id or report_filter_id must be provided'
             )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def get_filter_reports(
         self, business_id: str, app_id: str,
         report_id: Optional[str] = None,
@@ -441,6 +466,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         # TODO aqui me falta coger el dataFields y coger los reportId a los que enmascara
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.debug)
     def add_report_to_filter(
         self, business_id: str, app_id: str, new_report_filter: Dict,
         report_id: Optional[str] = None,
@@ -457,6 +483,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         #  el reportId contenido en new_report_filter
         raise NotImplementedError
 
+    @logging_before_and_after(logging_level=logger.debug)
     def set_filter_to_reports(
         self, business_id: str, app_id: str, report_ids: List[str],
         filter_name: Dict,
@@ -468,6 +495,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
         }
         return self.create_report(filter_report_metadata)
 
+    @logging_before_and_after(logging_level=logger.debug)
     def remove_filter_for_report(
         self, business_id: str, app_id: str, report_id: str,
     ):
@@ -500,6 +528,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             report_id=filter_report['id'],
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def hide_report(self, business_id: str, app_id: str, report_id: str):
         report_metadata: Dict = {'isDisabled': True}
         self.update_report(
@@ -509,6 +538,7 @@ class ReportMetadataApi(ReportExplorerApi, ABC):
             report_metadata=report_metadata,
         )
 
+    @logging_before_and_after(logging_level=logger.debug)
     def unhide_report(self, business_id: str, app_id: str, report_id: str):
         report_metadata: Dict = {'isDisabled': False}
         self.update_report(

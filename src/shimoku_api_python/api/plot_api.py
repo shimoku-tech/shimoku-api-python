@@ -1542,7 +1542,10 @@ class BasePlot:
                     report_id=report_id
                 )
             )
-            del self._report_order[report_id]
+            try:  # It should always exist
+                del self._report_order[report_id]
+            except KeyError:
+                warnings.warn("Report wasn't correctly stored in self._report_order", RuntimeWarning)
 
             # Tabs data structures maintenance
             if report['reportType'] == 'TABS':

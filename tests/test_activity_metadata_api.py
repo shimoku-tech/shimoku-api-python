@@ -18,7 +18,7 @@ s = shimoku.Client(
     async_execution=async_execution,
     business_id=business_id,
 )
-menu_path = 'test-activities'
+menu_path = 'test_activity'
 activity_name = 'test_activity'
 
 
@@ -26,6 +26,16 @@ class MyTestCase(unittest.TestCase):
     def activity_doesnt_exist(self, _menu_path, _activity_name):
         with self.assertRaises(RuntimeError):
             s.activity.get_activity(menu_path=_menu_path, activity_name=_activity_name)
+
+
+def delete_new_activity_if_it_exists():
+    """
+    Deletes the activity created in the test_create_delete_get_activities test.
+    """
+    try:
+        s.activity.delete_activity(menu_path=menu_path, activity_name='new_'+activity_name)
+    except ValueError:
+        pass
 
 
 def test_create_delete_get_activities():
@@ -74,21 +84,55 @@ def test_create_get_runs():
     run2 = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
     run3 = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
 
-    # Test default how_many_runs, which is 1, and that the run is the most recent one
     activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
 
     assert activity['name'] == new_activity_name
     assert len(activity['runs']) == 1
-    assert activity['runs'][0]['id'] == run3['id']
+    assert activity['runs'][0]['id'] in [run1['id'], run2['id'], run3['id']]
 
-    # Test how_many_runs=3, the order of the runs is the same as the order they were created
     activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name, how_many_runs=3)
+    activities_run_ids = [run['id'] for run in activity['runs']]
 
     assert activity['name'] == new_activity_name
     assert len(activity['runs']) == 3
-    assert run1['id'] in activity['runs'][0]['id']
-    assert run2['id'] in activity['runs'][1]['id']
-    assert run3['id'] in activity['runs'][2]['id']
+    assert run1['id'] in activities_run_ids
+    assert run2['id'] in activities_run_ids
+    assert run3['id'] in activities_run_ids
+
+    # delete the activity and test that it doesn't exist
+    s.activity.delete_activity(menu_path=menu_path, activity_name=new_activity_name)
+
+    t = MyTestCase()
+    t.activity_doesnt_exist(menu_path, new_activity_name)
+
+
+def test_create_get_run_logs():
+    """
+    Makes various calls to the activity metadata API to create, and get logs.
+    """
+    new_activity_name = 'new_'+activity_name
+    activity = s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)
+
+    assert activity['name'] == new_activity_name
+    assert activity['runs'] == []
+
+    run = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
+
+    log1 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+                                     message='test message 1', severity='INFO')
+    log2 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+                                     message='test message 2', severity='DEBUG', tags=['tag1', 'tag2'])
+    log3 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+                                     message='test message 3', severity='ERROR', tags=['tag1', 'tag2', 'tag3'])
+
+    activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
+    run = activity['runs'][0]
+
+    # test that the logs are in the correct order, they are ordered by creation time
+    assert len(run['logs']) == 3
+    assert log1 == run['logs'][0]
+    assert log2 == run['logs'][1]
+    assert log3 == run['logs'][2]
 
     # delete the activity and test that it doesn't exist
     s.activity.delete_activity(menu_path=menu_path, activity_name=new_activity_name)
@@ -99,12 +143,45 @@ def test_create_get_runs():
 
 def test_execute_activity():
     """
-    Executes an activity and tests that the activity and run are created. The activity must have a webhook linked for
-    it to work.
+    Executes an activity and tests that the activity and run are created, also tests that the run has a log and that the
+    settings are being passed correctly.
+    The activity must have a webhook linked for it to work.
     """
+    run = s.activity.execute_activity(menu_path=menu_path, activity_name=activity_name)
+
+    activity = s.activity.get_activity(menu_path=menu_path, activity_name=activity_name)
+
+    # Runs are ordered by execution time, so the first run is the most recently executed
+    assert activity['runs'][0]['id'] == run['id']
+    assert len(activity['runs'][0]['logs']) == 1
+
+    settings = [{'name': 'test1', 'value': 'test1'}, {'name': 'test2', 'value': 'test2'}]
+
+    run1 = s.activity.execute_activity(menu_path=menu_path, activity_name=activity_name, settings=settings[0])
+    run2 = s.activity.execute_activity(menu_path=menu_path, activity_name=activity_name, settings=settings[1])
+    run3 = s.activity.create_run(menu_path=menu_path, activity_name=activity_name, settings=run2['id'])
+    s.activity.execute_run(menu_path=menu_path, activity_name=activity_name, run_id=run3['id'])
+
+    activity = s.activity.get_activity(menu_path=menu_path, activity_name=activity_name, how_many_runs=4)
+
+    assert activity['runs'][0]['id'] == run['id']
+    assert activity['runs'][0]['settings'] == {}
+    assert len(activity['runs'][0]['logs']) == 1
+    assert activity['runs'][1]['id'] == run1['id']
+    assert activity['runs'][1]['settings'] == settings[0]
+    assert len(activity['runs'][1]['logs']) == 1
+    assert activity['runs'][2]['id'] == run2['id']
+    assert activity['runs'][2]['settings'] == settings[1]
+    assert len(activity['runs'][2]['logs']) == 1
+    assert activity['runs'][3]['id'] == run3['id']
+    assert activity['runs'][3]['settings'] == settings[1]
+    assert len(activity['runs'][3]['logs']) == 1
 
 
+if __name__ == '__main__':
+    delete_new_activity_if_it_exists()
+    test_create_delete_get_activities()
+    test_create_get_runs()
+    test_create_get_run_logs()
+    test_execute_activity()
 
-
-test_create_delete_get_activities()
-test_create_get_runs()

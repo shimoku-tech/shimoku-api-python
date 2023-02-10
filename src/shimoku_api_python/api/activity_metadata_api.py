@@ -102,7 +102,7 @@ class Activity:
             response = await(
                 self.activity.api_client.query_element(
                     method='POST', endpoint=endpoint,
-                    **{'body_params': {'settings': self.settings}}
+                    **{'body_params': {'settings': json.dumps(self.settings)}}
                 )
             )
             ###########################################################
@@ -257,7 +257,8 @@ class Activity:
         return response['id']
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, business_id: str, app_id: str, name: str, id: Optional[str] = None):
+    def __init__(self, api_client, business_id: str, app_id: str, name: str,
+                 id: Optional[str] = None):
         # TODO this should be handled by the structure of the SDK #
         self.business_id: str = business_id
         self.app_id: Optional[str] = app_id
@@ -293,7 +294,8 @@ class Activity:
         """
         if self.id:
             for run in (await self._api_get_runs()):
-                self.runs[run['id']] = Activity.Run(activity=self, id=run['id'], settings=run['settings'])
+                self.runs[run['id']] = Activity.Run(activity=self, id=run['id'],
+                                                    settings=run['settings'] if run.get('settings') else {})
 
             await asyncio.gather(*[run for run in self.runs.values()])
 
@@ -336,15 +338,23 @@ class Activity:
 
     #TODO copy the settings from a previous run when a run_id is given
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_new_run(self, settings: Dict) -> Run:
+    async def create_new_run(self, settings: Union[Dict, str]) -> Run:
         """
         Creates a new run for the activity.
+        :param settings: The settings of the run, or the id of the run to copy the settings from.
         :return: The newly created run.
         """
         if self.id is None:
             error = 'The activity has not been created yet. Make sure to await the activity before creating a run.'
             logger.error(error)
             raise RuntimeError(error)
+
+        if isinstance(settings, str):
+            if settings not in self.runs:
+                error = f'The run with id {settings} does not exist in the activity {self.name}.'
+                logger.error(error)
+                raise RuntimeError(error)
+            settings = self.runs[settings].settings
 
         run = await Activity.Run(self, settings=settings)
         self.runs[run.id] = run
@@ -577,12 +587,12 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def execute_activity(self, menu_path: str, activity_name: str, settings: Dict = None) -> Dict:
+    async def execute_activity(self, menu_path: str, activity_name: str, settings: Union[Dict, str] = None) -> Dict:
         """
         Execute an activity by its name and menu path
         :param menu_path: the menu path of the app where the activity is located
         :param activity_name: the name of the activity
-        :param settings: the settings of the activity
+        :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run of the activity as a dictionary
         """
 
@@ -677,12 +687,12 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_run(self, menu_path: str, activity_name: str, settings: Dict = None) -> Dict[str, Any]:
+    async def create_run(self, menu_path: str, activity_name: str, settings: Union[Dict, str] = None) -> Dict[str, Any]:
         """
         Create a run for an activity by its name
         :param menu_path: the menu path of the app where the activity is located
         :param activity_name: the name of the activity
-        :param settings: the settings of the run
+        :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run created as a dictionary
         """
         app_name, _ = self._clean_menu_path(menu_path=menu_path)

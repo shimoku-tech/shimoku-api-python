@@ -3783,6 +3783,7 @@ def test_free_echarts():
 
 def test_input_form():
     report_dataset_properties = {
+        'variant': 'autoSend',
         'fields': [
             {
                 'title': 'Personal information',
@@ -3872,8 +3873,8 @@ def test_input_form():
     )
 
 
-def test_dynamic_and_conditional_input_form():
-    print('test_dynamic_and_conditional_input_form')
+def test_dynamic_conditional_and_auto_send_input_form():
+    print('test_dynamic_conditional_and_auto_send_input_form')
     menu_path: str = 'test/input-dynamic-conditional'
 
     form_groups = {
@@ -3967,11 +3968,27 @@ def test_dynamic_and_conditional_input_form():
             }
         ]
 
+    s.activate_sequential_execution()
+
     s.plt.generate_input_form_groups(
         menu_path=menu_path, order=0,
         form_groups=form_groups,
         dynamic_sequential_show=True
     )
+
+    form_groups = {
+        'Personal information': form_groups['Personal information'],
+        'Other data': form_groups['Other data'],
+    }
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=1,
+        form_groups=form_groups,
+        auto_send=True,
+        dynamic_sequential_show=True,
+    )
+
+    if async_execution:
+        s.activate_async_execution()
 
 
 def test_get_input_forms():
@@ -4678,7 +4695,7 @@ s.run()
 test_tabs(check_data=False)
 
 # Others
-test_dynamic_and_conditional_input_form()
+test_dynamic_conditional_and_auto_send_input_form()
 test_input_form()
 test_get_input_forms()
 test_set_apps_orders()

@@ -4976,6 +4976,7 @@ class PlotApi(BasePlot):
     def generate_input_form_groups(
         self, menu_path: str, order: int,
         form_groups: Dict, dynamic_sequential_show: Optional[bool] = False,
+        auto_send: Optional[bool] = False,
         next_group_label: Optional[str] = 'Next',
         rows_size: Optional[int] = 3, cols_size: int = 12,
         padding: Optional[str] = None,
@@ -4996,6 +4997,9 @@ class PlotApi(BasePlot):
         """
 
         report_dataset_properties = {'fields': []}
+        if auto_send:
+            report_dataset_properties['variant'] = 'autoSend'
+
         next_id = str(uuid.uuid1()) if dynamic_sequential_show else None
 
         for form_group_name, form_group in form_groups.items():

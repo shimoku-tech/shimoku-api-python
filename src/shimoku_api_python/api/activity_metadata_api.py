@@ -295,7 +295,7 @@ class Activity:
         if self.id:
             for run in (await self._api_get_runs()):
                 self.runs[run['id']] = Activity.Run(activity=self, id=run['id'],
-                                                    settings=run['settings'] if run.get('settings') else {})
+                                                    settings=json.loads(run['settings']) if run.get('settings') else {})
 
             await asyncio.gather(*[run for run in self.runs.values()])
 

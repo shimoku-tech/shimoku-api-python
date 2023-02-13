@@ -180,8 +180,12 @@ class BasePlot:
                     warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
                     continue
 
-                # Order them correctly to preserve insertion order
-                tabs_group = dict(sorted(tabs_group.items(), key=lambda item: item[1]['order']))
+                try:
+                    # Order them correctly to preserve insertion order
+                    tabs_group = dict(sorted(tabs_group.items(), key=lambda item: item[1]['order']))
+                except KeyError:
+                    warnings.warn("Tabs in this business don't have the most recent structure, don't execute "
+                                  "tabs code with versions previous to the 0.14.", DeprecationWarning)
 
                 self._tabs[tabs_group_entry] = {}
                 for tab_name, order_and_report_ids in tabs_group.items():

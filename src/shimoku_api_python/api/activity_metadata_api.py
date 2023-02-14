@@ -431,11 +431,19 @@ class ActivityMetadataApi:
         _business_metadata_api: The BusinessMetadataApi instance used to interact with the business.
 
     Methods:
-        set_business_id: Set the business_id attribute.
-        _create_activity: Create an activity in the business.
-        _execute_activity: Execute an activity in the business.
+        _get_business_activities: Get the activities available in the business.
+        set_business: Set the business to interact with.
+        create_activity: Create an activity in the business
+        update_activity: Update an activities name in the business.
         delete_activity: Delete an activity in the business.
-        run_activity: Check if an activity has been created in the business, and if not, create it. Then, execute it.
+        execute_activity: Execute an activity in the business, creating a new run.
+        get_activity: Get an activity from the business.
+        _get_activity: private method to get an activity from the business.
+        get_acticities: Get all the activities from the app.
+        create_run: Create a new run for an activity.
+        execute_run: Execute a run for an activity.
+        create_run_log: Create a new run log for a run.
+
     """
 
     @logging_before_and_after(logging_level=logger.debug)

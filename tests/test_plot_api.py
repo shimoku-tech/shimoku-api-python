@@ -348,8 +348,7 @@ def test_delete_path():
 
     s.plt.delete_path(menu_path=app_path)
 
-    # Check it does not exist anymore
-    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, app_path)['id']))
 
 
 def test_delete():
@@ -403,7 +402,7 @@ def test_delete():
         by_component_type=False,
     )
 
-    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, app_path)['id']))
 
 
 def test_append_data_to_trend_chart():
@@ -4525,7 +4524,7 @@ def test_tabs(check_data=True):
         order=0,
         by_component_type=False,
     )
-    assert not s.app.get_app_by_name(business_id=business_id, name=menu_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
 
     menu_path = "test-tabs"
     s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
@@ -4639,7 +4638,7 @@ def test_same_position_charts():
     s.plt.delete_path(menu_path + '/no conflict path 1')
     s.plt.delete_path(menu_path + '/no conflict path 2')
 
-    assert not len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
 
 
 print(f'Start time {dt.datetime.now()}')

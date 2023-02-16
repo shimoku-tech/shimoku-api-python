@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional, Callable, Coroutine
 import logging
 from IPython.lib import backgroundjobs as bg
 import time
@@ -82,6 +82,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
         async def execute_tasks():
             # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
             global plot_api
+            api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
 
             # if just one task it's the same as sequential
             if len(task_pool) == 1:
@@ -134,6 +135,10 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                 await asyncio.gather(*tabs_tasks)
                 tabs_group_indexes.clear()
 
+        async def sequential_task_execution(coroutine: Coroutine):
+            api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
+            return await coroutine
+
         @wraps(async_func)
         def wrapper(*args, **kwargs):
 
@@ -160,11 +165,10 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
                     return job.result
                 else:
-                    api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
                     if len(task_pool) > 0:
                         logger.info('Executing task pool')
                         asyncio.run(execute_tasks())
-                    return asyncio.run(async_func(*args, **kwargs))
+                    return asyncio.run(sequential_task_execution(async_func(*args, **kwargs)))
 
             task_pool.append(async_func(*args, **kwargs))
             logger.info(f'{async_func.__name__} added to the task pool')

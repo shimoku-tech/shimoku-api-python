@@ -15,6 +15,7 @@ from shimoku_api_python.api.file_metadata_api import FileMetadataApi
 from shimoku_api_python.api.plot_api import PlotApi
 from shimoku_api_python.api.ai_api import AiAPI
 from shimoku_api_python.api.ping_api import PingApi
+from shimoku_api_python.api.activity_metadata_api import ActivityMetadataApi
 
 from shimoku_api_python.client import ApiClient
 
@@ -37,11 +38,21 @@ class Client(object):
         if access_token and access_token != "":
             config = {'access_token': access_token}
 
+        self.activate_sequential_execution = activate_sequential_execution
+        self.activate_async_execution = deactivate_sequential_execution
+
+        if async_execution:
+            self.activate_async_execution()
+        else:
+            self.activate_sequential_execution()
+
         self._api_client = ApiClient(
             config=config,
             universe_id=universe_id,
             environment=environment,
         )
+        shimoku_api_python.async_execution_pool.api_client = self._api_client
+
         self.ping = PingApi(self._api_client)
         self.universe = UniverseMetadataApi(self._api_client)
         self.business = BusinessMetadataApi(self._api_client)
@@ -51,19 +62,15 @@ class Client(object):
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client, business_id=business_id)
         self.plt = PlotApi(self._api_client, business_id=business_id, app_metadata_api=self.app)
+        shimoku_api_python.async_execution_pool.plot_api = self.plt
+
         self.ai = AiAPI(self.plt)
         self.html_components = shimoku_components_catalog.html_components
-
-        self.activate_sequential_execution = activate_sequential_execution
-        self.activate_async_execution = deactivate_sequential_execution
-
-        if async_execution:
-            self.activate_async_execution()
-        else:
-            self.activate_sequential_execution()
-
-        shimoku_api_python.async_execution_pool.plot_api = self.plt
-        shimoku_api_python.async_execution_pool.api_client = self._api_client
+        self.activity = ActivityMetadataApi(self._api_client,
+                                            app_metadata_api=self.app,
+                                            business_metadata_api=self.business,
+                                            plot_api=self.plt,
+                                            business_id=business_id)
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config={}):

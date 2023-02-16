@@ -69,6 +69,7 @@ class Client(object):
         self.activity = ActivityMetadataApi(self._api_client,
                                             app_metadata_api=self.app,
                                             business_metadata_api=self.business,
+                                            plot_api=self.plt,
                                             business_id=business_id)
 
     @logging_before_and_after(logging_level=logger.info)

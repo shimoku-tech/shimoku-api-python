@@ -4,6 +4,7 @@ import datetime as dt
 
 from shimoku_api_python.api.app_metadata_api import AppMetadataApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
+from shimoku_api_python.api.plot_api import PlotApi
 from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
@@ -336,7 +337,6 @@ class Activity:
             'runs': [run.to_dict() for run in self.runs.values()],
         }
 
-    #TODO copy the settings from a previous run when a run_id is given
     @logging_before_and_after(logging_level=logger.debug)
     async def create_new_run(self, settings: Union[Dict, str]) -> Run:
         """
@@ -448,13 +448,17 @@ class ActivityMetadataApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, app_metadata_api: AppMetadataApi, business_metadata_api: BusinessMetadataApi,
-                 business_id: Optional[str] = None):
+                 plot_api: PlotApi, business_id: Optional[str] = None):
         self.api_client = api_client
         self.business_id: Optional[str] = business_id
         self.activities: Dict[(str, str), Activity] = {}
+        # TODO this should be handled by the structure of the SDK #
         self._app_metadata_api: AppMetadataApi = app_metadata_api
         self._business_metadata_api: BusinessMetadataApi = business_metadata_api
-        self._get_business_activities()
+        self._plot_api: PlotApi = plot_api
+        ###########################################################
+        if business_id:
+            self._get_business_activities()
 
     @logging_before_and_after(logging_level=logger.debug)
     def _get_business_activities(self):
@@ -519,6 +523,57 @@ class ActivityMetadataApi:
         self.activities = {}
         self.business_id = business_id
         self._get_business_activities()
+
+    @logging_before_and_after(logging_level=logger.info)
+    def button_execute_activity(
+            self, menu_path: str, order: int, activity_name: str, label: str,
+            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
+            align: Optional[str] = 'stretch',
+            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None
+    ):
+        """
+        Create an execute button report in the dashboard for the activity.
+        :param activity_name: the name of the activity
+        :param order: the order of the button in the dashboard
+        :param menu_path: the menu path of the app to which the activity belongs
+        :param label: the name of the button to be clicked
+        :param rows_size: the number of rows of the button
+        :param cols_size: the number of columns of the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        :param bentobox_data: the bentobox metadata for FE
+        :param tabs_index: the index of the tab in the dashboard
+        :param settings: the settings of the execution of the activity
+        :return:
+        """
+
+        app_name, _ = self._clean_menu_path(menu_path=menu_path)
+
+        # TODO solve this bottleneck #
+        app: Dict = asyncio.run(self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))
+        app_id: str = app['id']
+        activity_entry = (app_id, activity_name)
+
+        activity = self.activities[activity_entry]
+
+        self._plot_api.button(
+            menu_path=menu_path,
+            order=order, label=label,
+            rows_size=rows_size, cols_size=cols_size,
+            align=align,
+            padding=padding,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            on_click_events=[
+                {
+                    "action": "runActivity",
+                    "params": {
+                        "activityId": activity.id,
+                    }
+                }
+            ]
+        )
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

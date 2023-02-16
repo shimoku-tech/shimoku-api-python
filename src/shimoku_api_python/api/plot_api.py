@@ -114,7 +114,6 @@ class PlotAux:
         self.create_app_type_and_app = self.multi_create_api.create_app_type_and_app
 
         self.delete_report = self.delete_explorer_api.delete_report
-        self.delete_app = self.delete_explorer_api.delete_app
         self.delete_report_entries = self.delete_explorer_api.delete_report_entries
 
 
@@ -656,6 +655,9 @@ class BasePlot:
 
         if tabs_index:
             await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+
+        if report_metadata['reportType'] == 'BUTTON':
+            return report_id
 
         try:
             if data:
@@ -1410,7 +1412,7 @@ class BasePlot:
 
         business_reports = await self._plot_aux.get_business_reports(business_id=self.business_id)
         delete_report_tasks = []
-        delete_app_tasks = []
+
         for report in target_reports:
 
             # Don't overwrite tabs
@@ -1468,16 +1470,7 @@ class BasePlot:
             if self._report_in_tab.get(report_id):
                 self._delete_report_id_from_tab(report_id)
 
-            # Check if app can be deleted
-            if not overwrite and len(app_reports) == 0:
-                delete_app_tasks.append(
-                    self._plot_aux.delete_app(
-                        business_id=self.business_id,
-                        app_id=app_id,
-                    )
-                )
         await asyncio.gather(*delete_report_tasks)
-        await asyncio.gather(*delete_app_tasks)
 
     @async_auto_call_manager(execute=True)
     async def delete(
@@ -1505,6 +1498,13 @@ class BasePlot:
         If menu_path contains an "{App}/{Path}" then it removes the path
         otherwise it removes the whole app
         """
+        await self._delete_path(menu_path=menu_path)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _delete_path(self, menu_path: str) -> None:
+        """
+        Private version of delete_path
+        """
         name, path_name = self._clean_menu_path(menu_path=menu_path)
         app: Dict = await self._plot_aux.get_app_by_name(
             business_id=self.business_id,
@@ -1514,14 +1514,6 @@ class BasePlot:
             return
 
         app_id: str = app['id']
-        if '/' not in menu_path:
-            await self._plot_aux.delete_app(
-                business_id=self.business_id,
-                app_id=app_id,
-            )
-            self._clear_or_create_all_local_state()
-            await self._get_business_state(self.business_id)
-            return
 
         reports: List[Dict] = await self._plot_aux.get_app_reports(
             business_id=self.business_id, app_id=app_id,
@@ -1569,7 +1561,7 @@ class BasePlot:
     @logging_before_and_after(logging_level=logger.info)
     async def clear_business(self):
         """Calls "delete_path" for all the apps of the actual business, clearing the business"""
-        tasks = [self._plot_aux.delete_app(business_id=self.business_id, app_id=app['id'])
+        tasks = [self._delete_path(menu_path=app['name'])
                  for app in await self._plot_aux.get_business_apps(self.business_id)]
 
         await asyncio.gather(*tasks)
@@ -5021,3 +5013,53 @@ class PlotApi(BasePlot):
             menu_path=menu_path, order=order, rows_size=rows_size, cols_size=cols_size,
             padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index
         )
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def button(
+        self, label: str, menu_path: str, order: int,
+        rows_size: Optional[int] = 1, cols_size: int = 2,
+        align: Optional[str] = 'stretch',
+        padding: Optional[str] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        on_click_events: Optional[Union[List[Dict], Dict]] = [],
+    ):
+        """
+        :param label:
+        :param menu_path:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param align:
+        :param padding:
+        :param bentobox_data:
+        :param tabs_index:
+        :param on_click_events:
+        """
+        if isinstance(on_click_events, dict):
+            on_click_events = [on_click_events]
+
+        report_metadata: Dict = {
+            'reportType': 'BUTTON',
+            'properties': json.dumps({
+                'text': label,
+                'align': align,
+                'events': {
+                    'onClick': on_click_events,
+                }
+            })
+        }
+
+        if bentobox_data:
+            self._validate_bentobox(bentobox_data)
+            report_metadata['bentobox'] = json.dumps(bentobox_data)
+
+        return await self._create_chart(
+            data='',
+            menu_path=menu_path,
+            order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
+            report_metadata=report_metadata,
+            tabs_index=tabs_index,
+        )
+

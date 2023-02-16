@@ -178,10 +178,41 @@ def test_execute_activity():
     assert len(activity['runs'][3]['logs']) == 1
 
 
+def test_button_execute_activity():
+    """
+    Creates a button in the dashboard with the capability to execute an activity.
+    """
+    s.activity.button_execute_activity(
+        menu_path=menu_path, activity_name=activity_name, order=0, label='test_button',
+        cols_size=12, align='start'
+    )
+    s.activity.button_execute_activity(
+        menu_path=menu_path, activity_name=activity_name, order=1, label='test_button',
+        cols_size=12, align='center'
+    )
+    s.activity.button_execute_activity(
+        menu_path=menu_path, activity_name=activity_name, order=2, label='test_button',
+        rows_size=2, cols_size=12, align='right'
+    )
+
+    for i in range(6):
+        s.activity.button_execute_activity(
+            menu_path=menu_path, activity_name=activity_name, order=3+i, label='test_button',
+            rows_size=2, cols_size=12-i*2, align='stretch', padding=f'0,{i},0,{i}'
+        )
+
+    s.activity.button_execute_activity(
+        menu_path=menu_path, activity_name=activity_name, order=9, label='test_button',
+        cols_size=12, align='center'
+    )
+
+
 if __name__ == '__main__':
     delete_new_activity_if_it_exists()
     test_create_delete_get_activities()
     test_create_get_runs()
     test_create_get_run_logs()
     test_execute_activity()
+    test_button_execute_activity()
+    s.activity.get_activities(menu_path=menu_path, pretty_print=True, how_many_runs=100)
 

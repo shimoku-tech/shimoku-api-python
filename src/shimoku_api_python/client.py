@@ -129,7 +129,7 @@ class ApiClient(object):
                     headers=header_params, body=body,
                 )
         except Exception as err:
-            logger.error(err)
+            logger.error(str(err))
             raise ApiClientError(err)
 
     @logging_before_and_after(logging_level=logger.debug)

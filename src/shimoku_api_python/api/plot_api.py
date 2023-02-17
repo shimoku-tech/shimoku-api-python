@@ -149,6 +149,7 @@ class BasePlot:
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_business_state(self, business_id: str):
 
+        self.api_client.semaphore = asyncio.Semaphore(self.api_client.semaphore_limit)
         business_reports = await self._plot_aux.get_business_reports(business_id)
 
         @logging_before_and_after(logging_level=logger.debug)

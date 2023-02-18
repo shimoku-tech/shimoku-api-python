@@ -348,8 +348,7 @@ def test_delete_path():
 
     s.plt.delete_path(menu_path=app_path)
 
-    # Check it does not exist anymore
-    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, app_path)['id']))
 
 
 def test_delete():
@@ -403,7 +402,7 @@ def test_delete():
         by_component_type=False,
     )
 
-    assert not s.app.get_app_by_name(business_id=business_id, name=app_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, app_path)['id']))
 
 
 def test_append_data_to_trend_chart():
@@ -3783,6 +3782,7 @@ def test_free_echarts():
 
 def test_input_form():
     report_dataset_properties = {
+        'variant': 'autoSend',
         'fields': [
             {
                 'title': 'Personal information',
@@ -3872,8 +3872,8 @@ def test_input_form():
     )
 
 
-def test_dynamic_and_conditional_input_form():
-    print('test_dynamic_and_conditional_input_form')
+def test_dynamic_conditional_and_auto_send_input_form():
+    print('test_dynamic_conditional_and_auto_send_input_form')
     menu_path: str = 'test/input-dynamic-conditional'
 
     form_groups = {
@@ -3967,11 +3967,27 @@ def test_dynamic_and_conditional_input_form():
             }
         ]
 
+    s.activate_sequential_execution()
+
     s.plt.generate_input_form_groups(
         menu_path=menu_path, order=0,
         form_groups=form_groups,
         dynamic_sequential_show=True
     )
+
+    form_groups = {
+        'Personal information': form_groups['Personal information'],
+        'Other data': form_groups['Other data'],
+    }
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=1,
+        form_groups=form_groups,
+        auto_send=True,
+        dynamic_sequential_show=True,
+    )
+
+    if async_execution:
+        s.activate_async_execution()
 
 
 def test_get_input_forms():
@@ -4508,7 +4524,7 @@ def test_tabs(check_data=True):
         order=0,
         by_component_type=False,
     )
-    assert not s.app.get_app_by_name(business_id=business_id, name=menu_path)
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
 
     menu_path = "test-tabs"
     s.plt.change_tabs_group_internal_order('Bar deep 2', menu_path, ['Line 2', 'Bar 1', 'Line 1'])
@@ -4622,7 +4638,7 @@ def test_same_position_charts():
     s.plt.delete_path(menu_path + '/no conflict path 1')
     s.plt.delete_path(menu_path + '/no conflict path 2')
 
-    assert not len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
+    assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
 
 
 print(f'Start time {dt.datetime.now()}')
@@ -4678,7 +4694,7 @@ s.run()
 test_tabs(check_data=False)
 
 # Others
-test_dynamic_and_conditional_input_form()
+test_dynamic_conditional_and_auto_send_input_form()
 test_input_form()
 test_get_input_forms()
 test_set_apps_orders()

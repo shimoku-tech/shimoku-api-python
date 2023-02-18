@@ -277,11 +277,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     def __init__(self, api_client):
         super().__init__(api_client)
-        # self.cached_apps = {}
 
-    # def __cache_apps_by_normalized_name(self, apps):
-    #     for app in apps:
-    #         self.cached_apps[app['appBusinessId']+app['normalizedName']] = app
     @logging_before_and_after(logging_level=logger.debug)
     async def get_universe_businesses(self) -> List[Dict]:
         endpoint: str = f'businesses'
@@ -456,6 +452,24 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return reports
 
     @logging_before_and_after(logging_level=logger.debug)
+    async def get_app_activities(self, business_id: str, app_id: str) -> List[Dict]:
+        """Given an App Id retrieve all activities that belong to the App.
+        """
+        endpoint: str = f'business/{business_id}/app/{app_id}/activities'
+        reports_raw: Dict = await (
+            self.api_client.query_element(
+                endpoint=endpoint, method='GET',
+            )
+        )
+        try:
+            activities = reports_raw.get('items')
+        except AttributeError:
+            logger.warning('Reports json should have an "items" field')
+            activities = None
+
+        return activities if activities else []
+
+    @logging_before_and_after(logging_level=logger.debug)
     async def get_app_report_ids(self, business_id: str, app_id: str) -> List[str]:
         """Given an app retrieve all report_id
 
@@ -497,6 +511,20 @@ class CascadeExplorerAPI(GetExplorerAPI):
         return [report['id']
                 for reports_list in results
                 for report in reports_list]
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_business_activities(self, business_id: str) -> List[Dict]:
+        """Given a business retrieve all activities
+
+        :param business_id: business UUID
+        """
+        business_apps = await self.get_business_apps(business_id)
+        tasks = [self.get_app_activities(business_id=business_id, app_id=app['id']) for app in business_apps]
+        results = await asyncio.gather(*tasks)
+
+        return [activity
+                for activities_list in results
+                for activity in activities_list]
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_report_datasets(
@@ -1932,6 +1960,7 @@ class BusinessExplorerApi:
         self.create_business = self.cascade_create_explorer_api.create_business
         self.update_business = self.update_explorer_api.update_business
 
+        self.get_business_activities = self.cascade_explorer_api.get_business_activities
         self.get_business_apps = self.cascade_explorer_api.get_business_apps
         self.get_business_app_ids = self.cascade_explorer_api.get_business_app_ids
         self.get_business_all_apps_with_filter = self.cascade_explorer_api.get_business_apps_with_filter

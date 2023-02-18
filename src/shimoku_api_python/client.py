@@ -129,7 +129,7 @@ class ApiClient(object):
                     headers=header_params, body=body,
                 )
         except Exception as err:
-            logger.error(err)
+            logger.error(str(err))
             raise ApiClientError(err)
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -224,8 +224,6 @@ class ApiClient(object):
     @logging_before_and_after(logging_level=logger.debug)
     async def request(self, method, url, query_params=None, headers=None, body=None):
         auth = None
-        logger.debug(f'method:{method}, url: {url}, headers: {headers},'
-                     f'query params: {query_params}, body: {body}')
         if self.is_basic_auth:
             auth = ('user', self.api_key)
 
@@ -247,9 +245,14 @@ class ApiClient(object):
 
             while True:  # loop until nextToken is None
 
-                async with session.request(
-                        method, url+(f'?nextToken={next_token}' if next_token else '?limit=100'),
-                        params=query_params, json=body, headers=headers) as res:
+                aux_url = url
+                if method == 'GET':
+                    aux_url += (f'?nextToken={next_token}' if next_token else '?limit=100')
+
+                logger.debug(f'method:{method}, url: {aux_url}, headers: {headers},'
+                             f'query params: {query_params}, body: {body}')
+
+                async with session.request(method, aux_url, params=query_params, json=body, headers=headers) as res:
                     try:
                         if 'application/json' in res.headers.get('content-type'):
                             data = await res.json()

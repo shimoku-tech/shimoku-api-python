@@ -160,6 +160,8 @@ class Activity:
             It creates the run on the server.
             """
             if self.id:
+                run = await self._api_get_run(self.id)
+                self.settings = run['settings'] if 'settings' in run else {}
                 await self.get_logs()
             else:
                 self.id = await self._api_create_run()
@@ -361,7 +363,7 @@ class Activity:
         return run
 
     @logging_before_and_after(logging_level=logger.debug)
-    def get_run(self, run_id: str) -> Run:
+    async def get_run(self, run_id: str) -> Run:
         """
         Returns the run with the given id.
         """
@@ -371,9 +373,8 @@ class Activity:
             raise RuntimeError(error)
 
         if run_id not in self.runs:
-            error = f'The run with id {run_id} does not exist in the activity {self.name}.'
-            logger.error(error)
-            raise RuntimeError(error)
+            run = await Activity.Run(self, id=run_id)
+            self.runs[run.id] = run
 
         return self.runs[run_id]
 
@@ -797,7 +798,7 @@ class ActivityMetadataApi:
             raise RuntimeError(error)
 
         activity = self.activities[activity_entry]
-        run = activity.get_run(run_id=run_id)
+        run = await activity.get_run(run_id=run_id)
         result = await run.execute()
         logger.info(f'Run with id {run_id} executed with result {result}')
 
@@ -829,10 +830,35 @@ class ActivityMetadataApi:
             raise RuntimeError(error)
 
         activity = self.activities[activity_entry]
-        run = activity.get_run(run_id=run_id)
+        run = await activity.get_run(run_id=run_id)
         log = await run.create_log(message=message, severity=severity, tags=tags)
 
         if pretty_print:
             print(json.dumps(log, indent=2))
 
         return log
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_run_settings(self, menu_path: str, activity_name: str, run_id: str) -> Dict[str, Any]:
+        """
+        Get the settings of a run by its id
+        :param menu_path: the menu path of the app where the activity is located
+        :param activity_name: the name of the activity
+        :param run_id: the id of the run
+        :return: the settings of the run as a dictionary
+        """
+        app_name, _ = self._clean_menu_path(menu_path=menu_path)
+
+        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
+        app_id: str = app['id']
+        activity_entry = (app_id, activity_name)
+
+        if activity_entry not in self.activities:
+            error = f'Activity {activity_name} not found in app {app_name}.'
+            logger.error(error)
+            raise RuntimeError(error)
+
+        activity = self.activities[activity_entry]
+        run = await activity.get_run(run_id=run_id)
+        return run.settings

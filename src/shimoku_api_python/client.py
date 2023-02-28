@@ -262,7 +262,7 @@ class ApiClient(object):
                         if not res.ok:
                             raise ApiClientError(data)
 
-                        if data.get('items'):
+                        if 'items' in data:
                             next_token = data.get('nextToken')
                             if data_res.get('items'):
                                 data_res['items'].extend(data.get('items'))

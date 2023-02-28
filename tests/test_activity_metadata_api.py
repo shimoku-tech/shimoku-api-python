@@ -20,6 +20,7 @@ s = shimoku.Client(
 )
 menu_path = 'test_activity'
 activity_name = 'test_activity'
+run_id = getenv('RUN_ID')
 
 
 class MyTestCase(unittest.TestCase):
@@ -36,6 +37,13 @@ def delete_new_activity_if_it_exists():
         s.activity.delete_activity(menu_path=menu_path, activity_name='new_'+activity_name)
     except ValueError:
         pass
+
+
+def test_get_run_settings():
+    """
+    Makes a call to the activity metadata API to get run settings.
+    """
+    s.activity.get_run_settings(menu_path=menu_path, activity_name=activity_name, run_id=run_id)
 
 
 def test_create_delete_get_activities():
@@ -209,6 +217,7 @@ def test_button_execute_activity():
 
 if __name__ == '__main__':
     delete_new_activity_if_it_exists()
+    test_get_run_settings()
     test_create_delete_get_activities()
     test_create_get_runs()
     test_create_get_run_logs()

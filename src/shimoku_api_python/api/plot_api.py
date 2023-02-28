@@ -4645,6 +4645,8 @@ class PlotApi(BasePlot):
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
 
+        df = df[[x] + value_columns]
+
         if not option_modifications:
             option_modifications = {
                 'subtitle': subtitle if subtitle else '',
@@ -4734,6 +4736,8 @@ class PlotApi(BasePlot):
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        df = df[[x] + value_columns]
 
         if not option_modifications:
             option_modifications = {
@@ -4825,6 +4829,8 @@ class PlotApi(BasePlot):
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        df = df[[x] + value_columns]
 
         if not option_modifications:
             option_modifications = {

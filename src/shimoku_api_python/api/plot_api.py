@@ -1193,7 +1193,7 @@ class BasePlot:
                 app_normalized_name, app_path_name = menu_path, None
 
             if not app_path_name:
-                raise ValueError('To order Apps use set_apps_order() instead!')
+                raise ValueError('To order Apps use set_apps_orders() instead!')
 
             app_normalized_name = self._plot_aux.create_normalized_name(app_normalized_name)
             app_path_name = self._plot_aux.create_normalized_name(app_path_name)

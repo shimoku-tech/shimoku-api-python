@@ -3353,8 +3353,6 @@ class PlotApi(BasePlot):
                 raise ValueError(f'{extra_element} is not solved')
 
         len_df = len(df)
-        padding_right = None
-        padding_left = None
         if vertical and (len_df > 1 or isinstance(vertical, str)):
             if bentobox_data:
                 raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
@@ -3383,16 +3381,30 @@ class PlotApi(BasePlot):
                 order += 1
 
         else:
+            if padding is None:
+                padding = '0,0,0,0'
+
+            padding = padding.replace(' ', '')
+            padding_left = f'{padding[0]},0,{padding[4]},{padding[6]}'
+            padding_right= f'{padding[0]},{padding[2]},{padding[4]},0'
+            padding_else = f'{padding[0]},0,{padding[4]},0'
             cols_size = cols_size//len_df
             if cols_size < 2:
                 raise ValueError(f'The calculation of the individual cols_size for each indicator '
                                  f'is too small (cols_size/len(df)): {cols_size}')
 
         last_index = df.index[-1]
+        first_index = df.index[0]
 
         for index, df_row in df.iterrows():
 
-            if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
+            if not vertical:
+                padding = padding_else
+                if index == first_index:
+                    padding = padding_left
+                elif index == last_index:
+                    padding = padding_right
+            elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
             report_metadata: Dict = {

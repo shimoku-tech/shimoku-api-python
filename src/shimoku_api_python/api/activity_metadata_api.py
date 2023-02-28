@@ -453,6 +453,7 @@ class ActivityMetadataApi:
         self.api_client = api_client
         self.business_id: Optional[str] = business_id
         self.activities: Dict[(str, str), Activity] = {}
+        self.activities_by_id: Dict[str, Activity] = {}
         # TODO this should be handled by the structure of the SDK #
         self._app_metadata_api: AppMetadataApi = app_metadata_api
         self._business_metadata_api: BusinessMetadataApi = business_metadata_api
@@ -470,10 +471,12 @@ class ActivityMetadataApi:
         activities = self._business_metadata_api.get_business_activities(self.business_id)
         for activity in activities:
             activity_entry = (activity['appId'], activity['name'])
-            self.activities[activity_entry] = Activity(
+            activity_obj = Activity(
                 api_client=self.api_client, business_id=self.business_id,
                 app_id=activity['appId'], name=activity['name'], id=activity['id']
             )
+            self.activities[activity_entry] = activity_obj
+            self.activities_by_id[activity['id']] = activity_obj
 
     @staticmethod
     def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
@@ -511,6 +514,22 @@ class ActivityMetadataApi:
             path_name = None
 
         return name, path_name
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _resolve_app_id(self, app_id: Optional[str] = None, menu_path: Optional[str] = None) -> str:
+        """
+        Resolve the app id from the app id or the menu path.
+        :param app_id: the app id
+        :param menu_path: the menu path
+        :return: the app id
+        """
+        if app_id:
+            return app_id
+        if not menu_path:
+            raise ValueError("Either an app_id or a menu_path has to be provided")
+
+        app_name, _ = self._clean_menu_path(menu_path=menu_path)
+        return (await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))['id']
 
     @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
@@ -578,80 +597,111 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_activity(self, menu_path: str, activity_name: str) -> Dict:
+    async def create_activity(self,  activity_name: str,
+                              menu_path: Optional[str] = None, app_id: Optional[str] = None) -> Dict:
         """
         Create an activity by its name and app id
         :param activity_name: the name of the activity
         :param menu_path: the menu path of the app to which the activity belongs
+        :param app_id: the id of the app to which the activity belongs
         :return:
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
+        app_id: str = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
         activity_entry = (app_id, activity_name)
 
         if activity_entry not in self.activities:
             activity = await Activity(self.api_client, self.business_id, app_id, activity_name)
             self.activities[activity_entry] = activity
+            self.activities_by_id[activity.id] = activity
         else:
-            logger.info(f'Activity {activity_name} already exists in app {app_name}.')
+            logger.info(f'Activity {activity_name} already exists in app {app_id}.')
 
         return self.activities[activity_entry].to_dict()
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                            how_many_runs: int = -1) -> Activity:
+        """
+        Get an activity by its name and app, or by its id.
+        :param activity_name: the name of the activity
+        :param menu_path: the menu path of the app to which the activity belongs
+        :param app_id: the id of the app to which the activity belongs
+        :param activity_id: the id of the activity
+        :param how_many_runs: the number of runs to get from the activity
+        :return: the activity object
+        """
+        app_id: str = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
+
+        activity_entry = (app_id, activity_name)
+
+        if (activity_id and activity_id not in self.activities_by_id) or \
+           (activity_name and activity_entry not in self.activities):
+            error = f'Activity {activity_name} not found in app {app_id}.'
+            logger.error(error)
+            raise RuntimeError(error)
+        elif not activity_id and not activity_name:
+            error = 'Either activity_id or activity_name must be provided.'
+            logger.error(error)
+            raise ValueError(error)
+
+        activity = self.activities_by_id[activity_id] if activity_id else self.activities[activity_entry]
+
+        if how_many_runs > 0:
+            activity.how_many_runs = how_many_runs
+
+        return await activity
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_activity(self, menu_path: str, activity_name: str):
+    async def delete_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                              activity_name: Optional[str] = None, activity_id: Optional[str] = None):
         """
         Delete an activity by its name and app id
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param menu_path: the menu path of the app to which the activity belongs
+        :param app_id: the id of the app to which the activity belongs
         :return:
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
+        app_id = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
+        activity = await self._get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
+        activity_name = activity.name
         activity_entry = (app_id, activity_name)
 
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} does not exist in the app {app_name}'
-            logger.error(error)
-            raise ValueError(error)
-
-        activity = self.activities[activity_entry]
         await activity.delete()
         del self.activities[activity_entry]
+        del self.activities_by_id[activity.id]
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_activity(self, menu_path: str, activity_name: str, new_activity_name: str):
+    async def update_activity(self, new_activity_name: str,
+                              menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                              activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                              ):
         """
         Update an activity by its name
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param new_activity_name: the new name of the activity
         :return:
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
+        app_id = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
+        activity = await self._get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
+        activity_name = activity.name
         activity_entry = (app_id, activity_name)
 
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} does not exist in the app {app_name}'
-            logger.error(error)
-            raise ValueError(error)
-
-        activity = self.activities[activity_entry]
         await activity.update(new_name=new_activity_name)
         self.activities[(app_id, new_activity_name)] = activity
         del self.activities[activity_entry]
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def execute_activity(self, menu_path: str, activity_name: str, settings: Union[Dict, str] = None) -> Dict:
+    async def execute_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                               activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                               settings: Union[Dict, str] = None) -> Dict:
         """
         Execute an activity by its name and menu path
         :param menu_path: the menu path of the app where the activity is located
@@ -659,19 +709,8 @@ class ActivityMetadataApi:
         :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run of the activity as a dictionary
         """
-
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
         run = await activity.create_new_run(settings=settings)
         result = await run.execute()
         logger.info(f'Activity {activity_name} executed with result {result}')
@@ -679,41 +718,24 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_activity(self, menu_path: str, activity_name: str, pretty_print: bool = False, how_many_runs: int = -1) -> Dict:
+    async def get_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                           activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                           pretty_print: bool = False, how_many_runs: int = -1) -> Dict:
         """
         Get an activity by its name
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param pretty_print: if True, the activity is printed in a pretty format
         :param how_many_runs: how many runs to get
         :return: the activity as a dictionary
         """
-        return await self._get_activity(menu_path=menu_path, activity_name=activity_name,
-                                        pretty_print=pretty_print, how_many_runs=how_many_runs)
-
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _get_activity(self, menu_path: str, activity_name: str, pretty_print: bool = False, how_many_runs: int = -1) -> Dict:
-        """
-        Private version of get_activity
-        """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
-
-        if how_many_runs > 0:
-            activity.how_many_runs = how_many_runs
-
-        await activity
-
+        activity = await self._get_activity(
+            menu_path=menu_path, activity_name=activity_name,
+            app_id=app_id, activity_id=activity_id,
+            how_many_runs=how_many_runs
+        )
         if pretty_print:
             print(json.dumps(activity.to_dict(), indent=2))
 
@@ -721,29 +743,28 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_activities(self, menu_path: str, pretty_print: bool = False,
+    async def get_activities(self, menu_path: Optional[str] = None, app_id: Optional[str] = None, pretty_print: bool = False,
                              print_names: bool = False, how_many_runs: int = -1) -> List[Dict]:
         """
         Get the list of activities in the app
         :param menu_path: the menu path of the app
+        :param app_id: the id of the app
         :param pretty_print: if True, the activities are printed in a pretty format
         :param print_names: if True and pretty_print is False, only the names of the activities are printed
         :param how_many_runs: how many runs to get
-        :return: a list of activities
+        :return: a list of activities as dictionaries
         """
 
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
+        app_id: str = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
 
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-
-        activity_tasks = [self._get_activity(menu_path=menu_path, activity_name=activity.name, pretty_print=pretty_print,
-                                             how_many_runs=how_many_runs)
+        activity_tasks = [self._get_activity(app_id=app_id, activity_name=activity.name, how_many_runs=how_many_runs)
                           for (activity_app_id, _), activity in self.activities.items() if activity_app_id == app_id]
 
         await asyncio.gather(*activity_tasks)
 
-        if print_names and not pretty_print:
+        if pretty_print:
+            print(json.dumps([activity.to_dict() for activity in self.activities.values()], indent=2))
+        elif print_names:
             logger.info(f'Activities available in the business: '
                         f'{", ".join([activity.app_id+"/"+activity.name for activity in self.activities.values()])}')
 
@@ -751,66 +772,58 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_run(self, menu_path: str, activity_name: str, settings: Union[Dict, str] = None) -> Dict[str, Any]:
+    async def create_run(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                         activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                         settings: Union[Dict, str] = None) -> Dict[str, Any]:
         """
         Create a run for an activity by its name
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run created as a dictionary
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
 
         run = await activity.create_new_run(settings=settings)
-        logger.info(f'New run with id {run.id} created for activity {activity_name} in app {app_name}.')
+        logger.info(f'New run with id {run.id} created for activity {activity_name} in app {app_id}.')
         return run.to_dict()
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def execute_run(self, menu_path: str, activity_name: str, run_id: str):
+    async def execute_run(self, run_id: str,
+                          menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                          activity_name: Optional[str] = None, activity_id: Optional[str] = None):
         """
         Execute a run by its id
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param run_id: the id of the run
         :return:
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         result = await run.execute()
         logger.info(f'Run with id {run_id} executed with result {result}')
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_run_log(self, menu_path: str, activity_name: str, run_id: str,
-                             message: str, severity: Optional[str] = 'INFO',
-                             tags: Optional[List[str]] = [], pretty_print: bool = False) -> Dict[str, str]:
+    async def create_run_log(self, run_id: str, message: str, severity: Optional[str] = 'INFO',
+                             tags: Optional[List[str]] = [],
+                             menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                             activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                             pretty_print: bool = False) -> Dict[str, str]:
         """
         Create a log for a run by its id
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param run_id: the id of the run
         :param message: the message to log
         :param severity: the severity of the log
@@ -818,18 +831,8 @@ class ActivityMetadataApi:
         :param pretty_print: if True, the log is printed in a pretty format
         :return:
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         log = await run.create_log(message=message, severity=severity, tags=tags)
 
@@ -840,25 +843,20 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_run_settings(self, menu_path: str, activity_name: str, run_id: str) -> Dict[str, Any]:
+    async def get_run_settings(self, run_id: str,
+                               menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                               activity_name: Optional[str] = None, activity_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Get the settings of a run by its id
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param run_id: the id of the run
         :return: the settings of the run as a dictionary
         """
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
 
-        app: Dict = await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name)
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        if activity_entry not in self.activities:
-            error = f'Activity {activity_name} not found in app {app_name}.'
-            logger.error(error)
-            raise RuntimeError(error)
-
-        activity = self.activities[activity_entry]
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return run.settings

@@ -1,6 +1,7 @@
 from os import getenv
 import shimoku_api_python as shimoku
 import unittest
+import asyncio
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -22,6 +23,10 @@ menu_path = 'test_activity'
 activity_name = 'test_activity'
 run_id = getenv('RUN_ID')
 
+app_name, _ = s.activity._clean_menu_path(menu_path=menu_path)
+app_id = asyncio.run(s.activity._app_metadata_api.get_or_create_app_and_apptype(name=app_name))['id']
+activity_id = s.activity.get_activity(app_id=app_id, activity_name=activity_name)['id']
+
 
 class MyTestCase(unittest.TestCase):
     def activity_doesnt_exist(self, _menu_path, _activity_name):
@@ -35,7 +40,7 @@ def delete_new_activity_if_it_exists():
     """
     try:
         s.activity.delete_activity(menu_path=menu_path, activity_name='new_'+activity_name)
-    except ValueError:
+    except RuntimeError:
         pass
 
 
@@ -43,6 +48,9 @@ def test_get_run_settings():
     """
     Makes a call to the activity metadata API to get run settings.
     """
+    s.activity.get_run_settings(app_id=app_id, activity_id=activity_id, run_id=run_id)
+    s.activity.get_run_settings(menu_path=menu_path, activity_id=activity_id, run_id=run_id)
+    s.activity.get_run_settings(app_id=app_id, activity_name=activity_name, run_id=run_id)
     s.activity.get_run_settings(menu_path=menu_path, activity_name=activity_name, run_id=run_id)
 
 
@@ -52,10 +60,11 @@ def test_create_delete_get_activities():
     """
 
     new_activity_name = 'new_'+activity_name
-    n_activities_before = len(s.activity.get_activities(menu_path=menu_path))
+    n_activities_before = len(s.activity.get_activities(app_id=app_id))
 
-    s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)
+    s.activity.create_activity(app_id=app_id, activity_name=new_activity_name)
     activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
+    new_activity_id = activity['id']
 
     assert activity['name'] == 'new_'+activity_name
     assert activity['runs'] == []
@@ -68,7 +77,7 @@ def test_create_delete_get_activities():
     n_activities_mid = len(s.activity.get_activities(menu_path=menu_path))
     assert n_activities_mid == n_activities_before + 1
 
-    s.activity.delete_activity(menu_path=menu_path, activity_name=new_activity_name)
+    s.activity.delete_activity(app_id=app_id, activity_id=new_activity_id)
 
     n_activities_after = len(s.activity.get_activities(menu_path=menu_path))
 
@@ -84,15 +93,16 @@ def test_create_get_runs():
     """
     new_activity_name = 'new_'+activity_name
     activity = s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)
+    new_activity_id = activity['id']
 
     assert activity['name'] == new_activity_name
     assert activity['runs'] == []
 
     run1 = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
-    run2 = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
+    run2 = s.activity.create_run(menu_path=menu_path, activity_id=new_activity_id)
     run3 = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
 
-    activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
+    activity = s.activity.get_activity(menu_path=menu_path, activity_id=new_activity_id)
 
     assert activity['name'] == new_activity_name
     assert len(activity['runs']) == 1
@@ -120,6 +130,7 @@ def test_create_get_run_logs():
     """
     new_activity_name = 'new_'+activity_name
     activity = s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)
+    new_activity_id = activity['id']
 
     assert activity['name'] == new_activity_name
     assert activity['runs'] == []
@@ -128,9 +139,9 @@ def test_create_get_run_logs():
 
     log1 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
                                      message='test message 1', severity='INFO')
-    log2 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+    log2 = s.activity.create_run_log(app_id=app_id, activity_id=new_activity_id, run_id=run['id'],
                                      message='test message 2', severity='DEBUG', tags=['tag1', 'tag2'])
-    log3 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+    log3 = s.activity.create_run_log(app_id=app_id, activity_name=new_activity_name, run_id=run['id'],
                                      message='test message 3', severity='ERROR', tags=['tag1', 'tag2', 'tag3'])
 
     activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)

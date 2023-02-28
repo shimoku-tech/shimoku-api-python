@@ -161,8 +161,8 @@ class BasePlot:
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
-                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"'))
-                properties = json.loads(tabs_group_report['properties'].replace("'", '"'))
+                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"').replace('None', 'null'))
+                properties = json.loads(tabs_group_report['properties'].replace("'", '"').replace('None', 'null'))
                 tabs_group_report_id = tabs_group_report['id']
                 app_id = tabs_group_report['appId']
                 path_name = tabs_group_report['path'] if tabs_group_report['path'] else ""
@@ -1448,7 +1448,7 @@ class BasePlot:
                 app_name, path_name = self._clean_menu_path(menu_path)
                 if not path_name:
                     path_name = ""
-                data_fields = json.loads(report['dataFields'].replace("'", '"'))
+                data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
 
@@ -1547,7 +1547,7 @@ class BasePlot:
             # Tabs data structures maintenance
             if report['reportType'] == 'TABS':
                 path_name = report['path'] if report['path'] else ""
-                data_fields = json.loads(report['dataFields'].replace("'", '"'))
+                data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
                 if tabs_group_entry in self._tabs:

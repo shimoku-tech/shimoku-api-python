@@ -182,7 +182,7 @@ class GetExplorerAPI(object):
             f'business/{business_id}/'
             f'app/{app_id}/'
             f'report/{report_id}/'
-            f'{reportdataset_id}'
+            f'reportDataSet/{reportdataset_id}'
         )
         dataset_data: Dict = await(
             self.api_client.query_element(
@@ -1237,7 +1237,7 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
             f'business/{business_id}/'
             f'app/{app_id}/'
             f'report/{report_id}/'
-            f'{reportdataset_id}'
+            f'reportDataSet/{reportdataset_id}'
         )
         return await self.api_client.query_element(
             method='PATCH', endpoint=endpoint,
@@ -1513,7 +1513,7 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
             f'business/{business_id}/'
             f'app/{app_id}/'
             f'report/{report_id}/'
-            f'{reportdataset_id}'
+            f'reportDataSet/{reportdataset_id}'
         )
         result: Dict = await self.api_client.query_element(
             method='DELETE', endpoint=endpoint

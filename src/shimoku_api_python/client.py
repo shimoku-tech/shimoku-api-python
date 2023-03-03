@@ -31,6 +31,8 @@ class ApiClient(object):
             self.host = 'https://api.staging.shimoku.io/external/v1/'
         elif environment == 'develop':
             self.host = 'https://api.develop.shimoku.io/external/v1/'
+        elif environment == 'guillermo':
+            self.host = 'https://wxauh7u2te.execute-api.eu-west-1.amazonaws.com/guillermo/external/v1/'
         else:
             raise ValueError(
                 f'The namespace must be either "production", "staging" or "develop | '

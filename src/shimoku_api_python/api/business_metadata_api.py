@@ -19,6 +19,7 @@ class BusinessMetadataApi(ABC):
 
         self.api_client = api_client
         self.get_business_activities = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_activities)
+        self.async_get_business_activities = self.business_explorer_api.get_business_activities
         self.get_business = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business)
         self.get_universe_businesses = async_auto_call_manager(execute=True)(self.business_explorer_api.get_universe_businesses)
         self.create_business = async_auto_call_manager(execute=True)(self.business_explorer_api.create_business)

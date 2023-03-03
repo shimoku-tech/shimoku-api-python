@@ -160,6 +160,38 @@ def test_create_get_run_logs():
     t.activity_doesnt_exist(menu_path, new_activity_name)
 
 
+def test_default_activity_settings():
+    """
+    Tests that the default settings are being set and used correctly.
+    """
+    new_activity_name = 'new_' + activity_name
+    new_activity_id = s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)['id']
+
+    # test that the default settings are being set
+    settings = {'name': 'test1', 'value': 'test1'}
+    activity = s.activity.update_activity(menu_path=menu_path, activity_name=new_activity_name, settings=settings)
+
+    assert activity['settings'] == settings
+
+    # test that the default settings persist in the API
+    s.activity._clear_local_activities()
+
+    async def _get_business_activities():
+        s.activity.api_client.semaphore = asyncio.Semaphore(s.activity.api_client.semaphore_limit)
+        await s.activity._get_business_activities()
+
+    asyncio.run(_get_business_activities())
+
+    activity = s.activity.get_activity(menu_path=menu_path, activity_id=new_activity_id)
+    assert activity['settings'] == settings
+
+    # delete the activity and test that it doesn't exist
+    s.activity.delete_activity(menu_path=menu_path, activity_name=new_activity_name)
+
+    t = MyTestCase()
+    t.activity_doesnt_exist(menu_path, new_activity_name)
+
+
 def test_execute_activity():
     """
     Executes an activity and tests that the activity and run are created, also tests that the run has a log and that the
@@ -232,6 +264,7 @@ if __name__ == '__main__':
     test_create_delete_get_activities()
     test_create_get_runs()
     test_create_get_run_logs()
+    test_default_activity_settings()
     test_execute_activity()
     test_button_execute_activity()
     s.activity.get_activities(menu_path=menu_path, pretty_print=True, how_many_runs=100)

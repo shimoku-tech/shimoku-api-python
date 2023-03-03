@@ -103,7 +103,7 @@ class Activity:
             response = await(
                 self.activity.api_client.query_element(
                     method='POST', endpoint=endpoint,
-                    **{'body_params': {'settings': json.dumps(self.settings)}}
+                    **{'body_params': {'settings': json.dumps(self.settings)} if self.settings is not None else {}}
                 )
             )
             ###########################################################
@@ -129,7 +129,7 @@ class Activity:
             return response
 
         @logging_before_and_after(logging_level=logger.debug)
-        def __init__(self, activity, id: str = None, settings: Dict = {}):
+        def __init__(self, activity, id: str = None, settings: Optional[Dict] = None):
             self.activity = activity
             self.id = id
             self.logs = []
@@ -161,7 +161,7 @@ class Activity:
             """
             if self.id:
                 run = await self._api_get_run(self.id)
-                self.settings = run['settings'] if 'settings' in run else {}
+                self.settings = json.loads(run['settings']) if run.get('settings') else {}
                 await self.get_logs()
             else:
                 self.id = await self._api_create_run()
@@ -261,7 +261,7 @@ class Activity:
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, business_id: str, app_id: str, name: str,
-                 id: Optional[str] = None):
+                 id: Optional[str] = None, settings: Optional[Dict] = None):
         # TODO this should be handled by the structure of the SDK #
         self.business_id: str = business_id
         self.app_id: Optional[str] = app_id
@@ -272,6 +272,7 @@ class Activity:
         self.id: str = id
         self.runs: Dict[str, Activity.Run] = {}
         self.how_many_runs: int = 1
+        self.settings = settings
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _api_get_runs(self):
@@ -337,6 +338,7 @@ class Activity:
             'id': self.id,
             'name': self.name,
             'runs': [run.to_dict() for run in self.runs.values()],
+            'settings': self.settings
         }
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -397,9 +399,11 @@ class Activity:
         ###########################################################
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def update(self, new_name: str):
+    async def update(self, new_name: Optional[str] = None, settings: Optional[Dict] = None):
         """
         Updates the activity from the business.
+        :param new_name: The new name of the activity.
+        :param settings: The new default settings of the activity.
         """
         if self.id is None:
             error = 'The activity has not been created yet. Make sure to await the activity before updating it.'
@@ -411,12 +415,25 @@ class Activity:
                         f'app/{self.app_id}/' \
                         f'activity/{self.id}'
 
-        item = {'name': new_name}
+        item = {}
+        if new_name is not None:
+            item['name'] = new_name
 
-        await self.api_client.query_element(method='PUT', endpoint=endpoint, **{'body_params': item})
+        if settings is not None:
+            item['settings'] = json.dumps(settings)
+
+        if len(item) == 0:
+            logger.warning('No changes were made to the activity.')
+            return
+
+        await self.api_client.query_element(method='PATCH', endpoint=endpoint, **{'body_params': item})
         ###########################################################
 
-        self.name = new_name
+        if new_name is not None:
+            self.name = new_name
+
+        if settings is not None:
+            self.settings = settings
 
 
 # TODO: the menu path should be handled by the structure of the SDK and not checked for every function call
@@ -433,6 +450,7 @@ class ActivityMetadataApi:
 
     Methods:
         _get_business_activities: Get the activities available in the business.
+        _clear_local_activities: Clear the local activities.
         set_business: Set the business to interact with.
         create_activity: Create an activity in the business
         update_activity: Update an activities name in the business.
@@ -444,6 +462,8 @@ class ActivityMetadataApi:
         create_run: Create a new run for an activity.
         execute_run: Execute a run for an activity.
         create_run_log: Create a new run log for a run.
+        get_run_settings: Get the settings of a run.
+
 
     """
 
@@ -459,24 +479,36 @@ class ActivityMetadataApi:
         self._business_metadata_api: BusinessMetadataApi = business_metadata_api
         self._plot_api: PlotApi = plot_api
         ###########################################################
-        if business_id:
-            self._get_business_activities()
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _get_business_activities(self):
+    async def _get_business_activities(self):
         """
         Get the activities available in the business and store them in the activities attribute.
         The key of the dictionary is a tuple with the app id and the activity name.
         """
-        activities = self._business_metadata_api.get_business_activities(self.business_id)
+        activities = await self._business_metadata_api.async_get_business_activities(self.business_id)
         for activity in activities:
             activity_entry = (activity['appId'], activity['name'])
+
             activity_obj = Activity(
                 api_client=self.api_client, business_id=self.business_id,
-                app_id=activity['appId'], name=activity['name'], id=activity['id']
+                app_id=activity['appId'], name=activity['name'], id=activity['id'],
+                settings=activity['settings'] if 'settings' in activity else {},
             )
+
+            if 'settings' not in activity:
+                await activity_obj.update(settings={})
+
             self.activities[activity_entry] = activity_obj
             self.activities_by_id[activity['id']] = activity_obj
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def _clear_local_activities(self):
+        """
+        Clear the activities and activities_by_id attributes.
+        """
+        self.activities = {}
+        self.activities_by_id = {}
 
     @staticmethod
     def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
@@ -540,9 +572,8 @@ class ActivityMetadataApi:
         """
         # If the business id does not exists it raises an ApiClientError
         _ = self._business_metadata_api.get_business(business_id)
-        self.activities = {}
+        self._clear_local_activities()
         self.business_id = business_id
-        self._get_business_activities()
 
     @logging_before_and_after(logging_level=logger.info)
     def button_execute_activity(
@@ -564,7 +595,6 @@ class ActivityMetadataApi:
         :param padding: the padding of the button
         :param bentobox_data: the bentobox metadata for FE
         :param tabs_index: the index of the tab in the dashboard
-        :param settings: the settings of the execution of the activity
         :return:
         """
 
@@ -635,15 +665,21 @@ class ActivityMetadataApi:
 
         activity_entry = (app_id, activity_name)
 
-        if (activity_id and activity_id not in self.activities_by_id) or \
-           (activity_name and activity_entry not in self.activities):
-            error = f'Activity {activity_name} not found in app {app_id}.'
-            logger.error(error)
-            raise RuntimeError(error)
-        elif not activity_id and not activity_name:
+        if not activity_id and not activity_name:
             error = 'Either activity_id or activity_name must be provided.'
             logger.error(error)
             raise ValueError(error)
+
+        if (activity_id and activity_id not in self.activities_by_id) or \
+           (activity_name and activity_entry not in self.activities):
+            self._clear_local_activities()
+            await self._get_business_activities()
+
+            if (activity_id and activity_id not in self.activities_by_id) or \
+               (activity_name and activity_entry not in self.activities):
+                error = f'Activity {activity_name} not found in app {app_id}.'
+                logger.error(error)
+                raise RuntimeError(error)
 
         activity = self.activities_by_id[activity_id] if activity_id else self.activities[activity_entry]
 
@@ -675,10 +711,10 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_activity(self, new_activity_name: str,
+    async def update_activity(self,
                               menu_path: Optional[str] = None, app_id: Optional[str] = None,
                               activity_name: Optional[str] = None, activity_id: Optional[str] = None,
-                              ):
+                              new_activity_name: Optional[str] = None, settings: Optional[Dict] = None) -> Dict:
         """
         Update an activity by its name
         :param menu_path: the menu path of the app where the activity is located
@@ -686,16 +722,21 @@ class ActivityMetadataApi:
         :param activity_name: the name of the activity
         :param activity_id: the id of the activity
         :param new_activity_name: the new name of the activity
-        :return:
+        :param settings: the default settings of the activity
+        :return: the updated activity as a dictionary
         """
         app_id = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
         activity = await self._get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
         activity_name = activity.name
         activity_entry = (app_id, activity_name)
 
-        await activity.update(new_name=new_activity_name)
-        self.activities[(app_id, new_activity_name)] = activity
-        del self.activities[activity_entry]
+        await activity.update(new_name=new_activity_name, settings=settings)
+
+        if new_activity_name is not None:
+            self.activities[(app_id, new_activity_name)] = activity
+            del self.activities[activity_entry]
+
+        return activity.to_dict()
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -705,7 +746,9 @@ class ActivityMetadataApi:
         """
         Execute an activity by its name and menu path
         :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
         :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
         :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run of the activity as a dictionary
         """
@@ -713,7 +756,7 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.create_new_run(settings=settings)
         result = await run.execute()
-        logger.info(f'Activity {activity_name} executed with result {result}')
+        logger.info(f'Activity {activity_name if activity_name else activity_id} executed with result {result}')
         return run.to_dict()
 
     @async_auto_call_manager(execute=True)
@@ -757,18 +800,21 @@ class ActivityMetadataApi:
 
         app_id: str = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
 
+        self._clear_local_activities()
+        await self._get_business_activities()
+
         activity_tasks = [self._get_activity(app_id=app_id, activity_name=activity.name, how_many_runs=how_many_runs)
                           for (activity_app_id, _), activity in self.activities.items() if activity_app_id == app_id]
 
-        await asyncio.gather(*activity_tasks)
+        activities = [activity.to_dict() for activity in await asyncio.gather(*activity_tasks)]
 
         if pretty_print:
-            print(json.dumps([activity.to_dict() for activity in self.activities.values()], indent=2))
+            print(json.dumps(activities, indent=2))
         elif print_names:
             logger.info(f'Activities available in the business: '
-                        f'{", ".join([activity.app_id+"/"+activity.name for activity in self.activities.values()])}')
+                        f'{", ".join([activity["app_id"]+"/"+activity["name"] for activity in activities])}')
 
-        return [activity.to_dict() for activity in self.activities.values()]
+        return activities
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -784,11 +830,17 @@ class ActivityMetadataApi:
         :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run created as a dictionary
         """
+
         activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
                                             activity_name=activity_name, activity_id=activity_id)
 
         run = await activity.create_new_run(settings=settings)
-        logger.info(f'New run with id {run.id} created for activity {activity_name} in app {app_id}.')
+
+        if menu_path is not None:
+            app_name, _ = self._clean_menu_path(menu_path=menu_path)
+
+        logger.info(f'New run with id {run.id} created for activity {activity_name if activity_name else activity_id}'
+                    f' in app {app_id if app_id else app_name}.')
         return run.to_dict()
 
     @async_auto_call_manager(execute=True)

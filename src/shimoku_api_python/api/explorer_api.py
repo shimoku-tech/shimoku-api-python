@@ -464,7 +464,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         try:
             activities = reports_raw.get('items')
         except AttributeError:
-            logger.warning('Reports json should have an "items" field')
+            logger.warning('Activities json should have an "items" field')
             activities = None
 
         return activities if activities else []

@@ -10,7 +10,7 @@ from shimoku_api_python.api.explorer_api import (
 )
 from shimoku_api_python.exceptions import ApiClientError
 
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -21,7 +21,7 @@ class AppMetadataApi(ABC):
     """
     """
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, **kwargs):
+    def __init__(self, api_client, execution_pool_context: ExecutionPoolContext, **kwargs):
 
         self.app_explorer_api = AppExplorerApi(api_client)
         self.business_explorer_api = BusinessExplorerApi(api_client)
@@ -47,6 +47,8 @@ class AppMetadataApi(ABC):
         self.get_app_by_name = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_name)
 
         self.delete_app = async_auto_call_manager(execute=True)(self.app_explorer_api.delete_app)
+
+        self.epc = execution_pool_context
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']

@@ -4,7 +4,7 @@ from typing import Dict
 from abc import ABC
 
 from shimoku_api_python.api.explorer_api import BusinessExplorerApi
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ class BusinessMetadataApi(ABC):
     """
     """
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client):
+    def __init__(self, api_client, execution_pool_context: ExecutionPoolContext):
         self.business_explorer_api = BusinessExplorerApi(api_client)
 
         self.api_client = api_client
@@ -32,6 +32,8 @@ class BusinessMetadataApi(ABC):
         self.get_business_report_ids = async_auto_call_manager(execute=True)(self.business_explorer_api.get_business_report_ids)
 
         self.delete_business = async_auto_call_manager(execute=True)(self.business_explorer_api.delete_business)
+
+        self.epc = execution_pool_context
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)

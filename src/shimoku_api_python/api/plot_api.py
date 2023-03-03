@@ -28,7 +28,7 @@ from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 import asyncio
 
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 class PlotAux:
-    def __init__(self, api_client, app_metadata_api):
+    def __init__(self, api_client, app_metadata_api, epc: ExecutionPoolContext):
         self.business_explorer_api = BusinessExplorerApi(api_client=api_client)
         self.universe_explorer_api = UniverseExplorerApi(api_client=api_client)
         self.report_explorer_api = ReportExplorerApi(api_client=api_client)
@@ -46,7 +46,7 @@ class PlotAux:
         self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client=api_client)
         self.report_dataset_explorer_api = ReportDatasetExplorerApi(api_client=api_client)
         self.dataset_explorer_api = DatasetExplorerApi(api_client=api_client)
-        self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client)
+        self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client, execution_pool_context=epc)
         self.app_metadata_api = app_metadata_api
         self.data_managing_api = DataManagingApi(api_client=api_client)
         self.data_validation_api = DataValidation(api_client=api_client)
@@ -119,8 +119,9 @@ class PlotAux:
 
 class BasePlot:
 
-    def __init__(self, api_client, app_metadata_api, **kwargs):
-        self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api)
+    def __init__(self, api_client, app_metadata_api, execution_pool_context: ExecutionPoolContext, **kwargs):
+        self.epc = execution_pool_context
+        self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api, epc=self.epc)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
 
@@ -1866,11 +1867,16 @@ class PlotApi(BasePlot):
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, app_metadata_api, **kwargs):
-        super().__init__(api_client, app_metadata_api=app_metadata_api)
+    def __init__(self, api_client, app_metadata_api, execution_pool_context: ExecutionPoolContext, **kwargs):
+        super().__init__(api_client, execution_pool_context=execution_pool_context, app_metadata_api=app_metadata_api)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
-            loop = asyncio.get_event_loop()
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+
             if loop.is_running():
                 # We are in a jupyter notebook, so we need to execute in a different loop
                 jobs = bg.BackgroundJobManager()

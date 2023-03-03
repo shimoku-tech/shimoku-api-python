@@ -6,6 +6,7 @@ from shimoku_api_python.async_execution_pool import async_auto_call_manager, Exe
 # import apis into sdk package
 from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
+from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi
 from shimoku_api_python.api.app_metadata_api import AppMetadataApi
 from shimoku_api_python.api.app_type_metadata_api import AppTypeMetadataApi
 from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
@@ -53,6 +54,7 @@ class Client(object):
         self.ping = PingApi(self._api_client)
         self.universe = UniverseMetadataApi(self._api_client, execution_pool_context=self.epc)
         self.business = BusinessMetadataApi(self._api_client, execution_pool_context=self.epc)
+        self.dashboard = DashboardMetadataApi(self._api_client, self.business, business_id=business_id)
         self.app_type = AppTypeMetadataApi(self._api_client, execution_pool_context=self.epc)
         self.app = AppMetadataApi(self._api_client, business_id=business_id, execution_pool_context=self.epc)
         self.report = ReportMetadataApi(self._api_client)

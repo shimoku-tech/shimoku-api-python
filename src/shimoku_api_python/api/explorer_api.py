@@ -152,13 +152,14 @@ class GetExplorerAPI(object):
         return report_data
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_dataset(self, business_id: str, dataset_id: str, **kwargs) -> Dict:
+    async def get_dataset(self, business_id: str, app_id: str, dataset_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
         :param business_id: business UUID
+        :param app_id: app UUID
         :param dataset_id: dataset UUID
         """
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         dataset_data: Dict = await (
             self.api_client.query_element(
                 method='GET', endpoint=endpoint, **kwargs
@@ -548,7 +549,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         data_sets: List[Dict] = []
         for reportdataset in reportdatasets:
             endpoint: str = (
-                f'business/{business_id}/'
+                f'business/{business_id}/app/{app_id}/'
                 f'dataSet/{reportdataset["dataSetId"]}'
             )
             data_set: Dict = await (
@@ -562,10 +563,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_dataset_data(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
     ) -> List[Dict]:
         endpoint: str = (
             f'business/{business_id}/'
+            f'app/{app_id}/'
             f'dataSet/{dataset_id}/'
             f'datas'
         )
@@ -588,7 +590,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             business_id=business_id, app_id=app_id, report_id=report_id,
         )
 
-        tasks = [self.get_dataset_data(business_id=business_id, dataset_id=report_dataset['id'])
+        tasks = [self.get_dataset_data(business_id=business_id, app_id=app_id, dataset_id=report_dataset['id'])
                  for report_dataset in report_datasets]
 
         results = await asyncio.gather(*tasks)
@@ -994,12 +996,14 @@ class CreateExplorerAPI(object):
         }
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_dataset(self, business_id: str) -> Dict:
+    async def create_dataset(self, business_id: str, app_id: str) -> Dict:
         """Create new DataSet associated to a business
 
-        :param business_id:
+        :param app_id: UUID of the app
+        :param business_id: UUID of the business
+        :return: The dataset created
         """
-        endpoint: str = f'business/{business_id}/dataSet'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet'
 
         return await self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': {}},
@@ -1039,18 +1043,22 @@ class CreateExplorerAPI(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_data_points(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
             items: List[str],
     ) -> List[Dict]:
         """Create new row in Data (equivalent to reportEntry)
 
-        :param business_id:
-        :param dataset_id:
-        :param items:
+        :param business_id: UUID of the business
+        :param app_id: UUID of the app
+        :param dataset_id: UUID of the dataset
+        :param items: A list of dicts with the data to be inserted
+
+        :return: A list of dicts with the data inserted
         """
         # TODO see if this can be batch accelerated like report entries
         endpoint: str = (
             f'business/{business_id}/'
+            f'app/{app_id}/'
             f'dataSet/{dataset_id}/'
             f'data'
         )
@@ -1246,11 +1254,11 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update_dataset(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
             dataset_metadata: Dict,
     ) -> Dict:
         """"""
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         return await self.api_client.query_element(
             method='PATCH', endpoint=endpoint,
             **{'body_params': dataset_metadata},
@@ -1352,7 +1360,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             real_time=real_time,
         )
 
-        dataset: Dict = await self.create_dataset(business_id=business_id)
+        dataset: Dict = await self.create_dataset(business_id=business_id, app_id=app_id)
         dataset_id: str = dataset['id']
 
         if type(items) == list:  # ECHARTS2
@@ -1383,6 +1391,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
         data: List[Dict] = await self.create_data_points(
             business_id=business_id,
+            app_id=app_id,
             dataset_id=dataset_id,
             items=items,
         )
@@ -1521,9 +1530,9 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def delete_dataset(self, business_id: str, dataset_id: str) -> Dict:
+    async def delete_dataset(self, business_id: str, app_id: str, dataset_id: str) -> Dict:
         """"""
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         result: Dict = await self.api_client.query_element(
             method='DELETE', endpoint=endpoint
         )

@@ -140,9 +140,9 @@ def test_create_get_run_logs():
     log1 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
                                      message='test message 1', severity='INFO')
     log2 = s.activity.create_run_log(app_id=app_id, activity_id=new_activity_id, run_id=run['id'],
-                                     message='test message 2', severity='DEBUG', tags=['tag1', 'tag2'])
+                                     message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
     log3 = s.activity.create_run_log(app_id=app_id, activity_name=new_activity_name, run_id=run['id'],
-                                     message='test message 3', severity='ERROR', tags=['tag1', 'tag2', 'tag3'])
+                                     message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
 
     activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
     run = activity['runs'][0]
@@ -268,4 +268,3 @@ if __name__ == '__main__':
     test_execute_activity()
     test_button_execute_activity()
     s.activity.get_activities(menu_path=menu_path, pretty_print=True, how_many_runs=100)
-

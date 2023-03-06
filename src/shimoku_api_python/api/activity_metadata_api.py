@@ -51,7 +51,7 @@ class Activity:
         """
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def _api_create_run_log(self, message: str, severity: str, tags: List[str]):
+        async def _api_create_run_log(self, message: str, severity: str, tags: Dict[str, str]):
             # TODO this should be handled by the structure of the SDK #
             endpoint: str = f'business/{self.activity.business_id}/' \
                             f'app/{self.activity.app_id}/' \
@@ -60,7 +60,7 @@ class Activity:
                             f'log'
 
             log = {'dateTime': str(datetime.datetime.now().isoformat())[:-3]+"Z", 'message': message,
-                   'severity': severity, 'tags': tags}
+                   'severity': severity, 'tags': json.dumps(tags)}
 
             response = await self.activity.api_client.query_element(
                 method='POST', endpoint=endpoint,
@@ -201,7 +201,7 @@ class Activity:
             return status
 
         @logging_before_and_after(logging_level=logger.debug)
-        async def create_log(self, message: str, severity: str, tags: List[str]) -> Dict[str, str]:
+        async def create_log(self, message: str, severity: str, tags: Dict[str, str]) -> Dict[str, str]:
             """
             Creates a log on the server.
             :param message: The message of the log.
@@ -213,6 +213,12 @@ class Activity:
                 error = 'The run has not been created yet. Make sure to await the run before creating a log.'
                 logger.error(error)
                 raise RuntimeError(error)
+
+            if tags and (not isinstance(tags, Dict) or any([not isinstance(key, str) or not isinstance(value, str)
+                                                            for key, value in tags.items()])):
+                error = 'The tags must be a dictionary of strings.'
+                logger.error(error)
+                raise ValueError(error)
 
             log = await self._api_create_run_log(message=message, severity=severity, tags=tags)
             self.logs.append(log)
@@ -230,6 +236,10 @@ class Activity:
                 raise RuntimeError(error)
 
             self.logs = await self._api_get_run_logs()
+
+            for log in self.logs:
+                log['tags'] = json.loads(log['tags']) if log.get('tags') else {}
+
             self.logs.sort(
                 key=lambda log:
                 dt.datetime.strptime(log['dateTime'], "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -273,6 +283,7 @@ class Activity:
         self.runs: Dict[str, Activity.Run] = {}
         self.how_many_runs: int = 1
         self.settings = settings
+        self.awaited = False
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _api_get_runs(self):
@@ -296,6 +307,11 @@ class Activity:
         """
         Asyncronous initialization of the activity, it's called when the activity is awaited.
         """
+
+        if self.awaited:
+            return self
+        self.awaited = True
+
         if self.id:
             for run in (await self._api_get_runs()):
                 self.runs[run['id']] = Activity.Run(activity=self, id=run['id'],
@@ -315,7 +331,7 @@ class Activity:
                         ]
                         if len(rid_r[1].logs) > 0 else [dt.datetime.min]
                     )
-                )[-self.how_many_runs:]
+                )
             )
         else:
             self.id = await self._api_create_activity(self.name)
@@ -337,7 +353,7 @@ class Activity:
         return {
             'id': self.id,
             'name': self.name,
-            'runs': [run.to_dict() for run in self.runs.values()],
+            'runs': [run.to_dict() for run in list(self.runs.values())[-self.how_many_runs:]],
             'settings': self.settings
         }
 
@@ -493,7 +509,7 @@ class ActivityMetadataApi:
             activity_obj = Activity(
                 api_client=self.api_client, business_id=self.business_id,
                 app_id=activity['appId'], name=activity['name'], id=activity['id'],
-                settings=activity['settings'] if 'settings' in activity else {},
+                settings=json.loads(activity['settings']) if activity.get('settings') else {},
             )
 
             if 'settings' not in activity:
@@ -866,7 +882,7 @@ class ActivityMetadataApi:
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def create_run_log(self, run_id: str, message: str, severity: Optional[str] = 'INFO',
-                             tags: Optional[List[str]] = [],
+                             tags: Optional[Dict[str, str]] = None,
                              menu_path: Optional[str] = None, app_id: Optional[str] = None,
                              activity_name: Optional[str] = None, activity_id: Optional[str] = None,
                              pretty_print: bool = False) -> Dict[str, str]:
@@ -886,7 +902,7 @@ class ActivityMetadataApi:
         activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
-        log = await run.create_log(message=message, severity=severity, tags=tags)
+        log = await run.create_log(message=message, severity=severity, tags=tags if tags else {})
 
         if pretty_print:
             print(json.dumps(log, indent=2))

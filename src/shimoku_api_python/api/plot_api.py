@@ -3309,9 +3309,9 @@ class PlotApi(BasePlot):
 
         @async_auto_call_manager()
         @logging_before_and_after(logging_level=logger.info)
-        async def single_indicator(**kwargs):
+        async def single_indicator(self, *args, **kwargs):
             # Necessary for time logging and correct execution pool handling
-            await self._create_chart(**kwargs)
+            await self._create_chart(*args, **kwargs)
 
         mandatory_elements: List[str] = [
             header, value
@@ -3415,6 +3415,7 @@ class PlotApi(BasePlot):
             report_metadata['properties'] = json.dumps(df_row.to_dict())
 
             single_indicator(
+                self=self,
                 data=[df_row.to_dict()],
                 menu_path=menu_path,
                 order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,

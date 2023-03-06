@@ -10,7 +10,8 @@ import datetime as dt
 
 import pandas as pd
 from shimoku_api_python.api.explorer_api import FileExplorerApi, BusinessExplorerApi
-from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext, \
+    decorate_external_function
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -30,7 +31,7 @@ class BasicFileMetadataApi(ABC):
 
         self._get_file = self.file_explorer_api._get_file
         self.async_get_files = self.file_explorer_api.get_files
-        self.get_files = async_auto_call_manager(execute=True)(self.file_explorer_api.get_files)
+        self.get_files = decorate_external_function(self, self.file_explorer_api, 'get_files')
 
         self._create_file = self.file_explorer_api._create_file
 
@@ -38,7 +39,7 @@ class BasicFileMetadataApi(ABC):
 
         self.async_get_business_apps = self.file_explorer_api.get_business_apps
         self._get_app_by_name = self.file_explorer_api._get_app_by_name
-        self.get_business_apps = async_auto_call_manager(execute=True)(self.file_explorer_api.get_business_apps)
+        self.get_business_apps = decorate_external_function(self, self.file_explorer_api, 'get_business_apps')
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']

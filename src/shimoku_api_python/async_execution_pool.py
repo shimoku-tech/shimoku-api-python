@@ -4,6 +4,7 @@ from typing import Tuple, Optional, Callable, Coroutine
 import logging
 from IPython.lib import backgroundjobs as bg
 import time
+from shimoku_api_python.execution_logger import logging_before_and_after
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,23 @@ class ExecutionPoolContext:
         # (they will have to explicitly state it in their code)
         self.sequential = True
         self.plot_api = None
+
+
+def decorate_external_function(self, external_class, function_name):
+    """
+    This function is used to decorate a function from another class, getting all the context necessary from the self
+    argument of the class where it is being called. This is done so that the execution_pool_context is only used by the
+    user-access classes, and not by the low level SDK classes.
+    """
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.debug)
+    async def call_function_from_class(self, external_class, function_name, *args, **kwargs):
+        return await getattr(external_class, function_name)(*args, **kwargs)
+
+    def wrapper(*args, **kwargs):
+        return call_function_from_class(self, external_class, function_name, *args, **kwargs)
+
+    return wrapper
 
 
 def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
@@ -139,7 +157,11 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
         def wrapper(self, *args, **kwargs):
 
             # Get the epc from the self argument, it's always the first element of the args
-            epc: ExecutionPoolContext = self.epc
+            if hasattr(self, 'epc'):
+                epc: ExecutionPoolContext = self.epc
+            else:
+                raise RuntimeError('The async_auto_call_manager decorator can only be used in classes that have an '
+                                   'epc attribute')
 
             if epc.sequential or execute:
                 try:
@@ -156,7 +178,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                         while not job.finished:
                             time.sleep(0.1)
 
-                    job = jobs.new(asyncio.run, async_func(*args, **kwargs))
+                    job = jobs.new(asyncio.run, async_func(self, *args, **kwargs))
                     while not job.finished:
                         time.sleep(0.1)
 
@@ -165,9 +187,9 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                     if len(epc.task_pool) > 0:
                         logger.info('Executing task pool')
                         asyncio.run(execute_tasks(epc))
-                    return asyncio.run(sequential_task_execution(epc, async_func(*args, **kwargs)))
+                    return asyncio.run(sequential_task_execution(epc, async_func(self, *args, **kwargs)))
 
-            epc.task_pool.append(async_func(*args, **kwargs))
+            epc.task_pool.append(async_func(self, *args, **kwargs))
             logger.info(f'{async_func.__name__} added to the task pool')
 
             if kwargs.get('menu_path') and 'delete' not in async_func.__name__:

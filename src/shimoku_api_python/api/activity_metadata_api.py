@@ -772,6 +772,7 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.create_new_run(settings=settings)
         result = await run.execute()
+        await run
         logger.info(f'Activity {activity_name if activity_name else activity_id} executed with result {result}')
         return run.to_dict()
 
@@ -877,6 +878,7 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         result = await run.execute()
+        await run
         logger.info(f'Run with id {run_id} executed with result {result}')
 
     @async_auto_call_manager(execute=True)

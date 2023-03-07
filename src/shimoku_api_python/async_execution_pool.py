@@ -116,16 +116,16 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
             # After the apps are created we need to create the tabs to not create multiple tabs
             if len(epc.tabs_group_indexes) > 0:
-                epc.tabs_tasks = []
+                tabs_tasks = []
                 for tabs_group_pseudo_entry in epc.tabs_group_indexes:
                     app_name, path_name, group_name = tabs_group_pseudo_entry
                     app = await epc.plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
                     app_id: str = app['id']
                     tabs_group_entry = (app_id, path_name, group_name)
                     if tabs_group_entry not in epc.plot_api._tabs:
-                        epc.tabs_tasks.append(epc.plot_api._create_tabs_group(epc.plot_api.business_id, tabs_group_entry))
+                        tabs_tasks.append(epc.plot_api._create_tabs_group(epc.plot_api.business_id, tabs_group_entry))
 
-                await asyncio.gather(*epc.tabs_tasks)
+                await asyncio.gather(*tabs_tasks)
 
             await asyncio.gather(*epc.task_pool)
             epc.task_pool.clear()

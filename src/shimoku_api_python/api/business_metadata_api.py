@@ -20,16 +20,20 @@ class BusinessMetadataApi(ABC):
         self.api_client = api_client
         self.epc = execution_pool_context
 
-        # This is a way to avoid having to pass the execution_pool_context to all external functions
-        for method in self.business_explorer_api.__dir__():
+        self.get_business_activities = decorate_external_function(self, self.business_explorer_api, 'get_business_activities')
+        self.get_business = decorate_external_function(self, self.business_explorer_api, 'get_business')
+        self.get_universe_businesses = decorate_external_function(self, self.business_explorer_api, 'get_universe_businesses')
+        self.create_business = decorate_external_function(self, self.business_explorer_api, 'create_business')
+        self.update_business = decorate_external_function(self, self.business_explorer_api, 'update_business')
 
-            # Skip private methods and methods that are already defined in this class
-            if method.startswith('_') or method in self.__dir__() \
-               or not isinstance(getattr(self.business_explorer_api, method), Callable):
-                continue
+        self.get_business_apps = decorate_external_function(self, self.business_explorer_api, 'get_business_apps')
+        self.get_business_app_ids = decorate_external_function(self, self.business_explorer_api, 'get_business_app_ids')
+        self.get_business_all_apps_with_filter = decorate_external_function(self, self.business_explorer_api, 'get_business_all_apps_with_filter')
 
-            # Decorate the external function
-            setattr(self, method, decorate_external_function(self, self.business_explorer_api, method))
+        self.get_business_reports = decorate_external_function(self, self.business_explorer_api, 'get_business_reports')
+        self.get_business_report_ids = decorate_external_function(self, self.business_explorer_api, 'get_business_report_ids')
+
+        self.delete_business = decorate_external_function(self, self.business_explorer_api, 'delete_business')
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)

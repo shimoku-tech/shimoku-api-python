@@ -34,16 +34,20 @@ class AppMetadataApi(ABC):
         self._create_app = self.app_explorer_api.create_app
         self._get_business = self.business_explorer_api.get_business
 
-        # This is a way to avoid having to pass the execution_pool_context to all external functions
-        for method in self.app_explorer_api.__dir__():
+        self.get_app = decorate_external_function(self, self.app_explorer_api, 'get_app')
+        self.create_app = decorate_external_function(self, self.app_explorer_api, 'create_app')
+        self.update_app = decorate_external_function(self, self.app_explorer_api, 'update_app')
+        self.delete_app = decorate_external_function(self, self.app_explorer_api, 'delete_app')
 
-            # Skip private methods and methods that are already defined in this class
-            if method.startswith('_') or method in self.__dir__() \
-                    or not isinstance(getattr(self.app_explorer_api, method), Callable):
-                continue
-
-            # Decorate the external function
-            setattr(self, method, decorate_external_function(self, self.app_explorer_api, method))
+        self.get_business_apps = decorate_external_function(self, self.business_explorer_api, 'get_business_apps')
+        self.find_app_by_name_filter = decorate_external_function(self, self.app_explorer_api, 'find_app_by_name_filter')
+        self.get_app_reports = decorate_external_function(self, self.app_explorer_api, 'get_app_reports')
+        self.get_app_report_ids = decorate_external_function(self, self.app_explorer_api, 'get_app_report_ids')
+        self.get_app_path_names = decorate_external_function(self, self.app_explorer_api, 'get_app_path_names')
+        self.get_app_reports_by_filter = decorate_external_function(self, self.app_explorer_api, 'get_app_reports_by_filter')
+        self.get_app_by_type = decorate_external_function(self, self.app_explorer_api, 'get_app_by_type')
+        self.get_app_type = decorate_external_function(self, self.app_explorer_api, 'get_app_type')
+        self.get_app_by_name = decorate_external_function(self, self.app_explorer_api, 'get_app_by_name')
 
         self.epc = execution_pool_context
 

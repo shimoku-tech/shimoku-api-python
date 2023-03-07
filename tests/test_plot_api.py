@@ -959,13 +959,13 @@ def test_stacked_area_chart():
     print("test_area_chart")
     menu_path = 'test-free-echarts/stacked-area-chart'
     data_ = [
-        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
-        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
-        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Mon'},
+        {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Tue'},
+        {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Wed'},
+        {'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934, 'Weekday': 'Thu'},
+        {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Fri'},
+        {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Sat'},
+        {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Sun'},
     ]
     s.plt.stacked_area_chart(
         data=data_,

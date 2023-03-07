@@ -2604,7 +2604,7 @@ def test_bentobox():
     bentobox_data: Dict = {
         'bentoboxOrder': 0,
         'bentoboxSizeColumns': 8,
-        'bentoboxSizeRows': 20,
+        'bentoboxSizeRows': 3,
     }
     bentobox_data.update(bentobox_id)
 
@@ -2618,7 +2618,7 @@ def test_bentobox():
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=0, rows_size=8, cols_size=12,
+        order=0, rows_size=10, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -2628,7 +2628,7 @@ def test_bentobox():
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=1, rows_size=8, cols_size=12,
+        order=1, rows_size=10, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -2646,7 +2646,7 @@ def test_bentobox():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=2, rows_size=14, cols_size=24,
+        order=2, rows_size=26, cols_size=24,
         bentobox_data=bentobox_id,
     )
 
@@ -4123,7 +4123,7 @@ def test_tabs(check_data=True):
         bentobox_data: Dict = {
             'bentoboxOrder': 0,
             'bentoboxSizeColumns': 8,
-            'bentoboxSizeRows': 20,
+            'bentoboxSizeRows': 3,
         }
         bentobox_data.update(bentobox_id)
 
@@ -4137,7 +4137,7 @@ def test_tabs(check_data=True):
         s.plt.indicator(
             data=data_indic,
             menu_path=menu_path,
-            order=0, rows_size=8, cols_size=12,
+            order=0, rows_size=10, cols_size=12,
             value='value',
             header='title',
             footer='description',
@@ -4148,7 +4148,7 @@ def test_tabs(check_data=True):
         s.plt.indicator(
             data=data_indic,
             menu_path=menu_path,
-            order=1, rows_size=8, cols_size=12,
+            order=1, rows_size=10, cols_size=12,
             value='value',
             header='title',
             footer='description',
@@ -4168,7 +4168,7 @@ def test_tabs(check_data=True):
             data=data_bento,
             x='date', y=['x', 'y'],
             menu_path=menu_path,
-            order=2, rows_size=14, cols_size=24,
+            order=2, rows_size=26, cols_size=24,
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )

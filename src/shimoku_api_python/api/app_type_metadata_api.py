@@ -9,7 +9,7 @@ import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
 
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 
 class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
@@ -17,8 +17,9 @@ class AppTypeMetadataApi(AppTypeExplorerApi, ABC):
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client):
+    def __init__(self, api_client, execution_pool_context: ExecutionPoolContext):
         super().__init__(api_client)
+        self.epc = execution_pool_context
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)

@@ -1,7 +1,8 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
+import asyncio
 
 from shimoku_api_python.api.explorer_api import (
     AppExplorerApi, MultiCreateApi,
@@ -10,7 +11,8 @@ from shimoku_api_python.api.explorer_api import (
 )
 from shimoku_api_python.exceptions import ApiClientError
 
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext,\
+    decorate_external_function
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -21,7 +23,7 @@ class AppMetadataApi(ABC):
     """
     """
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, **kwargs):
+    def __init__(self, api_client, execution_pool_context: ExecutionPoolContext, **kwargs):
 
         self.app_explorer_api = AppExplorerApi(api_client)
         self.business_explorer_api = BusinessExplorerApi(api_client)
@@ -32,21 +34,22 @@ class AppMetadataApi(ABC):
         self._create_app = self.app_explorer_api.create_app
         self._get_business = self.business_explorer_api.get_business
 
-        self.get_app = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app)
-        self.create_app = async_auto_call_manager(execute=True)(self.app_explorer_api.create_app)
-        self.update_app = async_auto_call_manager(execute=True)(self.app_explorer_api.update_app)
+        self.get_app = decorate_external_function(self, self.app_explorer_api, 'get_app')
+        self.create_app = decorate_external_function(self, self.app_explorer_api, 'create_app')
+        self.update_app = decorate_external_function(self, self.app_explorer_api, 'update_app')
+        self.delete_app = decorate_external_function(self, self.app_explorer_api, 'delete_app')
 
-        self.get_business_apps = async_auto_call_manager(execute=True)(self.app_explorer_api.get_business_apps)
-        self.find_app_by_name_filter = async_auto_call_manager(execute=True)(self.app_explorer_api.find_app_by_name_filter)
-        self.get_app_reports = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_reports)
-        self.get_app_report_ids = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_report_ids)
-        self.get_app_path_names = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_path_names)
-        self.get_app_reports_by_filter = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_reports_by_filter)
-        self.get_app_by_type = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_type)
-        self.get_app_type = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_type)
-        self.get_app_by_name = async_auto_call_manager(execute=True)(self.app_explorer_api.get_app_by_name)
+        self.get_business_apps = decorate_external_function(self, self.business_explorer_api, 'get_business_apps')
+        self.find_app_by_name_filter = decorate_external_function(self, self.app_explorer_api, 'find_app_by_name_filter')
+        self.get_app_reports = decorate_external_function(self, self.app_explorer_api, 'get_app_reports')
+        self.get_app_report_ids = decorate_external_function(self, self.app_explorer_api, 'get_app_report_ids')
+        self.get_app_path_names = decorate_external_function(self, self.app_explorer_api, 'get_app_path_names')
+        self.get_app_reports_by_filter = decorate_external_function(self, self.app_explorer_api, 'get_app_reports_by_filter')
+        self.get_app_by_type = decorate_external_function(self, self.app_explorer_api, 'get_app_by_type')
+        self.get_app_type = decorate_external_function(self, self.app_explorer_api, 'get_app_type')
+        self.get_app_by_name = decorate_external_function(self, self.app_explorer_api, 'get_app_by_name')
 
-        self.delete_app = async_auto_call_manager(execute=True)(self.app_explorer_api.delete_app)
+        self.epc = execution_pool_context
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
@@ -187,3 +190,14 @@ class AppMetadataApi(ABC):
                 business_id=self.business_id, name=name,
             )
         return app
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_all_business_apps(self):
+        """
+        Deletes all the apps from the current business
+        """
+        tasks = [self.app_explorer_api.delete_app(self.business_id, app['id'])
+                 for app in await self.business_explorer_api.get_business_apps(self.business_id)]
+
+        await asyncio.gather(*tasks)

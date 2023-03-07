@@ -4680,6 +4680,8 @@ test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
 test_gauge_indicators()
+test_rose()
+test_doughnut()
 test_free_echarts()
 
 # Filters and sequential needed

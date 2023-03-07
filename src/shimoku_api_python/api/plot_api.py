@@ -4426,7 +4426,7 @@ class PlotApi(BasePlot):
         self, gauges_data: Union[pd.DataFrame, List[Dict]], order: int, menu_path: str,
         rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
         gauges_padding: Optional[str] = '3, 1, 1, 1',
-        gauges_rows_size: Optional[int] = 11, gauges_cols_size: Optional[int] = 4,
+        gauges_rows_size: Optional[int] = 9, gauges_cols_size: Optional[int] = 4,
         filters: Optional[Dict] = None, tabs_index: Optional[Tuple[str, str]] = None,
         calculate_percentages: Optional[bool] = False
     ):
@@ -4486,7 +4486,7 @@ class PlotApi(BasePlot):
         self.indicator(
             data=data_,
             menu_path=menu_path,
-            order=order, rows_size=10, cols_size=17,
+            order=order, rows_size=8, cols_size=15,
             padding='1, 1, 0, 1',
             value='value',
             color='color',
@@ -4573,8 +4573,8 @@ class PlotApi(BasePlot):
             data=data_gauge,
             options=raw_options,
             menu_path=menu_path,
-            order=order+1, rows_size=10, cols_size=5,
-            padding='2, 0, 1, 0',
+            order=order+1, rows_size=6, cols_size=7,
+            padding='1, 0, 1, 0',
             bentobox_data=bentobox_data,
             tabs_index=tabs_index
         )

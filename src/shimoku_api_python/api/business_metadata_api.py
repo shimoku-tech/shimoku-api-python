@@ -20,6 +20,7 @@ class BusinessMetadataApi(ABC):
         self.api_client = api_client
         self.epc = execution_pool_context
 
+        self.async_get_business_activities = self.business_explorer_api.get_business_activities
         self.get_business_activities = decorate_external_function(self, self.business_explorer_api, 'get_business_activities')
         self.get_business = decorate_external_function(self, self.business_explorer_api, 'get_business')
         self.get_universe_businesses = decorate_external_function(self, self.business_explorer_api, 'get_universe_businesses')

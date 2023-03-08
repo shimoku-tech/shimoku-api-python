@@ -162,8 +162,8 @@ class BasePlot:
             business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
 
             for tabs_group_report in business_tabs:
-                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"'))
-                properties = json.loads(tabs_group_report['properties'].replace("'", '"'))
+                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"').replace('None', 'null'))
+                properties = json.loads(tabs_group_report['properties'].replace("'", '"').replace('None', 'null'))
                 tabs_group_report_id = tabs_group_report['id']
                 app_id = tabs_group_report['appId']
                 path_name = tabs_group_report['path'] if tabs_group_report['path'] else ""
@@ -1194,7 +1194,7 @@ class BasePlot:
                 app_normalized_name, app_path_name = menu_path, None
 
             if not app_path_name:
-                raise ValueError('To order Apps use set_apps_order() instead!')
+                raise ValueError('To order Apps use set_apps_orders() instead!')
 
             app_normalized_name = self._plot_aux.create_normalized_name(app_normalized_name)
             app_path_name = self._plot_aux.create_normalized_name(app_path_name)
@@ -1449,7 +1449,7 @@ class BasePlot:
                 app_name, path_name = self._clean_menu_path(menu_path)
                 if not path_name:
                     path_name = ""
-                data_fields = json.loads(report['dataFields'].replace("'", '"'))
+                data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
 
@@ -1548,7 +1548,7 @@ class BasePlot:
             # Tabs data structures maintenance
             if report['reportType'] == 'TABS':
                 path_name = report['path'] if report['path'] else ""
-                data_fields = json.loads(report['dataFields'].replace("'", '"'))
+                data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
                 group_name = data_fields['groupName']
                 tabs_group_entry = (app_id, path_name, group_name)
                 if tabs_group_entry in self._tabs:
@@ -3359,8 +3359,6 @@ class PlotApi(BasePlot):
                 raise ValueError(f'{extra_element} is not solved')
 
         len_df = len(df)
-        padding_right = None
-        padding_left = None
         if vertical and (len_df > 1 or isinstance(vertical, str)):
             if bentobox_data:
                 raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
@@ -3389,16 +3387,30 @@ class PlotApi(BasePlot):
                 order += 1
 
         else:
+            if padding is None:
+                padding = '0,0,0,0'
+
+            padding = padding.replace(' ', '')
+            padding_left = f'{padding[0]},0,{padding[4]},{padding[6]}'
+            padding_right= f'{padding[0]},{padding[2]},{padding[4]},0'
+            padding_else = f'{padding[0]},0,{padding[4]},0'
             cols_size = cols_size//len_df
             if cols_size < 2:
                 raise ValueError(f'The calculation of the individual cols_size for each indicator '
                                  f'is too small (cols_size/len(df)): {cols_size}')
 
         last_index = df.index[-1]
+        first_index = df.index[0]
 
         for index, df_row in df.iterrows():
 
-            if index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
+            if not vertical:
+                padding = padding_else
+                if index == first_index:
+                    padding = padding_left
+                elif index == last_index:
+                    padding = padding_right
+            elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
             report_metadata: Dict = {
@@ -4433,7 +4445,7 @@ class PlotApi(BasePlot):
         self, gauges_data: Union[pd.DataFrame, List[Dict]], order: int, menu_path: str,
         rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
         gauges_padding: Optional[str] = '3, 1, 1, 1',
-        gauges_rows_size: Optional[int] = 11, gauges_cols_size: Optional[int] = 4,
+        gauges_rows_size: Optional[int] = 9, gauges_cols_size: Optional[int] = 4,
         filters: Optional[Dict] = None, tabs_index: Optional[Tuple[str, str]] = None,
         calculate_percentages: Optional[bool] = False
     ):
@@ -4493,7 +4505,7 @@ class PlotApi(BasePlot):
         self.indicator(
             data=data_,
             menu_path=menu_path,
-            order=order, rows_size=10, cols_size=17,
+            order=order, rows_size=8, cols_size=15,
             padding='1, 1, 0, 1',
             value='value',
             color='color',
@@ -4580,8 +4592,8 @@ class PlotApi(BasePlot):
             data=data_gauge,
             options=raw_options,
             menu_path=menu_path,
-            order=order+1, rows_size=10, cols_size=5,
-            padding='2, 0, 1, 0',
+            order=order+1, rows_size=6, cols_size=7,
+            padding='1, 0, 1, 0',
             bentobox_data=bentobox_data,
             tabs_index=tabs_index
         )
@@ -4651,6 +4663,8 @@ class PlotApi(BasePlot):
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        df = df[[x] + value_columns]
 
         if not option_modifications:
             option_modifications = {
@@ -4742,6 +4756,8 @@ class PlotApi(BasePlot):
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
 
+        df = df[[x] + value_columns]
+
         if not option_modifications:
             option_modifications = {
                 'subtitle': subtitle if subtitle else '',
@@ -4832,6 +4848,8 @@ class PlotApi(BasePlot):
         if calculate_percentages:
             df[value_columns] = df[value_columns].apply(
                 lambda row: self._calculate_percentages_from_list(row, 2), axis=1)
+
+        df = df[[x] + value_columns]
 
         if not option_modifications:
             option_modifications = {

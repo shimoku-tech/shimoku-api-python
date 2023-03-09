@@ -4,6 +4,9 @@ from typing import Tuple, Optional, Callable, Coroutine
 import logging
 from IPython.lib import backgroundjobs as bg
 import time
+from shimoku_api_python.execution_logger import logging_before_and_after
+
+logger = logging.getLogger(__name__)
 
 
 # TODO find a better way to handle this
@@ -41,26 +44,38 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
     return name, path_name
 
 
-task_pool = []
-app_names = []
-tabs_group_indexes = []
-list_for_conflicts = []
-# By default, set to true, to make the user aware that it is using the async configuration
-# (they will have to explicitly state it in their code)
-sequential = True
-plot_api = None
-api_client = None
-logger = logging.getLogger(__name__)
+class ExecutionPoolContext:
+    """
+    This class stores the arguments needed to execute the tasks in the task pool
+    """
+
+    def __init__(self, api_client):
+        self.api_client = api_client
+        self.task_pool = []
+        self.app_names = []
+        self.tabs_group_indexes = []
+        self.list_for_conflicts = []
+        # By default, set to true, to make the user aware that it is using the async configuration
+        # (they will have to explicitly state it in their code)
+        self.sequential = True
+        self.plot_api = None
 
 
-def activate_sequential_execution():
-    global sequential
-    sequential = True
+def decorate_external_function(self, external_class, function_name):
+    """
+    This function is used to decorate a function from another class, getting all the context necessary from the self
+    argument of the class where it is being called. This is done so that the execution_pool_context is only used by the
+    user-access classes, and not by the low level SDK classes.
+    """
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.debug)
+    async def call_function_from_class(self, external_class, function_name, *args, **kwargs):
+        return await getattr(external_class, function_name)(*args, **kwargs)
 
+    def wrapper(*args, **kwargs):
+        return call_function_from_class(self, external_class, function_name, *args, **kwargs)
 
-def deactivate_sequential_execution():
-    global sequential
-    sequential = False
+    return wrapper
 
 
 def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
@@ -79,72 +94,76 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
     def decorator(async_func: Callable) -> Callable:
 
-        async def execute_tasks():
+        async def execute_tasks(epc: ExecutionPoolContext):
             # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
-            global plot_api
-            api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
+            epc.api_client.semaphore = asyncio.Semaphore(epc.api_client.semaphore_limit)
 
             # if just one task it's the same as sequential
-            if len(task_pool) == 1:
-                result = await task_pool[0]
-                task_pool.clear()
-                app_names.clear()
-                tabs_group_indexes.clear()
-                list_for_conflicts.clear()
+            if len(epc.task_pool) == 1:
+                result = await epc.task_pool[0]
+                epc.task_pool.clear()
+                epc.app_names.clear()
+                epc.tabs_group_indexes.clear()
+                epc.list_for_conflicts.clear()
                 return result
 
             # We need to create the apps before the tasks try to access them all at once
-            if len(app_names) > 0:
-                menu_path_tasks = [plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
-                                   for app_name in app_names]
+            if len(epc.app_names) > 0:
+                menu_path_tasks = [epc.plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                                   for app_name in epc.app_names]
                 await asyncio.gather(*menu_path_tasks)
-                app_names.clear()
+                epc.app_names.clear()
 
             # After the apps are created we need to create the tabs to not create multiple tabs
-            if len(tabs_group_indexes) > 0:
+            if len(epc.tabs_group_indexes) > 0:
                 tabs_tasks = []
-                for tabs_group_pseudo_entry in tabs_group_indexes:
+                for tabs_group_pseudo_entry in epc.tabs_group_indexes:
                     app_name, path_name, group_name = tabs_group_pseudo_entry
-                    app = await plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                    app = await epc.plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
                     app_id: str = app['id']
                     tabs_group_entry = (app_id, path_name, group_name)
-                    if tabs_group_entry not in plot_api._tabs:
-                        tabs_tasks.append(plot_api._create_tabs_group(plot_api.business_id, tabs_group_entry))
+                    if tabs_group_entry not in epc.plot_api._tabs:
+                        tabs_tasks.append(epc.plot_api._create_tabs_group(epc.plot_api.business_id, tabs_group_entry))
 
                 await asyncio.gather(*tabs_tasks)
 
-            await asyncio.gather(*task_pool)
-            task_pool.clear()
-            list_for_conflicts.clear()
+            await asyncio.gather(*epc.task_pool)
+            epc.task_pool.clear()
+            epc.list_for_conflicts.clear()
 
             # After all the tasks have finished update the tabs to get all the charts correctly
-            if len(tabs_group_indexes) > 0:
+            if len(epc.tabs_group_indexes) > 0:
                 tabs_tasks = []
-                for tabs_group_pseudo_entry in tabs_group_indexes:
+                for tabs_group_pseudo_entry in epc.tabs_group_indexes:
                     app_name, path_name, group_name = tabs_group_pseudo_entry
-                    app = await plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                    app = await epc.plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
                     app_id: str = app['id']
                     tabs_tasks.append(
-                        plot_api._update_tabs_group_metadata(
-                            business_id=plot_api.business_id,
+                        epc.plot_api._update_tabs_group_metadata(
+                            business_id=epc.plot_api.business_id,
                             app_id=app_id, path_name=path_name,
                             group_name=group_name,
                         )
                     )
 
                 await asyncio.gather(*tabs_tasks)
-                tabs_group_indexes.clear()
+                epc.tabs_group_indexes.clear()
 
-        async def sequential_task_execution(coroutine: Coroutine):
-            api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
+        async def sequential_task_execution(epc: ExecutionPoolContext, coroutine: Coroutine):
+            epc.api_client.semaphore = asyncio.Semaphore(epc.api_client.semaphore_limit)
             return await coroutine
 
         @wraps(async_func)
-        def wrapper(*args, **kwargs):
+        def wrapper(self, *args, **kwargs):
 
-            global task_pool, app_names, tabs_group_indexes
+            # Get the epc from the self argument, it's always the first element of the args
+            if hasattr(self, 'epc'):
+                epc: ExecutionPoolContext = self.epc
+            else:
+                raise RuntimeError('The async_auto_call_manager decorator can only be used in classes that have an '
+                                   'epc attribute')
 
-            if sequential or execute:
+            if epc.sequential or execute:
                 try:
                     loop = asyncio.get_event_loop()
                 except RuntimeError:
@@ -153,24 +172,24 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                 if loop and loop.is_running():
                     # We are in a jupyter notebook, so we need to execute in a different loop
                     jobs = bg.BackgroundJobManager()
-                    if len(task_pool) > 0:
+                    if len(epc.task_pool) > 0:
                         logger.info('Executing task pool')
-                        job = jobs.new(asyncio.run, execute_tasks())
+                        job = jobs.new(asyncio.run, execute_tasks(epc))
                         while not job.finished:
                             time.sleep(0.1)
 
-                    job = jobs.new(asyncio.run, async_func(*args, **kwargs))
+                    job = jobs.new(asyncio.run, async_func(self, *args, **kwargs))
                     while not job.finished:
                         time.sleep(0.1)
 
                     return job.result
                 else:
-                    if len(task_pool) > 0:
+                    if len(epc.task_pool) > 0:
                         logger.info('Executing task pool')
-                        asyncio.run(execute_tasks())
-                    return asyncio.run(sequential_task_execution(async_func(*args, **kwargs)))
+                        asyncio.run(execute_tasks(epc))
+                    return asyncio.run(sequential_task_execution(epc, async_func(self, *args, **kwargs)))
 
-            task_pool.append(async_func(*args, **kwargs))
+            epc.task_pool.append(async_func(self, *args, **kwargs))
             logger.info(f'{async_func.__name__} added to the task pool')
 
             if kwargs.get('menu_path') and 'delete' not in async_func.__name__:
@@ -180,27 +199,27 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
                 list_for_conflicts_entry = app_name + path_name
 
-                app_names += [app_name] if app_name not in app_names else []
+                epc.app_names += [app_name] if app_name not in epc.app_names else []
                 if kwargs.get('tabs_index'):
                     list_for_conflicts_entry += kwargs['tabs_index'][0] + kwargs['tabs_index'][1]
                     tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
-                    tabs_group_indexes += [tabs_group_pseudo_entry] \
-                        if tabs_group_pseudo_entry not in tabs_group_indexes else []
+                    epc.tabs_group_indexes += [tabs_group_pseudo_entry] \
+                        if tabs_group_pseudo_entry not in epc.tabs_group_indexes else []
 
                 if kwargs.get('order'):
                     list_for_conflicts_entry += str(kwargs.get('order'))
 
-                    if list_for_conflicts_entry in list_for_conflicts:
-                        task_pool.clear()
-                        app_names.clear()
-                        tabs_group_indexes.clear()
-                        list_for_conflicts.clear()
+                    if list_for_conflicts_entry in epc.list_for_conflicts:
+                        epc.task_pool.clear()
+                        epc.app_names.clear()
+                        epc.tabs_group_indexes.clear()
+                        epc.list_for_conflicts.clear()
                         error_message = 'Report order collision, two reports with the same order can not be executed ' \
                                         'at the same time'
                         logger.error(error_message)
                         raise RuntimeError(error_message)
                     else:
-                        list_for_conflicts.append(list_for_conflicts_entry)
+                        epc.list_for_conflicts.append(list_for_conflicts_entry)
 
         return wrapper
 

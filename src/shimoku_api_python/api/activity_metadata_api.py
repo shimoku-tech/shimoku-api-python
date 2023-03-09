@@ -5,7 +5,7 @@ import datetime as dt
 from shimoku_api_python.api.app_metadata_api import AppMetadataApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
 from shimoku_api_python.api.plot_api import PlotApi
-from shimoku_api_python.async_execution_pool import async_auto_call_manager
+from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 
@@ -485,7 +485,7 @@ class ActivityMetadataApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, app_metadata_api: AppMetadataApi, business_metadata_api: BusinessMetadataApi,
-                 plot_api: PlotApi, business_id: Optional[str] = None):
+                 plot_api: PlotApi, execution_pool_context: ExecutionPoolContext, business_id: Optional[str] = None):
         self.api_client = api_client
         self.business_id: Optional[str] = business_id
         self.activities: Dict[(str, str), Activity] = {}
@@ -494,6 +494,7 @@ class ActivityMetadataApi:
         self._app_metadata_api: AppMetadataApi = app_metadata_api
         self._business_metadata_api: BusinessMetadataApi = business_metadata_api
         self._plot_api: PlotApi = plot_api
+        self.epc: ExecutionPoolContext = execution_pool_context
         ###########################################################
 
     @logging_before_and_after(logging_level=logger.debug)

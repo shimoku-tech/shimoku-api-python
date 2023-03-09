@@ -1649,6 +1649,10 @@ def test_doughnut():
     s.plt.doughnut(data_, menu_path=menu_path, order=1, rounded=False)
 
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     doughnut_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -1672,6 +1676,10 @@ def test_rose():
     s.plt.rose(data_, menu_path=menu_path, order=1, rounded=False)
 
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     rose_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -1685,6 +1693,10 @@ def test_shimoku_gauges():
     print("test_shimoku_gauges")
     menu_path: str = 'test-free-echarts/shimoku-gauges'
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     gauges_data = pd.DataFrame(columns=["name", "value", "color"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -4680,6 +4692,8 @@ test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
 test_gauge_indicators()
+test_rose()
+test_doughnut()
 test_free_echarts()
 
 # Filters and sequential needed

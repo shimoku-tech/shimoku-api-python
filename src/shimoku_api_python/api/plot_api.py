@@ -124,6 +124,11 @@ class BasePlot:
         self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api, epc=self.epc)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
+        self.dashboard = None
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def set_dashboard(self, dashboard_name):
+        self.dashboard = dashboard_name
 
     @logging_before_and_after(logging_level=logger.debug)
     def _clear_or_create_all_local_state(self):
@@ -584,8 +589,9 @@ class BasePlot:
         tabs_group_entry = (app_id, path_name, group)
         tab_entry = (app_id, path_name, tabs_index)
 
-        if tabs_group_entry not in self._tabs:
-            await self._create_tabs_group(business_id, tabs_group_entry)
+        async with self.api_client.locks['get_create_tab']:
+            if tabs_group_entry not in self._tabs:
+                await self._create_tabs_group(business_id, tabs_group_entry)
 
         self._report_in_tab[report_id] = tab_entry
 
@@ -633,7 +639,9 @@ class BasePlot:
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
+                                                                 dashboard_name=self.dashboard
+                                                                 if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 
         if overwrite:
@@ -1341,7 +1349,9 @@ class BasePlot:
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux.get_or_create_app_and_apptype(name=name)
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
+                                                                 dashboard_name=self.dashboard
+                                                                 if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 
         if overwrite:
@@ -1439,6 +1449,7 @@ class BasePlot:
                     report_id=report_id
                 )
             )
+
             try:  # It should always exist
                 del self._report_order[report_id]
             except KeyError:
@@ -1946,6 +1957,10 @@ class PlotApi(BasePlot):
             }
         }
 
+    @logging_before_and_after(logging_level=logger.debug)
+    def set_dashboard(self, dashboard_name: str):
+        super().set_dashboard(dashboard_name)
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_business(self, business_id: str):
@@ -2378,21 +2393,9 @@ class PlotApi(BasePlot):
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        # TODO investigate what to do with this
-        # try:
-        #     d: Dict[str, Dict] = await self._plot_aux.create_app_type_and_app(
-        #         business_id=self.business_id,
-        #         app_type_metadata={'name': name},
-        #         app_metadata={},
-        #     )
-        #     app: Dict = d['app']
-        # except ApiClientError:  # Business admin user
-        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=name)
-        if not app:
-            app: Dict = await self._plot_aux.create_app(
-                business_id=self.business_id, name=name,
-            )
-
+        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
+                                                                 dashboard_name=self.dashboard
+                                                                 if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 
         if not isinstance(downloadable_to_csv, bool):

@@ -54,9 +54,13 @@ class Client(object):
         self.ping = PingApi(self._api_client)
         self.universe = UniverseMetadataApi(self._api_client, execution_pool_context=self.epc)
         self.business = BusinessMetadataApi(self._api_client, execution_pool_context=self.epc)
-        self.dashboard = DashboardMetadataApi(self._api_client, self.business, business_id=business_id)
+        self.dashboard = DashboardMetadataApi(self._api_client, self.business, business_id=business_id,
+                                              execution_pool_context=self.epc)
         self.app_type = AppTypeMetadataApi(self._api_client, execution_pool_context=self.epc)
-        self.app = AppMetadataApi(self._api_client, business_id=business_id, execution_pool_context=self.epc)
+        self.app = AppMetadataApi(self._api_client,
+                                  business_id=business_id,
+                                  execution_pool_context=self.epc,
+                                  dashboard_metadata_api=self.dashboard)
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client, business_id=business_id, execution_pool_context=self.epc)

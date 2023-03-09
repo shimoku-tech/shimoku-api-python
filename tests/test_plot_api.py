@@ -34,6 +34,7 @@ s = shimoku.Client(
 s.plt.set_business(business_id=business_id)
 s.app.set_business(business_id=business_id)
 s.io.set_business(business_id=business_id)
+s.dashboard.set_business(business_id=business_id)
 
 delete_paths: bool = False
 
@@ -4657,35 +4658,36 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-s.plt.clear_business()
-#
-# # Charts
-# test_line()
-# test_funnel()
-# test_tree()
-# test_iframe()
-# test_html()
-# test_table()
-# test_table_with_labels()
-# test_bentobox()
-# test_zero_centered_barchart()
-# test_indicator()
-# test_indicator_one_dict()
-# test_alert_indicator()
-# test_stockline()
-# test_radar()
-# test_pie()
-# test_ux()
-# test_ring_gauge()
-# test_sunburst()
-# test_treemap()
-# test_heatmap()
-# test_sankey()
-# test_horizontal_barchart()
-# test_predictive_line()
-# test_speed_gauge()
-# test_scatter()
+# s.plt.clear_business()
 
+# Charts
+test_line()
+test_funnel()
+test_tree()
+test_iframe()
+test_html()
+test_table()
+test_table_with_labels()
+test_bentobox()
+test_zero_centered_barchart()
+test_indicator()
+test_indicator_one_dict()
+test_alert_indicator()
+test_stockline()
+test_radar()
+test_pie()
+# test_ux()
+test_ring_gauge()
+test_sunburst()
+test_treemap()
+test_heatmap()
+test_sankey()
+test_horizontal_barchart()
+test_predictive_line()
+test_speed_gauge()
+test_scatter()
+
+s.plt.set_dashboard('Dashboard groupping apps')
 # Free echarts
 test_stacked_barchart()
 test_stacked_horizontal_barchart()
@@ -4695,29 +4697,29 @@ test_gauge_indicators()
 test_rose()
 test_doughnut()
 test_free_echarts()
-#
-# # Filters and sequential needed
-# test_heatmap_with_filters()
-# test_bar_with_filters_with_aggregation_methods()
-# test_bar_with_filters()
-# test_bar()
-#
-# # Tabs
-# test_tabs()
-# s.run()
-# test_tabs(check_data=False)
-#
-# # Others
-# test_dynamic_conditional_and_auto_send_input_form()
-# test_input_form()
-# test_get_input_forms()
-# test_set_apps_orders()
-# test_set_sub_path_orders()
-# test_set_new_business()
-# test_append_data_to_trend_chart()
-# test_delete()
-# test_delete_path()
-# test_same_position_charts()
+
+# Filters and sequential needed
+test_heatmap_with_filters()
+test_bar_with_filters_with_aggregation_methods()
+test_bar_with_filters()
+test_bar()
+
+# Tabs
+test_tabs()
+s.run()
+test_tabs(check_data=False)
+
+# Others
+test_dynamic_conditional_and_auto_send_input_form()
+test_input_form()
+test_get_input_forms()
+test_set_apps_orders()
+test_set_sub_path_orders()
+test_set_new_business()
+test_append_data_to_trend_chart()
+test_delete()
+test_delete_path()
+test_same_position_charts()
 s.run()
 
 # TODO

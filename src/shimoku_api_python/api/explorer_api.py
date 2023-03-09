@@ -286,6 +286,19 @@ class GetExplorerAPI(object):
         )
         return dashboard_data
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def app_dashboard_links(self, business_id: str, dashboard_id: str) -> Dict:
+        """Retrieve the appdashboards of a dashboard
+
+        :param business_id: business UUID
+        :param dashboard_id: dashboard UUID
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboards'
+        appdashboards: Dict = await (
+            self.api_client.query_element(method='GET', endpoint=endpoint)
+        )
+        return appdashboards['items']
+
 
 class CascadeExplorerAPI(GetExplorerAPI):
 
@@ -1193,6 +1206,39 @@ class CreateExplorerAPI(object):
         file_data.pop('url')
         return file_data
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def create_dashboard(self, business_id: str, dashboard_metadata: Dict) -> Dict:
+        """Create a Dashboard
+
+        :param business_id: UUID of the business
+        :param app_id: UUID of the app
+        :param dashboard_metadata: Metadata of the dashboard
+        :return: The dashboard as a dictionary
+        """
+
+        endpoint: str = f'business/{business_id}/dashboard'
+        dashboard: Dict = await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': dashboard_metadata},
+        )
+        return dashboard
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def add_app_in_dashboard(self, business_id: str, dashboard_id: str, app_id: str) -> Dict:
+        """Add an app in a dashboard
+
+        :param business_id: UUID of the business
+        :param dashboard_id: UUID of the dashboard
+        :param app_id: UUID of the app
+        :return: The dashboard as a dictionary
+        """
+
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboard'
+
+        dashboard: Dict = await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': {'appId': app_id}},
+        )
+        return dashboard
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
 
@@ -1456,22 +1502,6 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             'data': data,
         }
 
-    @logging_before_and_after(logging_level=logger.debug)
-    async def create_dashboard(self, business_id: str, dashboard_metadata: Dict) -> Dict:
-        """Create a Dashboard
-
-        :param business_id: UUID of the business
-        :param app_id: UUID of the app
-        :param dashboard_metadata: Metadata of the dashboard
-        :return: The dashboard as a dictionary
-        """
-
-        endpoint: str = f'business/{business_id}/dashboard'
-        dashboard: Dict = await self.api_client.query_element(
-            method='POST', endpoint=endpoint, **{'body_params': dashboard_metadata},
-        )
-        return dashboard
-
 
 
 
@@ -1633,16 +1663,27 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
-    def delete_dashboard(self, business_id: str, dashboard_id: str) -> Dict:
+    async def delete_dashboard(self, business_id: str, dashboard_id: str) -> Dict:
         """
         Delete a dashboard
         :param business_id: UUID of the business
         :param dashboard_id: UUID of the dashboard
         """
         endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}'
-        result: Dict = self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        result: Dict = await self.api_client.query_element(method='DELETE', endpoint=endpoint)
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_app_dashboard_link(self, business_id: str, dashboard_id: str, app_dashboard_id: str) -> Dict:
+        """
+        Delete an app from a dashboard
+        :param business_id: UUID of the business
+        :param dashboard_id: UUID of the dashboard
+        :param app_dashboard_id: UUID of the app_dashboard
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboard/{app_dashboard_id}'
+        result: Dict = await self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
 
 # TODO los siguientes puntos:
 #  . Si elimino (delete) un report se eliminan sus reportdataset?
@@ -2053,15 +2094,18 @@ class DashboardExplorerApi:
     def __init__(self, api_client):
         self.get_explorer_api = GetExplorerAPI(api_client)
         self.cascade_explorer_api = CascadeExplorerAPI(api_client)
-        self.cascade_create_explorer_api = CascadeCreateExplorerAPI(api_client)
+        self.create_explorer_api = CreateExplorerAPI(api_client)
         self.update_explorer_api = UpdateExplorerAPI(api_client)
         self.delete_explorer_api = DeleteExplorerApi(api_client)
 
         self.get_dashboard = self.get_explorer_api.get_dashboard
         self.get_business_dashboards = self.cascade_explorer_api.get_business_dashboards
-        self.create_dashboard = self.cascade_create_explorer_api.create_dashboard
+        self.create_dashboard = self.create_explorer_api.create_dashboard
         self.update_dashboard = self.update_explorer_api.update_dashboard
         self.delete_dashboard = self.delete_explorer_api.delete_dashboard
+        self.add_app_in_dashboard = self.create_explorer_api.add_app_in_dashboard
+        self.app_dashboard_links = self.get_explorer_api.app_dashboard_links
+        self.delete_app_dashboard_link = self.delete_explorer_api.delete_app_dashboard_link
 
 
 class AppTypeExplorerApi:

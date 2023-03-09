@@ -9,6 +9,7 @@ from shimoku_api_python.api.explorer_api import (
     CascadeExplorerAPI, CascadeCreateExplorerAPI,
     BusinessExplorerApi
 )
+from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi
 from shimoku_api_python.exceptions import ApiClientError
 
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext,\
@@ -23,8 +24,10 @@ class AppMetadataApi(ABC):
     """
     """
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, execution_pool_context: ExecutionPoolContext, **kwargs):
+    def __init__(self, api_client, dashboard_metadata_api: DashboardMetadataApi, execution_pool_context: ExecutionPoolContext, **kwargs):
 
+        self._api_client = api_client
+        self.dashboard_metadata_api = dashboard_metadata_api
         self.app_explorer_api = AppExplorerApi(api_client)
         self.business_explorer_api = BusinessExplorerApi(api_client)
         self.multi_create = MultiCreateApi(api_client)
@@ -33,6 +36,8 @@ class AppMetadataApi(ABC):
         self._get_app_by_name = self.app_explorer_api.get_app_by_name
         self._create_app = self.app_explorer_api.create_app
         self._get_business = self.business_explorer_api.get_business
+        self._add_app_in_dashboard = self.dashboard_metadata_api.async_add_app_in_dashboard
+        self._create_dashboard = self.dashboard_metadata_api.async_create_dashboard
 
         self.get_app = decorate_external_function(self, self.app_explorer_api, 'get_app')
         self.create_app = decorate_external_function(self, self.app_explorer_api, 'create_app')
@@ -50,6 +55,8 @@ class AppMetadataApi(ABC):
         self.get_app_by_name = decorate_external_function(self, self.app_explorer_api, 'get_app_by_name')
 
         self.epc = execution_pool_context
+
+        self._apps = {}
 
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
@@ -173,7 +180,7 @@ class AppMetadataApi(ABC):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_or_create_app_and_apptype(self, name: str) -> Dict:
+    async def get_or_create_app_and_apptype(self, name: str, dashboard_name: Optional[str] = None) -> Dict:
         """Try to create an App and AppType if they exist instead retrieve them"""
         # TODO investigate what to do with this
         # try:
@@ -184,12 +191,23 @@ class AppMetadataApi(ABC):
         #     )
         #     app: Dict = d['app']
         # except ApiClientError:  # Business admin user
-        app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
-        if not app:
-            app: Dict = await self._create_app(
-                business_id=self.business_id, name=name,
-            )
-        return app
+        async with self._api_client.locks['get_create_app']:
+
+            if name in self._apps:
+                return self._apps[name]
+
+            app: Dict = await self._get_app_by_name(business_id=self.business_id, name=name)
+            if not app:
+                app: Dict = await self._create_app(
+                    business_id=self.business_id, name=name,
+                )
+                if dashboard_name:
+                    await self._create_dashboard(dashboard_name=dashboard_name)
+                    await self._add_app_in_dashboard(app_id=app['id'], dashboard_name=dashboard_name)
+
+            self._apps[name] = app
+
+            return app
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -199,5 +217,7 @@ class AppMetadataApi(ABC):
         """
         tasks = [self.app_explorer_api.delete_app(self.business_id, app['id'])
                  for app in await self.business_explorer_api.get_business_apps(self.business_id)]
+
+        self._apps = {}
 
         await asyncio.gather(*tasks)

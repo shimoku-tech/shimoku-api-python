@@ -42,6 +42,10 @@ class ApiClient(object):
         # semaphor for async api calls
         self.semaphore_limit = 10
         self.semaphore = None
+        self.locks = {
+            'get_create_app': None,
+            'get_create_tab': None,
+        }
 
         self.host: str = f'{self.host}universe/{universe_id}/'
 

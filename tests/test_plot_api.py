@@ -959,13 +959,13 @@ def test_stacked_area_chart():
     print("test_area_chart")
     menu_path = 'test-free-echarts/stacked-area-chart'
     data_ = [
-        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
-        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
-        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
-        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
-        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Mon'},
+        {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Tue'},
+        {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Wed'},
+        {'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934, 'Weekday': 'Thu'},
+        {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Fri'},
+        {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Sat'},
+        {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Sun'},
     ]
     s.plt.stacked_area_chart(
         data=data_,
@@ -1649,6 +1649,10 @@ def test_doughnut():
     s.plt.doughnut(data_, menu_path=menu_path, order=1, rounded=False)
 
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     doughnut_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -1672,6 +1676,10 @@ def test_rose():
     s.plt.rose(data_, menu_path=menu_path, order=1, rounded=False)
 
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     rose_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -1685,6 +1693,10 @@ def test_shimoku_gauges():
     print("test_shimoku_gauges")
     menu_path: str = 'test-free-echarts/shimoku-gauges'
     df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment']+value_columns]
+
     gauges_data = pd.DataFrame(columns=["name", "value", "color"])
     df_transposed = df.transpose().reset_index().drop(0)
     value_columns = [col for col in df_transposed.columns if col != "index"]
@@ -2604,7 +2616,7 @@ def test_bentobox():
     bentobox_data: Dict = {
         'bentoboxOrder': 0,
         'bentoboxSizeColumns': 8,
-        'bentoboxSizeRows': 20,
+        'bentoboxSizeRows': 3,
     }
     bentobox_data.update(bentobox_id)
 
@@ -2618,7 +2630,7 @@ def test_bentobox():
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=0, rows_size=8, cols_size=12,
+        order=0, rows_size=10, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -2628,7 +2640,7 @@ def test_bentobox():
     s.plt.indicator(
         data=data_,
         menu_path=menu_path,
-        order=1, rows_size=8, cols_size=12,
+        order=1, rows_size=10, cols_size=12,
         value='value',
         header='title',
         footer='description',
@@ -2646,7 +2658,7 @@ def test_bentobox():
         data=data,
         x='date', y=['x', 'y'],
         menu_path=menu_path,
-        order=2, rows_size=14, cols_size=24,
+        order=2, rows_size=26, cols_size=24,
         bentobox_data=bentobox_id,
     )
 
@@ -4123,7 +4135,7 @@ def test_tabs(check_data=True):
         bentobox_data: Dict = {
             'bentoboxOrder': 0,
             'bentoboxSizeColumns': 8,
-            'bentoboxSizeRows': 20,
+            'bentoboxSizeRows': 3,
         }
         bentobox_data.update(bentobox_id)
 
@@ -4137,7 +4149,7 @@ def test_tabs(check_data=True):
         s.plt.indicator(
             data=data_indic,
             menu_path=menu_path,
-            order=0, rows_size=8, cols_size=12,
+            order=0, rows_size=10, cols_size=12,
             value='value',
             header='title',
             footer='description',
@@ -4148,7 +4160,7 @@ def test_tabs(check_data=True):
         s.plt.indicator(
             data=data_indic,
             menu_path=menu_path,
-            order=1, rows_size=8, cols_size=12,
+            order=1, rows_size=10, cols_size=12,
             value='value',
             header='title',
             footer='description',
@@ -4168,7 +4180,7 @@ def test_tabs(check_data=True):
             data=data_bento,
             x='date', y=['x', 'y'],
             menu_path=menu_path,
-            order=2, rows_size=14, cols_size=24,
+            order=2, rows_size=26, cols_size=24,
             bentobox_data=bentobox_id,
             tabs_index=tabs_index_
         )
@@ -4680,6 +4692,8 @@ test_stacked_horizontal_barchart()
 test_stacked_area_chart()
 test_shimoku_gauges()
 test_gauge_indicators()
+test_rose()
+test_doughnut()
 test_free_echarts()
 
 # Filters and sequential needed

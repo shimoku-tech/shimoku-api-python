@@ -96,7 +96,7 @@ class PlotAux:
         self.create_data_points = self.dataset_explorer_api.create_data_points
 
         self.get_app_type_by_name = self.app_type_metadata_api.get_app_type_by_name
-        self.get_or_create_app_and_apptype = self.app_metadata_api._async_get_or_create_app_and_apptype
+        self._async_get_or_create_app_and_apptype = self.app_metadata_api._async_get_or_create_app_and_apptype
 
         self.update_report_data = self.data_managing_api.update_report_data
         self.append_report_data = self.data_managing_api.append_report_data
@@ -156,6 +156,7 @@ class BasePlot:
     async def _get_business_state(self, business_id: str):
 
         self.api_client.semaphore = asyncio.Semaphore(self.api_client.semaphore_limit)
+        self.api_client.locks = {name: asyncio.Lock() for name in self.api_client.locks.keys()}
         business_reports = await self._plot_aux.get_business_reports(business_id)
 
         @logging_before_and_after(logging_level=logger.debug)
@@ -639,8 +640,8 @@ class BasePlot:
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
-                                                                 dashboard_name=self.dashboard
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
+                                                                        dashboard_name=self.dashboard
                                                                  if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 
@@ -1349,8 +1350,8 @@ class BasePlot:
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
-                                                                 dashboard_name=self.dashboard
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
+                                                                        dashboard_name=self.dashboard
                                                                  if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 
@@ -2393,8 +2394,8 @@ class PlotApi(BasePlot):
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
         name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app = await self._plot_aux.get_or_create_app_and_apptype(name=name,
-                                                                 dashboard_name=self.dashboard
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
+                                                                        dashboard_name=self.dashboard
                                                                  if self.dashboard else name + ' dashboard')
         app_id: str = app['id']
 

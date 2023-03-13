@@ -192,6 +192,46 @@ def test_default_activity_settings():
     t.activity_doesnt_exist(menu_path, new_activity_name)
 
 
+def test_get_run_logs():
+    """
+    Makes various calls to the activity metadata API to create, and get logs.
+    """
+    new_activity_name = 'new_'+activity_name
+    activity = s.activity.create_activity(menu_path=menu_path, activity_name=new_activity_name)
+    new_activity_id = activity['id']
+
+    run = s.activity.create_run(menu_path=menu_path, activity_name=new_activity_name)
+
+    log1 = s.activity.create_run_log(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'],
+                                     message='test message 1', severity='INFO')
+    log2 = s.activity.create_run_log(app_id=app_id, activity_id=new_activity_id, run_id=run['id'],
+                                     message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
+    log3 = s.activity.create_run_log(app_id=app_id, activity_name=new_activity_name, run_id=run['id'],
+                                     message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
+
+    activity = s.activity.get_activity(menu_path=menu_path, activity_name=new_activity_name)
+    run = activity['runs'][0]
+
+    # test that the logs are in the correct order, they are ordered by creation time
+    assert len(run['logs']) == 3
+    assert log1 == run['logs'][0]
+    assert log2 == run['logs'][1]
+    assert log3 == run['logs'][2]
+
+    # test that the logs can be retrieved by run id
+    logs = s.activity.get_run_logs(menu_path=menu_path, activity_name=new_activity_name, run_id=run['id'])
+    assert len(logs) == 3
+    assert log1 == logs[0]
+    assert log2 == logs[1]
+    assert log3 == logs[2]
+
+    # delete the activity and test that it doesn't exist
+    s.activity.delete_activity(menu_path=menu_path, activity_name=new_activity_name)
+
+    t = MyTestCase()
+    t.activity_doesnt_exist(menu_path, new_activity_name)
+
+
 def test_execute_activity():
     """
     Executes an activity and tests that the activity and run are created, also tests that the run has a log and that the
@@ -265,6 +305,7 @@ if __name__ == '__main__':
     test_create_get_runs()
     test_create_get_run_logs()
     test_default_activity_settings()
+    test_get_run_logs()
     test_execute_activity()
     test_button_execute_activity()
     s.activity.get_activities(menu_path=menu_path, pretty_print=True, how_many_runs=100)

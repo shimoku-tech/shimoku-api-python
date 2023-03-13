@@ -318,7 +318,7 @@ class DashboardMetadataApi(ABC):
             return {}
 
         await self._dashboard_explorer_api.delete_role(business_id=self.business_id, dashboard_id=dashboard['id'],
-                                                 role_id=role_id)
+                                                       role_id=role_id)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

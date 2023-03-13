@@ -229,7 +229,7 @@ class Activity:
         @logging_before_and_after(logging_level=logger.debug)
         async def get_logs(self) -> List[Dict[str, str]]:
             """
-            Gets the logs of the run from the server and r4eturns them as a list of dictionaries.
+            Gets the logs of the run from the server and returns them as a list of dictionaries.
             """
             if self.id is None:
                 error = 'The run has not been created yet. Make sure to await the run before getting the logs.'
@@ -932,3 +932,24 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return run.settings
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_run_logs(self, run_id: str,
+                           menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                           activity_name: Optional[str] = None, activity_id: Optional[str] = None) \
+            -> List[Dict[str, Any]]:
+        """
+        Get the logs of a run by its id
+        :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
+        :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
+        :param run_id: the id of the run
+        :return: the logs of the run as a list of dictionaries
+        """
+
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
+        run = await activity.get_run(run_id=run_id)
+        return await run.get_logs()

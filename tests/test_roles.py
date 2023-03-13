@@ -102,7 +102,7 @@ class TestRoles(unittest.TestCase):
         s.dashboard.delete_dashboard(dashboard_id=dashboard['id'])
 
     def test_app_roles(self):
-        app = s.app.get_or_create_app_and_apptype(name='roles_app')
+        app = s.app._async_get_or_create_app_and_apptype(name='roles_app')
 
         roles = s.app.get_roles_by_name(business_id=business_id, app_id=app['id'], role_name='test_role')
         if roles:

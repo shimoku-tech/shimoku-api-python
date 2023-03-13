@@ -36,8 +36,8 @@ class AppMetadataApi(ABC):
         self._get_app_by_name = self.app_explorer_api.get_app_by_name
         self._create_app = self.app_explorer_api.create_app
         self._get_business = self.business_explorer_api.get_business
-        self._add_app_in_dashboard = self.dashboard_metadata_api.async_add_app_in_dashboard
-        self._create_dashboard = self.dashboard_metadata_api.async_create_dashboard
+        self._add_app_in_dashboard = self.dashboard_metadata_api._async_add_app_in_dashboard
+        self._create_dashboard = self.dashboard_metadata_api._async_create_dashboard
 
         self.get_app = decorate_external_function(self, self.app_explorer_api, 'get_app')
         self.create_app = decorate_external_function(self, self.app_explorer_api, 'create_app')
@@ -53,6 +53,11 @@ class AppMetadataApi(ABC):
         self.get_app_by_type = decorate_external_function(self, self.app_explorer_api, 'get_app_by_type')
         self.get_app_type = decorate_external_function(self, self.app_explorer_api, 'get_app_type')
         self.get_app_by_name = decorate_external_function(self, self.app_explorer_api, 'get_app_by_name')
+
+        self.create_role = decorate_external_function(self, self.app_explorer_api, 'create_role')
+        self.get_roles = decorate_external_function(self, self.app_explorer_api, 'get_roles')
+        self.get_roles_by_name = decorate_external_function(self, self.app_explorer_api, 'get_roles_by_name')
+        self.delete_role = decorate_external_function(self, self.app_explorer_api, 'delete_role')
 
         self.epc = execution_pool_context
 
@@ -180,7 +185,7 @@ class AppMetadataApi(ABC):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_or_create_app_and_apptype(self, name: str, dashboard_name: Optional[str] = None) -> Dict:
+    async def _async_get_or_create_app_and_apptype(self, name: str, dashboard_name: Optional[str] = None) -> Dict:
         """Try to create an App and AppType if they exist instead retrieve them"""
         # TODO investigate what to do with this
         # try:
@@ -208,6 +213,11 @@ class AppMetadataApi(ABC):
             self._apps[name] = app
 
             return app
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_or_create_app_and_apptype(self, name: str, dashboard_name: Optional[str] = None) -> Dict:
+        return await self._async_get_or_create_app_and_apptype(name=name, dashboard_name=dashboard_name)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

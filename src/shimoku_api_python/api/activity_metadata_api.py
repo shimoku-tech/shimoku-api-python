@@ -67,6 +67,7 @@ class Activity:
                 **{'body_params': log}
             )
             ###########################################################
+            response['tags'] = json.loads(response['tags'])
             return response
 
         @logging_before_and_after(logging_level=logger.debug)
@@ -578,7 +579,7 @@ class ActivityMetadataApi:
             raise ValueError("Either an app_id or a menu_path has to be provided")
 
         app_name, _ = self._clean_menu_path(menu_path=menu_path)
-        return (await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))['id']
+        return (await self._app_metadata_api._async_get_or_create_app_and_apptype(name=app_name))['id']
 
     @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
@@ -618,7 +619,7 @@ class ActivityMetadataApi:
         app_name, _ = self._clean_menu_path(menu_path=menu_path)
 
         # TODO solve this bottleneck #
-        app: Dict = asyncio.run(self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))
+        app: Dict = asyncio.run(self._app_metadata_api._async_get_or_create_app_and_apptype(name=app_name))
         app_id: str = app['id']
         activity_entry = (app_id, activity_name)
 

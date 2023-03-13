@@ -61,7 +61,7 @@ class ExecutionPoolContext:
         self.plot_api = None
 
 
-def decorate_external_function(self, external_class, function_name):
+def decorate_external_function(self, external_class, function_name) -> Callable:
     """
     This function is used to decorate a function from another class, getting all the context necessary from the self
     argument of the class where it is being called. This is done so that the execution_pool_context is only used by the
@@ -72,6 +72,7 @@ def decorate_external_function(self, external_class, function_name):
     async def call_function_from_class(self, external_class, function_name, *args, **kwargs):
         return await getattr(external_class, function_name)(*args, **kwargs)
 
+    @wraps(getattr(external_class, function_name))
     def wrapper(*args, **kwargs):
         return call_function_from_class(self, external_class, function_name, *args, **kwargs)
 
@@ -116,7 +117,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                 tabs_tasks = []
                 for tabs_group_pseudo_entry in epc.tabs_group_indexes:
                     app_name, path_name, group_name = tabs_group_pseudo_entry
-                    app = await epc.plot_api._plot_aux.get_or_create_app_and_apptype(name=app_name)
+                    app = await epc.plot_api._plot_aux._async_get_or_create_app_and_apptype(name=app_name)
                     app_id: str = app['id']
                     tabs_tasks.append(
                         epc.plot_api._update_tabs_group_metadata(
@@ -131,6 +132,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
         async def sequential_task_execution(epc: ExecutionPoolContext, coroutine: Coroutine):
             epc.api_client.semaphore = asyncio.Semaphore(epc.api_client.semaphore_limit)
+            epc.api_client.locks = {name: asyncio.Lock() for name in epc.api_client.locks.keys()}
             return await coroutine
 
         @wraps(async_func)

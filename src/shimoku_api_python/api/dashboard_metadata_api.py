@@ -3,6 +3,8 @@ import json
 from typing import Dict, Tuple, Optional, List
 from abc import ABC
 
+import asyncio
+
 from shimoku_api_python.api.explorer_api import DashboardExplorerApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
@@ -70,7 +72,7 @@ class DashboardMetadataApi(ABC):
     async def create_dashboard(self, dashboard_name: str, order: Optional[int] = None, public_permission: Optional[Dict] = None,
                                is_disabled: bool = False):
         """"""
-        result = await self.async_create_dashboard(dashboard_name, order, public_permission, is_disabled)
+        result = await self._async_create_dashboard(dashboard_name, order, public_permission, is_disabled)
 
         if result is None:
             logger.warning(f'The dashboard {dashboard_name} already exists in the business {self.business_id}, '
@@ -79,8 +81,8 @@ class DashboardMetadataApi(ABC):
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def async_create_dashboard(self, dashboard_name: str, order: Optional[int] = None,
-                                     public_permission: Optional[str] = None, is_disabled: Optional[bool] = False):
+    async def _async_create_dashboard(self, dashboard_name: str, order: Optional[int] = None,
+                                      public_permission: Optional[str] = None, is_disabled: Optional[bool] = False):
         """"""
 
         if not self.business_id:
@@ -107,7 +109,8 @@ class DashboardMetadataApi(ABC):
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _async_get_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+    async def _async_get_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
+                                   warn: bool = False):
         """ Get the dashboard metadata
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
@@ -117,6 +120,10 @@ class DashboardMetadataApi(ABC):
         dashboard_id = await self._resolve_dashboard_id(dashboard_id, dashboard_name)
 
         if not dashboard_id:
+            if warn:
+                logger.warning(
+                    f'There is no dashboard with the name {dashboard_name} in the business {self.business_id}, '
+                    f'not doing anything')
             return None
 
         return await self._dashboard_explorer_api.get_dashboard(self.business_id, dashboard_id)
@@ -129,14 +136,8 @@ class DashboardMetadataApi(ABC):
         :param dashboard_id: UUID of the dashboard
         :return: dashboard metadata
         """
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
 
-        if not dashboard:
-            logger.warning(f'There is no dashboard with the name {dashboard_name} '
-                           f'in the business {self.business_id}, returning None')
-            return None
-
-        return dashboard
+        return await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -146,7 +147,9 @@ class DashboardMetadataApi(ABC):
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         """
-        dashboard_id = await self._resolve_dashboard_id(dashboard_id, dashboard_name)
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
+        dashboard_id, dashboard_name = dashboard['id'], dashboard['name']
+
         while dashboard_id:
 
             await self._dashboard_explorer_api.delete_dashboard(self.business_id, dashboard_id)
@@ -170,11 +173,9 @@ class DashboardMetadataApi(ABC):
                            f'not doing anything')
             return None
 
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
         if not dashboard:
-            logger.warning(f'There is no dashboard with the name {dashboard_name} in the business {self.business_id}, '
-                           f'not doing anything')
             return None
 
         dashboard_id = dashboard['id']
@@ -205,15 +206,13 @@ class DashboardMetadataApi(ABC):
             del self._dashboard_id_by_name[dashboard_name]
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def async_add_app_in_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
-                                         dashboard_id: Optional[str] = None):
+    async def _async_add_app_in_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
+                                          dashboard_id: Optional[str] = None):
         """"""
 
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
         if not dashboard:
-            logger.warning(f'There is no dashboard with the name {dashboard_name} in the business {self.business_id}, '
-                           f'not doing anything')
             return None
 
         dashboard_id = dashboard['id']
@@ -225,7 +224,7 @@ class DashboardMetadataApi(ABC):
     async def add_app_in_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
                                    dashboard_id: Optional[str] = None):
         """"""
-        await self.async_add_app_in_dashboard(app_id, dashboard_name, dashboard_id)
+        await self._async_add_app_in_dashboard(app_id, dashboard_name, dashboard_id)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -244,17 +243,16 @@ class DashboardMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_dashboard_app_ids(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None) -> List[str]:
+    async def get_dashboard_app_ids(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None) \
+            -> List[str]:
         """ Get the list of the ids of the apps in the dashboard
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         :return: list of the ids of the apps in the dashboard
         """
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
         if not dashboard:
-            logger.warning(f'There is no dashboard with the name {dashboard_name} in the business {self.business_id}, '
-                           f'not doing anything')
             return []
 
         return [app_dashboard_link['appId'] for app_dashboard_link
@@ -270,11 +268,7 @@ class DashboardMetadataApi(ABC):
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         """
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
-
-        if not dashboard:
-            logger.warning(f'There is no dashboard with the name {dashboard_name} in the business {self.business_id}, '
-                           f'not doing anything')
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
         app_dashboard_links = await self._dashboard_explorer_api.app_dashboard_links(business_id=self.business_id,
                                                                                      dashboard_id=dashboard['id'])
@@ -285,3 +279,95 @@ class DashboardMetadataApi(ABC):
         await self._dashboard_explorer_api.delete_app_dashboard_link(business_id=self.business_id,
                                                                      dashboard_id=dashboard['id'],
                                                                      app_dashboard_id=app_dashboard_link_id)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def create_role(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
+                          resource: Optional[str] = None, role_name: Optional[str] = None,
+                          permission: Optional[str] = None, target: Optional[str] = None)-> Dict:
+        """ Create a role for a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :param resource: resources level of permission of the role
+        :param role_name: role name
+        :param permission: permission level of the role
+        :param target: target of the role
+        """
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+
+        if not dashboard:
+            return {}
+
+        return await self._dashboard_explorer_api.create_role(
+            business_id=self.business_id, dashboard_id=dashboard['id'],
+            resource=resource, role_name=role_name, permission=permission, target=target)
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_role(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
+                          role_id: Optional[str] = None):
+        """ Delete a role of a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :param role_id: UUID of the role to delete
+        """
+
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+
+        if not dashboard:
+            return {}
+
+        await self._dashboard_explorer_api.delete_role(business_id=self.business_id, dashboard_id=dashboard['id'],
+                                                 role_id=role_id)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_roles(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None) -> List[Dict]:
+        """ Get the list of roles of a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :return: list of roles of the dashboard
+        """
+
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+
+        if not dashboard:
+            return []
+
+        return await self._dashboard_explorer_api.get_roles(business_id=self.business_id, dashboard_id=dashboard['id'])
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_roles_by_name(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
+                                role_name: Optional[str] = None) -> List[Dict]:
+        """ Get the list of roles of a dashboard by name
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :param role_name: name of the role
+        :return: list of roles of the dashboard
+        """
+
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+
+        if not dashboard:
+            return []
+
+        return await self._dashboard_explorer_api.get_roles_by_name(business_id=self.business_id,
+                                                                    dashboard_id=dashboard['id'], role_name=role_name)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_all_business_dashboard(self):
+        """ Delete all dashboards of the business
+        """
+        dashboards = await self._dashboard_explorer_api.get_business_dashboards(business_id=self.business_id)
+
+        delete_dashboard_tasks = []
+        for dashboard in dashboards:
+            delete_dashboard_tasks.append(
+                self._dashboard_explorer_api.delete_dashboard(
+                    business_id=self.business_id, dashboard_id=dashboard['id']
+                )
+            )
+
+        await asyncio.gather(*delete_dashboard_tasks)

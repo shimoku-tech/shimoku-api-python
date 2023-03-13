@@ -24,7 +24,7 @@ activity_name = 'test_activity'
 run_id = getenv('RUN_ID')
 
 app_name, _ = s.activity._clean_menu_path(menu_path=menu_path)
-app_id = asyncio.run(s.activity._app_metadata_api.get_or_create_app_and_apptype(name=app_name))['id']
+app_id = asyncio.run(s.activity._app_metadata_api._async_get_or_create_app_and_apptype(name=app_name))['id']
 activity_id = s.activity.get_activity(app_id=app_id, activity_name=activity_name)['id']
 
 

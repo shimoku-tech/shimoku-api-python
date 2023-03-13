@@ -9,7 +9,7 @@ import tqdm
 
 import asyncio
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +31,23 @@ class GetExplorerAPI(object):
             )
         )
         return business_data
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_roles(self, business_id: str, dashboard_id: Optional[str] = None,
+                        app_id: Optional[str] = None) -> Dict:
+
+        endpoint = f'business/{business_id}/' + (f'dashboard/{dashboard_id}/' if dashboard_id
+                                                 else f'app/{app_id}/' if app_id
+                                                 else '') + 'roles'
+
+        return (await self.api_client.query_element(method='GET', endpoint=endpoint))['items']
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_roles_by_name(self, business_id: str, role_name: str,
+                                dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> [Dict]:
+        roles = await self.get_roles(business_id=business_id, dashboard_id=dashboard_id, app_id=app_id)
+
+        return [role for role in roles if role['role'] == role_name]
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_app_type(self, app_type_id: str, **kwargs) -> Dict:
@@ -890,6 +907,42 @@ class CreateExplorerAPI(object):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
+    async def create_role(self, business_id: str, role: str, resource: Optional[str] = None,
+                          permission: Optional[str] = None, target: Optional[str] = None,
+                          dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> Dict:
+        """"""
+
+        valid_resources = ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']
+        if resource and resource not in valid_resources:
+            log_error(logger, f'{resource} is not a valid value for resource, '
+                              f'the valid values are: {valid_resources}', ValueError)
+
+        valid_permissions = ['READ', 'WRITE']
+        if permission and permission not in valid_permissions:
+            log_error(logger, f'{permission} is not a valid value for permission, '
+                              f'the valid values are: {valid_permissions}', ValueError)
+
+        valid_targets = ['GROUP', 'USER']
+        if target and target not in valid_targets:
+            log_error(logger, f'{target} is not a valid value for target, '
+                              f'the valid values are: {valid_targets}', ValueError)
+
+        endpoint = f'business/{business_id}/'+(f'dashboard/{dashboard_id}/' if dashboard_id
+                                               else f'app/{app_id}/' if app_id
+                                               else '')+'role'
+
+        item: Dict = {
+            'permission': permission if permission else 'READ',
+            'resource': resource if resource else 'BUSINESS_INFO',
+            'target': target if target else 'GROUP',
+            'role': role,
+        }
+
+        return await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': item},
+        )
+
+    @logging_before_and_after(logging_level=logger.debug)
     async def create_app_type(self, name: str) -> Dict:
         """"""
         app_type: Dict = await self._find_app_type_by_name_filter(name=name)
@@ -1523,6 +1576,16 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         )
 
     @logging_before_and_after(logging_level=logger.debug)
+    async def delete_role(self, business_id: str, role_id: str,
+                          dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> Dict:
+
+        endpoint = f'business/{business_id}/' + (f'dashboard/{dashboard_id}/' if dashboard_id
+                                                 else f'app/{app_id}/' if app_id
+                                                 else '') + f'role/{role_id}'
+
+        return await self.api_client.query_element(method='DELETE', endpoint=endpoint)
+
+    @logging_before_and_after(logging_level=logger.debug)
     async def delete_app_type(self, app_type_id: str):
         """Delete an appType"""
         endpoint: str = f'apptype/{app_type_id}'
@@ -2088,6 +2151,15 @@ class BusinessExplorerApi:
 
         self.delete_business = self.delete_explorer_api.delete_business
 
+        self.create_role = lambda business_id, role_name, resource=None, permission=None, target=None: \
+            self.cascade_create_explorer_api.create_role(business_id=business_id, role=role_name, resource=resource,
+                                                         permission=permission, target=target)
+        self.get_roles = lambda business_id: self.get_explorer_api.get_roles(business_id=business_id)
+        self.get_roles_by_name = lambda business_id, role_name: \
+            self.get_explorer_api.get_roles_by_name(business_id=business_id, role_name=role_name)
+        self.delete_role = lambda business_id, role_id: \
+            self.delete_explorer_api.delete_role(business_id=business_id, role_id=role_id)
+
 
 class DashboardExplorerApi:
     """"""
@@ -2107,6 +2179,18 @@ class DashboardExplorerApi:
         self.app_dashboard_links = self.get_explorer_api.app_dashboard_links
         self.delete_app_dashboard_link = self.delete_explorer_api.delete_app_dashboard_link
 
+        self.create_role = \
+            lambda business_id, dashboard_id, role_name, resource=None, permission=None, target=None: \
+            self.create_explorer_api.create_role(
+                business_id=business_id, dashboard_id=dashboard_id, resource=resource,
+                role=role_name, permission=permission, target=target
+            )
+        self.get_roles = lambda business_id, dashboard_id: self.get_explorer_api.get_roles(
+            business_id=business_id, dashboard_id=dashboard_id)
+        self.get_roles_by_name = lambda business_id, dashboard_id, role_name: self.get_explorer_api.get_roles_by_name(
+            business_id=business_id, dashboard_id=dashboard_id, role_name=role_name)
+        self.delete_role = lambda business_id, dashboard_id, role_id: self.delete_explorer_api.delete_role(
+            business_id=business_id, dashboard_id=dashboard_id, role_id=role_id)
 
 class AppTypeExplorerApi:
     """"""
@@ -2159,6 +2243,19 @@ class AppExplorerApi:
         self.get_app_by_name = self.cascade_explorer_api.get_app_by_name
 
         self.delete_app = self.delete_explorer_api.delete_app
+
+        self.create_role = \
+            lambda business_id, app_id, role_name, permission=None, target=None, resource=None: \
+            self.create_explorer_api.create_role(
+                business_id=business_id, app_id=app_id, role=role_name,
+                permission=permission, target=target, resource=resource
+            )
+        self.get_roles = lambda business_id, app_id: self.get_explorer_api.get_roles(
+            business_id=business_id, app_id=app_id)
+        self.get_roles_by_name = lambda business_id, app_id, role_name: self.get_explorer_api.get_roles_by_name(
+            business_id=business_id, app_id=app_id, role_name=role_name)
+        self.delete_role = lambda business_id, app_id, role_id: self.delete_explorer_api.delete_role(
+            business_id=business_id, app_id=app_id, role_id=role_id)
 
 
 class ReportExplorerApi:

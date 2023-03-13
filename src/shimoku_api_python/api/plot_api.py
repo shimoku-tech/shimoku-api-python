@@ -96,7 +96,7 @@ class PlotAux:
         self.create_data_points = self.dataset_explorer_api.create_data_points
 
         self.get_app_type_by_name = self.app_type_metadata_api.get_app_type_by_name
-        self.get_or_create_app_and_apptype = self.app_metadata_api.get_or_create_app_and_apptype
+        self.get_or_create_app_and_apptype = self.app_metadata_api._async_get_or_create_app_and_apptype
 
         self.update_report_data = self.data_managing_api.update_report_data
         self.append_report_data = self.data_managing_api.append_report_data

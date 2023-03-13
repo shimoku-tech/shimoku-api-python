@@ -36,6 +36,11 @@ class BusinessMetadataApi(ABC):
 
         self.delete_business = decorate_external_function(self, self.business_explorer_api, 'delete_business')
 
+        self.create_role = decorate_external_function(self, self.business_explorer_api, 'create_role')
+        self.get_roles = decorate_external_function(self, self.business_explorer_api, 'get_roles')
+        self.get_roles_by_name = decorate_external_function(self, self.business_explorer_api, 'get_roles_by_name')
+        self.delete_role = decorate_external_function(self, self.business_explorer_api, 'delete_role')
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)
     def copy_business(self):

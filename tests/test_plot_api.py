@@ -4654,6 +4654,55 @@ def test_same_position_charts():
     assert 0 == len(s.app.get_app_reports(business_id, s.app.get_app_by_name(business_id, menu_path)['id']))
 
 
+def test_annotation_chart():
+    menu_path = 'test/Annotation Chart'
+
+    data = [
+        {'date': '2021-01-01', 'x': 1},
+        {'date': '2021-01-02', 'x': 2},
+        {'date': '2021-01-03', 'x': 3},
+        {'date': '2021-01-04', 'x': 4},
+        {'date': '2021-01-05', 'x': 5},
+        {'date': '2021-01-06', 'x': 6},
+        {'date': '2021-01-07', 'x': 7},
+        {'date': '2021-01-08', 'x': 8},
+        {'date': '2021-01-09', 'x': 9},
+        {'date': '2021-01-10', 'x': 10},
+    ]
+
+    s.plt.annotated_chart(
+        menu_path=menu_path,
+        data=[data], x='date', y='x', order=0,
+    )
+
+    data1 = [
+        {'date': '2022-01-01', 'Síntoma [1]': 3},
+        {'date': '2022-03-01', 'Síntoma [1]': 7, 'Annotation': 'Got really sick'},
+        {'date': '2022-04-01', 'Síntoma [1]': 7},
+        {'date': '2022-07-01', 'Síntoma [1]': 8},
+        {'date': '2022-08-01', 'Síntoma [1]': 9},
+        {'date': '2022-12-01', 'Síntoma [1]': 5},
+    ]
+    data2 = [
+        {'date': '2021-12-31', 'Síntoma [2]': 6},
+        {'date': '2022-01-02', 'Síntoma [2]': 9},
+        {'date': '2022-02-01', 'Síntoma [2]': 7},
+        {'date': '2022-03-01', 'Síntoma [2]': 8},
+        {'date': '2022-04-01', 'Síntoma [2]': 9},
+        {'date': '2022-05-01', 'Síntoma [2]': 7},
+        {'date': '2022-06-01', 'Síntoma [2]': 8, 'Annotation': 'Go away symptom [2]!'},
+        {'date': '2022-07-01', 'Síntoma [2]': 9},
+        {'date': '2022-08-01', 'Síntoma [2]': 8},
+    ]
+
+    s.plt.annotated_chart(
+        menu_path=menu_path,
+        order=7, x='date', y=['Síntoma [1]', 'Síntoma [2]'], annotation='Annotation',
+        data=[data1, data2], slider_config={'max': 100, 'defaultValue': 50},
+        slider_marks=[('Low', 15), ('Medium', 50), ('High', 85)]
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
@@ -4676,7 +4725,7 @@ test_alert_indicator()
 test_stockline()
 test_radar()
 test_pie()
-# test_ux()
+test_ux()
 test_ring_gauge()
 test_sunburst()
 test_treemap()
@@ -4686,6 +4735,7 @@ test_horizontal_barchart()
 test_predictive_line()
 test_speed_gauge()
 test_scatter()
+test_annotation_chart()
 
 s.plt.set_dashboard('Dashboard groupping apps')
 # Free echarts

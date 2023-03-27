@@ -3,6 +3,7 @@ import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import json
 from itertools import product
+from copy import deepcopy
 
 from IPython.lib import backgroundjobs as bg
 
@@ -1333,9 +1334,9 @@ class BasePlot:
             report_dataset_properties: Optional[Dict] = None,
             sort: Optional[Dict] = None,
             real_time: bool = False,
+            annotated_slider_config: Optional[Dict] = None,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         # TODO ojo debería no ser solo data tabular!!
-        df: pd.DataFrame = self._plot_aux.validate_data_is_pandarable(data)
 
         report_metadata: Dict = {'reportType': report_type}
 
@@ -1365,12 +1366,24 @@ class BasePlot:
                 overwrite=True,
             )
 
-        items: List[Dict] = self._plot_aux.transform_report_data_to_chart_data(report_data=df)
-
-        if force_custom_field and len(items) == 1:  # 'FORM'
+        if report_type == 'FORM':
+            df: pd.DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+            items: List[Dict] = self._plot_aux.transform_report_data_to_chart_data(report_data=df)
             items: Dict = self._plot_aux.convert_input_data_to_db_items(items[0])
-        else:  # 'ECHARTS2'
+        elif report_type == 'ECHARTS2':
+            df: pd.DataFrame = self._plot_aux.validate_data_is_pandarable(data)
+            items: List[Dict] = self._plot_aux.transform_report_data_to_chart_data(report_data=df)
             items: List[Dict[str]] = self._plot_aux.convert_input_data_to_db_items(items, sort)
+        elif report_type == 'ANNOTATED_ECHART':
+            items = [
+                self._plot_aux.convert_input_data_to_db_items(
+                    self._plot_aux.transform_report_data_to_chart_data(
+                        report_data=self._plot_aux.validate_data_is_pandarable(serie)
+                    ), sort)
+                for serie in data
+            ]
+        else:
+            raise ValueError(f'{report_type} not allowed')
 
         report_dataset = await self._plot_aux.create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
@@ -1380,6 +1393,8 @@ class BasePlot:
             report_dataset_properties=report_dataset_properties,
             sort=sort,
             real_time=real_time,
+            report_type=report_type,
+            annotated_slider_config=annotated_slider_config,
         )
         report_id: str = report_dataset['report']['id']
         self._report_order[report_id] = report_dataset['report']['order']
@@ -1900,7 +1915,7 @@ class PlotApi(BasePlot):
         else:
             self.business_id: Optional[str] = None
 
-        self._default_toolbox_options = {
+        self._default_toolbox_options_bottom = {
             'show': True,
             'orient': 'horizontal',
             'itemSize': 20,
@@ -1957,6 +1972,10 @@ class PlotApi(BasePlot):
                 }
             }
         }
+
+        self._default_toolbox_options_top = deepcopy(self._default_toolbox_options_bottom)
+        del self._default_toolbox_options_top['bottom']
+        self._default_toolbox_options_top['top'] = "2%"
 
     @logging_before_and_after(logging_level=logger.debug)
     def set_dashboard(self, dashboard_name: str):
@@ -4213,6 +4232,82 @@ class PlotApi(BasePlot):
             tabs_index=tabs_index,
         )
 
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def annotated_chart(
+        self, data: Union[List[DataFrame], List[List[Dict]]],
+        x: str, y: List[str], menu_path: str, order: int, rows_size: Optional[int] = 3,
+        cols_size: int = 12, padding: Optional[str] = None, annotation: Optional[str] = 'annotation',
+        title: Optional[str] = None,  # second layer
+        y_axis_name: Optional[str] = None,
+        option_modifications: Optional[Dict] = None,  # third layer
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        slider_config: Optional[Dict] = None,
+        slider_marks: Optional[Dict] = None,
+    ):
+        """"""
+
+        if slider_config is None:
+            slider_config = {}
+
+        if slider_marks:
+            slider_config['marks'] = [{'label': mark[0], 'value': mark[1]} for mark in slider_marks]
+
+        if not isinstance(y, list) and isinstance(y, str):
+            y = [y]
+
+        # one y per dataframe
+        assert len(y) == len(data)
+
+        dfs = [self._plot_aux.validate_data_is_pandarable(df) for df in data]
+        for df in dfs:
+            if annotation in df:
+                df[x] = pd.to_datetime(df[x])
+                df[annotation] = df[annotation].replace(np.nan, '', regex=True).astype(str)
+
+        if not option_modifications:
+            option_modifications = {
+                'title': {
+                    'text': title or '',
+                },
+                'yAxis': {
+                    'name': y_axis_name or '',
+                    'font'
+                    'type': 'value',
+                    'nameLocation': 'middle',
+                    'nameGap': 30,
+                },
+                'dataZoom': [{'type': 'inside', 'filterMode': 'none'}, {'show': True, 'filterMode': 'none'}],
+                'xAxis': {
+                    'type': 'time',
+                    'nameLocation': 'middle',
+                    'nameGap': 30,
+                },
+                'toolbox': self._default_toolbox_options_top,
+                'series': [
+                    {
+                        'type': 'line',
+                        'name': y_name,
+                        'itemStyle': {
+                            'borderRadius': [9, 9, 0, 0],
+                        }
+                    }
+                    for y_name in y
+                ],
+            }
+
+        return await self._create_dataset_charts(
+            options=option_modifications,
+            report_type='ANNOTATED_ECHART',
+            menu_path=menu_path, order=order,
+            rows_size=rows_size, cols_size=cols_size, padding=padding,
+            data=dfs, bentobox_data=bentobox_data,
+            force_custom_field=False,
+            tabs_index=tabs_index,
+            annotated_slider_config=slider_config,
+        )
+
     @logging_before_and_after(logging_level=logger.info)
     def doughnut(self,
         data: Union[str, List[Dict], pd.DataFrame],
@@ -4683,7 +4778,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': self._default_toolbox_options,
+                'toolbox': self._default_toolbox_options_bottom,
                 'xAxis': {
                     'type': 'category',
                     'fontFamily': 'Rubik',
@@ -4775,7 +4870,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': self._default_toolbox_options,
+                'toolbox': self._default_toolbox_options_bottom,
                 'xAxis': {
                     'name': x_axis_name if x_axis_name else "",
                     'type': 'value',
@@ -4867,7 +4962,7 @@ class PlotApi(BasePlot):
                     'trigger': 'item',
                     'axisPointer': {'type': 'cross'},
                 },
-                'toolbox': self._default_toolbox_options,
+                'toolbox': self._default_toolbox_options_bottom,
                 'xAxis': {
                     'type': 'category',
                     'fontFamily': 'Rubik',

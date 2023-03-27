@@ -593,55 +593,6 @@ class ActivityMetadataApi:
         self._clear_local_activities()
         self.business_id = business_id
 
-    @logging_before_and_after(logging_level=logger.info)
-    def button_execute_activity(
-            self, menu_path: str, order: int, activity_name: str, label: str,
-            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
-            align: Optional[str] = 'stretch',
-            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None
-    ):
-        """
-        Create an execute button report in the dashboard for the activity.
-        :param activity_name: the name of the activity
-        :param order: the order of the button in the dashboard
-        :param menu_path: the menu path of the app to which the activity belongs
-        :param label: the name of the button to be clicked
-        :param rows_size: the number of rows of the button
-        :param cols_size: the number of columns of the button
-        :param align: the alignment of the button
-        :param padding: the padding of the button
-        :param bentobox_data: the bentobox metadata for FE
-        :param tabs_index: the index of the tab in the dashboard
-        :return:
-        """
-
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        # TODO solve this bottleneck #
-        app: Dict = asyncio.run(self._app_metadata_api._async_get_or_create_app_and_apptype(name=app_name))
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        activity = self.activities[activity_entry]
-
-        self._plot_api.button(
-            menu_path=menu_path,
-            order=order, label=label,
-            rows_size=rows_size, cols_size=cols_size,
-            align=align,
-            padding=padding,
-            bentobox_data=bentobox_data,
-            tabs_index=tabs_index,
-            on_click_events=[
-                {
-                    "action": "runActivity",
-                    "params": {
-                        "activityId": activity.id,
-                    }
-                }
-            ]
-        )
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -953,3 +904,50 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return await run.get_logs()
+
+    @logging_before_and_after(logging_level=logger.info)
+    def button_execute_activity(
+            self, order: int, label: str,
+            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+            menu_path: Optional[str] = None, app_id: Optional[str] = None,
+            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
+            align: Optional[str] = 'stretch',
+            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None
+    ):
+        """
+        Create an execute button report in the dashboard for the activity.
+        :param activity_name: the name of the activity
+        :param order: the order of the button in the dashboard
+        :param menu_path: the menu path of the app to which the activity belongs
+        :param label: the name of the button to be clicked
+        :param rows_size: the number of rows of the button
+        :param cols_size: the number of columns of the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        :param bentobox_data: the bentobox metadata for FE
+        :param tabs_index: the index of the tab in the dashboard
+        :return:
+        """
+        # TODO: handle this correctly, this solution is a bottleneck
+
+        activity = self.get_activity(menu_path=menu_path, app_id=app_id,
+                                     activity_name=activity_name, activity_id=activity_id)
+
+        self._plot_api.button(
+            menu_path=menu_path,
+            order=order, label=label,
+            rows_size=rows_size, cols_size=cols_size,
+            align=align,
+            padding=padding,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            on_click_events=[
+                {
+                    "action": "runActivity",
+                    "params": {
+                        "activityId": activity['id'],
+                    }
+                }
+            ]
+        )

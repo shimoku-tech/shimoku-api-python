@@ -1472,11 +1472,13 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
     async def create_report_and_dataset(
         self, business_id: str, app_id: str,
         report_metadata: Dict,
-        items: Union[List[str], Dict],
+        report_type: str,
+        items: Union[List[str], Dict, List[List]],
         report_properties: Dict,
         report_dataset_properties: Optional[Dict] = None,
         sort: Optional[Dict] = None,
         real_time: bool = False,
+        annotated_slider_config: Optional[Dict] = None
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         """
         Example
@@ -1498,17 +1500,54 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             real_time=real_time,
         )
 
-        dataset: Dict = await self.create_dataset(business_id=business_id, app_id=app_id)
-        dataset_id: str = dataset['id']
+        dataset_ids: List[str] = []
+        report_dataset_ids = []
 
-        if type(items) == list:  # ECHARTS2
+        if not isinstance(items, (list, dict)):
+            raise ValueError('items must be a list or dict')
+
+        items_keys: Optional[List[str]] = None
+        source = None
+        if report_type == 'ECHARTS2':   # TODO multiple datasets have to be supported
+            dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+            dataset_ids.append(dataset_id)
+
             items_keys: Optional[List[str]] = list(items[0].keys())
             report_dataset_properties = {'mapping': items_keys}
             if sort:
                 report_dataset_properties['sort'] = sort
 
-        elif type(items) == dict:  # FORM
-            items_keys: Optional[List[str]] = None
+            report_dataset_id: str = (await self.create_reportdataset(
+                business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                dataset_properties=json.dumps(report_dataset_properties)))['id']
+
+            await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
+            source = '#{' + f'{report_dataset_id}' + '}'
+
+        elif report_type == 'ANNOTATED_ECHART':
+            source = []
+            for series in items:
+                dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+                dataset_ids.append(dataset_id)
+                items_keys = list(series[0].keys())
+                report_dataset_properties = {'mapping': {'values': ['dateField1', 'intField1'],
+                                                         'label': 'stringField1'}}
+                if sort:
+                    report_dataset_properties['sort'] = sort
+
+                report_dataset_id: str = (await self.create_reportdataset(
+                    business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                    dataset_properties=json.dumps(report_dataset_properties)))['id']
+                report_dataset_ids.append(report_dataset_id)
+
+                await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id,
+                                              items=[{k: v for k, v in d.items() if v != ''} for d in series])
+                source.append('#{' + f'{report_dataset_id}' + '}')
+
+        elif report_type == 'FORM':  # TODO multiple datasets have to be supported
+            dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+            dataset_ids.append(dataset_id)
+
             items = [items]
             try:
                 assert report_dataset_properties is not None
@@ -1516,30 +1555,26 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
                 raise ValueError(
                     'report_dataset_properties is required if items is a dict'
                 )
-        else:
-            raise ValueError('items must be a list or dict')
 
-        report_dataset: Dict = await self.create_reportdataset(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report['id'],
-            dataset_id=dataset_id,
-            dataset_properties=json.dumps(report_dataset_properties),
-        )
+            report_dataset_id: str = (await self.create_reportdataset(
+                business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                dataset_properties=json.dumps(report_dataset_properties)))['id']
+            report_dataset_ids.append(report_dataset_id)
 
-        data: List[Dict] = await self.create_data_points(
-            business_id=business_id,
-            app_id=app_id,
-            dataset_id=dataset_id,
-            items=items,
-        )
+            await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
+            source = '#{' + f'{report_dataset_id}' + '}'
 
-        # Syntax to be accepted by the FrontEnd
-        options_dataset_id: str = '#{' + f'{report_dataset["id"]}' + '}'
-        report_properties['dataset'] = {'source': options_dataset_id}
+        report_properties['dataset'] = {'source': source}
+
         if items_keys is not None:  # ECHARTS2
             report_properties['dimensions']: items_keys
-        report_properties = {'properties': json.dumps({'option': report_properties})}
+
+        report_properties = {'properties': {'option': report_properties}}
+
+        if annotated_slider_config:
+            report_properties['properties']['slider'] = annotated_slider_config
+
+        report_properties['properties'] = json.dumps(report_properties['properties'])
 
         report: Dict = await self.update_report(
             business_id=business_id,
@@ -1550,9 +1585,8 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
         return {
             'report': report,
-            'dataset': dataset,
-            'report_dataset': report_dataset,
-            'data': data,
+            'dataset_ids': dataset_ids, # I think that
+            'report_dataset_ids': report_dataset_ids,
         }
 
 

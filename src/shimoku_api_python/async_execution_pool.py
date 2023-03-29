@@ -4,7 +4,7 @@ from typing import Tuple, Optional, Callable, Coroutine
 import logging
 from IPython.lib import backgroundjobs as bg
 import time
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 
 from copy import copy
 logger = logging.getLogger(__name__)
@@ -142,8 +142,8 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
             if hasattr(self, 'epc'):
                 epc: ExecutionPoolContext = self.epc
             else:
-                raise RuntimeError('The async_auto_call_manager decorator can only be used in classes that have an '
-                                   'epc attribute')
+                log_error(logger, 'The async_auto_call_manager decorator can only be used in classes that '
+                                  'have an epc attribute', RuntimeError)
 
             epc.plot_api._plot_aux.app_metadata_api.apps = {}
             if epc.sequential or execute:
@@ -161,7 +161,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                         while not job.finished:
                             time.sleep(0.1)
 
-                    job = jobs.new(asyncio.run, async_func(self, *args, **kwargs))
+                    job = jobs.new(asyncio.run, sequential_task_execution(epc, async_func(self, *args, **kwargs)))
                     while not job.finished:
                         time.sleep(0.1)
 
@@ -189,17 +189,15 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                     epc.tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in epc.tabs_group_indexes else []
 
-                if kwargs.get('order'):
+                if kwargs.get('order') is not None:
                     list_for_conflicts_entry += str(kwargs.get('order'))
 
                     if list_for_conflicts_entry in epc.list_for_conflicts:
                         epc.task_pool.clear()
                         epc.tabs_group_indexes.clear()
                         epc.list_for_conflicts.clear()
-                        error_message = 'Report order collision, two reports with the same order can not be executed ' \
-                                        'at the same time'
-                        logger.error(error_message)
-                        raise RuntimeError(error_message)
+                        log_error(logger, 'Report order collision, two reports with the same order can not be executed '
+                                          'at the same time', RuntimeError)
                     else:
                         epc.list_for_conflicts.append(list_for_conflicts_entry)
 

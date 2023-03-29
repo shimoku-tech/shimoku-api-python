@@ -357,7 +357,7 @@ class DashboardMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_all_business_dashboard(self):
+    async def delete_all_business_dashboards(self):
         """ Delete all dashboards of the business
         """
         dashboards = await self._dashboard_explorer_api.get_business_dashboards(business_id=self.business_id)

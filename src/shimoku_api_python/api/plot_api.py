@@ -4262,8 +4262,8 @@ class PlotApi(BasePlot):
 
         dfs = [self._plot_aux.validate_data_is_pandarable(df) for df in data]
         for df in dfs:
+            df[x] = pd.to_datetime(df[x])
             if annotation in df:
-                df[x] = pd.to_datetime(df[x])
                 df[annotation] = df[annotation].replace(np.nan, '', regex=True).astype(str)
 
         if not option_modifications:

@@ -1507,7 +1507,6 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             raise ValueError('items must be a list or dict')
 
         items_keys: Optional[List[str]] = None
-        source = None
         if report_type == 'ECHARTS2':   # TODO multiple datasets have to be supported
             dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
             dataset_ids.append(dataset_id)
@@ -1522,11 +1521,10 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
                 dataset_properties=json.dumps(report_dataset_properties)))['id']
 
             await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
-            source = '#{' + f'{report_dataset_id}' + '}'
+            report_properties['dataset'] = {'source': '#{' + f'{report_dataset_id}' + '}'}
 
         elif report_type == 'ANNOTATED_ECHART':
-            source = []
-            for series in items:
+            for i, series in enumerate(items):
                 dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
                 dataset_ids.append(dataset_id)
                 items_keys = list(series[0].keys())
@@ -1542,7 +1540,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
                 await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id,
                                               items=[{k: v for k, v in d.items() if v != ''} for d in series])
-                source.append('#{' + f'{report_dataset_id}' + '}')
+                report_properties['series'][i]['data'] = '#{' + f'{report_dataset_id}' + '}'
 
         elif report_type == 'FORM':  # TODO multiple datasets have to be supported
             dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
@@ -1562,9 +1560,7 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             report_dataset_ids.append(report_dataset_id)
 
             await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
-            source = '#{' + f'{report_dataset_id}' + '}'
-
-        report_properties['dataset'] = {'source': source}
+            report_properties['dataset'] = {'source': '#{' + f'{report_dataset_id}' + '}'}
 
         if items_keys is not None:  # ECHARTS2
             report_properties['dimensions']: items_keys

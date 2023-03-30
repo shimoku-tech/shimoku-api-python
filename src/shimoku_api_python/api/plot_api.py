@@ -32,7 +32,7 @@ import asyncio
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -152,6 +152,15 @@ class BasePlot:
 
         # Map to store tabs properties
         self._tabs_group_properties = dict()
+        
+        # Map to store modal report ids by modal entry
+        self._modal_id_by_entry = dict()
+        
+        # Map to store modal report properties by report id
+        self._modal_properties = dict()
+
+        # Map to store the link between reports and modal
+        self._report_in_modal = dict()
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_business_state(self, business_id: str):
@@ -203,9 +212,30 @@ class BasePlot:
                         if report_id in self._report_order:
                             self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
                             self._tabs[tabs_group_entry][tab_name] += [report_id]
+        
+        @logging_before_and_after(logging_level=logger.debug)
+        def _get_business_modals_info():
+            business_modals = [report for report in business_reports if report['reportType'] == 'MODAL']
+
+            self._modal_properties = {
+                report['id']: json.loads(report['properties'].replace("'", '"').replace('None', 'null'))
+                for report in business_modals}
+            
+            self._modal_id_by_entry = {
+                (report['appId'], 
+                 report['path'] if report['path'] else '', 
+                 self._modal_properties[report['id']]['name']): report['id'] 
+                for report in business_modals}
+
+            self._report_in_modal = {
+                report_id: self._modal_properties[modal['id']]['name']
+                for modal in business_modals
+                for report_id in self._modal_properties[modal['id']]['reportIds']
+            }
 
         _get_business_reports_info()
         _get_business_tabs_info()
+        _get_business_modals_info()
 
     # TODO this method goes somewhere else (aux.py? an external folder?)
     @staticmethod
@@ -343,6 +373,137 @@ class BasePlot:
             )
 
         return report_metadata
+    
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_report(self, business_id: str, app_id: str, report_metadata: Dict,
+                             real_time: bool, modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]]) -> Dict:
+        """Create a report"""
+
+        if modal_name and tabs_index:
+            log_error(logger,
+                      'Adding a report to a modal and to a tab at the same time is not permitted.',
+                      RuntimeError)
+
+        report: Dict = await self._plot_aux.create_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+            real_time=real_time,
+        )
+
+        report_id: str = report['id']
+        path_name: str = report.get('path')
+        if not path_name:
+            path_name = ''
+        order: int = report.get('order')
+        self._report_order[report_id] = order
+
+        if modal_name:
+            await self._add_report_to_modal(
+                business_id, (app_id, path_name if path_name else '', modal_name), report['id']
+            )
+        elif tabs_index:
+            await self._insert_in_tab(
+                self.business_id, app_id, path_name, report_id, tabs_index, order
+            )
+
+        return report
+    
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _delete_report(self, business_id: str, app_id: str, report: Dict) -> None:
+        """Delete a report"""
+        report_id: str = report['id']
+        path_name: str = report.get('path')
+
+        try:  # It should always exist
+            del self._report_order[report_id]
+        except KeyError:
+            logger.warning("Report wasn't correctly stored in self._report_order", RuntimeWarning)
+
+        if not path_name:
+            path_name = ""
+
+        # Data structures maintenance
+        if report['reportType'] == 'TABS':
+            data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
+            group_name = data_fields['groupName']
+            tabs_group_entry = (app_id, path_name, group_name)
+
+            if tabs_group_entry in self._tabs:
+                self._delete_tabs_group(tabs_group_entry)
+            else:
+                logger.warning("Tabs group wasn't correctly stored in self._tabs", RuntimeWarning)
+
+        elif report['reportType'] == 'MODAL':
+            properties = json.loads(report['properties'].replace("'", '"').replace('None', 'null'))
+            modal_name = properties['name']
+            modal_entry = (app_id, path_name, modal_name)
+
+            if modal_entry in self._modal_id_by_entry:
+                self._delete_modal(modal_entry)
+            else:
+                logger.warning("Modal wasn't correctly stored in self._modal_id_by_entry", RuntimeWarning)
+
+        if self._report_in_tab.get(report_id):
+            self._delete_report_id_from_tab(report_id)
+
+        if self._report_in_modal.get(report_id):
+            modal_name = self._report_in_modal[report_id]
+            await self._remove_report_from_modal(business_id, (app_id, path_name, modal_name), report_id)
+
+        await self._plot_aux.delete_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_id=report_id,
+        )
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_report_and_dataset(
+            self, business_id: str, app_id: str, report_metadata: Dict,
+            items: List[Dict], report_properties: Dict,  report_dataset_properties: Dict,
+            sort: Optional[List[Dict]], real_time: Optional[bool],
+            report_type: Optional[str], annotated_slider_config: Optional[Dict],
+            modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]]
+    ) -> Dict:
+        """Create a report and a dataset"""
+
+        if modal_name and tabs_index:
+            log_error(logger,
+                      'Adding a report to a modal and to a tab at the same time is not permitted.',
+                      RuntimeError)
+        
+        report_dataset: Dict = await self._plot_aux.create_report_and_dataset(
+            business_id=business_id, app_id=app_id,
+            report_metadata=report_metadata,
+            items=items,
+            report_properties=report_properties,
+            report_dataset_properties=report_dataset_properties,
+            sort=sort,
+            real_time=real_time,
+            report_type=report_type,
+            annotated_slider_config=annotated_slider_config,
+        )
+        report = report_dataset['report']
+        report_id: str = report['id']
+        self._report_order[report_id] = report['order']
+        report_id: str = report['id']
+        path_name: str = report_metadata.get('path')
+        if not path_name:
+            path_name = ''
+        order: int = report_metadata.get('order')
+        self._report_order[report_id] = order
+
+        if modal_name:
+            path_name = report_metadata.get('path')
+            await self._add_report_to_modal(
+                business_id, (app_id, path_name if path_name else '', modal_name), report['id']
+            )
+        elif tabs_index:
+            await self._insert_in_tab(
+                self.business_id, app_id, path_name, report_id, tabs_index, order
+            )
+        
+        return report_dataset
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _find_target_reports(
@@ -351,7 +512,8 @@ class BasePlot:
             order: Optional[int] = None,
             component_type: Optional[str] = None,
             by_component_type: bool = True,
-            tabs_index: Tuple[str, str] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None
     ) -> List[Dict]:
         type_map = {
             'alert_indicator': 'INDICATOR',
@@ -415,7 +577,7 @@ class BasePlot:
                         report['path'] == path_name
                 )
             ]
-        elif not tabs_index:
+        elif not tabs_index and modal_name is None:
             target_reports: List[Dict] = [
                 report
                 for report in reports
@@ -424,6 +586,20 @@ class BasePlot:
                         and report['order'] == order
                         and report['id'] not in self._report_in_tab
                         # Don't accept plots inside of tabs even if the order matches
+                )
+            ]
+        elif modal_name:
+            modal_entry = (app_id, path_name if path_name else '', modal_name)
+            if modal_entry not in self._modal_id_by_entry:
+                return []
+            modal_id = self._modal_id_by_entry[modal_entry]
+            modal_report_ids = self._modal_properties[modal_id]['reportIds']
+            target_reports: List[Dict] = [
+                report
+                for report in reports
+                if (
+                        report['id'] in modal_report_ids
+                        and report['order'] == order
                 )
             ]
         else:
@@ -476,6 +652,42 @@ class BasePlot:
 
     # TABS
     @logging_before_and_after(logging_level=logger.debug)
+    async def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
+        """Creates a tab report and stores its id"""
+        app_id, path_name, group_name = tabs_group_entry
+
+        report_metadata: Dict[str, Any] = {
+            'dataFields': "{'groupName': '" + group_name + "', 'lastOrder': 0 }",
+            'path': path_name if path_name != "" else None,
+            'order': 0,
+            'reportType': 'TABS',
+            'properties': '{}'
+        }
+        report: Dict = await self._create_report(
+            business_id=business_id,
+            app_id=app_id,
+            report_metadata=report_metadata,
+            real_time=False,
+            modal_name=None,
+            tabs_index=None
+        )
+        self._report_order[report['id']] = 0
+        self._tabs_last_order[tabs_group_entry] = 0
+        self._tabs_group_id[tabs_group_entry] = report['id']
+        self._tabs[tabs_group_entry] = {}
+        self._tabs_group_properties[tabs_group_entry] = {'sticky': 'false', 'variant': 'enclosedSolidRounded'}
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_or_create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]) -> str:
+        """Creates a tab report and stores its id"""
+
+        async with self.api_client.locks['get_create_tab']:
+            if tabs_group_entry not in self._tabs:
+                await self._create_tabs_group(business_id, tabs_group_entry)
+
+        return self._tabs_group_id[tabs_group_entry]
+
+    @logging_before_and_after(logging_level=logger.debug)
     async def _update_tabs_group_metadata(
             self, business_id: str, app_id: str, path_name: str, group_name: str,
             order: Optional[int] = None, cols_size: Optional[str] = None,
@@ -483,9 +695,11 @@ class BasePlot:
             rows_size: Optional[int] = None, just_labels: Optional[bool] = None, sticky: Optional[bool] = None
     ):
         """Updates the tabs report metadata"""
-        tabs_group_entry = (app_id, path_name, group_name)
+        tabs_group_entry = (app_id, path_name if path_name else '', group_name)
+
+        tabs_group_id = await self._get_or_create_tabs_group(business_id, tabs_group_entry)
+
         report_metadata: Dict[str, Any] = {}
-        report_id = self._tabs_group_id[tabs_group_entry]
         if bentobox_data:
             report_metadata['bentobox'] = json.dumps(bentobox_data)
         if rows_size:
@@ -496,7 +710,7 @@ class BasePlot:
             report_metadata['sizePadding'] = padding
         if order:
             report_metadata['order'] = order
-            self._report_order[report_id] = order
+            self._report_order[tabs_group_id] = order
         if isinstance(just_labels, bool):
             self._tabs_group_properties[tabs_group_entry]['variant'] = 'solidRounded' if just_labels else 'enclosedSolidRounded'
         if isinstance(sticky, bool):
@@ -516,32 +730,9 @@ class BasePlot:
         await self._plot_aux.update_report(
             business_id=business_id,
             app_id=app_id,
-            report_id=report_id,
+            report_id=tabs_group_id,
             report_metadata=report_metadata,
         )
-
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _create_tabs_group(self, business_id: str, tabs_group_entry: Tuple[str, str, str]):
-        """Creates a tab report and stores its id"""
-        app_id, path_name, group_name = tabs_group_entry
-
-        report_metadata: Dict[str, Any] = {
-            'dataFields': "{'groupName': '" + group_name + "', 'lastOrder': 0 }",
-            'path': path_name if path_name != "" else None,
-            'order': 0,
-            'reportType': 'TABS',
-            'properties': '{}'
-        }
-        report: Dict = await self._plot_aux.create_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_metadata=report_metadata,
-        )
-        self._report_order[report['id']] = 0
-        self._tabs_last_order[tabs_group_entry] = 0
-        self._tabs_group_id[tabs_group_entry] = report['id']
-        self._tabs[tabs_group_entry] = {}
-        self._tabs_group_properties[tabs_group_entry] = {'sticky': 'false', 'variant': 'enclosedSolidRounded'}
 
     @logging_before_and_after(logging_level=logger.debug)
     def _delete_tabs_group(self, tabs_group_entry: Tuple[str, str, str]):
@@ -591,9 +782,7 @@ class BasePlot:
         tabs_group_entry = (app_id, path_name, group)
         tab_entry = (app_id, path_name, tabs_index)
 
-        async with self.api_client.locks['get_create_tab']:
-            if tabs_group_entry not in self._tabs:
-                await self._create_tabs_group(business_id, tabs_group_entry)
+        await self._get_or_create_tabs_group(business_id, tabs_group_entry)
 
         self._report_in_tab[report_id] = tab_entry
 
@@ -615,6 +804,105 @@ class BasePlot:
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
         await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
+    # Modal
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_modal(self, business_id: str, modal_entry: Tuple[str, str, str]):
+        """Creates a modal in the given app and path"""
+
+        app_id, path_name, modal_name = modal_entry
+        if modal_entry in self._modal_id_by_entry:
+            logger.warning("Modal already exists, not doing anything.")
+            return
+
+        report_metadata: Dict[str, Any] = {
+            'path': path_name if path_name != "" else None,
+            'order': -1,
+            'reportType': 'MODAL',
+            'properties': '{"open": false, "reportIds": [], "width": 60, "height": 50, "name": "%s"}' % modal_name,
+        }
+        
+        modal = await self._create_report(business_id, app_id, report_metadata,
+                                          real_time=False, modal_name=None, tabs_index=None)
+
+        self._modal_id_by_entry[modal_entry] = modal['id']
+        self._modal_properties[modal['id']] = {
+            'open': False, 'reportIds': [], 'width': 60, 'height': 50, 'name': modal_name}
+        
+    @logging_before_and_after(logging_level=logger.debug)
+    def _delete_modal(self, modal_entry: Tuple[str, str, str]):
+        """Deletes a modal in the given app and path"""
+        if modal_entry not in self._modal_id_by_entry:
+            logger.warning("Modal does not exist, can't delete it.")
+            return
+
+        modal_id = self._modal_id_by_entry[modal_entry]
+        del self._modal_id_by_entry[modal_entry]
+        del self._modal_properties[modal_id]
+
+        self._report_in_modal = {k: v for k, v in self._report_in_modal.items() if v != modal_entry[2]}
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_or_create_modal(self, business_id: str, modal_entry: Tuple[str, str, str]):
+
+        async with self.api_client.locks['get_create_modal']:
+            if modal_entry not in self._modal_id_by_entry:
+                await self._create_modal(business_id, modal_entry)
+
+        return self._modal_id_by_entry[modal_entry]
+        
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _update_modal(self, business_id: str, modal_entry: Tuple[str, str, str],
+                            open_by_default: Optional[bool] = None, width: Optional[int] = None, 
+                            height: Optional[int] = None):
+        """Updates the properties of a modal in the given app and path"""
+        app_id, _, _ = modal_entry
+        
+        modal_id = await self._get_or_create_modal(business_id, modal_entry)
+        modal_properties = self._modal_properties[modal_id]
+        
+        modal_properties['open'] = open_by_default if open_by_default is not None else modal_properties['open']
+        modal_properties['width'] = width if width is not None else modal_properties['width']
+        modal_properties['height'] = height if height is not None else modal_properties['height']
+
+        await self._plot_aux.update_report(
+            business_id=business_id, app_id=app_id, report_id=modal_id,
+            report_metadata={'properties': json.dumps(modal_properties)}
+        )
+        
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _add_report_to_modal(self, business_id: str, modal_entry: Tuple[str, str, str], report_id: str):
+        """Adds a report to a modal in the given app and path"""
+
+        modal_id = await self._get_or_create_modal(business_id, modal_entry)
+
+        if report_id in self._modal_properties[modal_id]['reportIds']:
+            logger.warning("Report already in modal, not doing anything.")
+            return
+
+        self._report_in_modal[report_id] = modal_entry[2]
+        self._modal_properties[modal_id]['reportIds'].append(report_id)
+        await self._update_modal(business_id, modal_entry)
+        
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _remove_report_from_modal(self, business_id: str, modal_entry: Tuple[str, str, str], report_id: str):
+        """Removes a report from a modal in the given app and path"""
+
+        if modal_entry not in self._modal_id_by_entry:
+            logger.warning("Modal does not exist, can't remove report from it.")
+            return
+        modal_id = self._modal_id_by_entry[modal_entry]
+        
+        if report_id not in self._modal_properties[modal_id]['reportIds']:
+            logger.warning("Report not in modal, can't remove it.")
+            return
+        
+        self._modal_properties[modal_id]['reportIds'].remove(report_id)
+
+        if modal_entry in self._modal_id_by_entry:
+            await self._update_modal(business_id, modal_entry)
+        else:
+            logger.warning("Modal lost, can't update it.")
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_chart(
             self, data: Union[str, DataFrame, List[Dict]],
@@ -626,6 +914,7 @@ class BasePlot:
             overwrite: Optional[bool] = True,
             real_time: Optional[bool] = False,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ) -> str:
         """
         :param data:
@@ -641,10 +930,11 @@ class BasePlot:
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
-                                                                        dashboard_name=self.dashboard
-                                                                 if self.dashboard else name + ' dashboard')
-        app_id: str = app['id']
+        app_id: str = (await self._plot_aux._async_get_or_create_app_and_apptype(
+            name=name,
+            dashboard_name=self.dashboard
+            if self.dashboard else name + ' dashboard'
+        ))['id']
 
         if overwrite:
             await self.async_delete(
@@ -653,20 +943,18 @@ class BasePlot:
                 order=report_metadata.get('order'),
                 grid=report_metadata.get('grid'),
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 overwrite=True
             )
 
-        report: Dict = await self._plot_aux.create_report(
+        report_id: str = (await self._create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
             real_time=real_time,
-        )
-        report_id: str = report['id']
-        self._report_order[report_id] = order
-
-        if tabs_index:
-            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            modal_name=modal_name,
+            tabs_index=tabs_index,
+        ))['id']
 
         if report_metadata['reportType'] == 'BUTTON':
             return report_id
@@ -713,6 +1001,7 @@ class BasePlot:
             bentobox_data: Optional[Dict] = None,
             aggregation_func: Optional[Callable] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ) -> str:
         """For Linechart, Barchart, Stocklinechart, Scatter chart, and alike
 
@@ -836,7 +1125,7 @@ class BasePlot:
             menu_path=menu_path, overwrite=overwrite,
             report_metadata=report_metadata, order=order,
             rows_size=rows_size, cols_size=cols_size, padding=padding,
-            tabs_index=tabs_index,
+            tabs_index=tabs_index, modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -906,6 +1195,7 @@ class BasePlot:
             menu_path: str,
             update_type: str = 'concat',
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ) -> None:
         """"""
         filter_reports: List[Dict] = (
@@ -979,6 +1269,7 @@ class BasePlot:
             report_metadata=report_metadata,
             overwrite=True,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -996,6 +1287,7 @@ class BasePlot:
         if isinstance(y, str):
             y = [y]
         tabs_index = kwargs.get("tabs_index")
+        modal_name = kwargs.get("modal_name")
 
         multifilter_tasks = []
         first_overwrite = True
@@ -1054,6 +1346,7 @@ class BasePlot:
                 menu_path=kwargs['menu_path'],
                 update_type=update_filter_type,
                 tabs_index=tabs_index,
+                modal_name=modal_name,
             )
         else:
             report_metadata: Dict = {
@@ -1330,6 +1623,7 @@ class BasePlot:
             overwrite: bool = True,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             options: Optional[Dict] = None,
             report_dataset_properties: Optional[Dict] = None,
             sort: Optional[Dict] = None,
@@ -1363,6 +1657,7 @@ class BasePlot:
                 order=report_metadata.get('order'),
                 grid=report_metadata.get('grid'),
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 overwrite=True,
             )
 
@@ -1385,7 +1680,7 @@ class BasePlot:
         else:
             raise ValueError(f'{report_type} not allowed')
 
-        report_dataset = await self._plot_aux.create_report_and_dataset(
+        report_dataset = await self._create_report_and_dataset(
             business_id=self.business_id, app_id=app_id,
             report_metadata=report_metadata,
             items=items,
@@ -1395,19 +1690,17 @@ class BasePlot:
             real_time=real_time,
             report_type=report_type,
             annotated_slider_config=annotated_slider_config,
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
-        report_id: str = report_dataset['report']['id']
-        self._report_order[report_id] = report_dataset['report']['order']
-
-        if tabs_index:
-            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
 
         return report_dataset
 
     @logging_before_and_after(logging_level=logger.debug)
     async def async_delete(
             self, menu_path: str,
-            tabs_index: Optional[str] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             grid: Optional[str] = None,
             order: Optional[int] = None,
             row: Optional[int] = None,
@@ -1434,6 +1727,7 @@ class BasePlot:
                 component_type=component_type,
                 by_component_type=by_component_type,
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 **kwargs,
             )
         )
@@ -1447,7 +1741,6 @@ class BasePlot:
             if overwrite and report['reportType'] == 'TABS':
                 continue
 
-            report_id = report['id']
             app_id = report['appId']
 
             # Check if the report has been deleted by another task
@@ -1459,17 +1752,12 @@ class BasePlot:
             app_reports = [report for report in business_reports if report['appId'] == app_id]
 
             delete_report_tasks.append(
-                self._plot_aux.delete_report(
+                self._delete_report(
                     business_id=self.business_id,
                     app_id=app_id,
-                    report_id=report_id
+                    report=report
                 )
             )
-
-            try:  # It should always exist
-                del self._report_order[report_id]
-            except KeyError:
-                warnings.warn("Report wasn't correctly stored in self._report_order", RuntimeWarning)
 
             # Tabs data structures maintenance
             if report['reportType'] == 'TABS':
@@ -1493,18 +1781,14 @@ class BasePlot:
 
                 # Add linked reports to the deletion queue
                 target_reports += [report for report in app_reports if report['id'] in child_report_ids]
-                if tabs_group_entry in self._tabs:
-                    self._delete_tabs_group(tabs_group_entry)
-
-            if self._report_in_tab.get(report_id):
-                self._delete_report_id_from_tab(report_id)
 
         await asyncio.gather(*delete_report_tasks)
 
     @async_auto_call_manager(execute=True)
     async def delete(
             self, menu_path: str,
-            tabs_index: Optional[str] = None,
+            tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             grid: Optional[str] = None,
             order: Optional[int] = None,
             row: Optional[int] = None,
@@ -1514,7 +1798,7 @@ class BasePlot:
             overwrite: bool = False,
     ):
         await self.async_delete(
-                menu_path=menu_path, tabs_index=tabs_index, grid=grid, order=order, row=row,
+                menu_path=menu_path, tabs_index=tabs_index, modal_name=modal_name, grid=grid, order=order, row=row,
                 column=column, component_type=component_type, by_component_type=by_component_type,
                 overwrite=overwrite
             )
@@ -1559,30 +1843,13 @@ class BasePlot:
 
         delete_tasks = []
         for report in target_reports:
-            report_id = report['id']
             delete_tasks.append(
-                self._plot_aux.delete_report(
+                self._delete_report(
                     business_id=self.business_id,
                     app_id=app_id,
-                    report_id=report_id
+                    report=report
                 )
             )
-            try:  # It should always exist
-                del self._report_order[report_id]
-            except KeyError:
-                warnings.warn("Report wasn't correctly stored in self._report_order", RuntimeWarning)
-
-            # Tabs data structures maintenance
-            if report['reportType'] == 'TABS':
-                path_name = report['path'] if report['path'] else ""
-                data_fields = json.loads(report['dataFields'].replace("'", '"').replace('None', 'null'))
-                group_name = data_fields['groupName']
-                tabs_group_entry = (app_id, path_name, group_name)
-                if tabs_group_entry in self._tabs:
-                    self._delete_tabs_group(tabs_group_entry)
-
-            if self._report_in_tab.get(report_id):
-                self._delete_report_id_from_tab(report_id)
 
         await asyncio.gather(*delete_tasks)
 
@@ -1613,6 +1880,7 @@ class BasePlot:
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             real_time: bool = False,
     ):
         """
@@ -1810,7 +2078,8 @@ class BasePlot:
                 rows_size=rows_size, cols_size=cols_size, padding=padding,
                 data=_data, bentobox_data=bentobox_data,
                 force_custom_field=False, sort=sort,
-                tabs_index=tabs_index
+                tabs_index=tabs_index,
+                modal_name=modal_name,
             )
 
         # TODO many things in common with _create_trend_charts_with_filters() unify!!
@@ -1872,6 +2141,7 @@ class BasePlot:
                     order=filter_order,
                     overwrite=True,
                     tabs_index=tabs_index,
+                    modal_name=modal_name,
                 )
 
         if options is None:
@@ -1977,10 +2247,6 @@ class PlotApi(BasePlot):
         del self._default_toolbox_options_top['bottom']
         self._default_toolbox_options_top['top'] = "2%"
 
-    @logging_before_and_after(logging_level=logger.debug)
-    def set_dashboard(self, dashboard_name: str):
-        super().set_dashboard(dashboard_name)
-
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_business(self, business_id: str):
@@ -2013,18 +2279,46 @@ class PlotApi(BasePlot):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
+    async def update_modal(self, menu_path: str, modal_name: str, open_by_default: Optional[bool] = None,
+                           width: Optional[int] = None, height: Optional[int] = None):
+
+        app_name, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
+                                                                        dashboard_name=self.dashboard
+                                                                        if self.dashboard else app_name + ' dashboard')
+        app_id = app['id']
+
+        await self._update_modal(self.business_id, (app_id, path_name, modal_name), open_by_default, width, height)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def add_tabs_group_to_modal(self, menu_path: str, modal_name: str, tabs_group_name: str):
+        app_name, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
+                                                                        dashboard_name=self.dashboard
+                                                                        if self.dashboard else app_name + ' dashboard')
+        app_id = app['id']
+        child_id = await self._get_or_create_tabs_group(self.business_id, (app_id, path_name, tabs_group_name))
+        await self._add_report_to_modal(self.business_id, (app_id, path_name, modal_name), child_id)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
     async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
                                        last_in_order: Optional[bool] = True):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
+                                                                        dashboard_name=self.dashboard
+                                                                        if self.dashboard else app_name + ' dashboard')
         app_id = app['id']
-        child_id = self._tabs_group_id[(app_id, path_name, child_tabs_group)]
+        child_id = await self._get_or_create_tabs_group(self.business_id, (app_id, path_name, child_tabs_group))
         order = self._report_order[child_id]
         parent_tabs_group_entry = (app_id, path_name, parent_tab_index[0])
-        if parent_tabs_group_entry not in self._tabs:
-            await self._create_tabs_group(self.business_id, parent_tabs_group_entry)
         if last_in_order:
             order = self._tabs_last_order[parent_tabs_group_entry] + 1
             await self._update_tabs_group_metadata(self.business_id, app_id, path_name, child_tabs_group, order)
@@ -2043,7 +2337,9 @@ class PlotApi(BasePlot):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
+                                                                        dashboard_name=self.dashboard
+                                                                        if self.dashboard else app_name + ' dashboard')
         app_id = app['id']
         await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size,
                                                bentobox_data, padding, rows_size, just_labels, sticky)
@@ -2054,7 +2350,9 @@ class PlotApi(BasePlot):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app: Dict = await self._plot_aux.get_app_by_name(business_id=self.business_id, name=app_name)
+        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
+                                                                        dashboard_name=self.dashboard
+                                                                        if self.dashboard else app_name + ' dashboard')
         app_id = app['id']
         tabs_group_entry = (app_id, path_name, group_name)
         tabs_group_aux = {}
@@ -2087,7 +2385,8 @@ class PlotApi(BasePlot):
             label_columns: Optional[Dict[str, str]] = {},
             downloadable_to_csv: bool = True,
             value_suffixes: Optional[Dict[str, str]] = {},
-            tabs_index: Optional[Tuple[str, str]] = None
+            tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
         {
@@ -2451,6 +2750,7 @@ class PlotApi(BasePlot):
                     grid=report_metadata.get('grid'),
                     by_component_type=False,
                     tabs_index=tabs_index,
+                    modal_name=modal_name,
                     overwrite=overwrite,
                 )
             else:
@@ -2462,16 +2762,14 @@ class PlotApi(BasePlot):
                     overwrite=overwrite,
                 )
 
-        report: Dict = await self._plot_aux.create_report(
+        report_id: str = (await self._create_report(
             business_id=self.business_id,
             app_id=app_id,
             report_metadata=report_metadata,
-        )
-        report_id: str = report['id']
-        self._report_order[report_id] = order
-
-        if tabs_index:
-            await self._insert_in_tab(self.business_id, app_id, path_name, report_id, tabs_index, order)
+            real_time=False,
+            modal_name=modal_name,
+            tabs_index=tabs_index,
+        ))['id']
 
         report_entry_filter_fields: Dict[str, List[str]] = {
             extra_map[extra_name]: values
@@ -2503,6 +2801,7 @@ class PlotApi(BasePlot):
             padding: Optional[str] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'HTML',
@@ -2522,7 +2821,8 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -2536,6 +2836,7 @@ class PlotApi(BasePlot):
             height: Optional[int] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         report_metadata: Dict = {
             'reportType': 'IFRAME',
@@ -2559,6 +2860,7 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
+            modal_name=modal_name,
             tabs_index=tabs_index,
         )
 
@@ -2578,6 +2880,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """Create a barchart
@@ -2641,6 +2944,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func
             )
         )
@@ -2661,6 +2965,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
@@ -2710,6 +3015,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -2730,6 +3036,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """Create a Horizontal barchart
@@ -2782,6 +3089,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='bar',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -2802,6 +3110,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """"""
@@ -2842,6 +3151,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func
             )
         )
@@ -2864,6 +3174,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """
@@ -2918,6 +3229,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -2937,6 +3249,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """
@@ -3044,6 +3357,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='line',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -3063,6 +3377,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """
@@ -3168,6 +3483,7 @@ class PlotApi(BasePlot):
             bentobox_data=bentobox_data,
             filters=filters,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             aggregation_func=aggregation_func
         )
 
@@ -3185,6 +3501,7 @@ class PlotApi(BasePlot):
             option_modifications: Optional[Dict] = None,  # third layer
             filters: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """"""
         self._plot_aux.validate_table_data(data, elements=[x] + y)
@@ -3217,7 +3534,8 @@ class PlotApi(BasePlot):
             menu_path=menu_path,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3236,6 +3554,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """"""
@@ -3257,6 +3576,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='scatter',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -3276,6 +3596,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,  # to create filters
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
         self._create_trend_chart(
@@ -3310,6 +3631,7 @@ class PlotApi(BasePlot):
             real_time: bool = False,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
         :param data:
@@ -3457,6 +3779,7 @@ class PlotApi(BasePlot):
                 report_metadata=report_metadata,
                 real_time=real_time,
                 tabs_index=tabs_index,
+                modal_name=modal_name,
             )
 
             if isinstance(order, int):
@@ -3477,6 +3800,7 @@ class PlotApi(BasePlot):
             vertical: Optional[bool] = False,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """"""
         elements: List[str] = [header, footer, value, color, target_path]
@@ -3491,7 +3815,8 @@ class PlotApi(BasePlot):
             footer=footer, color=color,
             vertical=vertical,
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3508,6 +3833,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """Create a Piechart
         """
@@ -3553,6 +3879,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3569,6 +3896,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """Create a RADAR
         """
@@ -3605,6 +3933,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -3620,6 +3949,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """Create a Tree
         """
@@ -3647,6 +3977,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3662,6 +3993,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """Create a Treemap
         """
@@ -3689,6 +4021,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3705,6 +4038,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """Create a Sunburst
         """
@@ -3732,6 +4066,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3750,6 +4085,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """"""
         y = ['open', 'close', 'highest', 'lowest']
@@ -3767,6 +4103,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='candlestick',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
             )
         )
 
@@ -3786,6 +4123,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """"""
@@ -3825,6 +4163,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func,
             )
         )
@@ -3844,6 +4183,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             aggregation_func: Optional[Callable] = None,
     ):
         """"""
@@ -3881,6 +4221,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='heatmap',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
                 aggregation_func=aggregation_func
             )
         )
@@ -3908,6 +4249,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """"""
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -3943,6 +4285,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -3961,6 +4304,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """"""
         df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -3986,6 +4330,7 @@ class PlotApi(BasePlot):
                 bentobox_data=bentobox_data,
                 echart_type='funnel',
                 tabs_index=tabs_index,
+                modal_name=modal_name,
             )
         )
 
@@ -4007,6 +4352,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ) -> str:
         """
         option = {
@@ -4171,6 +4517,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -4189,6 +4536,7 @@ class PlotApi(BasePlot):
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
     ) -> str:
         """"""
         self._plot_aux.validate_table_data(data, elements=[name, value])
@@ -4230,6 +4578,7 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @async_auto_call_manager()
@@ -4243,6 +4592,7 @@ class PlotApi(BasePlot):
         option_modifications: Optional[Dict] = None,  # third layer
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         slider_config: Optional[Dict] = None,
         slider_marks: Optional[Dict] = None,
     ):
@@ -4305,6 +4655,7 @@ class PlotApi(BasePlot):
             data=dfs, bentobox_data=bentobox_data,
             force_custom_field=False,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             annotated_slider_config=slider_config,
         )
 
@@ -4319,6 +4670,7 @@ class PlotApi(BasePlot):
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         rounded: Optional[bool] = True
     ):
         if not option_modifications:
@@ -4376,6 +4728,7 @@ class PlotApi(BasePlot):
             filters=filters,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',
@@ -4393,6 +4746,7 @@ class PlotApi(BasePlot):
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         rounded: Optional[bool] = True
     ):
         if not option_modifications:
@@ -4431,6 +4785,7 @@ class PlotApi(BasePlot):
             filters=filters,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',
@@ -4447,6 +4802,7 @@ class PlotApi(BasePlot):
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         is_percentage: bool = True,
     ):
         data = [{'value': abs(value)}]
@@ -4536,7 +4892,8 @@ class PlotApi(BasePlot):
             padding=padding,
             filters=filters,
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -4546,6 +4903,7 @@ class PlotApi(BasePlot):
         gauges_padding: Optional[str] = '3, 1, 1, 1',
         gauges_rows_size: Optional[int] = 9, gauges_cols_size: Optional[int] = 4,
         filters: Optional[Dict] = None, tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         calculate_percentages: Optional[bool] = False
     ):
         if isinstance(gauges_data, pd.DataFrame):
@@ -4571,7 +4929,7 @@ class PlotApi(BasePlot):
                 color=gauge['color'] if gauge.get('color') else 1,
                 rows_size=gauge['rows_size'] if gauge.get('rows_size') else gauges_rows_size,
                 cols_size=gauge['cols_size'] if gauge.get('cols_size') else gauges_cols_size,
-                bentobox_data=bentobox_data, tabs_index=tabs_index, filters=filters,
+                bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name, filters=filters,
                 is_percentage=gauge['is_percentage'] if gauge.get('is_percentage') else True,
             )
         return order+1
@@ -4581,7 +4939,8 @@ class PlotApi(BasePlot):
             self, menu_path: str, order: int, value: int,
             title: Optional[str] = "", description: Optional[str] = "",
             cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
-            color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None
+            color: Optional[Union[str, int]] = 1, tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         bentobox_id = str(uuid.uuid1())
         bentobox_data = {
@@ -4613,6 +4972,7 @@ class PlotApi(BasePlot):
             align='align',
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
         data_gauge = [{'value': value}]
@@ -4694,7 +5054,8 @@ class PlotApi(BasePlot):
             order=order+1, rows_size=6, cols_size=7,
             padding='1, 0, 1, 0',
             bentobox_data=bentobox_data,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -4712,6 +5073,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
                 df: DataFrame = self._plot_aux.validate_data_is_pandarable(data)
@@ -4752,6 +5114,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             show_values: Optional[List] = None,
             calculate_percentages: bool = False,
     ):
@@ -4824,6 +5187,7 @@ class PlotApi(BasePlot):
             filters=filters,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',
@@ -4844,6 +5208,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             show_values: Optional[List] = None,
             calculate_percentages: bool = False,
     ):
@@ -4916,6 +5281,7 @@ class PlotApi(BasePlot):
             filters=filters,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',
@@ -4937,6 +5303,7 @@ class PlotApi(BasePlot):
             filters: Optional[Dict] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
             show_values: Optional[List] = None,
             calculate_percentages: bool = False,
     ):
@@ -5010,6 +5377,7 @@ class PlotApi(BasePlot):
             filters=filters,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             sort={
                 'field': 'sort_values',
                 'direction': 'asc',
@@ -5026,6 +5394,7 @@ class PlotApi(BasePlot):
             padding: Optional[str] = None,
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
         :param data:
@@ -5093,7 +5462,8 @@ class PlotApi(BasePlot):
             rows_size=rows_size, cols_size=cols_size, padding=padding,
             data=data, bentobox_data=bentobox_data,
             force_custom_field=True,
-            tabs_index=tabs_index
+            tabs_index=tabs_index,
+            modal_name=modal_name,
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -5106,6 +5476,7 @@ class PlotApi(BasePlot):
         padding: Optional[str] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
     ):
         """
         :param dynamic_sequential_show:
@@ -5140,18 +5511,18 @@ class PlotApi(BasePlot):
         self.input_form(
             report_dataset_properties=report_dataset_properties,
             menu_path=menu_path, order=order, rows_size=rows_size, cols_size=cols_size,
-            padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index
+            padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name,
         )
 
-    @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def button(
+    async def _async_button(
         self, label: str, menu_path: str, order: int,
         rows_size: Optional[int] = 1, cols_size: int = 2,
         align: Optional[str] = 'stretch',
         padding: Optional[str] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
         on_click_events: Optional[Union[List[Dict], Dict]] = [],
     ):
         """
@@ -5190,5 +5561,84 @@ class PlotApi(BasePlot):
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
             report_metadata=report_metadata,
             tabs_index=tabs_index,
+            modal_name=modal_name,
+        )
+
+    @async_auto_call_manager()
+    async def button(
+        self, label: str, menu_path: str, order: int,
+        rows_size: Optional[int] = 1, cols_size: int = 2,
+        align: Optional[str] = 'stretch',
+        padding: Optional[str] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
+        on_click_events: Optional[Union[List[Dict], Dict]] = [],
+    ):
+        """
+        :param label:
+        :param menu_path:
+        :param order:
+        :param rows_size:
+        :param cols_size:
+        :param align:
+        :param padding:
+        :param bentobox_data:
+        :param tabs_index:
+        :param on_click_events:
+        """
+        return await self._async_button(
+            label=label, menu_path=menu_path, order=order, rows_size=rows_size, cols_size=cols_size,
+            align=align, padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index,
+            modal_name=modal_name, on_click_events=on_click_events,
+        )
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def modal_button(
+        self, label: str, menu_path: str, order: int, modal_name_to_open: str,
+        rows_size: Optional[int] = 1, cols_size: int = 2,
+        align: Optional[str] = 'stretch',
+        padding: Optional[str] = None,
+        bentobox_data: Optional[Dict] = None,
+        tabs_index: Optional[Tuple[str, str]] = None,
+        modal_name: Optional[str] = None,
+    ):
+        """
+        :param label:
+        :param menu_path:
+        :param order:
+        :modal_name_to_open:
+        :param rows_size:
+        :param cols_size:
+        :param align:
+        :param padding:
+        :param bentobox_data:
+        :param tabs_index:
+        :param modal_name:
+        """
+
+        app_name, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+
+        app_id = (await self._plot_aux._async_get_or_create_app_and_apptype(
+            name=app_name, dashboard_name=self.dashboard if self.dashboard else app_name + ' dashboard'))['id']
+
+        modal_id = await self._get_or_create_modal(self.business_id, (app_id, path_name, modal_name_to_open))
+
+        return await self._async_button(
+            label=label, menu_path=menu_path, order=order,
+            rows_size=rows_size, cols_size=cols_size, align=align,
+            padding=padding, bentobox_data=bentobox_data,
+            tabs_index=tabs_index, modal_name=modal_name,
+            on_click_events=[
+                {
+                    "action": "openModal",
+                    "params": {
+                        "modalId": modal_id,
+                    }
+                }
+            ]
         )
 

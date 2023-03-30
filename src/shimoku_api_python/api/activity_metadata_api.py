@@ -934,7 +934,7 @@ class ActivityMetadataApi:
         activity = self.get_activity(menu_path=menu_path, app_id=app_id,
                                      activity_name=activity_name, activity_id=activity_id)
 
-        self._plot_api.button(
+        self._plot_api._async_button(
             menu_path=menu_path,
             order=order, label=label,
             rows_size=rows_size, cols_size=cols_size,

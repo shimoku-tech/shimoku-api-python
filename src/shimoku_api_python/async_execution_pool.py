@@ -183,14 +183,25 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
                 list_for_conflicts_entry = app_name + path_name
 
-                if kwargs.get('tabs_index'):
-                    list_for_conflicts_entry += kwargs['tabs_index'][0] + kwargs['tabs_index'][1]
-                    tabs_group_pseudo_entry = (app_name, path_name, kwargs['tabs_index'][0])
+                tabs_index = kwargs.get('tabs_index')
+                modal_name = kwargs.get('modal_name')
+                order = kwargs.get('order')
+
+                if modal_name is not None and tabs_index:
+                    log_error(logger,
+                              'The modal_name and tabs_index parameters can not be used at the same time',
+                              RuntimeError)
+
+                if modal_name is not None:
+                    list_for_conflicts_entry += modal_name
+                elif tabs_index:
+                    list_for_conflicts_entry += tabs_index[0] + tabs_index[1]
+                    tabs_group_pseudo_entry = (app_name, path_name, tabs_index[0])
                     epc.tabs_group_indexes += [tabs_group_pseudo_entry] \
                         if tabs_group_pseudo_entry not in epc.tabs_group_indexes else []
 
-                if kwargs.get('order') is not None:
-                    list_for_conflicts_entry += str(kwargs.get('order'))
+                if order is not None:
+                    list_for_conflicts_entry += str(order)
 
                     if list_for_conflicts_entry in epc.list_for_conflicts:
                         epc.task_pool.clear()

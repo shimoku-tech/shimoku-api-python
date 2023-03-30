@@ -4703,6 +4703,235 @@ def test_annotation_chart():
     )
 
 
+def test_modal():
+    prediction_header = (
+        "<head>"
+        "<style>"  # Styles title
+        ".component-title{height:auto; width:100%; "
+        "border-radius:16px; padding:16px;"
+        "display:flex; align-items:center;"
+        "background-color:var(--chart-C1); color:var(--color-white);}"
+        "<style>.base-white{color:var(--color-white);}</style>"
+        "</head>"  # Styles subtitle
+        "<div class='component-title'>"
+        "<div class='big-icon-banner'></div>"
+        "<div class='text-block'>"
+        "<h1>Predictions</h1>"
+        "<p class='base-white'>"
+        "Modal Test</p>"
+        "</div>"
+        "</div>"
+    )
+    menu_path = 'Modal Test'
+
+    s.plt.update_modal(menu_path=menu_path, modal_name='Test modal', open_by_default=True, width=70, height=60)
+    s.plt.add_tabs_group_to_modal(menu_path=menu_path, modal_name='Test modal', tabs_group_name='Test')
+    s.plt.update_tabs_group_metadata(menu_path=menu_path, group_name='Test', order=1)
+
+    s.plt.html(
+        html=prediction_header, menu_path=menu_path, modal_name='Test modal', order=0
+    )
+
+    s.plt.html(
+        html=prediction_header, menu_path=menu_path, tabs_index=("Test", "Tab 1"), order=0
+    )
+    s.plt.html(
+        html=prediction_header, menu_path=menu_path, tabs_index=("Test", "Tab 1"), order=1
+    )
+    data_ = [
+        {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': dt.date(2021, 1, 3), 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': dt.date(2021, 1, 4), 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': dt.date(2021, 1, 5), 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
+    ]
+    search_columns: List[str] = ['name']
+
+    # Test search columns isolated work
+    s.plt.table(
+        title="Test-table",
+        data=data_,
+        menu_path=menu_path,
+        order=2,
+        search_columns=search_columns,
+        tabs_index=("Test", "Table"),
+    )
+    # Test search columns isolated work
+    s.plt.table(
+        title="Test-table",
+        data=data_,
+        menu_path=menu_path,
+        order=2,
+        search_columns=search_columns,
+        tabs_index=("TestNoModal", "Table"),
+    )
+
+    df = pd.read_csv('../data/test_stack_distribution.csv')
+
+    value_columns = [col for col in df.columns if col != "Segment"]
+    df = df[['Segment'] + value_columns]
+
+    gauges_data = pd.DataFrame(columns=["name", "value", "color"])
+    df_transposed = df.transpose().reset_index().drop(0)
+    value_columns = [col for col in df_transposed.columns if col != "index"]
+    gauges_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
+    gauges_data["name"] = df_transposed['index']
+    gauges_data["color"] = range(1, len(df_transposed) + 1)
+
+    s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=0, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+        tabs_index=("Test", "Gauges"),
+    )
+
+    s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=0, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+        tabs_index=("TestNoModal", "Gauges"),
+    )
+    gauges_data["color"] = range(1, len(df_transposed) + 1)[::-1]
+    order_modal = s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=2, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+        modal_name='Test modal',
+    )
+    gauges_data["color"] = range(1, len(df_transposed) + 1)
+    order = s.plt.shimoku_gauges_group(
+        gauges_data=gauges_data,
+        order=2, menu_path=menu_path,
+        cols_size=12, rows_size=3,
+        calculate_percentages=True,
+    )
+
+    form_groups = {
+        f'form group {i}': [{
+            'mapping': 'country',
+            'fieldName': f'Country {i}',
+            'inputType': 'select',
+            'options': ['España', 'Colombia']
+        },
+            {
+                'dependsOn': f'Country {i}',
+                'mapping': 'city',
+                'fieldName': f'City {i}',
+                'inputType': 'select',
+                'options': {
+                    'España': ['Madrid', 'Barcelona'],
+                    'Colombia': ['Bogotá', 'Medellin']
+                }
+            }
+        ] for i in range(4)}
+
+    form_groups['Personal information'] = \
+        [
+            {
+                'mapping': 'name',
+                'fieldName': 'name',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'surname',
+                'fieldName': 'surname',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'age',
+                'fieldName': 'age',
+                'inputType': 'number',
+            },
+            {
+                'mapping': 'tel',
+                'fieldName': 'phone',
+                'inputType': 'tel',
+            },
+            {
+                'mapping': 'gender',
+                'fieldName': 'Gender',
+                'inputType': 'radio',
+                'options': ['Male', 'Female', 'No-binary', 'Undefined'],
+            },
+            {
+                'mapping': 'email',
+                'fieldName': 'email',
+                'inputType': 'email',
+            },
+        ]
+
+    form_groups['Other data'] = \
+        [
+            {
+                'mapping': 'skills',
+                'fieldName': 'Skills',
+                'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                'inputType': 'checkbox',
+            },
+            {
+                'mapping': 'birthDay',
+                'fieldName': 'Birthday',
+                'inputType': 'date',
+            },
+            {
+                'mapping': 'onCompany',
+                'fieldName': 'Time on Shimoku',
+                'inputType': 'dateRange',
+            },
+            {
+                'mapping': 'hobbies',
+                'fieldName': 'Hobbies',
+                'inputType': 'select',
+                'options': ['Make Strong Api', 'Sailing to Canarias', 'Send Abracitos'],
+            },
+            {
+                'mapping': 'textField2',
+                'fieldName': 'Test Text',
+                'inputType': 'text',
+            },
+            {
+                'mapping': 'objectives',
+                'fieldName': 'Objetivos',
+                'inputType': 'multiSelect',
+                'options': ['sleep', 'close eyes', 'awake']
+            }
+        ]
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=0,
+        form_groups=form_groups,
+        dynamic_sequential_show=True,
+        tabs_index=("Test", "Form"),
+    )
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=0,
+        form_groups=form_groups,
+        dynamic_sequential_show=True,
+        tabs_index=("TestNoModal", "Form"),
+    )
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=order_modal,
+        form_groups=form_groups,
+        dynamic_sequential_show=True,
+        modal_name='Test modal',
+    )
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=order,
+        form_groups=form_groups,
+        dynamic_sequential_show=True,
+    )
+
+    s.plt.html(
+        html=prediction_header, menu_path='Test/Other', order=2
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
@@ -4758,6 +4987,9 @@ test_bar()
 test_tabs()
 s.run()
 test_tabs(check_data=False)
+
+# Modal
+test_modal()
 
 # Others
 test_dynamic_conditional_and_auto_send_input_form()

@@ -45,6 +45,7 @@ class ApiClient(object):
         self.locks = {
             'get_create_app': None,
             'get_create_tab': None,
+            'get_create_modal': None,
         }
 
         self.host: str = f'{self.host}universe/{universe_id}/'

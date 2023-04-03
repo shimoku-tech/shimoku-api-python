@@ -147,7 +147,9 @@ class DashboardMetadataApi(ABC):
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         """
-        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id)
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+        if not dashboard:
+            return
         dashboard_id, dashboard_name = dashboard['id'], dashboard['name']
 
         while dashboard_id:

@@ -9,7 +9,7 @@ import tqdm
 
 import asyncio
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -31,6 +31,23 @@ class GetExplorerAPI(object):
             )
         )
         return business_data
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_roles(self, business_id: str, dashboard_id: Optional[str] = None,
+                        app_id: Optional[str] = None) -> Dict:
+
+        endpoint = f'business/{business_id}/' + (f'dashboard/{dashboard_id}/' if dashboard_id
+                                                 else f'app/{app_id}/' if app_id
+                                                 else '') + 'roles'
+
+        return (await self.api_client.query_element(method='GET', endpoint=endpoint))['items']
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_roles_by_name(self, business_id: str, role_name: str,
+                                dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> [Dict]:
+        roles = await self.get_roles(business_id=business_id, dashboard_id=dashboard_id, app_id=app_id)
+
+        return [role for role in roles if role['role'] == role_name]
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_app_type(self, app_type_id: str, **kwargs) -> Dict:
@@ -152,13 +169,14 @@ class GetExplorerAPI(object):
         return report_data
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_dataset(self, business_id: str, dataset_id: str, **kwargs) -> Dict:
+    async def get_dataset(self, business_id: str, app_id: str, dataset_id: str, **kwargs) -> Dict:
         """Retrieve an specific app_id metadata
 
         :param business_id: business UUID
+        :param app_id: app UUID
         :param dataset_id: dataset UUID
         """
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         dataset_data: Dict = await (
             self.api_client.query_element(
                 method='GET', endpoint=endpoint, **kwargs
@@ -271,6 +289,32 @@ class GetExplorerAPI(object):
         endpoint: str = f'business/{business_id}/app/{app_id}/files'
         files: List[Dict] = await self.api_client.query_element(method='GET', endpoint=endpoint)
         return files
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_dashboard(self, business_id: str, dashboard_id: str) -> Dict:
+        """Retrieve an specific dashboard metadata
+
+        :param business_id: business UUID
+        :param dashboard_id: dashboard UUID
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}'
+        dashboard_data: Dict = await (
+            self.api_client.query_element(method='GET', endpoint=endpoint)
+        )
+        return dashboard_data
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def app_dashboard_links(self, business_id: str, dashboard_id: str) -> Dict:
+        """Retrieve the appdashboards of a dashboard
+
+        :param business_id: business UUID
+        :param dashboard_id: dashboard UUID
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboards'
+        appdashboards: Dict = await (
+            self.api_client.query_element(method='GET', endpoint=endpoint)
+        )
+        return appdashboards['items']
 
 
 class CascadeExplorerAPI(GetExplorerAPI):
@@ -548,7 +592,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
         data_sets: List[Dict] = []
         for reportdataset in reportdatasets:
             endpoint: str = (
-                f'business/{business_id}/'
+                f'business/{business_id}/app/{app_id}/'
                 f'dataSet/{reportdataset["dataSetId"]}'
             )
             data_set: Dict = await (
@@ -562,10 +606,11 @@ class CascadeExplorerAPI(GetExplorerAPI):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_dataset_data(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
     ) -> List[Dict]:
         endpoint: str = (
             f'business/{business_id}/'
+            f'app/{app_id}/'
             f'dataSet/{dataset_id}/'
             f'datas'
         )
@@ -588,7 +633,7 @@ class CascadeExplorerAPI(GetExplorerAPI):
             business_id=business_id, app_id=app_id, report_id=report_id,
         )
 
-        tasks = [self.get_dataset_data(business_id=business_id, dataset_id=report_dataset['id'])
+        tasks = [self.get_dataset_data(business_id=business_id, app_id=app_id, dataset_id=report_dataset['id'])
                  for report_dataset in report_datasets]
 
         results = await asyncio.gather(*tasks)
@@ -797,6 +842,17 @@ class CascadeExplorerAPI(GetExplorerAPI):
         else:
             return {}
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_business_dashboards(self, business_id: str) -> List[Dict]:
+        """
+        :param business_id: business UUID
+        """
+        endpoint: str = f'business/{business_id}/dashboards'
+        dashboard_data: Dict = await (
+            self.api_client.query_element(method='GET', endpoint=endpoint)
+        )
+        return dashboard_data['items']
+
 
 class CreateExplorerAPI(object):
 
@@ -845,6 +901,42 @@ class CreateExplorerAPI(object):
         endpoint: str = 'business'
 
         item: Dict = {'name': name}
+
+        return await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': item},
+        )
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def create_role(self, business_id: str, role: str, resource: Optional[str] = None,
+                          permission: Optional[str] = None, target: Optional[str] = None,
+                          dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> Dict:
+        """"""
+
+        valid_resources = ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']
+        if resource and resource not in valid_resources:
+            log_error(logger, f'{resource} is not a valid value for resource, '
+                              f'the valid values are: {valid_resources}', ValueError)
+
+        valid_permissions = ['READ', 'WRITE']
+        if permission and permission not in valid_permissions:
+            log_error(logger, f'{permission} is not a valid value for permission, '
+                              f'the valid values are: {valid_permissions}', ValueError)
+
+        valid_targets = ['GROUP', 'USER']
+        if target and target not in valid_targets:
+            log_error(logger, f'{target} is not a valid value for target, '
+                              f'the valid values are: {valid_targets}', ValueError)
+
+        endpoint = f'business/{business_id}/'+(f'dashboard/{dashboard_id}/' if dashboard_id
+                                               else f'app/{app_id}/' if app_id
+                                               else '')+'role'
+
+        item: Dict = {
+            'permission': permission if permission else 'READ',
+            'resource': resource if resource else 'BUSINESS_INFO',
+            'target': target if target else 'GROUP',
+            'role': role,
+        }
 
         return await self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': item},
@@ -994,12 +1086,14 @@ class CreateExplorerAPI(object):
         }
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_dataset(self, business_id: str) -> Dict:
+    async def create_dataset(self, business_id: str, app_id: str) -> Dict:
         """Create new DataSet associated to a business
 
-        :param business_id:
+        :param app_id: UUID of the app
+        :param business_id: UUID of the business
+        :return: The dataset created
         """
-        endpoint: str = f'business/{business_id}/dataSet'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet'
 
         return await self.api_client.query_element(
             method='POST', endpoint=endpoint, **{'body_params': {}},
@@ -1039,18 +1133,22 @@ class CreateExplorerAPI(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_data_points(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
             items: List[str],
     ) -> List[Dict]:
         """Create new row in Data (equivalent to reportEntry)
 
-        :param business_id:
-        :param dataset_id:
-        :param items:
+        :param business_id: UUID of the business
+        :param app_id: UUID of the app
+        :param dataset_id: UUID of the dataset
+        :param items: A list of dicts with the data to be inserted
+
+        :return: A list of dicts with the data inserted
         """
         # TODO see if this can be batch accelerated like report entries
         endpoint: str = (
             f'business/{business_id}/'
+            f'app/{app_id}/'
             f'dataSet/{dataset_id}/'
             f'data'
         )
@@ -1161,6 +1259,39 @@ class CreateExplorerAPI(object):
         file_data.pop('url')
         return file_data
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def create_dashboard(self, business_id: str, dashboard_metadata: Dict) -> Dict:
+        """Create a Dashboard
+
+        :param business_id: UUID of the business
+        :param app_id: UUID of the app
+        :param dashboard_metadata: Metadata of the dashboard
+        :return: The dashboard as a dictionary
+        """
+
+        endpoint: str = f'business/{business_id}/dashboard'
+        dashboard: Dict = await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': dashboard_metadata},
+        )
+        return dashboard
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def add_app_in_dashboard(self, business_id: str, dashboard_id: str, app_id: str) -> Dict:
+        """Add an app in a dashboard
+
+        :param business_id: UUID of the business
+        :param dashboard_id: UUID of the dashboard
+        :param app_id: UUID of the app
+        :return: The dashboard as a dictionary
+        """
+
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboard'
+
+        dashboard: Dict = await self.api_client.query_element(
+            method='POST', endpoint=endpoint, **{'body_params': {'appId': app_id}},
+        )
+        return dashboard
+
 
 class UpdateExplorerAPI(CascadeExplorerAPI):
 
@@ -1246,14 +1377,29 @@ class UpdateExplorerAPI(CascadeExplorerAPI):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update_dataset(
-            self, business_id: str, dataset_id: str,
+            self, business_id: str, app_id: str, dataset_id: str,
             dataset_metadata: Dict,
     ) -> Dict:
         """"""
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         return await self.api_client.query_element(
             method='PATCH', endpoint=endpoint,
             **{'body_params': dataset_metadata},
+        )
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def update_dashboard(self, business_id: str, dashboard_id: str, dashboard_metadata: Dict) -> Dict:
+        """ Update a dashboard metadata
+
+        :param business_id: The UUID of the business
+        :param dashboard_id: The UUID of the dashboard
+        :param dashboard_metadata: The metadata for the update
+        :return: The updated dashboard metadata
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}'
+        return await self.api_client.query_element(
+            method='PATCH', endpoint=endpoint,
+            **{'body_params': dashboard_metadata},
         )
 
 
@@ -1326,11 +1472,13 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
     async def create_report_and_dataset(
         self, business_id: str, app_id: str,
         report_metadata: Dict,
-        items: Union[List[str], Dict],
+        report_type: str,
+        items: Union[List[str], Dict, List[List]],
         report_properties: Dict,
         report_dataset_properties: Optional[Dict] = None,
         sort: Optional[Dict] = None,
         real_time: bool = False,
+        annotated_slider_config: Optional[Dict] = None
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         """
         Example
@@ -1352,17 +1500,52 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
             real_time=real_time,
         )
 
-        dataset: Dict = await self.create_dataset(business_id=business_id)
-        dataset_id: str = dataset['id']
+        dataset_ids: List[str] = []
+        report_dataset_ids = []
 
-        if type(items) == list:  # ECHARTS2
+        if not isinstance(items, (list, dict)):
+            raise ValueError('items must be a list or dict')
+
+        items_keys: Optional[List[str]] = None
+        if report_type == 'ECHARTS2':   # TODO multiple datasets have to be supported
+            dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+            dataset_ids.append(dataset_id)
+
             items_keys: Optional[List[str]] = list(items[0].keys())
             report_dataset_properties = {'mapping': items_keys}
             if sort:
                 report_dataset_properties['sort'] = sort
 
-        elif type(items) == dict:  # FORM
-            items_keys: Optional[List[str]] = None
+            report_dataset_id: str = (await self.create_reportdataset(
+                business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                dataset_properties=json.dumps(report_dataset_properties)))['id']
+
+            await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
+            report_properties['dataset'] = {'source': '#{' + f'{report_dataset_id}' + '}'}
+
+        elif report_type == 'ANNOTATED_ECHART':
+            for i, series in enumerate(items):
+                dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+                dataset_ids.append(dataset_id)
+                items_keys = list(series[0].keys())
+                report_dataset_properties = {'mapping': {'values': ['dateField1', 'intField1'],
+                                                         'label': 'stringField1'}}
+                if sort:
+                    report_dataset_properties['sort'] = sort
+
+                report_dataset_id: str = (await self.create_reportdataset(
+                    business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                    dataset_properties=json.dumps(report_dataset_properties)))['id']
+                report_dataset_ids.append(report_dataset_id)
+
+                await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id,
+                                              items=[{k: v for k, v in d.items() if v != ''} for d in series])
+                report_properties['series'][i]['data'] = '#{' + f'{report_dataset_id}' + '}'
+
+        elif report_type == 'FORM':  # TODO multiple datasets have to be supported
+            dataset_id: str = (await self.create_dataset(business_id=business_id, app_id=app_id))['id']
+            dataset_ids.append(dataset_id)
+
             items = [items]
             try:
                 assert report_dataset_properties is not None
@@ -1370,29 +1553,24 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
                 raise ValueError(
                     'report_dataset_properties is required if items is a dict'
                 )
-        else:
-            raise ValueError('items must be a list or dict')
 
-        report_dataset: Dict = await self.create_reportdataset(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report['id'],
-            dataset_id=dataset_id,
-            dataset_properties=json.dumps(report_dataset_properties),
-        )
+            report_dataset_id: str = (await self.create_reportdataset(
+                business_id=business_id, app_id=app_id, report_id=report['id'], dataset_id=dataset_id,
+                dataset_properties=json.dumps(report_dataset_properties)))['id']
+            report_dataset_ids.append(report_dataset_id)
 
-        data: List[Dict] = await self.create_data_points(
-            business_id=business_id,
-            dataset_id=dataset_id,
-            items=items,
-        )
+            await self.create_data_points(business_id=business_id, app_id=app_id, dataset_id=dataset_id, items=items)
+            report_properties['dataset'] = {'source': '#{' + f'{report_dataset_id}' + '}'}
 
-        # Syntax to be accepted by the FrontEnd
-        options_dataset_id: str = '#{' + f'{report_dataset["id"]}' + '}'
-        report_properties['dataset'] = {'source': options_dataset_id}
         if items_keys is not None:  # ECHARTS2
             report_properties['dimensions']: items_keys
-        report_properties = {'properties': json.dumps({'option': report_properties})}
+
+        report_properties = {'properties': {'option': report_properties}}
+
+        if annotated_slider_config:
+            report_properties['properties']['slider'] = annotated_slider_config
+
+        report_properties['properties'] = json.dumps(report_properties['properties'])
 
         report: Dict = await self.update_report(
             business_id=business_id,
@@ -1403,10 +1581,11 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
         return {
             'report': report,
-            'dataset': dataset,
-            'report_dataset': report_dataset,
-            'data': data,
+            'dataset_ids': dataset_ids, # I think that
+            'report_dataset_ids': report_dataset_ids,
         }
+
+
 
 
 class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
@@ -1425,6 +1604,16 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         await self.api_client.query_element(
             method='DELETE', endpoint=endpoint,
         )
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_role(self, business_id: str, role_id: str,
+                          dashboard_id: Optional[str] = None, app_id: Optional[str] = None) -> Dict:
+
+        endpoint = f'business/{business_id}/' + (f'dashboard/{dashboard_id}/' if dashboard_id
+                                                 else f'app/{app_id}/' if app_id
+                                                 else '') + f'role/{role_id}'
+
+        return await self.api_client.query_element(method='DELETE', endpoint=endpoint)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def delete_app_type(self, app_type_id: str):
@@ -1521,9 +1710,9 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def delete_dataset(self, business_id: str, dataset_id: str) -> Dict:
+    async def delete_dataset(self, business_id: str, app_id: str, dataset_id: str) -> Dict:
         """"""
-        endpoint: str = f'business/{business_id}/dataset/{dataset_id}'
+        endpoint: str = f'business/{business_id}/app/{app_id}/dataSet/{dataset_id}'
         result: Dict = await self.api_client.query_element(
             method='DELETE', endpoint=endpoint
         )
@@ -1566,6 +1755,28 @@ class DeleteExplorerApi(MultiCascadeExplorerAPI, UpdateExplorerAPI):
         result: Dict = await self.api_client.query_element(method='DELETE', endpoint=endpoint)
         return result
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_dashboard(self, business_id: str, dashboard_id: str) -> Dict:
+        """
+        Delete a dashboard
+        :param business_id: UUID of the business
+        :param dashboard_id: UUID of the dashboard
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}'
+        result: Dict = await self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_app_dashboard_link(self, business_id: str, dashboard_id: str, app_dashboard_id: str) -> Dict:
+        """
+        Delete an app from a dashboard
+        :param business_id: UUID of the business
+        :param dashboard_id: UUID of the dashboard
+        :param app_dashboard_id: UUID of the app_dashboard
+        """
+        endpoint: str = f'business/{business_id}/dashboard/{dashboard_id}/appDashboard/{app_dashboard_id}'
+        result: Dict = await self.api_client.query_element(method='DELETE', endpoint=endpoint)
+        return result
 
 # TODO los siguientes puntos:
 #  . Si elimino (delete) un report se eliminan sus reportdataset?
@@ -1970,6 +2181,46 @@ class BusinessExplorerApi:
 
         self.delete_business = self.delete_explorer_api.delete_business
 
+        self.create_role = lambda business_id, role_name, resource=None, permission=None, target=None: \
+            self.cascade_create_explorer_api.create_role(business_id=business_id, role=role_name, resource=resource,
+                                                         permission=permission, target=target)
+        self.get_roles = lambda business_id: self.get_explorer_api.get_roles(business_id=business_id)
+        self.get_roles_by_name = lambda business_id, role_name: \
+            self.get_explorer_api.get_roles_by_name(business_id=business_id, role_name=role_name)
+        self.delete_role = lambda business_id, role_id: \
+            self.delete_explorer_api.delete_role(business_id=business_id, role_id=role_id)
+
+
+class DashboardExplorerApi:
+    """"""
+    def __init__(self, api_client):
+        self.get_explorer_api = GetExplorerAPI(api_client)
+        self.cascade_explorer_api = CascadeExplorerAPI(api_client)
+        self.create_explorer_api = CreateExplorerAPI(api_client)
+        self.update_explorer_api = UpdateExplorerAPI(api_client)
+        self.delete_explorer_api = DeleteExplorerApi(api_client)
+
+        self.get_dashboard = self.get_explorer_api.get_dashboard
+        self.get_business_dashboards = self.cascade_explorer_api.get_business_dashboards
+        self.create_dashboard = self.create_explorer_api.create_dashboard
+        self.update_dashboard = self.update_explorer_api.update_dashboard
+        self.delete_dashboard = self.delete_explorer_api.delete_dashboard
+        self.add_app_in_dashboard = self.create_explorer_api.add_app_in_dashboard
+        self.app_dashboard_links = self.get_explorer_api.app_dashboard_links
+        self.delete_app_dashboard_link = self.delete_explorer_api.delete_app_dashboard_link
+
+        self.create_role = \
+            lambda business_id, dashboard_id, role_name, resource=None, permission=None, target=None: \
+            self.create_explorer_api.create_role(
+                business_id=business_id, dashboard_id=dashboard_id, resource=resource,
+                role=role_name, permission=permission, target=target
+            )
+        self.get_roles = lambda business_id, dashboard_id: self.get_explorer_api.get_roles(
+            business_id=business_id, dashboard_id=dashboard_id)
+        self.get_roles_by_name = lambda business_id, dashboard_id, role_name: self.get_explorer_api.get_roles_by_name(
+            business_id=business_id, dashboard_id=dashboard_id, role_name=role_name)
+        self.delete_role = lambda business_id, dashboard_id, role_id: self.delete_explorer_api.delete_role(
+            business_id=business_id, dashboard_id=dashboard_id, role_id=role_id)
 
 class AppTypeExplorerApi:
     """"""
@@ -2022,6 +2273,19 @@ class AppExplorerApi:
         self.get_app_by_name = self.cascade_explorer_api.get_app_by_name
 
         self.delete_app = self.delete_explorer_api.delete_app
+
+        self.create_role = \
+            lambda business_id, app_id, role_name, permission=None, target=None, resource=None: \
+            self.create_explorer_api.create_role(
+                business_id=business_id, app_id=app_id, role=role_name,
+                permission=permission, target=target, resource=resource
+            )
+        self.get_roles = lambda business_id, app_id: self.get_explorer_api.get_roles(
+            business_id=business_id, app_id=app_id)
+        self.get_roles_by_name = lambda business_id, app_id, role_name: self.get_explorer_api.get_roles_by_name(
+            business_id=business_id, app_id=app_id, role_name=role_name)
+        self.delete_role = lambda business_id, app_id, role_id: self.delete_explorer_api.delete_role(
+            business_id=business_id, app_id=app_id, role_id=role_id)
 
 
 class ReportExplorerApi:

@@ -32,6 +32,11 @@ def my_before_sleep(retry_state):
     logging.warning(msg)
 
 
+def log_error(logger, message, errorFunction):
+    logger.error(message)
+    raise errorFunction(message)
+
+
 def logging_before_and_after(logging_level: Callable, before: Optional[str] = None, after: Optional[str] = None) -> Callable:
 
     def decorator(func: Callable) -> Callable:

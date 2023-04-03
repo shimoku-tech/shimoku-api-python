@@ -67,6 +67,7 @@ class Activity:
                 **{'body_params': log}
             )
             ###########################################################
+            response['tags'] = json.loads(response['tags'])
             return response
 
         @logging_before_and_after(logging_level=logger.debug)
@@ -228,7 +229,7 @@ class Activity:
         @logging_before_and_after(logging_level=logger.debug)
         async def get_logs(self) -> List[Dict[str, str]]:
             """
-            Gets the logs of the run from the server and r4eturns them as a list of dictionaries.
+            Gets the logs of the run from the server and returns them as a list of dictionaries.
             """
             if self.id is None:
                 error = 'The run has not been created yet. Make sure to await the run before getting the logs.'
@@ -578,7 +579,7 @@ class ActivityMetadataApi:
             raise ValueError("Either an app_id or a menu_path has to be provided")
 
         app_name, _ = self._clean_menu_path(menu_path=menu_path)
-        return (await self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))['id']
+        return (await self._app_metadata_api._async_get_or_create_app_and_apptype(name=app_name))['id']
 
     @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
@@ -592,55 +593,6 @@ class ActivityMetadataApi:
         self._clear_local_activities()
         self.business_id = business_id
 
-    @logging_before_and_after(logging_level=logger.info)
-    def button_execute_activity(
-            self, menu_path: str, order: int, activity_name: str, label: str,
-            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
-            align: Optional[str] = 'stretch',
-            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None
-    ):
-        """
-        Create an execute button report in the dashboard for the activity.
-        :param activity_name: the name of the activity
-        :param order: the order of the button in the dashboard
-        :param menu_path: the menu path of the app to which the activity belongs
-        :param label: the name of the button to be clicked
-        :param rows_size: the number of rows of the button
-        :param cols_size: the number of columns of the button
-        :param align: the alignment of the button
-        :param padding: the padding of the button
-        :param bentobox_data: the bentobox metadata for FE
-        :param tabs_index: the index of the tab in the dashboard
-        :return:
-        """
-
-        app_name, _ = self._clean_menu_path(menu_path=menu_path)
-
-        # TODO solve this bottleneck #
-        app: Dict = asyncio.run(self._app_metadata_api.get_or_create_app_and_apptype(name=app_name))
-        app_id: str = app['id']
-        activity_entry = (app_id, activity_name)
-
-        activity = self.activities[activity_entry]
-
-        self._plot_api.button(
-            menu_path=menu_path,
-            order=order, label=label,
-            rows_size=rows_size, cols_size=cols_size,
-            align=align,
-            padding=padding,
-            bentobox_data=bentobox_data,
-            tabs_index=tabs_index,
-            on_click_events=[
-                {
-                    "action": "runActivity",
-                    "params": {
-                        "activityId": activity.id,
-                    }
-                }
-            ]
-        )
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -931,3 +883,71 @@ class ActivityMetadataApi:
                                             activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return run.settings
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_run_logs(self, run_id: str,
+                           menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                           activity_name: Optional[str] = None, activity_id: Optional[str] = None) \
+            -> List[Dict[str, Any]]:
+        """
+        Get the logs of a run by its id
+        :param menu_path: the menu path of the app where the activity is located
+        :param app_id: the id of the app where the activity is located
+        :param activity_name: the name of the activity
+        :param activity_id: the id of the activity
+        :param run_id: the id of the run
+        :return: the logs of the run as a list of dictionaries
+        """
+
+        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
+                                            activity_name=activity_name, activity_id=activity_id)
+        run = await activity.get_run(run_id=run_id)
+        return await run.get_logs()
+
+    @logging_before_and_after(logging_level=logger.info)
+    def button_execute_activity(
+            self, order: int, label: str,
+            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+            menu_path: Optional[str] = None, app_id: Optional[str] = None,
+            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
+            align: Optional[str] = 'stretch',
+            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None
+    ):
+        """
+        Create an execute button report in the dashboard for the activity.
+        :param activity_name: the name of the activity
+        :param order: the order of the button in the dashboard
+        :param menu_path: the menu path of the app to which the activity belongs
+        :param label: the name of the button to be clicked
+        :param rows_size: the number of rows of the button
+        :param cols_size: the number of columns of the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        :param bentobox_data: the bentobox metadata for FE
+        :param tabs_index: the index of the tab in the dashboard
+        :return:
+        """
+        # TODO: handle this correctly, this solution is a bottleneck
+
+        activity = self.get_activity(menu_path=menu_path, app_id=app_id,
+                                     activity_name=activity_name, activity_id=activity_id)
+
+        self._plot_api.button(
+            menu_path=menu_path,
+            order=order, label=label,
+            rows_size=rows_size, cols_size=cols_size,
+            align=align,
+            padding=padding,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            on_click_events=[
+                {
+                    "action": "runActivity",
+                    "params": {
+                        "activityId": activity['id'],
+                    }
+                }
+            ]
+        )

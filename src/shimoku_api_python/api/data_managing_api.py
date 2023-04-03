@@ -300,21 +300,23 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     str_counter += 1
                     d.update({k: f'stringField{str_counter}'})
                 elif type_v == float or type_v == int:
-                    float_counter += 1
                     if sort and k == sort['field']:
                         d.update({k: 'orderField1'})
                         sort['field'] = 'orderField1'
                     else:
+                        float_counter += 1
                         d.update({k: f'intField{float_counter}'})
-
                 elif type_v == dt.date or type_v == dt.datetime or type_v == pd.Timestamp:
                     date_counter += 1
                     d.update({k: f'dateField{date_counter}'})
+                    if sort and k == sort['field']:
+                        sort['field'] = f'dateField{date_counter}'
                 elif type_v == dict:
                     d.update({k: f'customField1'})
                 else:
                     raise ValueError(f'Unknown value type {v} | Type {type_v}')
-            return [{d[k]: v for k, v in datum.items()} for datum in data]
+            return [{d[k]: v if 'dateField' not in d[k] else v.isoformat()+'Z'
+                     for k, v in datum.items()} for datum in data]
         else:
             assert type(data) == list or type(data) == dict
 

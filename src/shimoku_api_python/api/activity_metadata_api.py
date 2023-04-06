@@ -486,7 +486,7 @@ class ActivityMetadataApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, api_client, app_metadata_api: AppMetadataApi, business_metadata_api: BusinessMetadataApi,
-                 plot_api: PlotApi, execution_pool_context: ExecutionPoolContext, business_id: Optional[str] = None):
+                 execution_pool_context: ExecutionPoolContext, business_id: Optional[str] = None):
         self.api_client = api_client
         self.business_id: Optional[str] = business_id
         self.activities: Dict[(str, str), Activity] = {}
@@ -494,7 +494,6 @@ class ActivityMetadataApi:
         # TODO this should be handled by the structure of the SDK #
         self._app_metadata_api: AppMetadataApi = app_metadata_api
         self._business_metadata_api: BusinessMetadataApi = business_metadata_api
-        self._plot_api: PlotApi = plot_api
         self.epc: ExecutionPoolContext = execution_pool_context
         ###########################################################
 
@@ -618,9 +617,9 @@ class ActivityMetadataApi:
         return self.activities[activity_entry].to_dict()
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _get_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
-                            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
-                            how_many_runs: int = -1) -> Activity:
+    async def _async_get_activity(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                  activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+                                  how_many_runs: int = -1) -> Activity:
         """
         Get an activity by its name and app, or by its id.
         :param activity_name: the name of the activity
@@ -670,7 +669,7 @@ class ActivityMetadataApi:
         :return:
         """
         app_id = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
-        activity = await self._get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
+        activity = await self._async_get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
         activity_name = activity.name
         activity_entry = (app_id, activity_name)
 
@@ -695,7 +694,7 @@ class ActivityMetadataApi:
         :return: the updated activity as a dictionary
         """
         app_id = await self._resolve_app_id(menu_path=menu_path, app_id=app_id)
-        activity = await self._get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
+        activity = await self._async_get_activity(app_id=app_id, activity_id=activity_id, activity_name=activity_name)
         activity_name = activity.name
         activity_entry = (app_id, activity_name)
 
@@ -721,8 +720,8 @@ class ActivityMetadataApi:
         :param settings: the settings of the run, or the id of the run to clone settings from
         :return: the run of the activity as a dictionary
         """
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
         run = await activity.create_new_run(settings=settings)
         result = await run.execute()
         await run
@@ -744,7 +743,7 @@ class ActivityMetadataApi:
         :param how_many_runs: how many runs to get
         :return: the activity as a dictionary
         """
-        activity = await self._get_activity(
+        activity = await self._async_get_activity(
             menu_path=menu_path, activity_name=activity_name,
             app_id=app_id, activity_id=activity_id,
             how_many_runs=how_many_runs
@@ -773,7 +772,7 @@ class ActivityMetadataApi:
         self._clear_local_activities()
         await self._get_business_activities()
 
-        activity_tasks = [self._get_activity(app_id=app_id, activity_name=activity.name, how_many_runs=how_many_runs)
+        activity_tasks = [self._async_get_activity(app_id=app_id, activity_name=activity.name, how_many_runs=how_many_runs)
                           for (activity_app_id, _), activity in self.activities.items() if activity_app_id == app_id]
 
         activities = [activity.to_dict() for activity in await asyncio.gather(*activity_tasks)]
@@ -801,8 +800,8 @@ class ActivityMetadataApi:
         :return: the run created as a dictionary
         """
 
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
 
         run = await activity.create_new_run(settings=settings)
 
@@ -827,8 +826,8 @@ class ActivityMetadataApi:
         :param run_id: the id of the run
         :return:
         """
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         result = await run.execute()
         await run
@@ -854,8 +853,8 @@ class ActivityMetadataApi:
         :param pretty_print: if True, the log is printed in a pretty format
         :return:
         """
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         log = await run.create_log(message=message, severity=severity, tags=tags if tags else {})
 
@@ -879,8 +878,8 @@ class ActivityMetadataApi:
         :return: the settings of the run as a dictionary
         """
 
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return run.settings
 
@@ -900,54 +899,7 @@ class ActivityMetadataApi:
         :return: the logs of the run as a list of dictionaries
         """
 
-        activity = await self._get_activity(menu_path=menu_path, app_id=app_id,
-                                            activity_name=activity_name, activity_id=activity_id)
+        activity = await self._async_get_activity(menu_path=menu_path, app_id=app_id,
+                                                  activity_name=activity_name, activity_id=activity_id)
         run = await activity.get_run(run_id=run_id)
         return await run.get_logs()
-
-    @logging_before_and_after(logging_level=logger.info)
-    def button_execute_activity(
-            self, order: int, label: str,
-            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
-            menu_path: Optional[str] = None, app_id: Optional[str] = None,
-            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
-            align: Optional[str] = 'stretch',
-            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None
-    ):
-        """
-        Create an execute button report in the dashboard for the activity.
-        :param activity_name: the name of the activity
-        :param order: the order of the button in the dashboard
-        :param menu_path: the menu path of the app to which the activity belongs
-        :param label: the name of the button to be clicked
-        :param rows_size: the number of rows of the button
-        :param cols_size: the number of columns of the button
-        :param align: the alignment of the button
-        :param padding: the padding of the button
-        :param bentobox_data: the bentobox metadata for FE
-        :param tabs_index: the index of the tab in the dashboard
-        :return:
-        """
-        # TODO: handle this correctly, this solution is a bottleneck
-
-        activity = self.get_activity(menu_path=menu_path, app_id=app_id,
-                                     activity_name=activity_name, activity_id=activity_id)
-
-        self._plot_api._async_button(
-            menu_path=menu_path,
-            order=order, label=label,
-            rows_size=rows_size, cols_size=cols_size,
-            align=align,
-            padding=padding,
-            bentobox_data=bentobox_data,
-            tabs_index=tabs_index,
-            on_click_events=[
-                {
-                    "action": "runActivity",
-                    "params": {
-                        "activityId": activity['id'],
-                    }
-                }
-            ]
-        )

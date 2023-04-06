@@ -64,19 +64,21 @@ class Client(object):
         self.report = ReportMetadataApi(self._api_client)
         self.data = DataManagingApi(self._api_client)
         self.io = FileMetadataApi(self._api_client, business_id=business_id, execution_pool_context=self.epc)
-        self.plt = PlotApi(self._api_client, business_id=business_id, app_metadata_api=self.app,
+        self.activity = ActivityMetadataApi(self._api_client,
+                                            app_metadata_api=self.app,
+                                            business_metadata_api=self.business,
+                                            business_id=business_id,
+                                            execution_pool_context=self.epc)
+        self.plt = PlotApi(self._api_client,
+                           business_id=business_id,
+                           app_metadata_api=self.app,
+                           activity_metadata_api=self.activity,
                            execution_pool_context=self.epc)
 
         self.epc.plot_api = self.plt
 
         self.ai = AiAPI(self.plt)
         self.html_components = shimoku_components_catalog.html_components
-        self.activity = ActivityMetadataApi(self._api_client,
-                                            app_metadata_api=self.app,
-                                            business_metadata_api=self.business,
-                                            plot_api=self.plt,
-                                            business_id=business_id,
-                                            execution_pool_context=self.epc)
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config={}):

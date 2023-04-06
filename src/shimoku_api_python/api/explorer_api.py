@@ -1478,7 +1478,8 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
         report_dataset_properties: Optional[Dict] = None,
         sort: Optional[Dict] = None,
         real_time: bool = False,
-        annotated_slider_config: Optional[Dict] = None
+        annotated_slider_config: Optional[Dict] = None,
+        events: Optional[Dict] = None
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         """
         Example
@@ -1569,6 +1570,9 @@ class CascadeCreateExplorerAPI(CreateExplorerAPI):
 
         if annotated_slider_config:
             report_properties['properties']['slider'] = annotated_slider_config
+
+        if events:
+            report_properties['properties']['events'] = events
 
         report_properties['properties'] = json.dumps(report_properties['properties'])
 

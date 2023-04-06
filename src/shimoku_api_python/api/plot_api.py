@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 
 
 class PlotAux:
-    def __init__(self, api_client, app_metadata_api, epc: ExecutionPoolContext):
+    def __init__(self, api_client, app_metadata_api, activity_metadata_api, epc: ExecutionPoolContext):
         self.business_explorer_api = BusinessExplorerApi(api_client=api_client)
         self.universe_explorer_api = UniverseExplorerApi(api_client=api_client)
         self.report_explorer_api = ReportExplorerApi(api_client=api_client)
@@ -49,6 +49,7 @@ class PlotAux:
         self.dataset_explorer_api = DatasetExplorerApi(api_client=api_client)
         self.app_type_metadata_api = AppTypeMetadataApi(api_client=api_client, execution_pool_context=epc)
         self.app_metadata_api = app_metadata_api
+        self.activity_metadata = activity_metadata_api
         self.data_managing_api = DataManagingApi(api_client=api_client)
         self.data_validation_api = DataValidation(api_client=api_client)
         self.multi_create_api = MultiCreateApi(api_client=api_client)
@@ -120,9 +121,12 @@ class PlotAux:
 
 class BasePlot:
 
-    def __init__(self, api_client, app_metadata_api, execution_pool_context: ExecutionPoolContext, **kwargs):
+    def __init__(self, api_client, app_metadata_api, activity_metadata_api,
+                 execution_pool_context: ExecutionPoolContext, **kwargs):
         self.epc = execution_pool_context
-        self._plot_aux = PlotAux(api_client, app_metadata_api=app_metadata_api, epc=self.epc)
+        self._plot_aux = PlotAux(api_client,
+                                 app_metadata_api=app_metadata_api, activity_metadata_api=activity_metadata_api,
+                                 epc=self.epc)
         self.api_client = api_client
         self._clear_or_create_all_local_state()
         self.dashboard = None
@@ -194,15 +198,15 @@ class BasePlot:
                     self._tabs_group_properties[tabs_group_entry] = {'sticky': properties['sticky'],
                                                                      'variant': properties['variant']}
                 except KeyError:
-                    warnings.warn('Tabs group should always have a "tabs" field in properties', RuntimeWarning)
+                    logger.warning('Tabs group should always have a "tabs" field in properties')
                     continue
 
                 try:
                     # Order them correctly to preserve insertion order
                     tabs_group = dict(sorted(tabs_group.items(), key=lambda item: item[1]['order']))
                 except KeyError:
-                    warnings.warn("Tabs in this business don't have the most recent structure, don't execute "
-                                  "tabs code with versions previous to the 0.14.", DeprecationWarning)
+                    logger.warning("Tabs in this business don't have the most recent structure, don't execute "
+                                   "tabs code with versions previous to the 0.14.")
 
                 self._tabs[tabs_group_entry] = {}
                 for tab_name, order_and_report_ids in tabs_group.items():
@@ -339,6 +343,17 @@ class BasePlot:
 
         return name, path_name
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_app_id_by_menu_path(self, menu_path: str) -> str:
+        """ Get app id by menu path. If app doesn't exist, create it.
+        :param menu_path: menu path
+        :return: app id
+        """
+        app_name, path_name = self._clean_menu_path(menu_path)
+
+        return (await self._plot_aux._async_get_or_create_app_and_apptype(
+            name=app_name, dashboard_name=self.dashboard if self.dashboard else app_name + ' dashboard'))['id']
+
     @staticmethod
     @logging_before_and_after(logging_level=logger.debug)
     def _fill_report_metadata(
@@ -418,7 +433,7 @@ class BasePlot:
         try:  # It should always exist
             del self._report_order[report_id]
         except KeyError:
-            logger.warning("Report wasn't correctly stored in self._report_order", RuntimeWarning)
+            logger.warning(f"Report {report_id} wasn't correctly stored in self._report_order")
 
         if not path_name:
             path_name = ""
@@ -432,7 +447,7 @@ class BasePlot:
             if tabs_group_entry in self._tabs:
                 self._delete_tabs_group(tabs_group_entry)
             else:
-                logger.warning("Tabs group wasn't correctly stored in self._tabs", RuntimeWarning)
+                logger.warning("Tabs group wasn't correctly stored in self._tabs")
 
         elif report['reportType'] == 'MODAL':
             properties = json.loads(report['properties'].replace("'", '"').replace('None', 'null'))
@@ -442,7 +457,7 @@ class BasePlot:
             if modal_entry in self._modal_id_by_entry:
                 self._delete_modal(modal_entry)
             else:
-                logger.warning("Modal wasn't correctly stored in self._modal_id_by_entry", RuntimeWarning)
+                logger.warning("Modal wasn't correctly stored in self._modal_id_by_entry")
 
         if self._report_in_tab.get(report_id):
             self._delete_report_id_from_tab(report_id)
@@ -463,7 +478,8 @@ class BasePlot:
             items: List[Dict], report_properties: Dict,  report_dataset_properties: Dict,
             sort: Optional[List[Dict]], real_time: Optional[bool],
             report_type: Optional[str], annotated_slider_config: Optional[Dict],
-            modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]]
+            modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]],
+            events: Optional[Dict] = None,
     ) -> Dict:
         """Create a report and a dataset"""
 
@@ -482,6 +498,7 @@ class BasePlot:
             real_time=real_time,
             report_type=report_type,
             annotated_slider_config=annotated_slider_config,
+            events=events,
         )
         report = report_dataset['report']
         report_id: str = report['id']
@@ -585,6 +602,7 @@ class BasePlot:
                         report['path'] == path_name
                         and report['order'] == order
                         and report['id'] not in self._report_in_tab
+                        and report['id'] not in self._report_in_modal
                         # Don't accept plots inside of tabs even if the order matches
                 )
             ]
@@ -776,7 +794,7 @@ class BasePlot:
             raise TypeError("Tabs indexing data must be of the type 'str'.")
 
         if self._report_in_tab.get(report_id):
-            warnings.warn("A report can only be included in one tab.", RuntimeWarning)
+            logger.warning("A report can only be included in one tab.")
             return
 
         tabs_group_entry = (app_id, path_name, group)
@@ -804,7 +822,22 @@ class BasePlot:
         self._tabs[tabs_group_entry][tab] = self._tabs[tabs_group_entry][tab] + [report_id]
         await self._update_tabs_group_metadata(business_id, app_id, path_name, group)
 
-    # Modal
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_tabs_group_id_by_menu_path(self, menu_path: str, tabs_group_name: str) -> str:
+        """ Get tabs group id by menu path and tabs group name. If tabs group doesn't exist, create it.
+        :param menu_path: menu path
+        :param tabs_group_name: tabs group name
+        :return: tabs group id
+        """
+        _, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
+
+        return await self._get_or_create_tabs_group(self.business_id, (app_id, path_name, tabs_group_name))
+
+    # MODALS
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_modal(self, business_id: str, modal_entry: Tuple[str, str, str]):
         """Creates a modal in the given app and path"""
@@ -898,10 +931,30 @@ class BasePlot:
         
         self._modal_properties[modal_id]['reportIds'].remove(report_id)
 
+        if report_id in self._report_in_modal:
+            del self._report_in_modal[report_id]
+        else:
+            logger.warning("Report-modal link not found, inconsistency error.")
+
         if modal_entry in self._modal_id_by_entry:
             await self._update_modal(business_id, modal_entry)
         else:
             logger.warning("Modal lost, can't update it.")
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_modal_id_by_menu_path(self, menu_path: str, modal_name: str) -> str:
+        """ Get modal id by menu path and modal name. If modal doesn't exist, create it.
+        :param menu_path: menu path
+        :param modal_name: modal name
+        :return: modal id
+        """
+        _, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
+
+        return await self._get_or_create_modal(self.business_id, (app_id, path_name, modal_name))
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_chart(
@@ -1629,6 +1682,7 @@ class BasePlot:
             sort: Optional[Dict] = None,
             real_time: bool = False,
             annotated_slider_config: Optional[Dict] = None,
+            events: Optional[Dict] = None,
     ) -> Dict[str, Union[Dict, List[Dict]]]:
         # TODO ojo debería no ser solo data tabular!!
 
@@ -1638,17 +1692,14 @@ class BasePlot:
             self._validate_bentobox(bentobox_data)
             report_metadata['bentobox'] = json.dumps(bentobox_data)
 
-        name, path_name = self._clean_menu_path(menu_path=menu_path)
+        _, path_name = self._clean_menu_path(menu_path=menu_path)
 
         report_metadata: Dict = self._fill_report_metadata(
             report_metadata=report_metadata, path_name=path_name,
             order=order, rows_size=rows_size, cols_size=cols_size, padding=padding,
         )
 
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
-                                                                        dashboard_name=self.dashboard
-                                                                 if self.dashboard else name + ' dashboard')
-        app_id: str = app['id']
+        app_id: str = await self._get_app_id_by_menu_path(menu_path=menu_path)
 
         if overwrite:
             await self.async_delete(
@@ -1692,6 +1743,7 @@ class BasePlot:
             annotated_slider_config=annotated_slider_config,
             tabs_index=tabs_index,
             modal_name=modal_name,
+            events=events,
         )
 
         return report_dataset
@@ -2164,8 +2216,10 @@ class PlotApi(BasePlot):
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, app_metadata_api, execution_pool_context: ExecutionPoolContext, **kwargs):
-        super().__init__(api_client, execution_pool_context=execution_pool_context, app_metadata_api=app_metadata_api)
+    def __init__(self, api_client, app_metadata_api, activity_metadata_api,
+                 execution_pool_context: ExecutionPoolContext, **kwargs):
+        super().__init__(api_client, execution_pool_context=execution_pool_context, app_metadata_api=app_metadata_api,
+                         activity_metadata_api=activity_metadata_api)
         if kwargs.get('business_id'):
             self.business_id: Optional[str] = kwargs['business_id']
             try:
@@ -2282,13 +2336,11 @@ class PlotApi(BasePlot):
     async def update_modal(self, menu_path: str, modal_name: str, open_by_default: Optional[bool] = None,
                            width: Optional[int] = None, height: Optional[int] = None):
 
-        app_name, path_name = self._clean_menu_path(menu_path)
+        _, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
-                                                                        dashboard_name=self.dashboard
-                                                                        if self.dashboard else app_name + ' dashboard')
-        app_id = app['id']
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
 
         await self._update_modal(self.business_id, (app_id, path_name, modal_name), open_by_default, width, height)
 
@@ -2298,25 +2350,24 @@ class PlotApi(BasePlot):
         app_name, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
-                                                                        dashboard_name=self.dashboard
-                                                                        if self.dashboard else app_name + ' dashboard')
-        app_id = app['id']
-        child_id = await self._get_or_create_tabs_group(self.business_id, (app_id, path_name, tabs_group_name))
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
+
+        child_id = await self._get_tabs_group_id_by_menu_path(menu_path, tabs_group_name)
         await self._add_report_to_modal(self.business_id, (app_id, path_name, modal_name), child_id)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def insert_tabs_group_in_tab(self, menu_path: str, parent_tab_index: Tuple[str, str], child_tabs_group: str,
                                        last_in_order: Optional[bool] = True):
-        app_name, path_name = self._clean_menu_path(menu_path)
+        _, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
-                                                                        dashboard_name=self.dashboard
-                                                                        if self.dashboard else app_name + ' dashboard')
-        app_id = app['id']
-        child_id = await self._get_or_create_tabs_group(self.business_id, (app_id, path_name, child_tabs_group))
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
+
+        child_id = await self._get_tabs_group_id_by_menu_path(menu_path, child_tabs_group)
+
         order = self._report_order[child_id]
         parent_tabs_group_entry = (app_id, path_name, parent_tab_index[0])
         if last_in_order:
@@ -2334,32 +2385,27 @@ class PlotApi(BasePlot):
             padding: Optional[str] = None, rows_size: Optional[int] = None,
             just_labels: Optional[bool] = None, sticky: Optional[bool] = None
     ):
-        app_name, path_name = self._clean_menu_path(menu_path)
+        _, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
-                                                                        dashboard_name=self.dashboard
-                                                                        if self.dashboard else app_name + ' dashboard')
-        app_id = app['id']
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
         await self._update_tabs_group_metadata(self.business_id, app_id, path_name, group_name, order, cols_size,
                                                bentobox_data, padding, rows_size, just_labels, sticky)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def change_tabs_group_internal_order(self, group_name: str, menu_path: str, tabs_list: List[str]):
-        app_name, path_name = self._clean_menu_path(menu_path)
+        _, path_name = self._clean_menu_path(menu_path)
         if not path_name:
             path_name = ""
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=app_name,
-                                                                        dashboard_name=self.dashboard
-                                                                        if self.dashboard else app_name + ' dashboard')
-        app_id = app['id']
+        app_id = await self._get_app_id_by_menu_path(menu_path)
         tabs_group_entry = (app_id, path_name, group_name)
         tabs_group_aux = {}
         tabs_group = self._tabs[tabs_group_entry]
         for tab_name in tabs_list:
             if tab_name in tabs_group_aux:
-                warnings.warn('Repeated name in order list! Ignoring this element.', RuntimeWarning)
+                logger.warning('Repeated name in order list! Ignoring this element.')
                 continue
             tabs_group_aux[tab_name] = tabs_group[tab_name]
 
@@ -2711,11 +2757,8 @@ class PlotApi(BasePlot):
         extra_map: Dict[str, str] = _calculate_table_extra_map()
         filter_fields: Dict[str, List[str]] = _calculate_table_filter_fields()
 
-        name, path_name = self._clean_menu_path(menu_path=menu_path)
-        app = await self._plot_aux._async_get_or_create_app_and_apptype(name=name,
-                                                                        dashboard_name=self.dashboard
-                                                                 if self.dashboard else name + ' dashboard')
-        app_id: str = app['id']
+        _, path_name = self._clean_menu_path(menu_path=menu_path)
+        app_id: str = await self._get_app_id_by_menu_path(menu_path=menu_path)
 
         if not isinstance(downloadable_to_csv, bool):
             raise TypeError("The type of the parameter 'downloadable_to_csv' needs to be a boolean, the type of the"
@@ -5395,6 +5438,10 @@ class PlotApi(BasePlot):
             bentobox_data: Optional[Dict] = None,
             tabs_index: Optional[Tuple[str, str]] = None,
             modal_name: Optional[str] = None,
+            modal_to_open_on_submit: Optional[str] = None,
+            activity_id_to_call_on_submit: Optional[str] = None,
+            acivity_name_to_call_on_submit: Optional[str] = None,
+            on_submit_events: Optional[List[Dict]] = None,
     ):
         """
         :param data:
@@ -5407,6 +5454,36 @@ class PlotApi(BasePlot):
         :param tabs_index:
         """
         self._plot_aux.validate_input_form_data(report_dataset_properties)
+
+        _, path_name = self._clean_menu_path(menu_path)
+        if not path_name:
+            path_name = ""
+
+        app_id = await self._get_app_id_by_menu_path(menu_path)
+
+        if on_submit_events is None:
+            on_submit_events = []
+
+        if modal_to_open_on_submit:
+            modal_id = await self._get_or_create_modal(self.business_id, (app_id, path_name, modal_to_open_on_submit))
+            on_submit_events.append({
+                'action': 'openModal',
+                'params': {
+                    'modalId': modal_id
+                }
+            })
+
+        if activity_id_to_call_on_submit or acivity_name_to_call_on_submit:
+            activity_id = (await self._plot_aux.activity_metadata._async_get_activity(
+                menu_path=menu_path, app_id=app_id, activity_name=acivity_name_to_call_on_submit,
+                activity_id=activity_id_to_call_on_submit)).id
+
+            on_submit_events.append({
+                "action": "runActivity",
+                "params": {
+                    "activityId": activity_id,
+                }
+            })
 
         if data is None:
             data = {}
@@ -5464,6 +5541,9 @@ class PlotApi(BasePlot):
             force_custom_field=True,
             tabs_index=tabs_index,
             modal_name=modal_name,
+            events={
+                'onSubmit': on_submit_events,
+            }
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -5477,6 +5557,10 @@ class PlotApi(BasePlot):
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
         modal_name: Optional[str] = None,
+        modal_to_open_on_submit: Optional[str] = None,
+        activity_id_to_call_on_submit: Optional[str] = None,
+        acivity_name_to_call_on_submit: Optional[str] = None,
+        on_submit_events: Optional[List[Dict]] = None,
     ):
         """
         :param dynamic_sequential_show:
@@ -5512,6 +5596,9 @@ class PlotApi(BasePlot):
             report_dataset_properties=report_dataset_properties,
             menu_path=menu_path, order=order, rows_size=rows_size, cols_size=cols_size,
             padding=padding, bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name,
+            modal_to_open_on_submit=modal_to_open_on_submit, on_submit_events=on_submit_events,
+            activity_id_to_call_on_submit=activity_id_to_call_on_submit,
+            acivity_name_to_call_on_submit=acivity_name_to_call_on_submit,
         )
 
     @logging_before_and_after(logging_level=logger.info)
@@ -5618,14 +5705,7 @@ class PlotApi(BasePlot):
         :param modal_name:
         """
 
-        app_name, path_name = self._clean_menu_path(menu_path)
-        if not path_name:
-            path_name = ""
-
-        app_id = (await self._plot_aux._async_get_or_create_app_and_apptype(
-            name=app_name, dashboard_name=self.dashboard if self.dashboard else app_name + ' dashboard'))['id']
-
-        modal_id = await self._get_or_create_modal(self.business_id, (app_id, path_name, modal_name_to_open))
+        modal_id = await self._get_modal_id_by_menu_path(menu_path=menu_path, modal_name=modal_name_to_open)
 
         return await self._async_button(
             label=label, menu_path=menu_path, order=order,
@@ -5637,6 +5717,52 @@ class PlotApi(BasePlot):
                     "action": "openModal",
                     "params": {
                         "modalId": modal_id,
+                    }
+                }
+            ]
+        )
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def button_execute_activity(
+            self, order: int, label: str,
+            activity_name: Optional[str] = None, activity_id: Optional[str] = None,
+            menu_path: Optional[str] = None, app_id: Optional[str] = None,
+            rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
+            align: Optional[str] = 'stretch',
+            padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
+            tabs_index: Optional[Tuple[str, str]] = None
+    ):
+        """
+        Create an execute button report in the dashboard for the activity.
+        :param activity_name: the name of the activity
+        :param order: the order of the button in the dashboard
+        :param menu_path: the menu path of the app to which the activity belongs
+        :param label: the name of the button to be clicked
+        :param rows_size: the number of rows of the button
+        :param cols_size: the number of columns of the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        :param bentobox_data: the bentobox metadata for FE
+        :param tabs_index: the index of the tab in the dashboard
+        :return:
+        """
+        activity_id = (await self._plot_aux.activity_metadata._async_get_activity(
+            menu_path=menu_path, app_id=app_id, activity_name=activity_name, activity_id=activity_id)).id
+
+        await self._async_button(
+            menu_path=menu_path,
+            order=order, label=label,
+            rows_size=rows_size, cols_size=cols_size,
+            align=align,
+            padding=padding,
+            bentobox_data=bentobox_data,
+            tabs_index=tabs_index,
+            on_click_events=[
+                {
+                    "action": "runActivity",
+                    "params": {
+                        "activityId": activity_id,
                     }
                 }
             ]

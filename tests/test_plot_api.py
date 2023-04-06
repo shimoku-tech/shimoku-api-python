@@ -4722,7 +4722,28 @@ def test_modal():
         "</div>"
         "</div>"
     )
+    form_sent = (
+        "<head>"
+        "<style>"  # Styles title
+        ".component-title{height:auto; width:100%; "
+        "border-radius:16px; padding:16px;"
+        "display:flex; align-items:center;"
+        "background-color:var(--chart-C1); color:var(--color-white);}"
+        "<style>.base-white{color:var(--color-white);}</style>"
+        "</head>"  # Styles subtitle
+        "<div class='component-title'>"
+        "<div class='big-icon-banner'></div>"
+        "<div class='text-block'>"
+        "<h1>Form has been sent, congratulations!</h1>"
+        "<p class='base-white'>"
+        "Modal Test</p>"
+        "</div>"
+        "</div>"
+    )
     menu_path = 'Modal Test'
+    s.plt.html(
+        html=form_sent, menu_path=menu_path, modal_name='Congratulations modal', order=0
+    )
 
     s.plt.update_modal(menu_path=menu_path, modal_name='Test modal', open_by_default=True, width=70, height=60)
     s.plt.add_tabs_group_to_modal(menu_path=menu_path, modal_name='Test modal', tabs_group_name='Test')
@@ -4793,6 +4814,7 @@ def test_modal():
         calculate_percentages=True,
         tabs_index=("TestNoModal", "Gauges"),
     )
+
     gauges_data["color"] = range(1, len(df_transposed) + 1)[::-1]
     order_modal = s.plt.shimoku_gauges_group(
         gauges_data=gauges_data,
@@ -4905,6 +4927,7 @@ def test_modal():
         form_groups=form_groups,
         dynamic_sequential_show=True,
         tabs_index=("Test", "Form"),
+        modal_to_open_on_submit='Congratulations modal'
     )
 
     s.plt.generate_input_form_groups(
@@ -4912,19 +4935,26 @@ def test_modal():
         form_groups=form_groups,
         dynamic_sequential_show=True,
         tabs_index=("TestNoModal", "Form"),
+        modal_to_open_on_submit='Congratulations modal'
     )
 
     s.plt.generate_input_form_groups(
-        menu_path=menu_path, order=order_modal,
+        menu_path=menu_path, order=order_modal+1,
         form_groups=form_groups,
         dynamic_sequential_show=True,
         modal_name='Test modal',
+        modal_to_open_on_submit='Congratulations modal'
     )
 
     s.plt.generate_input_form_groups(
         menu_path=menu_path, order=order,
         form_groups=form_groups,
         dynamic_sequential_show=True,
+        modal_to_open_on_submit='Congratulations modal'
+    )
+
+    s.plt.modal_button(
+        menu_path=menu_path, order=order+1, modal_name_to_open='Test modal', label='Open modal'
     )
 
     s.plt.html(
@@ -4936,7 +4966,8 @@ print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
 
-# s.plt.clear_business()
+# s.app.delete_all_business_apps()
+# s.dashboard.delete_all_business_dashboards()
 
 # Charts
 test_line()
@@ -4989,6 +5020,7 @@ s.run()
 test_tabs(check_data=False)
 
 # Modal
+s.plt.set_dashboard("Modal's dashboard")
 test_modal()
 
 # Others

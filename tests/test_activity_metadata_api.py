@@ -269,33 +269,76 @@ def test_execute_activity():
     assert len(activity['runs'][3]['logs']) == 1
 
 
-def test_button_execute_activity():
+def test_button_and_form_execute_activity():
     """
     Creates a button in the dashboard with the capability to execute an activity.
     """
-    s.activity.button_execute_activity(
+    s.plt.button_execute_activity(
         menu_path=menu_path, activity_name=activity_name, order=0, label='test_button',
         cols_size=12, align='start'
     )
-    s.activity.button_execute_activity(
+    s.plt.button_execute_activity(
         menu_path=menu_path, activity_name=activity_name, order=1, label='test_button',
         cols_size=12, align='center'
     )
-    s.activity.button_execute_activity(
+    s.plt.button_execute_activity(
         menu_path=menu_path, activity_name=activity_name, order=2, label='test_button',
         rows_size=2, cols_size=12, align='right'
     )
 
     for i in range(6):
-        s.activity.button_execute_activity(
+        s.plt.button_execute_activity(
             menu_path=menu_path, activity_name=activity_name, order=3+i, label='test_button',
             rows_size=2, cols_size=12-i*2, align='stretch', padding=f'0,{i},0,{i}'
         )
 
-    s.activity.button_execute_activity(
+    s.plt.button_execute_activity(
         menu_path=menu_path, activity_name=activity_name, order=9, label='test_button',
         cols_size=12, align='center'
     )
+
+
+    form_sent = (
+        "<head>"
+        "<style>"  # Styles title
+        ".component-title{height:auto; width:100%; "
+        "border-radius:16px; padding:16px;"
+        "display:flex; align-items:center;"
+        "background-color:var(--chart-C1); color:var(--color-white);}"
+        "<style>.base-white{color:var(--color-white);}</style>"
+        "</head>"  # Styles subtitle
+        "<div class='component-title'>"
+        "<div class='big-icon-banner'></div>"
+        "<div class='text-block'>"
+        "<h1>The activity has been called</h1>"
+        "<p class='base-white'>"
+        "Activity Test</p>"
+        "</div>"
+        "</div>"
+    )
+
+    s.plt.html(
+        html=form_sent, menu_path=menu_path, modal_name='Activity called', order=0
+    )
+
+    form_groups = {
+        'Personal information': [
+            {
+                'mapping': 'name',
+                'fieldName': 'name',
+                'inputType': 'text',
+            },
+        ]
+    }
+
+    s.plt.generate_input_form_groups(
+        menu_path=menu_path, order=10,
+        form_groups=form_groups,
+        acivity_name_to_call_on_submit=activity_name,
+        modal_to_open_on_submit='Activity called',
+    )
+    if async_execution:
+        s.activate_async_execution()
 
 
 if __name__ == '__main__':
@@ -307,5 +350,5 @@ if __name__ == '__main__':
     test_default_activity_settings()
     test_get_run_logs()
     test_execute_activity()
-    test_button_execute_activity()
+    test_button_and_form_execute_activity()
     s.activity.get_activities(menu_path=menu_path, pretty_print=True, how_many_runs=100)

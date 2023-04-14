@@ -56,15 +56,18 @@ parameters = dict(
     symbol_name='insights',
     h1="Lorem ipsum",
     line="Lorem ipsum",
+    modal_title="Lorem ipsum",
+    background_color='var(--color-primary)',
 )
 
 for component_function in components:
     function_signature = inspect.signature(component_function)
-    call_parameters = {parameter[0]: parameter[1] for parameter in parameters.items() if parameter[0] in function_signature.parameters}
+    call_parameters = {parameter[0]: parameter[1]
+                       for parameter in parameters.items() if parameter[0] in function_signature.parameters}
     print(component_function)
     print(function_signature.parameters)
-    #If the parameters are not defined in the parameters dictionary pass
-    if len(call_parameters) != len(function_signature.parameters):
+    #If the parameters dont exist in the function signature, skip it
+    if not call_parameters:
         continue
     print(f'passed {component_function.__name__}')
     html = component_function(**call_parameters)

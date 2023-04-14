@@ -5252,6 +5252,279 @@ def test_x_axis_tandem_chart():
     s.run()
 
 
+def test_infographics():
+    menu_path = 'test-bentobox/Infographics'
+    title = 'Lorem ipsum'
+    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et " \
+           "dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex" \
+           " ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu" \
+           " fugiat nulla pariatur. "
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=0, cols_size=6,
+        title=title, text=text, bubble_location='bottom',
+        chart_parameters=dict(
+            data=data,
+            rows_size=16,
+        ),
+    )
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=2, cols_size=6,
+        title=title, text=text,
+        chart_function=s.plt.line,
+        chart_parameters=dict(
+            x='date', y='x', data=data,
+        ),
+    )
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=4, cols_size=6,
+        title=title, text=text,
+        chart_function=s.plt.shimoku_gauge,
+        chart_parameters=dict(
+            value=random.randint(0, 100), name='Gauge', rows_size=18,
+            padding='0,0,0,0'
+        ),
+    )
+    stacked_data = [
+        {'Weekday': 'Mon', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Tue', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Wed', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+        {'Weekday': 'Thu', 'Email': 820, 'Union Ads': 932, 'Video Ads': 901, 'Search Engine': 934},
+        {'Weekday': 'Fri', 'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134},
+        {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
+        {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
+    ]
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=6, cols_size=6, rows_size=4,
+        title=title, text=text, bubble_location='bottom',
+        chart_function=s.plt.stacked_barchart,
+        chart_parameters=dict(
+            data=stacked_data,
+            x="Weekday",
+            x_axis_name='weekday',
+            y_axis_name='visits',
+        ),
+        background_color='var(--color-stripe-light)',
+    )
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=8,
+        title=title, text=text, bubble_location='right',
+        chart_parameters=dict(
+            data=data
+        ),
+        background_url='https://images.unsplash.com/photo-1569982175971-d92b01cf8694?ixlib=rb-4.0.3&ixid='
+                       'MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=870&q=80'
+    )
+
+    form_groups = {
+        'Personal information':
+            [
+                {
+                    'mapping': 'name',
+                    'fieldName': 'name',
+                    'inputType': 'text',
+                },
+            ],
+        'Other group':
+            [
+                {
+                    'mapping': 'skills',
+                    'fieldName': 'Skills',
+                    'options': ['Backend', 'Frontend', 'UX/UI', 'Api Builder', 'DevOps'],
+                    'inputType': 'checkbox',
+                },
+            ]
+    }
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=10, cols_size=8,
+        title=title, text=text, bubble_location='left',
+        chart_function=s.plt.generate_input_form_groups,
+        chart_parameters=dict(
+            form_groups=form_groups,
+            dynamic_sequential_show=True,
+            padding='5,1,0,0',
+        ),
+        background_color='var(--color-primary-light)'
+    )
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=12, cols_size=4,
+        title=title, text=text, bubble_location='left',
+        chart_function=s.plt.shimoku_gauge,
+        chart_parameters=dict(
+            value=random.randint(0, 100), name='Gauge', padding='5,1,0,0',
+            cols_size=10, color=3,
+        )
+    )
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=14, cols_size=6,
+        title=title, text=text, bubble_location='left',
+        image_url='default', image_size=60,
+        background_color='var(--color-primary-light)',
+        chart_parameters=dict(
+            data=data,
+            cols_size=10,
+        )
+    )
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=16, cols_size=6, rows_size=4,
+        title=title, text=text, bubble_location='right',
+        image_url='default',
+        chart_function=s.plt.table,
+        chart_parameters=dict(
+            data=data,
+            cols_size=10,
+        )
+    )
+
+    s.plt.infographics_text_bubble(
+        menu_path=menu_path, order=18,
+        title=title, text=text, bubble_location='right',
+        image_url='default', image_size=50,
+        chart_function=s.plt.table,
+        chart_parameters=dict(
+            data=stacked_data,
+            cols_size=16,
+        )
+    )
+
+
+def test_chart_and_indicators():
+    menu_path = 'test-bentobox/chart-and-indicators'
+    indicator_groups = [
+        [
+            {
+                "footer": "-950.55",
+                "header": "Dow Jones",
+                "val": "33,195.92",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "-84.68",
+                "header": "Nasdaq",
+                "val": "10,852.16",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "-950.55",
+                "header": "Dow Jones",
+                "val": "33,195.92",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "-84.68",
+                "header": "Nasdaq",
+                "val": "10,852.16",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "-950.55",
+                "header": "Dow Jones",
+                "val": "33,195.92",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+        ],
+        [
+            {
+                "footer": "-950.55",
+                "header": "Dow Jones",
+                "val": "33,195.92",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "-84.68",
+                "header": "Nasdaq",
+                "val": "10,852.16",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            }
+        ],
+        [
+            {
+                "footer": "Return of investment",
+                "header": "ROI",
+                "val": "1.5M",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "% of times the algorithm has predicted the relative position of "
+                          "NY prices with respect to HK prices correctly",
+                "header": "Accuracy",
+                "val": "76.67%",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            }
+        ],
+        [
+            {
+                "footer": "Return of investment",
+                "header": "ROI",
+                "val": "1.5M",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "% of times the algorithm has predicted the relative position of "
+                          "NY prices with respect to HK prices correctly",
+                "header": "Accuracy",
+                "val": "76.67%",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            },
+            {
+                "footer": "% of times the algorithm has predicted the relative position of "
+                          "NY prices with respect to HK prices correctly",
+                "header": "Accuracy",
+                "val": "76.67%",
+                "alignment": "left",
+                "color": "success",
+                'variant': 'contained'
+            }
+        ]
+    ]
+
+    s.plt.chart_and_indicators(
+        menu_path=menu_path, order=0,
+        chart_rows_size=3, cols_size=6,
+        chart_function=s.plt.line,
+        chart_parameters=dict(
+            data=data,
+            x='date',
+            y='x',
+            title='Line Chart With Indicators',
+        ),
+        indicators_groups=indicator_groups,
+        indicators_parameters=dict(
+            value='val',
+            header='header',
+            footer='footer',
+            align='alignment',
+            color='color',
+        )
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
@@ -5304,6 +5577,9 @@ test_scatter_with_effect()
 test_waterfall()
 test_bar_and_line_chart()
 # test_segmented_line_chart()
+
+test_infographics()
+test_chart_and_indicators()
 
 # Filters and sequential needed
 test_heatmap_with_filters()

@@ -315,7 +315,7 @@ class DataManagingApi(DataExplorerApi, DataValidation):
                     d.update({k: f'customField1'})
                 else:
                     raise ValueError(f'Unknown value type {v} | Type {type_v}')
-            return [{d[k]: v if 'dateField' not in d[k] else v.isoformat()+'Z'
+            return [{d[k]: v if 'dateField' not in d[k] else pd.to_datetime(v).isoformat()+'Z'
                      for k, v in datum.items()} for datum in data]
         else:
             assert type(data) == list or type(data) == dict

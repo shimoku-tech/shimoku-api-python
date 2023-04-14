@@ -26,6 +26,8 @@ from .explorer_api import (
     DeleteExplorerApi, UniverseExplorerApi,
     ReportDatasetExplorerApi, DatasetExplorerApi,
 )
+from .bentobox_charts import infographics_text_bubble, chart_and_modal_button, chart_and_indicators, \
+                             indicators_with_header
 from .data_managing_api import DataManagingApi
 from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
@@ -2427,6 +2429,7 @@ class PlotApi(BasePlot):
             title: Optional[str] = None,  # second layer
             filter_columns: Optional[List[str]] = None,
             search_columns: Optional[List[str]] = None,
+            padding: Optional[str] = None,
             sort_table_by_col: Optional[Dict[str, str]] = None,
             horizontal_scrolling: bool = False,
             overwrite: bool = True,
@@ -2434,6 +2437,7 @@ class PlotApi(BasePlot):
             downloadable_to_csv: bool = True,
             value_suffixes: Optional[Dict[str, str]] = {},
             tabs_index: Optional[Tuple[str, str]] = None,
+            bentobox_data: Optional[Dict] = None,
             modal_name: Optional[str] = None,
     ):
         """
@@ -2773,7 +2777,9 @@ class PlotApi(BasePlot):
             'dataFields': _calculate_table_data_fields(df),
             'sizeColumns': cols_size,
             'sizeRows': rows_size,
-            'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}'
+            'properties': '{"downloadable":' + str(downloadable_to_csv).lower() + '}',
+            'bentobox': json.dumps(bentobox_data),
+            'sizePadding': padding,
         }
 
         for col, value_format in value_suffixes.items():
@@ -3622,22 +3628,22 @@ class PlotApi(BasePlot):
 
         len_df = len(df)
         if vertical and (len_df > 1 or isinstance(vertical, str)):
-            if bentobox_data:
-                raise ValueError("The vertical configuration uses a bentobox so it cant be included in another bentobox")
-            bentobox_data = {
-                'bentoboxId': str(uuid.uuid1()),
-                'bentoboxOrder': order,
-                'bentoboxSizeColumns': cols_size,
-                'bentoboxSizeRows': rows_size*len_df,
-            }
+            if not bentobox_data:
+                bentobox_data = {
+                    'bentoboxId': str(uuid.uuid1()),
+                    'bentoboxOrder': order,
+                    'bentoboxSizeColumns': cols_size,
+                    'bentoboxSizeRows': rows_size*len_df,
+                }
+
             # fixexd cols_size for bentobox and variable rows size
             cols_size = 22
-            rows_size *= 10
+            rows_size = rows_size*10 - 2*int(bentobox_data is not None)
 
             padding = '1,1,0,1'
             if isinstance(vertical, str):
                 html = (
-                    f"<p>{vertical}</p>"
+                    f"<h5 style='font-family: Rubik'>{vertical}</h5>"
                 )
                 self.html(
                     html=html,
@@ -3653,10 +3659,18 @@ class PlotApi(BasePlot):
                 padding = '0,0,0,0'
 
             padding = padding.replace(' ', '')
-            padding_left = f'{padding[0]},0,{padding[4]},{padding[6]}'
-            padding_right= f'{padding[0]},{padding[2]},{padding[4]},0'
-            padding_else = f'{padding[0]},0,{padding[4]},0'
-            cols_size = cols_size//len_df
+
+            remaining_cols = cols_size % len_df
+
+            extra_padding = remaining_cols//2
+            padding_left_int = int(padding[6]) + extra_padding
+            padding_right_int = int(padding[2]) + extra_padding + remaining_cols % 2
+
+            padding_left = f'{padding[0]},0,{padding[4]},{padding_left_int}'
+            padding_right = f'{padding[0]},{padding_right_int},{padding[4]},{int(bentobox_data is not None)}'
+            padding_else = f'{padding[0]},0,{padding[4]},{int(bentobox_data is not None)}'
+
+            cols_size = cols_size//len_df-int(bentobox_data is not None)
             if cols_size < 2:
                 raise ValueError(f'The calculation of the individual cols_size for each indicator '
                                  f'is too small (cols_size/len(df)): {cols_size}')
@@ -4734,6 +4748,10 @@ class PlotApi(BasePlot):
         elif isinstance(color, int):
             color = f'var(--chart-C{abs(color)})'
 
+        value_font_size = 24 * max(min(rows_size, int(cols_size/2)), 1)
+        if bentobox_data:
+            value_font_size = 35 * max(int(min(rows_size/10, (cols_size-bentobox_data['bentoboxSizeColumns'])/4)), 1)
+
         if not option_modifications:
             option_modifications = {
                 'grid': {
@@ -4785,7 +4803,7 @@ class PlotApi(BasePlot):
                             'offsetCenter': ['0', '30'],
                         },
                         'detail': {
-                            'fontSize': 24,
+                            'fontSize': value_font_size,
                             'fontFamily': 'Rubik',
                             'font': 'inherit',
                             'color': '#202A36',
@@ -7958,7 +7976,8 @@ class PlotApi(BasePlot):
             rows_size: Optional[int] = 1, cols_size: Optional[int] = 2,
             align: Optional[str] = 'stretch',
             padding: Optional[str] = None, bentobox_data: Optional[Dict] = None,
-            tabs_index: Optional[Tuple[str, str]] = None
+            tabs_index: Optional[Tuple[str, str]] = None,
+            modal_name: Optional[str] = None,
     ):
         """
         Create an execute button report in the dashboard for the activity.
@@ -7972,6 +7991,7 @@ class PlotApi(BasePlot):
         :param padding: the padding of the button
         :param bentobox_data: the bentobox metadata for FE
         :param tabs_index: the index of the tab in the dashboard
+        :param modal_name: the name of the modal
         :return:
         """
         activity_id = (await self._plot_aux.activity_metadata._async_get_activity(
@@ -7985,6 +8005,7 @@ class PlotApi(BasePlot):
             padding=padding,
             bentobox_data=bentobox_data,
             tabs_index=tabs_index,
+            modal_name=modal_name,
             on_click_events=[
                 {
                     "action": "runActivity",
@@ -7995,3 +8016,8 @@ class PlotApi(BasePlot):
             ]
         )
 
+    # Bentobox charts defined in the bentobox_charts.py file
+    infographics_text_bubble = infographics_text_bubble
+    chart_and_modal_button = chart_and_modal_button
+    chart_and_indicators = chart_and_indicators
+    indicators_with_header = indicators_with_header

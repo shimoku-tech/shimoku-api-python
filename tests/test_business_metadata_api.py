@@ -58,6 +58,17 @@ def test_create_and_delete_business():
         )
     )
 
+    business_roles = s.business.get_roles(business_id=business_id_)
+
+    assert len(business_roles) == 4
+    resources = ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']
+    for role in business_roles:
+        assert role['role'] == 'business_read'
+        assert role['permission'] == 'READ'
+        assert role['resource'] in resources
+        assert role['target'] == 'GROUP'
+        resources.remove(role['resource'])
+
     assert {
         k: v
         for k, v in business_from_db.items()

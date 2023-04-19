@@ -2167,7 +2167,7 @@ class BusinessExplorerApi:
 
         self.get_business = self.get_explorer_api.get_business
         self.get_universe_businesses = self.cascade_explorer_api.get_universe_businesses
-        self._find_business_by_name_filter = self.cascade_explorer_api.find_business_by_name_filter
+        self.get_business_by_name = self.cascade_explorer_api.find_business_by_name_filter
         self.create_business = self.cascade_create_explorer_api.create_business
         self.update_business = self.update_explorer_api.update_business
 

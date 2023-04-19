@@ -1,5 +1,7 @@
 """"""
 import json
+import asyncio
+
 from typing import Dict, Callable
 from abc import ABC
 
@@ -23,8 +25,8 @@ class BusinessMetadataApi(ABC):
         self.async_get_business_activities = self.business_explorer_api.get_business_activities
         self.get_business_activities = decorate_external_function(self, self.business_explorer_api, 'get_business_activities')
         self.get_business = decorate_external_function(self, self.business_explorer_api, 'get_business')
+        self.get_business_by_name = decorate_external_function(self, self.business_explorer_api, 'get_business_by_name')
         self.get_universe_businesses = decorate_external_function(self, self.business_explorer_api, 'get_universe_businesses')
-        self.create_business = decorate_external_function(self, self.business_explorer_api, 'create_business')
         self.update_business = decorate_external_function(self, self.business_explorer_api, 'update_business')
 
         self.get_business_apps = decorate_external_function(self, self.business_explorer_api, 'get_business_apps')
@@ -40,6 +42,32 @@ class BusinessMetadataApi(ABC):
         self.get_roles = decorate_external_function(self, self.business_explorer_api, 'get_roles')
         self.get_roles_by_name = decorate_external_function(self, self.business_explorer_api, 'get_roles_by_name')
         self.delete_role = decorate_external_function(self, self.business_explorer_api, 'delete_role')
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.debug)
+    async def create_business(self, name: str, create_default_roles: bool = True) -> Dict:
+        """Create a new business and the necessary roles if specified
+        :param name: Name of the business
+        :param create_default_roles: Create the default roles for the business
+        :return: Business data
+        """
+        business_data = await self.business_explorer_api.create_business(name)
+
+        if create_default_roles:
+            create_roles_tasks = []
+
+            for role_permisson_resource in ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']:
+                create_roles_tasks.append(
+                    self.business_explorer_api.create_role(
+                        business_id=business_data['id'],
+                        role_name='business_read',
+                        resource=role_permisson_resource,
+                    )
+                )
+
+            await asyncio.gather(*create_roles_tasks)
+
+        return business_data
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)

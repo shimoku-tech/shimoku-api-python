@@ -5525,6 +5525,42 @@ def test_chart_and_indicators():
     )
 
 
+def test_tornado():
+    def gen_rand_df(product_names, neg=False):
+        """
+        Generate random data for testing
+        """
+        df_size = 10
+        rng = np.random.default_rng()
+
+        values = rng.uniform(low=10, high=30, size=df_size)
+        if neg:
+            values = -1 * values
+
+        return pd.DataFrame({
+            'value': values,
+            'name': product_names,
+        })
+
+    product_names = ["Cheeseburger", "Fried Chicken", "Pasta Carbonara", "Caesar Salad", "Fish and Chips",
+                 "Beef Stroganoff", "Pizza Margherita", "Grilled Salmon", "Taco Salad", "Crispy Calamari",
+                 "Shrimp Scampi", "Garlic Bread", "Sizzling Fajitas", "Chicken Teriyaki", "French Onion Soup",
+                 "Miso Ramen", "Crab Cakes", "Lobster Bisque", "Crispy Tofu Bowl", "Philly Cheesesteak",]
+    # Random data
+    df_pos = gen_rand_df(product_names[:10])
+    df_neg = gen_rand_df(product_names[10:20], neg=True)
+
+    s.plt.tornado(
+        df_neg=df_neg, df_pos=df_pos,
+        neg_dataops_mod={
+            'itemStyle': {
+                'color': 'blue',
+            },
+        },
+        order=0, menupath='Tornado'
+    )
+
+
 print(f'Start time {dt.datetime.now()}')
 if delete_paths:
     s.plt.delete_path('test')
@@ -5533,6 +5569,7 @@ if delete_paths:
 # s.dashboard.delete_all_business_dashboards()
 
 # Charts
+test_tornado()
 test_line()
 test_funnel()
 test_tree()

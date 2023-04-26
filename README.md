@@ -58,13 +58,16 @@ s = Shimoku.Client(
 ### Step 3 - Create plots
 
 ```python
+s.plt.set_dashboard('Custom Dashboard')
 
-df = pd.read_html('...')
+language_expressiveness = pd.read_html(
+    'https://en.wikipedia.org/wiki/Comparison_of_programming_languages')[2]
 
 s.plt.bar(
-  df, x='date', y=['billing'], 
-  menu_path='catalog/bar-example', 
-  order=0,
+  menu_path='catalog/bar-example', order=0, 
+  title='Language expressiveness',
+  data=language_expressiveness, x='Language',
+  y=['Statements ratio[48]', 'Lines ratio[49]'],
 )
 ```
 

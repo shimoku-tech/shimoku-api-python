@@ -134,6 +134,7 @@ class BasePlot:
         self.api_client = api_client
         self._clear_or_create_all_local_state()
         self.dashboard = None
+        self._default_dashboard = 'Default Name'
 
     @logging_before_and_after(logging_level=logger.debug)
     def set_dashboard(self, dashboard_name):
@@ -356,7 +357,7 @@ class BasePlot:
         app_name, path_name = self._clean_menu_path(menu_path)
 
         return (await self._plot_aux._async_get_or_create_app_and_apptype(
-            name=app_name, dashboard_name=self.dashboard if self.dashboard else app_name + ' dashboard'))['id']
+            name=app_name, dashboard_name=self.dashboard if self.dashboard else self._default_dashboard))['id']
 
     @staticmethod
     @logging_before_and_after(logging_level=logger.debug)
@@ -989,8 +990,7 @@ class BasePlot:
 
         app_id: str = (await self._plot_aux._async_get_or_create_app_and_apptype(
             name=name,
-            dashboard_name=self.dashboard
-            if self.dashboard else name + ' dashboard'
+            dashboard_name=self.dashboard if self.dashboard else self._default_dashboard
         ))['id']
 
         if overwrite:

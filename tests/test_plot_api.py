@@ -1,6 +1,7 @@
 """"""
 from os import getenv
 from typing import Dict, List
+from time import perf_counter
 import unittest
 import requests
 
@@ -30,12 +31,9 @@ s = shimoku.Client(
     universe_id=universe_id,
     environment=environment,
     verbosity=verbose,
+    business_id=business_id,
     async_execution=async_execution
 )
-s.plt.set_business(business_id=business_id)
-s.app.set_business(business_id=business_id)
-s.io.set_business(business_id=business_id)
-s.dashboard.set_business(business_id=business_id)
 
 delete_paths: bool = False
 
@@ -847,124 +845,48 @@ def test_bar_with_filters_with_aggregation_methods():
 
 
 def test_bar():
-    print('test_bar')
-    menu_path = 'test/bar-test'
+    s.set_menu_path('test/bar-test')
     data_ = [{'date': dt.date(2021, 1, 1), 'x': 50000000, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
              {'date': dt.date(2021, 1, 3), 'x': 40000000, 'y': 5},
              {'date': dt.date(2021, 1, 4), 'x': 70000000, 'y': 5},
              {'date': dt.date(2021, 1, 5), 'x': 30000000, 'y': 5}]
     s.plt.bar(
-        data=data_,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        x_axis_name='Date',
-        y_axis_name=['Revenue'],
-        # row=1, column=1,
+        data=data_, x='date', y=['x', 'y'],
+        x_axis_name='Date', y_axis_name='Revenue',
         order=0, rows_size=2,
         cols_size=12,
     )
-    s.plt.delete_path(menu_path=menu_path)
-
-    menu_path = 'test/bar-test-rowcol'
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
-
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-        order=0, rows_size=2,
-        cols_size=12,
-    )
-    s.plt.delete_path(menu_path=menu_path)
-
-    menu_path = 'test/bar-test'
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        # row=1, column=1,
-        order=1, rows_size=2,
-        cols_size=6,
-    )
-    s.plt.bar(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        # row=1, column=1,
-        order=2, rows_size=2,
-        cols_size=4,
-        padding="2, 2, 2, 2"
-    )
-
-    if delete_paths:
-        s.plt.delete_path(menu_path=menu_path)
+    s.plt.bar(x='date', order=1)
 
 
-def test_stacked_barchart():
-    print("test_stacked_barchart")
-    menu_path = 'test-free-echarts/stacked_distribution'
+def test_stacked_bar_chart():
+    s.set_menu_path('test-free-echarts/stacked-bar-chart')
     data_ = pd.read_csv('../data/test_stack_distribution.csv')
 
-    s.plt.stacked_barchart(
+    s.plt.stacked_bar(
         data=data_,
-        menu_path=menu_path,
+        x="Segment",
+        x_axis_name='Distribution and weight of the Drivers',
+        order=0, show_values=['Price'],
+    )
+
+
+def test_stacked_horizontal_bar_chart():
+    s.set_menu_path('test-free-echarts/horizontal-stacked-bar-chart')
+    data_ = pd.read_csv('../data/test_stack_distribution.csv')
+
+    s.plt.stacked_horizontal_bar(
+        data=data_,
         x="Segment",
         x_axis_name='Distribution and weight of the Drivers',
         order=0,
-    )
-
-    s.plt.stacked_barchart(
-        data=data_,
-        menu_path=menu_path,
-        x="Segment",
-        x_axis_name='Distribution and weight of the Drivers',
-        order=1,
-        show_values=['Price'],
-        calculate_percentages=True,
-    )
-
-
-def test_stacked_horizontal_barchart():
-    print("test_horizontal_stacked_barchart")
-    menu_path = 'test-free-echarts/horizontal_stacked_distribution'
-    data_ = pd.read_csv('../data/test_stack_distribution.csv')
-
-    s.plt.stacked_horizontal_barchart(
-        data=data_,
-        menu_path=menu_path,
-        x="Segment",
-        x_axis_name='Distribution and weight of the Drivers',
-        order=0,
-    )
-
-    s.plt.stacked_horizontal_barchart(
-        data=data_,
-        menu_path=menu_path,
-        x="Segment",
-        x_axis_name='Distribution and weight of the Drivers',
-        order=1,
-        show_values=['Price'],
-        calculate_percentages=True,
     )
 
 
 def test_stacked_area_chart():
     print("test_area_chart")
-    menu_path = 'test-free-echarts/stacked-area-chart'
+    s.set_menu_path('test-free-echarts/stacked-area-chart')
     data_ = [
         {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Mon'},
         {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Tue'},
@@ -974,28 +896,16 @@ def test_stacked_area_chart():
         {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Sat'},
         {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Sun'},
     ]
-    s.plt.stacked_area_chart(
+    s.plt.stacked_area(
         data=data_,
-        menu_path=menu_path,
         x="Weekday",
         x_axis_name='Visits per weekday',
         order=0,
     )
 
-    s.plt.stacked_area_chart(
-        data=data_,
-        menu_path=menu_path,
-        x="Weekday",
-        x_axis_name='Visits per weekday',
-        order=1,
-        show_values=['Search Engine', 'Union Ads'],
-        calculate_percentages=True,
-    )
-
 
 def test_zero_centered_barchart():
-    print('test_zero_centered_barchart')
-    menu_path: str = 'test/zero-centered-bar-test'
+    s.set_menu_path('test/zero-centered-bar-test')
     data_ = [
         {'Name': 'a', 'y': 5, 'z': -3, 'a': 0.01},
         {'Name': 'b', 'y': -7, 'z': 4, 'a': 0.1},
@@ -1003,41 +913,25 @@ def test_zero_centered_barchart():
         {'Name': 'd', 'y': -5, 'z': 6, 'a': 0.01},
     ]
 
-    s.plt.zero_centered_barchart(
+    s.plt.zero_centered_bar(
         data=data_,
-        x='Name', y=['y'],
-        menu_path=menu_path,
-        row=1, column=1,
+        x='Name', y='y',
+        order=0,
     )
 
-    s.plt.zero_centered_barchart(
+    s.plt.zero_centered_bar(
         data=data_,
         x='Name', y=['y', 'z', 'a'],
         x_axis_name="Axis x",
         y_axis_name="Axis y",
         title="Title",
-        menu_path=menu_path,
         order=1, rows_size=3, cols_size=10,
         padding="0,0,0,1"
     )
 
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='zero_centered_barchart',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='zero_centered_barchart',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
 
-
-def test_horizontal_barchart():
-    print('test_horizontal_barchart')
-    menu_path: str = 'test/horizontal-bar-test'
+def test_horizontal_bar_chart():
+    s.set_menu_path('test/horizontal-bar-test')
 
     data_ = [
         {'Name': 'a', 'y': 5, 'z': 3, 'a': 0.01},
@@ -1046,67 +940,29 @@ def test_horizontal_barchart():
         {'Name': 'd', 'y': 5, 'z': 6, 'a': 0.01},
     ]
 
-    s.plt.horizontal_barchart(
-        data=data_,
-        x='Name', y=['y', 'z'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
+    s.plt.horizontal_bar(data=data_, x='Name', y=['y', 'z'], order=0)
 
-    s.plt.horizontal_barchart(
+    s.plt.horizontal_bar(
         data=data_,
         x='Name', y=['y', 'z', 'a'],
         x_axis_name="Axis x",
         y_axis_name="Axis y",
         title="Title",
-        menu_path=menu_path,
         order=1, rows_size=3, cols_size=10,
         padding="0,0,0,1"
     )
 
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='horizontal_barchart',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='horizontal_barchart',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
-
 
 def test_line():
-    print('test_line')
-    menu_path: str = 'test/line-test'
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
-    )
+    s.set_menu_path('test/line-test')
+    s.plt.line(x='date', order=0)
+    s.plt.line(x='date', order=1, rows_size=2, cols_size=12)
 
-    s.plt.line(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
-    )
 
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='line',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='line',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
+def test_area():
+    s.set_menu_path('test/area-test')
+    s.plt.area(x='date', order=0)
+    s.plt.area(x='date', order=1, rows_size=2, cols_size=12)
 
 
 def test_stockline():
@@ -1141,34 +997,42 @@ def test_stockline():
 
 
 def test_scatter():
-    print('test_scatter')
-    menu_path: str = 'test/scatter-test'
+    s.set_menu_path('test/scatter-test')
+
+    s.plt.scatter(point_fields=[('x', 'y')], order=0, cols_size=6)
+
+    # https://figshare.com/articles/dataset/Age_height_and_weight_raw_data/16920130
+    df_ = pd.read_csv('../data/scatter_test.csv')
+
     s.plt.scatter(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        row=1, column=1,
+        data=df_, point_fields=[
+            ('AgeGroup1', 'WeightGroup1'), ('AgeGroup2', 'WeightGroup2'),
+            ('AgeGroup3', 'WeightGroup3'), ('AllGroupAge', 'AllGroupWeight')],
+        title='Age Weight correlation study',
+        x_axis_name='Age',
+        y_axis_name='Weight',
+        order=1, rows_size=4, cols_size=6,
     )
 
     s.plt.scatter(
-        data=data,
-        x='date', y=['x', 'y'],
-        menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
+        data=df_, point_fields=[
+            ('AgeGroup1', 'HeightGroup1'), ('AgeGroup2', 'HeightGroup2'),
+            ('AgeGroup3', 'HeightGroup3'), ('AllGroupAge', 'AllGroupHight')],
+        title='Age Height correlation study',
+        x_axis_name='Age',
+        y_axis_name='Height',
+        order=2, rows_size=4, cols_size=6,
     )
 
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='scatter',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='scatter',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
+    s.plt.scatter(
+        data=df_, point_fields=[
+            ('WeightGroup1', 'HeightGroup1'), ('WeightGroup2', 'HeightGroup2'),
+            ('WeightGroup3', 'HeightGroup3'), ('AllGroupWeight', 'AllGroupHight')],
+        title='Weight Height correlation study',
+        x_axis_name='Weight',
+        y_axis_name='Height',
+        order=3, rows_size=4, cols_size=6
+    )
 
 
 def test_scatter_with_effect():
@@ -1363,8 +1227,7 @@ def test_candlestick():
 
 
 def test_funnel():
-    print('test_funnel')
-    menu_path = 'test/funnel-test'
+    s.set_menu_path('test/funnel-test')
     data_ = [
         {
             "value": 60,
@@ -1388,29 +1251,13 @@ def test_funnel():
         }
     ]
     s.plt.funnel(
-        data=data_, name='name', value='value',
-        menu_path=menu_path,
-        row=1, column=1,
+        data=data_, order=0, title='Funnel Chart',
     )
 
     s.plt.funnel(
         data=data_, name='name', value='value',
-        menu_path=menu_path,
         order=1, rows_size=2, cols_size=12,
     )
-
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='funnel',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='funnel',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
 
 
 def test_heatmap():
@@ -2035,9 +1882,8 @@ def test_sunburst():
 
 
 def test_tree():
-    print('test_tree')
-    menu_path: str = 'test/tree-test'
-    data_ = [{
+    s.set_menu_path(menu_path='test/tree-test')
+    data_ = {
         'name': 'root',
         'value': 35,
         'children': [
@@ -2069,31 +1915,15 @@ def test_tree():
                 ],
             },
         ],
-    }]
-    s.plt.tree(
-        data=data_,
-        menu_path=menu_path,
-        row=1, column=1,
-    )
+    }
+    s.plt.set_shared_data(data_)
+    s.plt.tree(data=data_, order=0)
 
-    s.plt.tree(
-        data=data_,
-        menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
-    )
+    s.plt.tree(order=1, rows_size=4, cols_size=12, title='Tree', radial=True)
 
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='tree',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='tree',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
+    s.plt.tree(order=2, rows_size=2, cols_size=12, title='Tree', vertical=True)
+
+    s.plt.tree(order=3, rows_size=4, cols_size=12, title='Tree', radial=True, vertical=True)
 
 
 def test_treemap():
@@ -2196,52 +2026,42 @@ def test_radar():
 
 
 def test_indicator():
-    print('test_indicator')
-    menu_path: str = 'test-indicators/indicator-test'
+    s.set_menu_path('test/indicators')
     data_ = [
         {
-            "footer": "",
-            "header": "Estado",
-            "val": "Abierto",
-            "alignment": "center",
+            "description": "",
+            "title": "Estado",
+            "value": "Abierto",
+            "align": "center",
         },
         {
-            "footer": "",
-            "header": "Price ($)",
-            "val": "455",
-            "col": "success",
+            "description": "",
+            "title": "Price ($)",
+            "value": "455",
+            "color": "success",
         },
         {
-            "footer": "this is a description",
-            "header": "Volumen",
-            "val": "41153"
+            "description": "this is a description",
+            "title": "Volumen Changed!",
+            "value": "41153"
         },
         {
-            "footer": "",
-            "header": "Cambio €/$",
-            "val": "1.1946",
+            "description": "Crazy description",
+            "title": "Cambio €/$",
+            "value": "1.1946",
         },
     ]
+
     order = s.plt.indicator(
         data=data_,
-        menu_path=menu_path,
         order=0,
-        value='val',
-        header='header',
-        footer='footer',
-        align='alignment',
-        color='col'
     )
+
     order = s.plt.indicator(
         data=data_ + data_[2:],
-        menu_path=menu_path,
         order=order,
-        value='val',
-        header='header',
-        footer='footer',
-        align='alignment',
-        color='col'
     )
+
     data_ = [{
         "color": "success",
         "variant": "contained",
@@ -2279,118 +2099,30 @@ def test_indicator():
     ]
     s.plt.indicator(
         data=data_,
-        menu_path=menu_path,
         order=order, rows_size=1, cols_size=12,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color',
-        variant='variant',
-        target_path='targetPath',
-        icon='icon',
-        big_icon='bigIcon',
-        background_image='backgroundImage',
     )
 
+    s.set_menu_path('test/indicators-vertical')
     order = s.plt.indicator(
         data=data_ + data_,
-        menu_path=menu_path + '-vertical',
         order=0, rows_size=1, cols_size=6,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color',
-        variant='variant',
-        target_path='targetPath',
-        icon='icon',
-        big_icon='bigIcon',
-        background_image='backgroundImage',
-        vertical="Title of the indicators"
+        vertical="Title of the indicators",
     )
     order = s.plt.indicator(
         data=data_,
-        menu_path=menu_path + '-vertical',
         order=order, rows_size=2, cols_size=4,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color',
-        variant='variant',
-        target_path='targetPath',
-        icon='icon',
-        big_icon='bigIcon',
-        background_image='backgroundImage',
-        vertical=True
+        vertical=True,
     )
     order = s.plt.indicator(
         data=data_[0],
-        menu_path=menu_path + '-vertical',
         order=order, rows_size=8, cols_size=2,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color',
-        variant='variant',
-        target_path='targetPath',
-        vertical="Title of the indicator"
+        vertical="Title of the indicator",
     )
     s.plt.indicator(
         data=data_[0],
-        menu_path=menu_path + '-vertical',
         order=order, rows_size=8, cols_size=12,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color',
-        variant='variant',
-        target_path='targetPath',
-        vertical=True
+        vertical=True,
     )
-    if delete_paths:
-        s.plt.delete_path(menu_path)
-        s.plt.delete_path(menu_path + '-vertical')
-
-
-def test_indicator_one_dict():
-    print('test_indicator_one_dict')
-    menu_path: str = 'test-indicators/indicator-test-one-dict'
-    data_ = {
-        "description": "",
-        "title": "Estado",
-        "value": "Abierto",
-        "align": "center",
-        "color": "warning"
-    }
-
-    order = s.plt.indicator(
-        data=data_,
-        menu_path=menu_path,
-        order=0,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
-    )
-
-    s.plt.indicator(
-        data=data_,
-        menu_path=menu_path,
-        order=order, rows_size=2, cols_size=12,
-        value='value',
-        header='title',
-        footer='description',
-        align='align',
-        color='color'
-    )
-
-    if delete_paths:
-        s.plt.delete_path(menu_path)
 
 
 def test_alert_indicator():
@@ -2668,33 +2400,10 @@ def test_pie():
 
 
 def test_iframe():
-    print('test_iframe')
-    menu_path: str = 'test/iframe-test'
+    s.set_menu_path('test/iframe-test')
     url = 'https://www.marca.com/'
-    s.plt.iframe(
-        url=url,
-        menu_path=menu_path,
-        row=1, column=1, order=0,
-    )
-
-    s.plt.iframe(
-        url=url,
-        menu_path=menu_path,
-        order=1, rows_size=2, cols_size=12,
-    )
-
-    if delete_paths:
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='iframe',
-            row=1, column=1,
-        )
-        s.plt.delete(
-            menu_path=menu_path,
-            component_type='iframe',
-            order=1
-        )
-        s.plt.delete_path(menu_path)
+    s.plt.iframe(url=url, order=0)
+    s.plt.iframe(url=url, order=1, height=160*8, cols_size=6, padding='0,3,0,3')
 
 
 def test_html():
@@ -5525,89 +5234,91 @@ def test_chart_and_indicators():
     )
 
 
-print(f'Start time {dt.datetime.now()}')
+init_time = perf_counter()
 if delete_paths:
     s.plt.delete_path('test')
 
-# s.app.delete_all_business_apps()
-# s.dashboard.delete_all_business_dashboards()
+# s.business.delete_all_business_apps(uuid=business_id)
+# s.business.delete_all_business_dashboards(uuid=business_id)
 
 # Charts
-test_line()
+# test_indicator()
+# s.plt.set_shared_data(data)
+# test_line()
+# test_bar()
+# test_scatter()
+# test_area()
+# test_horizontal_bar_chart()
+# test_zero_centered_barchart()
+# test_stacked_bar_chart()
+# test_stacked_horizontal_bar_chart()
+# test_stacked_area_chart()
 test_funnel()
 test_tree()
-test_iframe()
-test_html()
-test_table()
-test_table_with_labels()
-test_bentobox()
-test_zero_centered_barchart()
-test_indicator()
-test_indicator_one_dict()
-test_alert_indicator()
-test_stockline()
-test_radar()
-test_pie()
-test_ux()
-test_ring_gauge()
-test_sunburst()
-test_treemap()
-test_heatmap()
-test_sankey()
-test_horizontal_barchart()
-test_predictive_line()
-test_speed_gauge()
-test_scatter()
-test_annotation_chart()
+# test_iframe()
+# test_html()
+# test_table()
+# test_table_with_labels()
+# test_bentobox()
 
-s.plt.set_dashboard('Dashboard groupping apps')
+# test_alert_indicator()
+# test_stockline()
+# test_radar()
+# test_pie()
+# test_ux()
+# test_ring_gauge()
+# test_sunburst()
+# test_treemap()
+# test_heatmap()
+# test_sankey()
+# test_predictive_line()
+# test_speed_gauge()
+# test_annotation_chart()
+
+# s.set_dashboard('Dashboard groupping apps')
 # Free echarts
-test_stacked_barchart()
-test_stacked_horizontal_barchart()
-test_stacked_area_chart()
-test_shimoku_gauges()
-test_gauge_indicators()
-test_rose()
-test_doughnut()
-test_free_echarts()
-test_rainfall_area()
-test_rainfall_line()
-test_line_with_confidence_area()
-test_scatter_with_effect()
-test_waterfall()
-test_bar_and_line_chart()
+# test_shimoku_gauges()
+# test_gauge_indicators()
+# test_rose()
+# test_doughnut()
+# test_free_echarts()
+# test_rainfall_area()
+# test_rainfall_line()
+# test_line_with_confidence_area()
+# test_scatter_with_effect()
+# test_waterfall()
+# test_bar_and_line_chart()
 # test_segmented_line_chart()
 
-test_infographics()
-test_chart_and_indicators()
+# test_infographics()
+# test_chart_and_indicators()
 
 # Filters and sequential needed
-test_heatmap_with_filters()
-test_bar_with_filters_with_aggregation_methods()
-test_bar_with_filters()
-test_bar()
+# test_heatmap_with_filters()
+# test_bar_with_filters_with_aggregation_methods()
+# test_bar_with_filters()
 
 # Tabs
-test_tabs()
-s.run()
-test_tabs(check_data=False)
+# test_tabs()
+# s.run()
+# test_tabs(check_data=False)
 
 # Modal
-s.plt.set_dashboard("Modal's dashboard")
-test_modal()
+# s.plt.set_dashboard("Modal's dashboard")
+# test_modal()
 s.run()
 
 # Others
-test_dynamic_conditional_and_auto_send_input_form()
-test_input_form()
-test_get_input_forms()
-test_set_apps_orders()
-test_set_sub_path_orders()
-test_set_new_business()
-test_append_data_to_trend_chart()
-test_delete()
-test_delete_path()
-test_same_position_charts()
+# test_dynamic_conditional_and_auto_send_input_form()
+# test_input_form()
+# test_get_input_forms()
+# test_set_apps_orders()
+# test_set_sub_path_orders()
+# test_set_new_business()
+# test_append_data_to_trend_chart()
+# test_delete()
+# test_delete_path()
+# test_same_position_charts()
 s.run()
 
 # TODO
@@ -5617,4 +5328,4 @@ s.run()
 # test_scatter_with_confidence_area()
 # test_bubble_chart()
 # test_line_with_confidence_area()
-print(f'End time {dt.datetime.now()}')
+print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')

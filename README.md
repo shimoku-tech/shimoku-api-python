@@ -100,7 +100,7 @@ Before submitting your pull request, please make sure your changes pass all test
 If you have any questions, suggestions, or issues, please feel free to reach out to us:
 
 - [Discord](https://discord.com/channels/1076588792024137879/1096371108665626676)
-- Email: support@shimoku.com
+- Email: contact@shimoku.com
 
 We're always happy to help and appreciate your feedback!
 

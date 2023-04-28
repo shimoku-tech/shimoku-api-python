@@ -1,4 +1,4 @@
-# Shimoku
+# Shimoku Api Python
 
 ![License](https://img.shields.io/github/license/shimoku-tech/shimoku-api-python)
 [![PyPI version](https://badge.fury.io/py/shimoku-api-python.svg)](https://badge.fury.io/py/shimoku-api-python)
@@ -20,7 +20,7 @@ Companies are more interested in predicting the future of their KPIs and trends 
 
 ### Introduction
 
-Creating Data Apps usually requires a full-stack team of Data and IT specialists. Shimoku simplifies this process for Data professionals by allowing them to create Data Apps faster without the need for IT expertise. Shimoku reduces the workload of IT teams, which are often the bottleneck in digital businesses, while creating new products and value for your clients.
+Creating Data Apps usually requires a full-stack team of Data and IT specialists. Shimoku simplifies this process for Data professionals by allowing them to create Data Apps faster without the need for IT expertise. Shimoku reduces the workload of IT teams, which are often the bottleneck in digital businesses while creating new products and value for your clients.
 
 By using Shimoku, a typical flow such as:
 

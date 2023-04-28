@@ -11,15 +11,8 @@ from tenacity import RetryError
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
-app_id: str = getenv('APP_ID')
-app_name: str = getenv('APP_NAME')
-app_type_id: str = getenv('APP_TYPE_ID')
 environment: str = getenv('ENVIRONMENT')
 verbosity: str = getenv('VERBOSITY')
-app_element: Dict[str, str] = dict(
-    business_id=business_id,
-    app_id=app_id,
-)
 
 config = {
     'access_token': api_key,
@@ -33,12 +26,19 @@ s = shimoku.Client(
     verbosity=verbosity,
 )
 
+app_name = 'Main test app'
+app_id = s.app.get_app(menu_path=app_name)['id']
+
+
+# Check it does not exists anymore
+class MyTestCase(unittest.TestCase):
+    def check_app_not_exists(self, _app_id: str):
+        with self.assertRaises(RetryError):
+            s.app.get_app(uuid=_app_id)
+
 
 def test_get_app():
-    app: Dict = s.app.get_app(
-        business_id=business_id,
-        app_id=app_id,
-    )
+    app: Dict = s.app.get_app(uuid=app_id)
     assert app
 
 
@@ -47,10 +47,7 @@ def test_get_fake_app():
         def test_fake_app(self):
             with self.assertRaises(RetryError):
                 app_id_: str = 'this is a test'
-                s.app.get_app(
-                    business_id=business_id,
-                    app_id=app_id_,
-                )
+                s.app.get_app(uuid=app_id_)
 
     t = MyTestCase()
     t.test_fake_app()
@@ -60,297 +57,120 @@ def test_update_app():
     """Set the updatedAt field of an App to '2000-01-01'
     Then revert the updatedAt to its original value
     """
-    var: str = 'hideTitle'
-    app: Dict = s.app.get_app(**app_element)
-    old_val: str = app.get(var)
-
-    val: str = True
-    app_data: Dict = {var: val}
-    x: Dict = s.app.update_app(
-        app_metadata=app_data, **app_element
+    app: Dict = s.app.get_app(menu_path=app_name)
+    old_vals = dict(
+        hide_title=app['hideTitle'],
+        hide_path=app['hidePath'],
+        show_breadcrumb=app['showBreadcrumb'],
+        show_history_navigation=app['showHistoryNavigation'],
     )
 
-    app_updated: Dict = s.app.get_app(**app_element)
+    new_vals = dict(
+        hide_title=True,
+        hide_path=True,
+        show_breadcrumb=True,
+        show_history_navigation=True,
+    )
+    s.app.update_app(uuid=app_id, **new_vals)
+    app_updated: Dict = s.app.get_app(uuid=app_id)
 
-    assert x == app_updated
-    assert app_updated[var] == val
+    assert app_updated['hideTitle']
+    assert app_updated['hidePath']
+    assert app_updated['showBreadcrumb']
+    assert app_updated['showHistoryNavigation']
 
     #########
     # Revert the change
     #########
+    s.app.update_app(uuid=app_id, **old_vals)
+    app_reverted: Dict = s.app.get_app(uuid=app_id)
 
-    app_data: Dict = {var: old_val}
-    new_x: Dict = s.app.update_app(
-        app_metadata=app_data, **app_element,
-    )
-
-    app_updated: Dict = s.app.get_app(**app_element)
-
-    assert new_x == app_updated
-    assert app_updated[var] == old_val
-
-
-def test_create_app_without_apptype_fails():
-    class MyTestCase(unittest.TestCase):
-        def check_app_creation_fails(self):
-            with self.assertRaises(TypeError):
-                app: Dict = (
-                    s.app.create_app(
-                        business_id=business_id,
-                        app_type_id='fail',
-                        # app_metadata={'name': 'Test app name'}
-                    )
-                )
-
-    t = MyTestCase()
-    t.check_app_creation_fails()
+    assert app_reverted['hideTitle'] == old_vals['hide_title']
+    assert app_reverted['hidePath'] == old_vals['hide_path']
+    assert app_reverted['showBreadcrumb'] == old_vals['show_breadcrumb']
+    assert app_reverted['showHistoryNavigation'] == old_vals['show_history_navigation']
 
 
 def test_create_and_delete_app():
-    app: Dict = (
-        s.app.create_app(
-            business_id=business_id,
-            app_type_id=app_type_id,
-            name='Testing app',
-        )
-    )
-    app_id_: str = app['id']
+    s.app.get_app(menu_path='auto-test')
+    s.app.delete_app(menu_path='auto-test')
 
-    assert len(app_id_) > 0
-
-    app: Dict = s.app.get_app(**app_element)
+    app: Dict = s.app.get_app(menu_path='auto-test')
 
     assert app
 
-    result: Dict = (
-        s.app.delete_app(
-            business_id=business_id,
-            app_id=app_id_,
-        )
-    )
+    result: Dict = s.app.delete_app(menu_path='auto-test')
 
     assert result
 
-    # Check it does not exists anymore
-    class MyTestCase(unittest.TestCase):
-        def check_app_not_exists(self):
-            with self.assertRaises(RetryError):
-                s.app.get_app(business_id=business_id, app_id=app_id_)
-
     t = MyTestCase()
-    t.check_app_not_exists()
+    t.check_app_not_exists(app['id'])
 
 
+#TODO make it work
 def test_get_app_reports():
-    reports: List[Dict] = s.app.get_app_reports(**app_element)
+    reports: List[Dict] = s.app.get_app_reports(menu_path=app_name)
     assert reports
     assert reports[0]
 
 
+#TODO make it work
 def test_get_app_report_ids():
-    report_ids: List[str] = s.app.get_app_report_ids(**app_element)
+    report_ids: List[str] = s.app.get_app_report_ids(menu_path=app_name)
     assert report_ids
     assert len(report_ids[0]) > 0
     assert isinstance(report_ids[0], str)
 
 
+#TODO make it work
 def test_get_app_path_names():
-    path_names: List[str] = s.app.get_app_path_names(**app_element)
+    path_names: List[str] = s.app.get_app_path_names(menu_path=app_name)
     assert path_names
 
 
+def test_get_app_activities():
+    s.set_menu_path(app_name)
+    for activity in s.app.get_app_activities(menu_path=app_name):
+        s.activity.delete_activity(uuid=activity['id'])
+
+    for i in range(3):
+        s.activity.create_activity(name=f'auto-test-activity {i}')
+
+    activities: List[Dict] = s.app.get_app_activities(menu_path=app_name)
+
+    assert len(activities) == 3
+    for activity in activities:
+        assert activity['name'].startswith('auto-test-activity')
+
+    s.app.delete_all_app_activities(menu_path=app_name)
+
+    activities: List[Dict] = s.app.get_app_activities(menu_path=app_name)
+
+    assert len(activities) == 0
+
+
 def test_rename_app():
-    new_app_name: str = 'test'
-    app: Dict = s.app.rename_app(
-        new_app_name=new_app_name,
-        **app_element,
-    )
-    old_val: str = app.get(var)
+    new_name: str = 'auto-test'
+    s.app.update_app(menu_path=app_name, new_name=new_name)
+    app: Dict = s.app.get_app(menu_path=new_name)
 
-    val: str = 10
-    app_data: Dict = {var: val}
-    x: Dict = s.app.update_app(
-        business_id=business_id,
-        app_id=app_id,
-        app_metadata=app_data
-    )
+    assert app['name'] == new_name
 
-    app_updated: Dict = s.app.get_app(**app_element)
+    s.app.update_app(menu_path=new_name, new_name=app_name)
+    app: Dict = s.app.get_app(menu_path=app_name)
 
-    assert x == app_updated
-    assert app_updated[var] == val
-
-    #########
-    # Revert the change
-    #########
-
-    app_data: Dict = {var: old_val}
-    new_x: Dict = s.app.update_app(
-        app_metadata=app_data, **app_element
-    )
-
-    app_updated: Dict = s.app.get_app(**app_element)
-
-    assert new_x == app_updated
-    assert app_updated[var] == old_val
-
-
-def test_hide_and_show_title():
-    col_var: str = 'hideTitle'
-    app: Dict = s.app.get_app(**app_element)
-
-    title_status: bool = app[col_var]
-
-    if not title_status:
-        s.app.hide_title(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-        s.app.show_title(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-    else:
-        s.app.show_title(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-        s.app.hide_title(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-
-def test_hide_and_show_path():
-    col_var: str = 'hidePath'
-    app: Dict = s.app.get_app(**app_element)
-
-    path_status: bool = app[col_var]
-
-    if not path_status:
-        s.app.hide_path(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-        s.app.show_path(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-    else:
-        s.app.show_path(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-        s.app.hide_path(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-
-def test_hide_and_show_breadcrumbs():
-    col_var: str = 'showBreadcrumb'
-    app: Dict = s.app.get_app(**app_element)
-
-    breadcrumb_status: bool = app[col_var]
-
-    if breadcrumb_status:
-        s.app.hide_breadcrumbs(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-        s.app.show_breadcrumbs(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-    else:
-        s.app.show_breadcrumbs(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-        s.app.hide_breadcrumbs(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-
-def test_hide_and_show_show_history_navigation():
-    col_var: str = 'showHistoryNavigation'
-    app: Dict = s.app.get_app(**app_element)
-
-    history_navigation_status: bool = app[col_var]
-
-    if history_navigation_status:
-        s.app.hide_history_navigation(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-        s.app.show_history_navigation(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-    else:
-        s.app.show_history_navigation(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert app_updated[col_var]
-
-        s.app.hide_history_navigation(app_name=app_name)
-        app_updated: Dict = s.app.get_app(**app_element)
-        assert not app_updated[col_var]
-
-def test_get_app_by_type():
-    app: Dict = s.app.get_app_by_type(
-        business_id=business_id,
-        app_type_id=app_type_id,
-    )
-    assert app
-    assert isinstance(app, dict)
-
-
-def test_get_app_by_name():
-    name = '   Test app_to_get_NAME    '
-    s.plt.delete_path(name)
-    app: Dict = (
-        s.app.create_app(
-            business_id=business_id,
-            app_type_id=app_type_id,
-            name=name,
-        )
-    )
-    app_id_: str = app['id']
-
-    app: Dict = s.app.get_app_by_name(
-        business_id=business_id,
-        name=name
-    )
-    assert app
-    assert app["normalizedName"] == s.plt._plot_aux.create_normalized_name(name)
-
-    name = "test-app-to-get-name"
-    app: Dict = s.app.get_app_by_name(
-        business_id=business_id,
-        name=name
-    )
-    assert app
-    assert app["normalizedName"] == s.plt._plot_aux.create_normalized_name(name)
-
-    s.app.delete_app(
-        business_id=business_id,
-        app_id=app_id_,
-    )
-
-
-def test_has_app_report():
-    has_reports: bool = s.app.has_app_report(app_name=app_name)
-    assert has_reports
+    assert app['name'] == app_name
 
 
 test_get_app()
 test_get_fake_app()
 test_update_app()
-test_create_app_without_apptype_fails()
 test_create_and_delete_app()
+test_get_app_activities()
+# TODO make them work
 test_get_app_reports()
 test_get_app_report_ids()
-# TODO  test_get_app_path_names()
-test_get_app_by_type()
-test_hide_and_show_title()
-test_hide_and_show_breadcrumbs()
-test_hide_and_show_path()
-test_hide_and_show_show_history_navigation()
-test_get_app_by_name()
-test_has_app_report()
+test_get_app_path_names()
+
 
 s.run()

@@ -2,15 +2,82 @@
 import json
 import asyncio
 
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional, Union, List
 from abc import ABC
 
 from shimoku_api_python.api.explorer_api import BusinessExplorerApi
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext, \
     decorate_external_function
+
+from shimoku_api_python.client import ApiClient
+from shimoku_api_python.base_resource import Resource
+from shimoku_api_python.utils import clean_menu_path
+from shimoku_api_python.role_class import Role
+from shimoku_api_python.api.dashboard_metadata_api import Dashboard
+from shimoku_api_python.api.app_metadata_api import App
+
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
+
+
+class Business(Resource):
+
+    resource_type = 'business'
+    alias_field = 'name'
+    plural = 'businesses'
+
+    def __init__(self, api_client: ApiClient, uuid: Optional[str] = None, alias: Optional[str] = None):
+        super().__init__(api_client=api_client, uuid=uuid, children=[Dashboard, App, Role],
+                         check_params_before_creation=['name'])
+
+        self._base_resource.params = {
+            'name': alias,
+            'theme': {},
+        }
+
+    async def delete(self):
+        return await self._base_resource.delete()
+
+    def set_params(self, theme: Dict, name: str):
+        if isinstance(theme, Dict):
+            self._base_resource.params['theme'] = theme
+        if isinstance(name, str):
+            self._base_resource.params['name'] = name
+
+    # Dashboard methods
+    async def get_dashboard(self, uuid: Optional[str] = None, name: Optional[str] = None) -> Dashboard:
+        return await self._base_resource.get_child(Dashboard, uuid, name)
+
+    # App methods
+    async def get_app(self, uuid: Optional[str] = None, menu_path: Optional[str] = None) -> App:
+
+        name = None
+        if menu_path:
+            name, _ = clean_menu_path(menu_path=menu_path)
+
+        return await self._base_resource.get_child(App, uuid, name)
+
+    async def get_apps(self, uuid: Optional[str] = None) -> List[App]:
+        return await self._base_resource.get_children(App, uuid)
+
+    async def delete_app(self, uuid: Optional[str] = None, menu_path: Optional[str] = None) -> App:
+
+        name = None
+        if menu_path:
+            name, _ = clean_menu_path(menu_path=menu_path)
+
+        return await self._base_resource.delete_child(App, uuid, name)
+
+    # Role methods
+    async def get_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> Role:
+        return await self._base_resource.get_child(Role, uuid, role)
+
+    async def get_roles(self, uuid: Optional[str] = None) -> List[Role]:
+        return await self._base_resource.get_children(Role, uuid)
+
+    async def delete_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> Role:
+        return await self._base_resource.delete_child(Role, uuid, role)
 
 
 class BusinessMetadataApi(ABC):

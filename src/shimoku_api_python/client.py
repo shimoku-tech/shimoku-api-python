@@ -92,7 +92,7 @@ class ApiClient(object):
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
     @logging_before_and_after(logging_level=logger.debug)
-    @retry(stop=stop_after_attempt(6), wait=wait_exponential(multiplier=2, min=1, max=16),
+    @retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=2, min=1, max=16),
            before_sleep=my_before_sleep)
     async def call_api(
             self, resource_path, method, path_params=None, query_params=None,

@@ -3,7 +3,6 @@ import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import json
 from itertools import product
-import functools
 from copy import deepcopy
 from math import log10, ceil, floor
 
@@ -13,11 +12,9 @@ import json5
 import datetime as dt
 import pandas as pd
 import numpy as np
-import warnings
 from pandas import DataFrame
 
 import uuid
-from shimoku_api_python.exceptions import ApiClientError
 from .data_managing_api import DataValidation
 from .explorer_api import (
     BusinessExplorerApi, CreateExplorerAPI, CascadeExplorerAPI,
@@ -26,10 +23,9 @@ from .explorer_api import (
     DeleteExplorerApi, UniverseExplorerApi,
     ReportDatasetExplorerApi, DatasetExplorerApi,
 )
-from .bentobox_charts import infographics_text_bubble, chart_and_modal_button, chart_and_indicators, \
-                             indicators_with_header
+from shimoku_api_python.api.charts.bentobox_charts import infographics_text_bubble, chart_and_modal_button, \
+                                                          chart_and_indicators, indicators_with_header
 from .data_managing_api import DataManagingApi
-from .app_metadata_api import AppMetadataApi
 from .app_type_metadata_api import AppTypeMetadataApi
 import asyncio
 

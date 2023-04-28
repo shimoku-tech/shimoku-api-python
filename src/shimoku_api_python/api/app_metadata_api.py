@@ -1,7 +1,7 @@
 """"""
 
 from abc import ABC
-from typing import List, Dict, Optional, Callable
+from typing import List, Dict, Optional, Callable, TYPE_CHECKING
 import asyncio
 
 from shimoku_api_python.api.explorer_api import (
@@ -9,22 +9,108 @@ from shimoku_api_python.api.explorer_api import (
     CascadeExplorerAPI, CascadeCreateExplorerAPI,
     BusinessExplorerApi
 )
-from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi
 from shimoku_api_python.exceptions import ApiClientError
+from shimoku_api_python.api.activity_metadata_api import Activity
+from shimoku_api_python.role_class import Role
+from shimoku_api_python.base_resource import Resource
+from shimoku_api_python.utils import clean_menu_path, create_normalized_name
+
+if TYPE_CHECKING:
+    from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi
+    from shimoku_api_python.base_resource import Business
 
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext,\
     decorate_external_function
 
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
+
+
+class App(Resource):
+
+    resource_type = 'app'
+    alias_field = 'name'
+    plural = 'apps'
+
+    def __init__(self, parent: 'Business', uuid: Optional[str] = None, alias: Optional[str] = None,
+                 menu_path: Optional[str] = None):
+        super().__init__(parent=parent, uuid=uuid, children=[Role, Activity],
+                         check_params_before_creation=['name'])
+
+        if menu_path:
+            alias, _ = clean_menu_path(menu_path=menu_path)
+
+        normalized_name: Optional[str] = None
+        if alias:
+            normalized_name: str = create_normalized_name(alias)
+
+        self._base_resource.params = {
+            'name': alias,
+            'normalizedName': normalized_name,
+            'hideTitle': 'true',
+            'hidePath': 'false',
+            'showBreadcrumb': 'false',
+            'showHistoryNavigation': 'false',
+        }
+
+    async def delete(self):
+        return await self._base_resource.delete()
+
+    async def update(self):
+        return await self._base_resource.update()
+
+    def set_params(self, menu_path: Optional[str] = None, hide_title: Optional[bool] = None,
+                   hide_path: Optional[bool] = None, show_breadcrumb: Optional[bool] = None,
+                   show_history_navigation: Optional[bool] = None):
+
+        if menu_path:
+            name, _ = clean_menu_path(menu_path=menu_path)
+            self._base_resource.params['name'] = name
+            self._base_resource.params['normalizedName'] = create_normalized_name(name)
+
+        if isinstance(hide_title, bool):
+            self._base_resource.params['hideTitle'] = str(hide_title).lower()
+
+        if isinstance(hide_path, bool):
+            self._base_resource.params['hidePath'] = str(hide_path).lower()
+
+        if isinstance(show_breadcrumb, bool):
+            self._base_resource.params['showBreadcrumb'] = str(show_breadcrumb).lower()
+
+        if isinstance(show_history_navigation, bool):
+            self._base_resource.params['showHistoryNavigation'] = str(show_history_navigation).lower()
+
+    # Activity methods
+    async def create_activity(self, name: str, settings: Optional[Dict[str, str]] = None) -> 'Activity':
+        return await self._base_resource.create_child(Activity, alias=name, settings=settings)
+
+    async def get_activity(self, uuid: Optional[str] = None, name: Optional[str] = None) -> Activity:
+        return await self._base_resource.get_child(Activity, uuid, name)
+
+    async def get_activities(self) -> List[Activity]:
+        return await self._base_resource.get_children(Activity)
+
+    async def delete_activity(self, uuid: Optional[str] = None, name: Optional[str] = None):
+        return await self._base_resource.delete_child(Activity, uuid, name)
+
+    # Role methods
+    async def get_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> Role:
+        return await self._base_resource.get_child(Role, uuid, role)
+
+    async def get_roles(self) -> List[Role]:
+        return await self._base_resource.get_children(Role)
+
+    async def delete_role(self, uuid: Optional[str] = None, role: Optional[str] = None):
+        return await self._base_resource.delete_child(Role, uuid, role)
+
 
 
 class AppMetadataApi(ABC):
     """
     """
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, dashboard_metadata_api: DashboardMetadataApi, execution_pool_context: ExecutionPoolContext, **kwargs):
+    def __init__(self, api_client, dashboard_metadata_api: 'DashboardMetadataApi', execution_pool_context: ExecutionPoolContext, **kwargs):
 
         self._api_client = api_client
         self.dashboard_metadata_api = dashboard_metadata_api

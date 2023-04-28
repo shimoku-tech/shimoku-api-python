@@ -1,20 +1,116 @@
 """"""
 import json
-from typing import Dict, Tuple, Optional, List, Union
+from typing import Dict, Tuple, Optional, List, Union, TYPE_CHECKING
 from abc import ABC
 
 import asyncio
 
-import uuid
+from uuid import uuid1
 
 from shimoku_api_python.api.explorer_api import AppExplorerApi
-
 from shimoku_api_python.api.explorer_api import DashboardExplorerApi
-from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
+
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
+
+from shimoku_api_python.base_resource import Resource, ResourceCache
+from shimoku_api_python.role_class import Role
+from shimoku_api_python.api.app_metadata_api import App
+
+if TYPE_CHECKING:
+    from shimoku_api_python.api.business_metadata_api import Business, BusinessMetadataApi
+
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
+
+
+class Dashboard(Resource):
+
+    resource_type = 'dashboard'
+    alias_field = 'name'
+    plural = 'dashboards'
+
+    class AppDashboard(Resource):
+
+        resource_type = 'appDashboard'
+        plural = 'appDashboards'
+
+        def __init__(self, parent: 'Dashboard', uuid: Optional[str] = None, app: App = None):
+            super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['appId'])
+
+            self._base_resource.params = {
+                'appId': app['id'] if app else None,
+            }
+
+        async def delete(self):
+            return await self._base_resource.delete()
+
+    def __init__(self, parent: 'Business', uuid: Optional[str] = None, alias: Optional[str] = None):
+
+        super().__init__(uuid=uuid, parent=parent, children=[Dashboard.AppDashboard, Role],
+                         check_params_before_creation=['name'])
+
+        self._base_resource.params = {
+            'name': alias,
+            'order': 0,
+            'isDisabled': False,
+        }
+
+    async def delete(self):
+        return await self._base_resource.delete()
+
+    async def update(self):
+        return await self._base_resource.update()
+
+    async def get_app_dashboard(self, uuid: Optional[str] = None) -> AppDashboard:
+        return await self._base_resource.get_child(Dashboard.AppDashboard, uuid)
+
+    async def get_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> 'Role':
+        return await self._base_resource.get_child(Role, uuid, role)
+
+    async def insert_app(self, app: App):
+        cache: ResourceCache = self._base_resource.children[Dashboard.AppDashboard]
+        app_dashboard = Dashboard.AppDashboard(self, app=app)
+        await app_dashboard
+        await cache.add(app_dashboard)
+        logger.info(f"App {app['name'] if app['name'] else app['id']} added to dashboard {self._base_resource.id}")
+        return app_dashboard
+
+    async def remove_app(self, app: App):
+        tasks = []
+        cache: ResourceCache = self._base_resource.children[Dashboard.AppDashboard]
+        cache_list = await cache.list()
+        for app_dashboard in cache_list:
+            if app_dashboard['appId'] == app['id']:
+                tasks.append(cache.delete(uuid=app_dashboard['id']))
+                logger.info(f"App {app['name'] if app['name'] else app['id']} "
+                            f"removed from dashboard {self._base_resource.id}")
+
+        await asyncio.gather(*tasks)
+
+    async def list_app_ids(self) -> List[str]:
+        cache: ResourceCache = self._base_resource.children[Dashboard.AppDashboard]
+        cache_list = await cache.list()
+        return list(set([app_dashboard['appId'] for app_dashboard in cache_list]))
+
+    def set_params(self, name: Optional[str] = None, order: Optional[int] = None,
+                   public_permission: Optional[str] = None, is_disabled: Optional[bool] = None):
+
+        if isinstance(name, str):
+            self._base_resource.params['name'] = name
+
+        if isinstance(order, int):
+            self._base_resource.params['order'] = order
+
+        if public_permission is not None:
+            self._base_resource.params['publicPermission'] = json.dumps({
+                'isPublic': True,
+                'permission': 'READ',
+                'token': public_permission
+            })
+
+        if isinstance(is_disabled, bool):
+            self._base_resource.params['isDisabled'] = is_disabled
 
 
 class DashboardMetadataApi(ABC):
@@ -23,7 +119,7 @@ class DashboardMetadataApi(ABC):
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, api_client, business_metadata_api: BusinessMetadataApi,
+    def __init__(self, api_client, business_metadata_api: 'BusinessMetadataApi',
                  execution_pool_context: ExecutionPoolContext, **kwargs):
         self._dashboard_explorer_api = DashboardExplorerApi(api_client)
         self._business_metadata_api = business_metadata_api
@@ -164,7 +260,7 @@ class DashboardMetadataApi(ABC):
             dashboard_metadata['publicPermission'] = {
                 'isPublic': True,
                 'permission': 'READ',
-                'token': str(uuid.uuid4())
+                'token': str(uuid1())
             }
 
         result = await self._dashboard_explorer_api.create_dashboard(self.business_id, dashboard_metadata)
@@ -275,7 +371,7 @@ class DashboardMetadataApi(ABC):
             dashboard_metadata['publicPermission'] = {
                 'isPublic': is_public,
                 'permission': 'READ',
-                'token': str(uuid.uuid4())
+                'token': str(uuid1())
             }
 
         if is_disabled is not None:

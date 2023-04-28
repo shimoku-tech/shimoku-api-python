@@ -1,9 +1,11 @@
 """"""
 import json
-from typing import Dict, Tuple, Optional, List
+from typing import Dict, Tuple, Optional, List, Union
 from abc import ABC
 
 import asyncio
+
+from shimoku_api_python.api.explorer_api import AppExplorerApi
 
 from shimoku_api_python.api.explorer_api import DashboardExplorerApi
 from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi
@@ -23,6 +25,7 @@ class DashboardMetadataApi(ABC):
                  execution_pool_context: ExecutionPoolContext, **kwargs):
         self._dashboard_explorer_api = DashboardExplorerApi(api_client)
         self._business_metadata_api = business_metadata_api
+        self._app_explorer_api = AppExplorerApi(api_client)
         self.epc = execution_pool_context
 
         self._dashboard_id_by_name = {}
@@ -30,6 +33,44 @@ class DashboardMetadataApi(ABC):
         self.business_id = None
         if kwargs.get('business_id'):
             self.business_id = kwargs.get('business_id')
+
+    # TODO this should be in a utils module or similar
+    @staticmethod
+    def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
+        """
+        Break the menu path in the apptype or app normalizedName
+        and the path normalizedName if any
+        :param menu_path: the menu path
+        """
+        # remove empty spaces
+        menu_path: str = menu_path.strip()
+        # replace "_" for www protocol it is not good
+        menu_path = menu_path.replace('_', '-')
+
+        try:
+            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
+        except AssertionError:
+            raise ValueError(
+                f'We only allow one subpath in your request | '
+                f'you introduced {menu_path} it should be maximum '
+                f'{"/".join(menu_path.split("/")[:1])}'
+            )
+
+        # Split AppType or App Normalized Name
+        normalized_name: str = menu_path.split('/')[0]
+        name: str = (
+            ' '.join(normalized_name.split('-'))
+        )
+
+        try:
+            path_normalized_name: str = menu_path.split('/')[1]
+            path_name: str = (
+                ' '.join(path_normalized_name.split('-'))
+            )
+        except IndexError:
+            path_name = None
+
+        return name, path_name
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _resolve_dashboard_id(self, dashboard_id: Optional[str] = None,
@@ -59,6 +100,27 @@ class DashboardMetadataApi(ABC):
                 return None
 
         return self._dashboard_id_by_name[dashboard_name]
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _resolve_app_id(self, app_id: Optional[str] = None, menu_path: Optional[str] = None) -> str:
+        """
+        Resolve the app id from the app id or the menu path.
+        :param app_id: the app id
+        :param menu_path: the menu path
+        :return: the app id
+        """
+        if app_id:
+            return app_id
+        if not menu_path:
+            log_error(logger, 'Either the app id or the menu path must be provided', ValueError)
+
+        app_name, _ = self._clean_menu_path(menu_path=menu_path)
+        app = await self._app_explorer_api.get_app_by_name(business_id=self.business_id, name=app_name)
+
+        if not app:
+            log_error(logger, f'The app {app_name} does not exist in the business {self.business_id}', ValueError)
+
+        return app['id']
 
     @logging_before_and_after(logging_level=logger.info)
     def set_business(self, business_id: str):
@@ -106,6 +168,8 @@ class DashboardMetadataApi(ABC):
         result = await self._dashboard_explorer_api.create_dashboard(self.business_id, dashboard_metadata)
         self._dashboard_id_by_name[dashboard_name] = result['id']
 
+        logger.info(f'Dashboard {dashboard_name} created with id {result["id"]}')
+
         return result
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -139,11 +203,9 @@ class DashboardMetadataApi(ABC):
 
         return await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
 
-    @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.info)
-    async def delete_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
-        """
-        Delete a dashboard
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _async_delete_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Delete a dashboard
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         """
@@ -165,10 +227,26 @@ class DashboardMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
+    async def delete_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Delete a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+        await self._async_delete_dashboard(dashboard_name, dashboard_id)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
     async def update_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
                                name: Optional[str] = None, order: Optional[int] = None,
                                public_permission: Optional[str] = None, is_disabled: Optional[bool] = None):
-        """"""
+        """ Update a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :param name: new name of the dashboard
+        :param order: new order of the dashboard
+        :param public_permission: new public permission of the dashboard
+        :param is_disabled: new is_disabled of the dashboard
+        """
 
         if name in self._dashboard_id_by_name:
             logger.warning(f'The dashboard {name} already exists in the business {self.business_id}, '
@@ -208,25 +286,78 @@ class DashboardMetadataApi(ABC):
             del self._dashboard_id_by_name[dashboard_name]
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _async_add_app_in_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
-                                          dashboard_id: Optional[str] = None):
-        """"""
+    async def _async_add_app_in_dashboard(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                          dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Add an app in a dashboard
+        :param menu_path: The menu_path in use
+        :param app_id: UUID of the app
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
 
         dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+        app_id = await self._resolve_app_id(app_id=app_id, menu_path=menu_path)
 
         if not dashboard:
             return None
 
         dashboard_id = dashboard['id']
 
+        if await self._async_is_app_in_dashboard(dashboard_id=dashboard_id, app_id=app_id):
+            logger.info(f'The app {app_id} is already in the dashboard {dashboard_id}, not doing anything')
+            return None
+
+        logger.info(f'Adding app {app_id} in dashboard {dashboard_id}...')
+
         await self._dashboard_explorer_api.add_app_in_dashboard(self.business_id, dashboard_id, app_id)
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def add_app_in_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
-                                   dashboard_id: Optional[str] = None):
-        """"""
-        await self._async_add_app_in_dashboard(app_id, dashboard_name, dashboard_id)
+    async def add_app_in_dashboard(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                   dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Add an app in a dashboard
+        :param menu_path: The menu_path in use
+        :param app_id: UUID of the app
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+        await self._async_add_app_in_dashboard(menu_path, app_id, dashboard_name, dashboard_id)
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def group_apps(self, menu_paths: Union[Optional[List[str]], str] = None, app_ids: Optional[List[str]] = None,
+                         dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Add multiple apps in a dashboard, if the dashboard does not exist create it
+        :param menu_paths: the menu paths of the apps in use
+        :param app_ids: the UUID of the apps to be grouped
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+
+        if menu_paths:
+            if isinstance(menu_paths, list):
+                app_ids = await asyncio.gather(*[self._resolve_app_id(menu_path=menu_path) for menu_path in menu_paths])
+            elif menu_paths == 'all':
+                app_ids = await self._business_metadata_api.business_explorer_api.get_business_app_ids(self.business_id)
+
+        if not app_ids:
+            logger.warning('No apps have been provided, not doing anything')
+            return None
+
+        dashboard = (await self._async_get_dashboard(dashboard_name, dashboard_id, warn=False))
+
+        if not dashboard:
+
+            if not dashboard_name:
+                log_error(logger, 'Dashboard does not exist and no name has been provided', ValueError)
+
+            dashboard_id = (await self._async_create_dashboard(dashboard_name))['id']
+        else:
+            dashboard_id = dashboard['id']
+
+        await asyncio.gather(*[
+            self._async_add_app_in_dashboard(app_id=app_id, dashboard_id=dashboard_id) for app_id in app_ids
+        ])
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -245,8 +376,8 @@ class DashboardMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_dashboard_app_ids(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None) \
-            -> List[str]:
+    async def get_dashboard_app_ids(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None
+                                    ) -> List[str]:
         """ Get the list of the ids of the apps in the dashboard
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
@@ -261,16 +392,53 @@ class DashboardMetadataApi(ABC):
                 in await self._dashboard_explorer_api.app_dashboard_links(business_id=self.business_id,
                                                                           dashboard_id=dashboard['id'])]
 
-    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _async_is_app_in_dashboard(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                         dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None
+                                         ) -> bool:
+        """ Check if an app is in a dashboard
+        :param menu_path: The menu_path in use
+        :param app_id: id of the app to check
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :return: True if the app is in the dashboard, False otherwise
+        """
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+        app_id = await self._resolve_app_id(app_id=app_id, menu_path=menu_path)
+
+        if not dashboard:
+            return False
+
+        app_dashboard_links = await self._dashboard_explorer_api.app_dashboard_links(business_id=self.business_id,
+                                                                                     dashboard_id=dashboard['id'])
+
+        return any(app_dashboard_link['appId'] == app_id for app_dashboard_link in app_dashboard_links)
+
+    @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def remove_app_from_dashboard(self, app_id: str, dashboard_name: Optional[str] = None,
-                                        dashboard_id: Optional[str] = None):
+    async def is_app_in_dashboard(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                  dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None) -> bool:
+        """ Check if an app is in a dashboard
+        :param menu_path: The menu_path in use
+        :param app_id: id of the app to check
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        :return: True if the app is in the dashboard, False otherwise
+        """
+        return await self._async_is_app_in_dashboard(menu_path, app_id, dashboard_name, dashboard_id)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def remove_app_from_dashboard(self, menu_path: Optional[str] = None, app_id: Optional[str] = None,
+                                        dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
         """ Remove an app from a dashboard
+        :param menu_path: The menu_path in use
         :param app_id: id of the app to remove
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         """
         dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+        app_id = await self._resolve_app_id(app_id=app_id, menu_path=menu_path)
 
         app_dashboard_links = await self._dashboard_explorer_api.app_dashboard_links(business_id=self.business_id,
                                                                                      dashboard_id=dashboard['id'])
@@ -281,6 +449,43 @@ class DashboardMetadataApi(ABC):
         await self._dashboard_explorer_api.delete_app_dashboard_link(business_id=self.business_id,
                                                                      dashboard_id=dashboard['id'],
                                                                      app_dashboard_id=app_dashboard_link_id)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _async_remove_all_apps_from_dashboard(self, dashboard_name: Optional[str] = None,
+                                                    dashboard_id: Optional[str] = None):
+        """ Delete all app links of a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+        dashboard = await self._async_get_dashboard(dashboard_name, dashboard_id, warn=True)
+
+        if not dashboard:
+            return None
+
+        app_dashboard_links = await self._dashboard_explorer_api.app_dashboard_links(business_id=self.business_id,
+                                                                                     dashboard_id=dashboard['id'])
+
+        delete_app_dashboard_link_tasks = []
+        for app_dashboard_link in app_dashboard_links:
+            delete_app_dashboard_link_tasks.append(
+                self._dashboard_explorer_api.delete_app_dashboard_link(business_id=self.business_id,
+                                                                       dashboard_id=dashboard['id'],
+                                                                       app_dashboard_id=app_dashboard_link['id'])
+            )
+            logger.info(
+                f"Deleting link between app {app_dashboard_link['appId']} and dashboard {dashboard['id']}...")
+
+        await asyncio.gather(*delete_app_dashboard_link_tasks)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def remove_all_apps_from_dashboard(self, dashboard_name: Optional[str] = None,
+                                             dashboard_id: Optional[str] = None):
+        """ Delete all app links of a dashboard
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+        await self._async_remove_all_apps_from_dashboard(dashboard_name, dashboard_id)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -371,5 +576,17 @@ class DashboardMetadataApi(ABC):
                     business_id=self.business_id, dashboard_id=dashboard['id']
                 )
             )
+            logger.info(f"Deleting dashboard {dashboard['name']} with id {dashboard['id']}")
 
         await asyncio.gather(*delete_dashboard_tasks)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def force_delete_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None):
+        """ Force delete a dashboard, this will delete the links between the dashboard and the apps first, so that
+        the dashboard can always be deleted, but the apps will not be deleted
+        :param dashboard_name: name of the dashboard
+        :param dashboard_id: UUID of the dashboard
+        """
+        await self._async_remove_all_apps_from_dashboard(dashboard_name, dashboard_id)
+        await self._async_delete_dashboard(dashboard_name, dashboard_id)

@@ -1,0 +1,33 @@
+name: Publish to TestPyPI
+
+on:
+  push:
+    branches:
+      - 'release/*'
+    paths:
+      - 'src/**'
+      - 'setup.py'
+      - 'setup.cfg'
+      - 'requirements.txt'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: 3.x
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install setuptools setuptools_scm wheel twine
+      - name: Build package
+        run: python3 setup.py sdist bdist_wheel
+      - name: Publish to TestPyPI
+        env:
+          TWINE_USERNAME: ${{ secrets.TEST_PYPI_USERNAME }}
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD }}
+        run: twine upload --repository-url https://test.pypi.org/legacy/ dist/*

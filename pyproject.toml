@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=42", "setuptools_scm>=6.2"]
+
+[project]
+name = "shimoku-api-python"
+dynamic = ["version"]
+description = "Shimoku enables you to build Data Products in just hours and allows you to create Predictive Analytics Products with Artificial Intelligence capabilities."
+authors = [{name = "Shimoku", email = "contact@shimoku.com"}]
+license.file = "LICENSE.txt"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python",
+]
+
+[project.urls]
+Homepage = "https://github.com/shimoku-tech/shimoku-api-python"
+Documentation = "https://docs.shimoku.com/"

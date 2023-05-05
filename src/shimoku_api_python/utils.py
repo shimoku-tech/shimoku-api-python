@@ -1,4 +1,12 @@
-from typing import Tuple
+from typing import Tuple, Dict, List, Optional, Union
+import pandas as pd
+import numpy as np
+import datetime as dt
+import json
+
+import logging
+from shimoku_api_python.execution_logger import logging_before_and_after
+logger = logging.getLogger(__name__)
 
 
 def create_normalized_name(name: str) -> str:
@@ -52,3 +60,30 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
         path_name = None
 
     return name, path_name
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def _calculate_percentages_from_list(numbers, round_digits_min):
+    """Calculate the proportion of each number in a list
+    :param numbers: list of numbers
+    :param round_digits_min: minimum number of digits to round
+    :return: list of percentages
+    """
+    def max_precision():
+        max_p = 0
+        for n in numbers:
+            str_n = str(n)
+            if '.' in str_n:
+                n_precision = len(str_n.split('.')[1])
+                max_p = n_precision if n_precision > max_p else max_p
+        return max(max_p, round_digits_min)
+
+    if isinstance(numbers, list):
+        numbers = np.array(numbers)
+
+    perc = np.round(100 * numbers / np.sum(numbers), max_precision())
+    round_max = 99.9
+    while np.sum(perc) > 99.99:
+        perc = np.round(round_max * numbers / np.sum(numbers), max_precision())
+        round_max -= 0.1
+    return perc

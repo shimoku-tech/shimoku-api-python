@@ -6,9 +6,9 @@ import logging
 
 import pandas as pd
 
-from shimoku_api_python.execution_logger import logging_before_and_after, log_error
-
 from shimoku_components_catalog.html_components import create_h1_title_with_modal
+
+from ....execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 

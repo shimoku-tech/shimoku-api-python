@@ -44,8 +44,12 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
         #Async version
         @wraps(func)
         async def awrapper(*args, **kwargs):
-            underlined_text = '\033[4m' + func.__name__ + '\033[0m'
-            logging_level(f"Starting execution of function: {underlined_text}")
+            enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
+            underlined_text = '\033[4m' + (func.__name__ if not enabled_for_debug else func.__qualname__) + '\033[0m'
+            logging_level(
+                f"Starting execution of function: {underlined_text}" +
+                (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
+            )
             initial_time = time.time()
             process = psutil.Process(os.getpid())
             initial_memory = process.memory_info().rss / 1024 ** 2
@@ -59,7 +63,7 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 
             time_spent = 1000*(time.time()-initial_time)
             memory_spent = ''
-            if logging.root.isEnabledFor(logging.DEBUG):
+            if enabled_for_debug:
                 memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
             logging_level(
                 f"Finished execution of function: {underlined_text}, "
@@ -71,8 +75,12 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
         #Normal version
         @wraps(func)
         def wrapper(*args, **kwargs):
-            underlined_text = '\033[4m' + func.__name__ + '\033[0m'
-            logging_level(f"Starting execution of function: {underlined_text}")
+            enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
+            underlined_text = '\033[4m' + (func.__name__ if not enabled_for_debug else func.__qualname__) + '\033[0m'
+            logging_level(
+                f"Starting execution of function: {underlined_text}" +
+                (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
+            )
             initial_time = time.time()
             process = psutil.Process(os.getpid())
             initial_memory = process.memory_info().rss / 1024 ** 2
@@ -86,7 +94,7 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 
             time_spent = 1000*(time.time()-initial_time)
             memory_spent = ''
-            if logging.root.isEnabledFor(logging.DEBUG):
+            if enabled_for_debug:
                 memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
             logging_level(
                 f"Finished execution of function: {underlined_text}, "

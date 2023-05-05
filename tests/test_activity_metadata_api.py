@@ -19,7 +19,7 @@ s = shimoku.Client(
     async_execution=async_execution,
     business_id=business_id,
 )
-s.set_menu_path(business_id=business_id, menu_path='test_activity')
+s.set_menu_path(menu_path='test_activity')
 
 activity_name = 'test_activity'
 run_id = getenv('RUN_ID')
@@ -31,6 +31,10 @@ class MyTestCase(unittest.TestCase):
     def activity_doesnt_exist(self, _activity_name):
         with self.assertRaises(CacheError):
             s.activity.delete_activity(name=_activity_name)
+
+    def cant_create_activity(self, _activity_name):
+        with self.assertRaises(CacheError):
+            s.activity.create_activity(name=_activity_name)
 
 
 def delete_new_activity_if_it_exists():
@@ -71,7 +75,7 @@ def test_create_delete_get_activities():
     n_activities_mid = len(s.activity.get_activities())
     assert n_activities_mid == n_activities_before + 1
 
-    s.set_menu_path(business_id=business_id, menu_path='test_activity')
+    s.set_menu_path(menu_path='test_activity')
 
     n_activities_mid = len(s.activity.get_activities())
     assert n_activities_mid == n_activities_before + 1
@@ -84,6 +88,36 @@ def test_create_delete_get_activities():
 
     t = MyTestCase()
     t.activity_doesnt_exist(new_activity_name)
+
+
+def test_update_activity():
+    """
+    Makes various calls to the activity metadata API to update activities.
+    """
+    new_activity_name = 'new_'+activity_name
+
+    n_activities_before = len(s.activity.get_activities())
+
+    activity = s.activity.create_activity(name=new_activity_name)
+
+    new_activity_id = activity['id']
+
+    assert activity['name'] == new_activity_name
+
+    s.activity.update_activity(uuid=new_activity_id, new_name='updated '+new_activity_name)
+
+    assert not s.activity.get_activity(name=new_activity_name)
+    assert s.activity.get_activity(name='updated '+new_activity_name)
+    assert s.activity.create_activity(name=new_activity_name)
+    t = MyTestCase()
+    t.cant_create_activity(new_activity_name)
+
+    s.activity.delete_activity(uuid=new_activity_id)
+    s.activity.delete_activity(name=new_activity_name)
+
+    n_activities_after = len(s.activity.get_activities())
+
+    assert n_activities_before == n_activities_after
 
 
 def test_create_get_runs():
@@ -172,7 +206,7 @@ def test_default_activity_settings():
     assert activity['settings'] == settings
 
     # test that the default settings persist in the API
-    s.set_menu_path(business_id=business_id, menu_path='test_activity')
+    s.set_menu_path(menu_path='test_activity')
 
     activity = s.activity.get_activity(uuid=activity['id'])
     assert activity['settings'] == settings
@@ -226,7 +260,7 @@ def test_execute_activity():
     """
     run = s.activity.execute_activity(name=activity_name)
 
-    activity = s.activity.get_activity(name=activity_name)
+    activity = s.activity.get_activity(name=activity_name, how_many_runs=1)
 
     # Runs are ordered by execution time, so the first run is the most recently executed
     assert activity['runs'][0]['id'] == run['id']
@@ -333,6 +367,7 @@ if __name__ == '__main__':
     delete_new_activity_if_it_exists()
     test_get_run_settings()
     test_create_delete_get_activities()
+    test_update_activity()
     test_create_get_runs()
     test_create_get_run_logs()
     test_default_activity_settings()

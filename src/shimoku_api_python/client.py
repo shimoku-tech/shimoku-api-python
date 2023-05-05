@@ -24,7 +24,11 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, universe_id: str, environment: str, config={}):
+    def __init__(self, universe_id: str, environment: str, config=None):
+
+        if config is None:
+            config = {}
+
         if environment == 'production':
             self.host = 'https://api.shimoku.io/external/v1/'
         elif environment == 'staging':
@@ -47,8 +51,6 @@ class ApiClient(object):
             'get_create_tab': None,
             'get_create_modal': None,
         }
-
-        self.host: str = f'{self.host}universe/{universe_id}/'
 
         # DEFAULTS
         # Api key

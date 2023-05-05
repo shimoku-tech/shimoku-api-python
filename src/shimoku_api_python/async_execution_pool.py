@@ -59,6 +59,7 @@ class ExecutionPoolContext:
         # (they will have to explicitly state it in their code)
         self.sequential = True
         self.plot_api = None
+        self.universe = None
 
 
 def decorate_external_function(self, external_class, function_name) -> Callable:
@@ -99,6 +100,7 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
             # IMPORTANT!! Nothing has to be dependent on this code as the sequential execution needs to keep working
             epc.api_client.semaphore = asyncio.Semaphore(epc.api_client.semaphore_limit)
             epc.api_client.locks = {name: asyncio.Lock() for name in epc.api_client.locks.keys()}
+            epc.universe.cascade_update_locks()
 
             # if just one task it's the same as sequential
             if len(epc.task_pool) == 1:
@@ -112,27 +114,28 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
             epc.task_pool.clear()
             epc.list_for_conflicts.clear()
 
-            # After all the tasks have finished update the tabs to get all the charts correctly
-            if len(epc.tabs_group_indexes) > 0:
-                tabs_tasks = []
-                for tabs_group_pseudo_entry in epc.tabs_group_indexes:
-                    app_name, path_name, group_name = tabs_group_pseudo_entry
-                    app = await epc.plot_api._plot_aux._async_get_or_create_app_and_apptype(name=app_name)
-                    app_id: str = app['id']
-                    tabs_tasks.append(
-                        epc.plot_api._update_tabs_group_metadata(
-                            business_id=epc.plot_api.business_id,
-                            app_id=app_id, path_name=path_name,
-                            group_name=group_name,
-                        )
-                    )
-
-                await asyncio.gather(*tabs_tasks)
-                epc.tabs_group_indexes.clear()
+            # # After all the tasks have finished update the tabs to get all the charts correctly
+            # if len(epc.tabs_group_indexes) > 0:
+            #     tabs_tasks = []
+            #     for tabs_group_pseudo_entry in epc.tabs_group_indexes:
+            #         app_name, path_name, group_name = tabs_group_pseudo_entry
+            #         app = await epc.plot_api._plot_aux._async_get_or_create_app_and_apptype(name=app_name)
+            #         app_id: str = app['id']
+            #         tabs_tasks.append(
+            #             epc.plot_api._update_tabs_group_metadata(
+            #                 business_id=epc.plot_api.business_id,
+            #                 app_id=app_id, path_name=path_name,
+            #                 group_name=group_name,
+            #             )
+            #         )
+            #
+            #     await asyncio.gather(*tabs_tasks)
+            #     epc.tabs_group_indexes.clear()
 
         async def sequential_task_execution(epc: ExecutionPoolContext, coroutine: Coroutine):
             epc.api_client.semaphore = asyncio.Semaphore(epc.api_client.semaphore_limit)
             epc.api_client.locks = {name: asyncio.Lock() for name in epc.api_client.locks.keys()}
+            epc.universe.cascade_update_locks()
             return await coroutine
 
         @wraps(async_func)
@@ -145,7 +148,6 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
                 log_error(logger, 'The async_auto_call_manager decorator can only be used in classes that '
                                   'have an epc attribute', RuntimeError)
 
-            epc.plot_api._plot_aux.app_metadata_api.apps = {}
             if epc.sequential or execute:
                 try:
                     loop = asyncio.get_event_loop()

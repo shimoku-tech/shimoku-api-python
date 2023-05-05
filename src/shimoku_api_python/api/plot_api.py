@@ -1,12 +1,9 @@
 """"""
-import time
 from typing import List, Dict, Optional, Union, Tuple, Any, Iterable, Callable
 import json
 from itertools import product
 from copy import deepcopy
 from math import log10, ceil, floor
-
-from IPython.lib import backgroundjobs as bg
 
 import json5
 import datetime as dt
@@ -23,7 +20,7 @@ from .explorer_api import (
     DeleteExplorerApi, UniverseExplorerApi,
     ReportDatasetExplorerApi, DatasetExplorerApi,
 )
-from shimoku_api_python.api.charts.bentobox_charts import infographics_text_bubble, chart_and_modal_button, \
+from shimoku_api_python.resources.reports.charts.bentobox_charts import infographics_text_bubble, chart_and_modal_button, \
                                                           chart_and_indicators, indicators_with_header
 from .data_managing_api import DataManagingApi
 from .app_type_metadata_api import AppTypeMetadataApi
@@ -98,15 +95,15 @@ class PlotAux:
         self.create_data_points = self.dataset_explorer_api.create_data_points
 
         self.get_app_type_by_name = self.app_type_metadata_api.get_app_type_by_name
-        self._async_get_or_create_app_and_apptype = self.app_metadata_api._async_get_or_create_app_and_apptype
+        self._async_get_or_create_app_and_apptype = None
 
         self.update_report_data = self.data_managing_api.update_report_data
         self.append_report_data = self.data_managing_api.append_report_data
-        self.transform_report_data_to_chart_data = self.data_managing_api._transform_report_data_to_chart_data
-        self.convert_input_data_to_db_items = self.data_managing_api._convert_input_data_to_db_items
-        self.is_report_data_empty = self.data_managing_api._is_report_data_empty
-        self.convert_dataframe_to_report_entry = self.data_managing_api._convert_dataframe_to_report_entry
-        self.create_report_entries = self.data_managing_api._create_report_entries
+        self.transform_report_data_to_chart_data = None
+        self.convert_input_data_to_db_items = None
+        self.is_report_data_empty = None
+        self.convert_dataframe_to_report_entry = None
+        self.create_report_entries = None
 
         self.validate_table_data = self.data_validation_api._validate_table_data
         self.validate_input_form_data = self.data_validation_api._validate_input_form_data
@@ -167,97 +164,6 @@ class BasePlot:
         # Map to store the link between reports and modal
         self._report_in_modal = dict()
 
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _get_business_state(self, business_id: str):
-
-        self.api_client.semaphore = asyncio.Semaphore(self.api_client.semaphore_limit)
-        self.api_client.locks = {name: asyncio.Lock() for name in self.api_client.locks.keys()}
-        business_reports = await self._plot_aux.get_business_reports(business_id)
-
-        @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_reports_info():
-            self._report_order = {report['id']: report['order'] for report in business_reports}
-
-        @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_tabs_info():
-            business_tabs = [report for report in business_reports if report['reportType'] == 'TABS']
-
-            for tabs_group_report in business_tabs:
-                data_fields = json.loads(tabs_group_report['dataFields'].replace("'", '"').replace('None', 'null'))
-                properties = json.loads(tabs_group_report['properties'].replace("'", '"').replace('None', 'null'))
-                tabs_group_report_id = tabs_group_report['id']
-                app_id = tabs_group_report['appId']
-                path_name = tabs_group_report['path'] if tabs_group_report['path'] else ""
-                last_order = data_fields['lastOrder']
-                group_name = data_fields['groupName']
-                tabs_group_entry = (app_id, path_name, group_name)
-
-                self._tabs_group_id[tabs_group_entry] = tabs_group_report_id
-                self._tabs_last_order[tabs_group_entry] = last_order
-                try:
-                    tabs_group = properties['tabs']
-                    self._tabs_group_properties[tabs_group_entry] = {'sticky': properties['sticky'],
-                                                                     'variant': properties['variant']}
-                except KeyError:
-                    logger.warning('Tabs group should always have a "tabs" field in properties')
-                    continue
-
-                try:
-                    # Order them correctly to preserve insertion order
-                    tabs_group = dict(sorted(tabs_group.items(), key=lambda item: item[1]['order']))
-                except KeyError:
-                    logger.warning("Tabs in this business don't have the most recent structure, don't execute "
-                                   "tabs code with versions previous to the 0.14.")
-
-                self._tabs[tabs_group_entry] = {}
-                for tab_name, order_and_report_ids in tabs_group.items():
-                    report_ids = order_and_report_ids['reportIds']
-                    self._tabs[tabs_group_entry][tab_name] = []
-                    for report_id in report_ids:
-                        if report_id in self._report_order:
-                            self._report_in_tab[report_id] = (app_id, path_name, (group_name, tab_name))
-                            self._tabs[tabs_group_entry][tab_name] += [report_id]
-
-        @logging_before_and_after(logging_level=logger.debug)
-        def _get_business_modals_info():
-            business_modals = [report for report in business_reports if report['reportType'] == 'MODAL']
-
-            self._modal_properties = {
-                report['id']: json.loads(report['properties'].replace("'", '"').replace('None', 'null'))
-                for report in business_modals}
-
-            self._modal_id_by_entry = {
-                (report['appId'],
-                 report['path'] if report['path'] else '',
-                 self._modal_properties[report['id']]['name']): report['id']
-                for report in business_modals}
-
-            self._report_in_modal = {
-                report_id: self._modal_properties[modal['id']]['name']
-                for modal in business_modals
-                for report_id in self._modal_properties[modal['id']]['reportIds']
-            }
-
-        _get_business_reports_info()
-        _get_business_tabs_info()
-        _get_business_modals_info()
-
-    # TODO this method goes somewhere else (aux.py? an external folder?)
-    @staticmethod
-    def _convert_to_json(items: List[Dict]) -> str:
-        try:
-            items_str: str = json.dumps(items)
-        except TypeError:
-            # If we have date or datetime values
-            # then we need to convert them to isoformat
-            for datum in items:
-                for k, v in datum.items():
-                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
-                        datum[k] = v.isoformat()
-
-            items_str: str = json.dumps(items)
-        return items_str
-
     @staticmethod
     def _validate_filters(filters: Dict) -> None:
         # Check the filters is built properly
@@ -310,120 +216,6 @@ class BasePlot:
             except AssertionError:
                 raise ValueError('bentobox_data bentoboxSizeColumns must be a positive integer')
 
-    @staticmethod
-    def _clean_menu_path(menu_path: str) -> Tuple[str, str]:
-        """Break the menu path in the apptype or app normalizedName
-        and the path normalizedName if any"""
-        # remove empty spaces
-        menu_path: str = menu_path.strip()
-        # replace "_" for www protocol it is not good
-        menu_path = menu_path.replace('_', '-')
-
-        try:
-            assert len(menu_path.split('/')) <= 2  # we allow only one level of path
-        except AssertionError:
-            raise ValueError(
-                f'We only allow one subpath in your request | '
-                f'you introduced {menu_path} it should be maximum '
-                f'{"/".join(menu_path.split("/")[:1])}'
-            )
-
-        # Split AppType or App Normalized Name
-        normalized_name: str = menu_path.split('/')[0]
-        name: str = (
-            ' '.join(normalized_name.split('-'))
-        )
-
-        try:
-            path_normalized_name: str = menu_path.split('/')[1]
-            path_name: str = (
-                ' '.join(path_normalized_name.split('-'))
-            )
-        except IndexError:
-            path_name = None
-
-        return name, path_name
-
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _get_app_id_by_menu_path(self, menu_path: str) -> str:
-        """ Get app id by menu path. If app doesn't exist, create it.
-        :param menu_path: menu path
-        :return: app id
-        """
-        app_name, path_name = self._clean_menu_path(menu_path)
-
-        return (await self._plot_aux._async_get_or_create_app_and_apptype(
-            name=app_name, dashboard_name=self.dashboard if self.dashboard else self._default_dashboard))['id']
-
-    @staticmethod
-    @logging_before_and_after(logging_level=logger.debug)
-    def _fill_report_metadata(
-            path_name: str, report_metadata: Dict,
-            order: Optional[int] = None,
-            rows_size: Optional[int] = None,
-            cols_size: Optional[int] = None,
-            padding: Optional[str] = None,
-    ) -> Dict:
-        if order is not None and rows_size and cols_size:
-            report_metadata['order'] = order
-            report_metadata['sizeRows'] = rows_size
-            report_metadata['sizeColumns'] = cols_size
-
-        if padding:
-            report_metadata['sizePadding'] = padding
-
-        if order is not None:  # elif order fails when order = 0!
-            report_metadata['order'] = order
-        elif report_metadata.get('grid'):
-            report_metadata['order'] = 0
-        else:
-            raise ValueError(
-                'Row and Column or Order must be specified to overwrite a report'
-            )
-
-        report_metadata.update({'path': path_name})
-
-        if report_metadata.get('dataFields'):
-            report_metadata['dataFields'] = (
-                json.dumps(report_metadata['dataFields'])
-            )
-
-        return report_metadata
-
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _create_report(self, business_id: str, app_id: str, report_metadata: Dict,
-                             real_time: bool, modal_name: Optional[str], tabs_index: Optional[Tuple[str, str]]) -> Dict:
-        """Create a report"""
-
-        if modal_name and tabs_index:
-            log_error(logger,
-                      'Adding a report to a modal and to a tab at the same time is not permitted.',
-                      RuntimeError)
-
-        report: Dict = await self._plot_aux.create_report(
-            business_id=business_id,
-            app_id=app_id,
-            report_metadata=report_metadata,
-            real_time=real_time,
-        )
-
-        report_id: str = report['id']
-        path_name: str = report.get('path')
-        if not path_name:
-            path_name = ''
-        order: int = report.get('order')
-        self._report_order[report_id] = order
-
-        if modal_name:
-            await self._add_report_to_modal(
-                business_id, (app_id, path_name if path_name else '', modal_name), report['id']
-            )
-        elif tabs_index:
-            await self._insert_in_tab(
-                self.business_id, app_id, path_name, report_id, tabs_index, order
-            )
-
-        return report
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _delete_report(self, business_id: str, app_id: str, report: Dict) -> None:
@@ -653,7 +445,7 @@ class BasePlot:
         )
 
         try:
-            order_temp = max([report['pathOrder'] for report in reports_ if report['pathOrder'] ])
+            order_temp = max([report['pathOrder'] for report in reports_ if report['pathOrder']])
         except ValueError:
             order_temp = 0
 
@@ -2228,14 +2020,6 @@ class PlotApi(BasePlot):
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
 
-            if loop.is_running():
-                # We are in a jupyter notebook, so we need to execute in a different loop
-                jobs = bg.BackgroundJobManager()
-                job = jobs.new(asyncio.run, self._get_business_state(self.business_id))
-                while not job.finished:
-                    time.sleep(0.1)
-            else:
-                asyncio.run(self._get_business_state(self.business_id))
         else:
             self.business_id: Optional[str] = None
 
@@ -2308,28 +2092,6 @@ class PlotApi(BasePlot):
         self._clear_or_create_all_local_state()
         await self._get_business_state(self.business_id)
 
-    # TODO both of this functions are auxiliary, and don't make sense here, find a better place for them
-    @staticmethod
-    @logging_before_and_after(logging_level=logger.debug)
-    def _calculate_percentages_from_list(numbers, round_digits_min):
-        def max_precision():
-            max_p = 0
-            for n in numbers:
-                str_n = str(n)
-                if '.' in str_n:
-                    n_precision = len(str_n.split('.')[1])
-                    max_p = n_precision if n_precision > max_p else max_p
-            return max(max_p, round_digits_min)
-
-        if isinstance(numbers, list):
-            numbers = np.array(numbers)
-
-        perc = np.round(100 * numbers / np.sum(numbers), max_precision())
-        round_max = 99.9
-        while np.sum(perc) > 99.99:
-            perc = np.round(round_max * numbers / np.sum(numbers), max_precision())
-            round_max -= 0.1
-        return perc
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -8017,3 +7779,105 @@ class PlotApi(BasePlot):
     chart_and_modal_button = chart_and_modal_button
     chart_and_indicators = chart_and_indicators
     indicators_with_header = indicators_with_header
+
+
+from ..resources.app import App
+from ..resources.reports.charts.indicator import Indicator
+
+
+class NewPlotApi:
+
+    def __init__(self, app: Optional[App], execution_pool_context: ExecutionPoolContext):
+        self._app = app
+        self.current_path: Optional[str] = None
+        self.epc = execution_pool_context
+
+    @logging_before_and_after(logging_level=logger.info)
+    def indicator(
+        self, data: Union[str, pd.DataFrame, List[Dict], Dict],
+        order: Optional[int] = None, rows_size: Optional[int] = 1, cols_size: int = 12,
+        padding: Optional[str] = None,
+        bentobox_data: Optional[Dict] = None,
+        vertical: Union[bool, str] = False
+    ):
+        """ Create an indicator report in the dashboard.
+        """
+
+        @async_auto_call_manager()
+        @logging_before_and_after(logging_level=logger.info)
+        async def single_indicator(self, **kwargs):
+            # Necessary for time logging and correct execution pool handling
+            await self._app.create_report(Indicator, **kwargs)
+
+        df = pd.DataFrame(data if isinstance(data, list) else [data])
+        keep_columns = [k for k in df.columns if k in list(Indicator.default_properties.keys())]
+        df = df[keep_columns]
+
+        len_df = len(df)
+        if vertical and (len_df > 1 or isinstance(vertical, str)):
+            if not bentobox_data:
+                bentobox_data = {
+                    'bentoboxId': str(uuid.uuid1()),
+                    'bentoboxOrder': order,
+                    'bentoboxSizeColumns': cols_size,
+                    'bentoboxSizeRows': rows_size * len_df,
+                }
+
+            # fixexd cols_size for bentobox and variable rows size
+            cols_size = 22
+            rows_size = rows_size * 10 - 2 * int(bentobox_data is not None)
+
+            padding = '1,1,0,1'
+
+        else:
+            if padding is None:
+                padding = '0,0,0,0'
+
+            padding = padding.replace(' ', '')
+
+            remaining_cols = cols_size % len_df
+
+            extra_padding = remaining_cols // 2
+            padding_left_int = int(padding[6]) + extra_padding
+            padding_right_int = int(padding[2]) + extra_padding + remaining_cols % 2
+
+            padding_left = f'{padding[0]},0,{padding[4]},{padding_left_int}'
+            padding_right = f'{padding[0]},{padding_right_int},{padding[4]},{int(bentobox_data is not None)}'
+            padding_else = f'{padding[0]},0,{padding[4]},{int(bentobox_data is not None)}'
+
+            cols_size = cols_size // len_df - int(bentobox_data is not None)
+            if cols_size < 2:
+                raise ValueError(f'The calculation of the individual cols_size for each indicator '
+                                 f'is too small (cols_size/len(df)): {cols_size}')
+
+        last_index = df.index[-1]
+        first_index = df.index[0]
+
+        for index, df_row in df.iterrows():
+
+            if not vertical:
+                padding = padding_else
+                if index == first_index:
+                    padding = padding_left
+                elif index == last_index:
+                    padding = padding_right
+            elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
+                padding = '1,1,1,1'
+
+            single_indicator(
+                self=self,
+                path=self.current_path,
+                order=order,
+                sizePadding=padding,
+                bentobox=bentobox_data,
+                sizeRows=rows_size,
+                sizeColumns=cols_size,
+                properties=df_row.dropna().to_dict()
+            )
+
+            if isinstance(order, int):
+                order += 1
+
+        return order
+
+

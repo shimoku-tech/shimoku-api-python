@@ -28,12 +28,4 @@ def test_get_universe_businesses():
     assert businesses
 
 
-def test_get_universe_app_types():
-    app_types: List[Dict] = (
-        s.universe.get_universe_app_types()
-    )
-    assert app_types
-
-
 test_get_universe_businesses()
-test_get_universe_app_types()

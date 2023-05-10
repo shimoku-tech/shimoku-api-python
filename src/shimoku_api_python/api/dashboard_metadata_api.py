@@ -5,6 +5,8 @@ from abc import ABC
 
 import asyncio
 
+import uuid
+
 from shimoku_api_python.api.explorer_api import AppExplorerApi
 
 from shimoku_api_python.api.explorer_api import DashboardExplorerApi
@@ -131,10 +133,10 @@ class DashboardMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_dashboard(self, dashboard_name: str, order: Optional[int] = None, public_permission: Optional[Dict] = None,
+    async def create_dashboard(self, dashboard_name: str, order: Optional[int] = None, is_public: bool = False,
                                is_disabled: bool = False):
         """"""
-        result = await self._async_create_dashboard(dashboard_name, order, public_permission, is_disabled)
+        result = await self._async_create_dashboard(dashboard_name, order, is_public, is_disabled)
 
         if result is None:
             logger.warning(f'The dashboard {dashboard_name} already exists in the business {self.business_id}, '
@@ -144,7 +146,7 @@ class DashboardMetadataApi(ABC):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _async_create_dashboard(self, dashboard_name: str, order: Optional[int] = None,
-                                      public_permission: Optional[str] = None, is_disabled: Optional[bool] = False):
+                                      is_public: bool = False, is_disabled: bool = False):
         """"""
 
         if not self.business_id:
@@ -158,12 +160,12 @@ class DashboardMetadataApi(ABC):
             'order': order or len(self._dashboard_id_by_name),
             'isDisabled': is_disabled
         }
-        if public_permission:
-            dashboard_metadata['publicPermission'] = json.dumps({
+        if is_public:
+            dashboard_metadata['publicPermission'] = {
                 'isPublic': True,
                 'permission': 'READ',
-                'token': public_permission
-            })
+                'token': str(uuid.uuid4())
+            }
 
         result = await self._dashboard_explorer_api.create_dashboard(self.business_id, dashboard_metadata)
         self._dashboard_id_by_name[dashboard_name] = result['id']
@@ -238,13 +240,13 @@ class DashboardMetadataApi(ABC):
     @logging_before_and_after(logging_level=logger.info)
     async def update_dashboard(self, dashboard_name: Optional[str] = None, dashboard_id: Optional[str] = None,
                                name: Optional[str] = None, order: Optional[int] = None,
-                               public_permission: Optional[str] = None, is_disabled: Optional[bool] = None):
+                               is_public: Optional[bool] = None, is_disabled: Optional[bool] = None):
         """ Update a dashboard
         :param dashboard_name: name of the dashboard
         :param dashboard_id: UUID of the dashboard
         :param name: new name of the dashboard
         :param order: new order of the dashboard
-        :param public_permission: new public permission of the dashboard
+        :param is_public: new public permission of the dashboard
         :param is_disabled: new is_disabled of the dashboard
         """
 
@@ -269,12 +271,12 @@ class DashboardMetadataApi(ABC):
         if order is not None:
             dashboard_metadata['order'] = order
 
-        if public_permission is not None:
-            dashboard_metadata['publicPermission'] = json.dumps({
-                'isPublic': True,
+        if is_public is not None:
+            dashboard_metadata['publicPermission'] = {
+                'isPublic': is_public,
                 'permission': 'READ',
-                'token': public_permission
-            })
+                'token': str(uuid.uuid4())
+            }
 
         if is_disabled is not None:
             dashboard_metadata['isDisabled'] = is_disabled

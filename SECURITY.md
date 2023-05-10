@@ -10,6 +10,7 @@ currently being supported with security updates.
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.20.x   | ✅ |
 | 0.19.x   | ✅ |
 | 0.18.x  | ✅ |
 | 0.17.x  | ✅ |

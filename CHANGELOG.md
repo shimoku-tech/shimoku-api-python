@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 0.20.0 (2023-05-10)
+
+This version enables embedding, it's time to share dashboards with the internet!
+
+## Improvements
+
+When creating or updating a dashboard the user can set the parameter is_public to True, this will enable the embedding functionality for the dashboard in the frontal page.
+
+See the updated documentation in:
+
+- [Managing Dashboards](https://docs.shimoku.com/development/advanced-usage/management/managing-dashboards)
+
+---
+
 ## 0.19.0 (2023-04-28)
 
 This is a small version that improves the UX of the dashboard manipulation.
@@ -20,6 +34,6 @@ See the updated documentation in:
 
 - [Quick Start](https://docs.shimoku.com/development/getting-started/quickstart)
 - [Menu]
-- [Managing Dashboards]
+- [Managing Dashboards](https://docs.shimoku.com/development/advanced-usage/management/managing-dashboards)
 
 

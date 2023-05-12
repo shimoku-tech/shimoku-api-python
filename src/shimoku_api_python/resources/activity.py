@@ -41,7 +41,7 @@ class Activity(Resource):
             plural = 'logs'
 
             @logging_before_and_after(logging_level=logger.debug)
-            def __init__(self, parent: 'Activity.Run', uuid: Optional[str] = None):
+            def __init__(self, parent: 'Activity.Run', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
 
                 params = dict(
                     dateTime=str(dt.datetime.now().isoformat())[:-3] + "Z",
@@ -50,17 +50,18 @@ class Activity(Resource):
                     tags={},
                 )
 
-                super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['message', 'severity'],
+                super().__init__(parent=parent, uuid=uuid, db_resource=db_resource,
+                                 check_params_before_creation=['message', 'severity'],
                                  params_to_serialize=['tags'], params=params)
 
         @logging_before_and_after(logging_level=logger.debug)
-        def __init__(self, parent: 'Activity', uuid: Optional[str] = None):
+        def __init__(self, parent: 'Activity', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
 
             params = dict(
                 settings={},
             )
 
-            super().__init__(parent=parent, uuid=uuid, children=[Activity.Run.Log],
+            super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[Activity.Run.Log],
                              params_to_serialize=['settings'], params=params)
 
         @logging_before_and_after(logging_level=logger.debug)
@@ -113,15 +114,16 @@ class Activity(Resource):
             return response['STATUS']
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, parent: 'App', uuid: Optional[str] = None, alias: Optional[str] = None):
+    def __init__(self, parent: 'App', uuid: Optional[str] = None, alias: Optional[str] = None,
+                 db_resource: Optional[Dict] = None):
 
         params = dict(
             name=alias,
             settings={},
         )
 
-        super().__init__(parent=parent, uuid=uuid, children=[Activity.Run], check_params_before_creation=['name'],
-                         params_to_serialize=['settings'], params=params)
+        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[Activity.Run],
+                         check_params_before_creation=['name'], params_to_serialize=['settings'], params=params)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def delete(self):

@@ -176,7 +176,11 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
             _self = copy(self)  # copy the self object to avoid modifying the shallow data
             epc.task_pool.append(async_func(_self, *args, **kwargs))
-            logger.info(f'{async_func.__name__} added to the task pool')
+            func_name = async_func.__name__
+            if 'logging_func_name' in kwargs:
+                func_name = kwargs['logging_func_name']
+
+            logger.info(f'{func_name} added to the task pool')
 
             if kwargs.get('menu_path') and 'delete' not in async_func.__name__:
                 app_name, path_name = clean_menu_path(menu_path=kwargs['menu_path'])

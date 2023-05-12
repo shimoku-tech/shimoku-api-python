@@ -112,17 +112,16 @@ class Client(object):
             await self._dashboard_object.insert_app(app)
 
     @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.info)
-    async def set_menu_path(self, menu_path: str):
-        """Set menu path for the client.
-        :param menu_path: Menu path
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _change_app(self, menu_path: str):
+        """Change app in use for the following calls.
+        :param menu_path: Menu path of the app
         """
-        app_name, path = clean_menu_path(menu_path)
-        if self._app_object and self._app_object['name'] == app_name:
-            self.plt.current_path = path
-            return
-
-        self._app_object: App = await self._business_object.get_app(menu_path=menu_path)
+        app: App = await self._business_object.get_app(menu_path=menu_path)
+        self._app_object = app
+        self.report = ReportMetadataApi(app=app, execution_pool_context=self.epc)
+        self.activity = ActivityMetadataApi(app=app, execution_pool_context=self.epc)
+        self.plt = NewPlotApi(app=app, execution_pool_context=self.epc)
 
         self.activity = ActivityMetadataApi(self._app_object, self.epc)
         self.report = ReportMetadataApi(self._app_object, self.epc)
@@ -134,6 +133,20 @@ class Client(object):
 
         if self._app_object['id'] not in await self._dashboard_object.list_app_ids():
             await self._dashboard_object.insert_app(self._app_object)
+
+    @logging_before_and_after(logging_level=logger.info)
+    def set_menu_path(self, menu_path: str):
+        """Set menu path for the client.
+        :param menu_path: Menu path
+        """
+        app_name, path = clean_menu_path(menu_path)
+        if self._app_object:
+            self.plt.raise_if_cant_change_path()
+            if self._app_object['name'] == app_name:
+                self.plt.change_path(path)
+                return
+        self._change_app(menu_path)
+        self.plt.change_path(path)
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config: Dict):

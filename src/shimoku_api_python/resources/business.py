@@ -1,5 +1,5 @@
 from uuid import uuid1
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, TYPE_CHECKING
 
 from ..base_resource import Resource
 from ..utils import clean_menu_path
@@ -22,14 +22,15 @@ class Business(Resource):
     plural = 'businesses'
 
     @logging_before_and_after(logger.debug)
-    def __init__(self, parent: 'Universe', uuid: Optional[str] = None, alias: Optional[str] = None):
+    def __init__(self, parent: 'Universe', uuid: Optional[str] = None, alias: Optional[str] = None,
+                 db_resource: Optional[Dict] = None):
 
         params = {
             'name': alias,
             'theme': {},
         }
 
-        super().__init__(parent=parent, uuid=uuid, children=[Dashboard, App, Role],
+        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[Dashboard, App, Role],
                          check_params_before_creation=['name'], params_to_serialize=['theme'],
                          params=params)
 

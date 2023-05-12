@@ -1,12 +1,9 @@
-from typing import List, TYPE_CHECKING
+from typing import List
 from ..report import Report
 
 import logging
 from ...execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    pass
 
 
 class TabsGroup(Report):
@@ -15,11 +12,20 @@ class TabsGroup(Report):
     report_type = 'TABS'
 
     default_properties = dict(
+        hash=None,
         tabs=dict(),
-        groupName=None,
         sticky=False,
         variant='enclosedSolidRounded',
     )
+
+    @logging_before_and_after(logger.debug)
+    def add_tab(self, tab: str):
+        """ Add tab to the tabs group without saving it to the server
+        :param tab: tab name
+        """
+        if tab in self['properties']['tabs']:
+            return
+        self['properties']['tabs'][tab] = {'order': len(self['properties']['tabs']), 'reportIds': []}
 
     @logging_before_and_after(logger.debug)
     def add_report(self, tab: str, report: Report):
@@ -27,12 +33,11 @@ class TabsGroup(Report):
         :param tab: tab name
         :param report: report to add
         """
-
-        if tab not in self['properties']['tabs']:
-            self['properties']['tabs'][tab] = {'order': len(self['properties']['tabs']), 'reportIds': []}
+        self.add_tab(tab)
 
         if report['id'] in self['properties']['tabs'][tab]['reportIds']:
             logger.warning(f"Report {report['id']} already in tab {tab}")
+            return
 
         self['properties']['tabs'][tab]['reportIds'].append(report['id'])
 
@@ -69,4 +74,14 @@ class TabsGroup(Report):
 
         for i, tab in enumerate(all_tabs):
             self['properties']['tabs'][tab]['order'] = i + len(tabs)
+
+    @logging_before_and_after(logger.debug)
+    def has_report(self, report: Report):
+        """ Check if report is in the tabs group
+        :param report: report to check
+        """
+        for tab in self['properties']['tabs'].values():
+            if report['id'] in tab['reportIds']:
+                return True
+        return False
 

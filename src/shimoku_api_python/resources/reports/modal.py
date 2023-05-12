@@ -1,12 +1,8 @@
-from typing import TYPE_CHECKING
 from ..report import Report
 
 import logging
 from ...execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    pass
 
 
 class Modal(Report):
@@ -15,7 +11,7 @@ class Modal(Report):
     report_type = 'MODAL'
 
     default_properties = dict(
-        name=None,
+        hash=None,
         open=False,
         reportIds=[],
         width=60,
@@ -30,6 +26,7 @@ class Modal(Report):
 
         if report['id'] in self['properties']['reportIds']:
             logger.warning(f"Report {report['id']} already in modal")
+            return
 
         self['properties']['reportIds'].append(report['id'])
 
@@ -44,4 +41,11 @@ class Modal(Report):
             return
 
         self['properties']['reportIds'].remove(report['id'])
+
+    @logging_before_and_after(logger.debug)
+    def has_report(self, report: Report):
+        """ Check if report is in the modal
+        :param report: report to check
+        """
+        return report['id'] in self['properties']['reportIds']
 

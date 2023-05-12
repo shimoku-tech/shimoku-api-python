@@ -1,4 +1,4 @@
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, TYPE_CHECKING
 
 import asyncio
 
@@ -27,12 +27,14 @@ class Dashboard(Resource):
         plural = 'appDashboards'
 
         @logging_before_and_after(logger.debug)
-        def __init__(self, parent: 'Dashboard', uuid: Optional[str] = None, app: App = None):
+        def __init__(self, parent: 'Dashboard', uuid: Optional[str] = None, app: App = None,
+                     db_resource: Optional[Dict] = None):
 
             params = dict(
                 appId=app['id'] if app else None,
             )
-            super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['appId'], params=params)
+            super().__init__(parent=parent, uuid=uuid, db_resource=db_resource,
+                             check_params_before_creation=['appId'], params=params)
 
         @logging_before_and_after(logger.debug)
         async def delete(self):
@@ -40,7 +42,8 @@ class Dashboard(Resource):
             return await self._base_resource.delete()
 
     @logging_before_and_after(logger.debug)
-    def __init__(self, parent: 'Business', uuid: Optional[str] = None, alias: Optional[str] = None):
+    def __init__(self, parent: 'Business', uuid: Optional[str] = None, alias: Optional[str] = None,
+                 db_resource: Optional[Dict] = None):
 
         params = dict(
             name=alias,
@@ -53,7 +56,8 @@ class Dashboard(Resource):
             )
         )
 
-        super().__init__(uuid=uuid, parent=parent, children=[Dashboard.AppDashboard, Role],
+        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource,
+                         children=[Dashboard.AppDashboard, Role],
                          check_params_before_creation=['name'], params=params)
 
     @logging_before_and_after(logger.debug)

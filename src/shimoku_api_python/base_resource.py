@@ -2,10 +2,10 @@ import logging
 import asyncio
 import json
 
-from typing import Optional, Dict, Any, List, TypeVar, Type, Set
+from typing import Optional, Dict, Any, List, TypeVar, Type, Set, Tuple, Union
 from tqdm import tqdm
 
-from abc import ABC, abstractmethod
+from abc import ABC
 
 from .client import ApiClient
 from .exceptions import ResourceIdMissing, CacheError
@@ -55,16 +55,19 @@ class ResourceCache:
                 return []
 
             for resource_dict in resources:
-                resource = self._resource_class(uuid=resource_dict.get('id'), parent=self._parent)
+                resource = self._resource_class(db_resource=resource_dict, parent=self._parent)
                 self._cache[resource_dict.get('id')] = resource
 
-                if self._resource_class.alias_field in resource_dict:
-                    self._aliases[resource_dict[self._resource_class.alias_field]] = resource_dict.get('id')
+                alias_field = self._resource_class.alias_field
+                alias_entry = None
+                if alias_field in resource_dict:
+                    alias_entry = resource_dict.get(alias_field)
+                elif isinstance(alias_field, Tuple) and alias_field[0] in resource_dict:
+                    alias_entry = resource[alias_field[0]].get(alias_field[1])
 
-                for field, value in resource_dict.items():
-                    if field in resource:
-                        resource[field] = value if field not in resource.params_to_serialize \
-                                          else json.loads(value if value else f'{resource[field].__class__()}')
+                if alias_entry:
+                    self._aliases[alias_entry] = resource_dict.get('id')
+
                 resource.empty_changed_params()
 
         return list(self._cache.values())
@@ -126,7 +129,8 @@ class ResourceCache:
 
         logger.debug(f"CACHE MISS: Resource {uuid}")
 
-        resource = await self._resource_class(parent=self._parent, uuid=uuid)
+        db_resource = await self._resource_class(parent=self._parent, uuid=uuid).get()
+        resource = self._resource_class(parent=self._parent, db_resource=db_resource)
 
         return await self.add(resource=resource, alias=alias)
 
@@ -206,7 +210,7 @@ class BaseResource:
     def __init__(
             self, parent: Optional[IsResource] = None, uuid: Optional[str] = None,
             api_client: Optional[ApiClient] = None, params: Optional[Dict[str, Any]] = None,
-            alias_field: Optional[str] = None, resource_type: Optional[str] = None,
+            alias_field: Optional[Union[str, Tuple[str, str]]] = None, resource_type: Optional[str] = None,
             params_to_serialize: Optional[List[str]] = None, await_children: Optional[bool] = False,
             wrapper_class_instance: Optional[IsResource] = None
     ):
@@ -269,6 +273,7 @@ class BaseResource:
                     else json.loads(value if value else '{}')
 
         self.changed_params = set()
+        return resource_dict
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create(self) -> str:
@@ -303,14 +308,17 @@ class BaseResource:
             if field in params:
                 params[field] = json.dumps(params[field])
 
-            assert isinstance(self.params[field], dict)
+            assert isinstance(self.params[field], (dict, list))
 
-        await(
-            self.api_client.query_element(
-                method='PATCH', endpoint=endpoint,
-                **{'body_params': params}
+        if params:
+            await(
+                self.api_client.query_element(
+                    method='PATCH', endpoint=endpoint,
+                    **{'body_params': params}
+                )
             )
-        )
+        else:
+            logger.debug(f'No params to update for {self.resource_type} {str(self)}')
 
         self.changed_params = set()
 
@@ -326,7 +334,7 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_children_batch(self, resource_class: Type[IsResource], children_params: List[Dict],
-                                    batch_size: int = 100):
+                                    unit: str, batch_size: int = 100):
         """ Creates a batch of children of a given resource class. It doesn't return the created resources,
         And it doesn't save them in the cache.
         :param resource_class: The class of the resource to create.
@@ -339,10 +347,12 @@ class BaseResource:
         endpoint = f'{self.base_url}{self.resource_type}/{self.id}/{resource_class.resource_type}/batch'
 
         log_level = logger.getEffectiveLevel()
-        if log_level >= logging.INFO:
-            logger.info("Uploading table data")
+        disable = log_level > logging.INFO or len(children_params) < 1000
 
-        with tqdm(total=len(children_params), unit=' report entries', disable=(log_level > logging.INFO)) \
+        if not disable:
+            logger.info("Uploading data")
+
+        with tqdm(total=len(children_params), unit=unit, disable=disable) \
                 as progress_bar:
             query_tasks = []
             for chunk in range(0, len(children_params), batch_size):
@@ -355,7 +365,7 @@ class BaseResource:
                 )
             await asyncio.gather(*query_tasks)
 
-        logger.info("Table data uploaded")
+        logger.info("Data uploaded") if not disable else None
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_child(self, resource_class: Type[IsResource], **kwargs) -> IsResource:
@@ -460,7 +470,14 @@ class BaseResource:
 
     def __str__(self):
         """ Returns a string representation of the resource. """
-        return self.params[self.alias_field] if self.alias_field else self.id
+        if self.alias_field:
+            return self.params[self.alias_field] if not isinstance(self.alias_field, Tuple) \
+                else self.params[self.alias_field[0]][self.alias_field[1]]
+        return self.id
+
+    def __eq__(self, other):
+        """ Returns True if the resource is equal to another resource. """
+        return self.params == other.params
 
 
 class Resource(ABC):
@@ -473,6 +490,7 @@ class Resource(ABC):
     def __init__(
         self, parent: Optional[IsResource] = None,
         uuid: Optional[str] = None,
+        db_resource: Optional[dict[str, Any]] = None,
         api_client: Optional[ApiClient] = None,
         params: Optional[dict[str, Any]] = None,
         children: Optional[List[Type[IsResource]]] = None,
@@ -480,6 +498,13 @@ class Resource(ABC):
         params_to_serialize: Optional[List[str]] = None,
         await_children: Optional[bool] = False
     ):
+        """ Initializes a resource. """
+
+        if db_resource:
+            uuid = db_resource['id']
+        else:
+            db_resource = {}
+
         self._base_resource = BaseResource(api_client=api_client, uuid=uuid, parent=parent, params=params,
                                            resource_type=self.resource_type, alias_field=self.alias_field,
                                            params_to_serialize=params_to_serialize, await_children=await_children,
@@ -492,6 +517,11 @@ class Resource(ABC):
         self._check_params_before_creation = check_params_before_creation if check_params_before_creation else []
         self.api_client = self._base_resource.api_client
         self.params_to_serialize = self._base_resource.params_to_serialize
+
+        for field, value in db_resource.items():
+            if field in self:
+                self[field] = value if field not in self.params_to_serialize \
+                    else json.loads(value if value else f'{self[field].__class__()}')
 
     @logging_before_and_after(logging_level=logger.debug)
     def __await__(self):
@@ -538,7 +568,10 @@ class Resource(ABC):
         elif item == 'base_url':
             return self._base_resource.base_url
         elif item in self._base_resource.params:
-            return self._base_resource.params[item]
+            result = self._base_resource.params[item]
+            if isinstance(result, (dict, list)):
+                self._base_resource.changed_params.add(item)
+            return result
         else:
             log_error(logger, f"{self.__class__.__name__} parameters do not contain {item}", KeyError)
 
@@ -565,3 +598,7 @@ class Resource(ABC):
     def __str__(self):
         """ Returns a string representation of the resource. """
         return self._base_resource.__str__()
+
+    def __eq__(self, other: IsResource):
+        """ Returns whether the resource is equal to another resource. """
+        return self._base_resource.__eq__(other._base_resource)

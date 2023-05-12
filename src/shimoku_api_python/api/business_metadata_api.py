@@ -88,7 +88,7 @@ class BusinessMetadataApi(ABC):
         """
         business: Business = await self._universe.get_business(uuid=uuid, name=name)
         if not business:
-            logger.warning(f"Business with name {name} not found")
+            logger.warning(f"Business with {name if name else uuid} not found")
         return business
 
     @async_auto_call_manager(execute=True)

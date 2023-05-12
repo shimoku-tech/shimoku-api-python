@@ -1,23 +1,26 @@
 import logging
 import os
 from sys import stdout
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple, Union
 from io import TextIOWrapper
 from functools import wraps
-from warnings import warn
 from inspect import stack
 import asyncio
 import psutil
-import time
+from time import perf_counter
+
+logger = logging.getLogger(__name__)
 
 
 # Got this code from https://code.activestate.com/recipes/412603-stack-based-indentation-of-formatted-logging/
 class IndentFormatter(logging.Formatter):
+    """ Formatter that adds indentation to logging messages based on the stack. """
     def __init__(self, fmt=None, datefmt=None):
         logging.Formatter.__init__(self, fmt, datefmt)
         self.baseline = len(stack())
 
     def format(self, rec):
+        """ Format the specified record as text. """
         _stack = stack()
         # we eliminate the unnecessary indents
         arrow = ('<- ' if 'Finished' in rec.msg else ('-> ' if 'Starting' in rec.msg else '| '))
@@ -28,79 +31,64 @@ class IndentFormatter(logging.Formatter):
 
 
 def my_before_sleep(retry_state):
+    """ Logging function called before sleeping between retries. """
     msg = f'Retrying {retry_state.fn}: attempt {retry_state.attempt_number} ended with: {retry_state.outcome}'
     logging.warning(msg)
 
 
 def log_error(logger, message, errorFunction):
+    """ Log an error and raise an exception. """
     logger.error(message)
     raise errorFunction(message)
 
 
-def logging_before_and_after(logging_level: Callable, before: Optional[str] = None, after: Optional[str] = None) -> Callable:
+def logging_before_and_after(logging_level: Callable) -> Callable:
+    """ Decorator that logs before and after the execution of a function. """
 
     def decorator(func: Callable) -> Callable:
 
-        #Async version
+        def before_call(*args, **kwargs):
+            """ Logs before the execution of the function. """
+            enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
+            func_name = (func.__name__ if not enabled_for_debug else func.__qualname__)
+            if 'logging_func_name' in kwargs:
+                func_name = kwargs['logging_func_name']
+
+            underlined_text = '\033[4m' + func_name + '\033[0m'
+            logging_level(
+                f"Starting execution: {underlined_text}" +
+                (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
+            )
+            initial_time = perf_counter()
+            process = psutil.Process(os.getpid())
+            initial_memory = process.memory_info().rss / 1024 ** 2
+            return initial_time, initial_memory, process, underlined_text
+
+        def after_call(initial_time, initial_memory, process, underlined_text):
+            """ Logs after the execution of the function. """
+            time_spent = 1000*(perf_counter()-initial_time)
+            memory_spent = ''
+            if logging.root.isEnabledFor(logging.DEBUG):
+                memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
+            logging_level(
+                f"Finished execution: {underlined_text}, "
+                f"elapsed time: {time_spent:.2f} ms"
+                f"{memory_spent}")
+
         @wraps(func)
         async def awrapper(*args, **kwargs):
-            enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
-            underlined_text = '\033[4m' + (func.__name__ if not enabled_for_debug else func.__qualname__) + '\033[0m'
-            logging_level(
-                f"Starting execution of function: {underlined_text}" +
-                (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
-            )
-            initial_time = time.time()
-            process = psutil.Process(os.getpid())
-            initial_memory = process.memory_info().rss / 1024 ** 2
-            if before:
-                logging_level(before)
-
+            """ Async version of the wrapper. """
+            initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
             result = await func(*args, **kwargs)
-
-            if after:
-                logging_level(after)
-
-            time_spent = 1000*(time.time()-initial_time)
-            memory_spent = ''
-            if enabled_for_debug:
-                memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
-            logging_level(
-                f"Finished execution of function: {underlined_text}, "
-                f"elapsed time: {time_spent:.2f} ms"
-                f"{memory_spent}")
-
+            after_call(initial_time, initial_memory, process, underlined_text)
             return result
 
-        #Normal version
         @wraps(func)
         def wrapper(*args, **kwargs):
-            enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
-            underlined_text = '\033[4m' + (func.__name__ if not enabled_for_debug else func.__qualname__) + '\033[0m'
-            logging_level(
-                f"Starting execution of function: {underlined_text}" +
-                (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
-            )
-            initial_time = time.time()
-            process = psutil.Process(os.getpid())
-            initial_memory = process.memory_info().rss / 1024 ** 2
-            if before:
-                logging_level(before)
-
+            """ Normal version of the wrapper. """
+            initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
             result = func(*args, **kwargs)
-
-            if after:
-                logging_level(after)
-
-            time_spent = 1000*(time.time()-initial_time)
-            memory_spent = ''
-            if enabled_for_debug:
-                memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
-            logging_level(
-                f"Finished execution of function: {underlined_text}, "
-                f"elapsed time: {time_spent:.2f} ms"
-                f"{memory_spent}")
-
+            after_call(initial_time, initial_memory, process, underlined_text)
             return result
 
         return wrapper if not asyncio.iscoroutinefunction(func) else awrapper
@@ -109,6 +97,10 @@ def logging_before_and_after(logging_level: Callable, before: Optional[str] = No
 
 
 def configure_logging(verbosity: Optional[str] = None, channel: Optional[TextIOWrapper] = stdout):
+    """ Configures the logging module to use the specified verbosity and channel.
+    :param verbosity: The verbosity level to use, can be 'DEBUG', 'INFO' or 'WARNING'.
+    :param channel: The channel to use, can be a file or a stream.
+    """
 
     verbosity = verbosity.upper()
     if verbosity not in ['DEBUG', 'INFO', 'WARNING']:
@@ -116,7 +108,7 @@ def configure_logging(verbosity: Optional[str] = None, channel: Optional[TextIOW
                          f"the value provided is: {verbosity}")
 
     if not hasattr(channel, 'write'):
-        warn("Specified channel doesn't have a 'write' method, using standard output", RuntimeWarning)
+        logger.warning("Specified channel doesn't have a 'write' method, using standard output")
         channel = stdout
 
     _format = f'%(asctime)s | %(levelname)s {"| %(indent)s%(name)s " if verbosity == "DEBUG" else ""}| %(message)s'

@@ -14,8 +14,8 @@ class ReportMetadataApi:
     """
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, parent: 'App', execution_pool_context: ExecutionPoolContext):
-        self._app = parent
+    def __init__(self, app: 'App', execution_pool_context: ExecutionPoolContext):
+        self._app = app
         self.epc = execution_pool_context
 
     @logging_before_and_after(logging_level=logger.debug)

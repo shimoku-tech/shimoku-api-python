@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import datetime as dt
 import json
+import inspect
+from functools import wraps
+import collections.abc
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -63,7 +66,7 @@ def clean_menu_path(menu_path: str) -> Tuple[str, str]:
 
 
 @logging_before_and_after(logging_level=logger.debug)
-def _calculate_percentages_from_list(numbers, round_digits_min):
+def calculate_percentages_from_list(numbers, round_digits_min):
     """Calculate the proportion of each number in a list
     :param numbers: list of numbers
     :param round_digits_min: minimum number of digits to round
@@ -87,3 +90,81 @@ def _calculate_percentages_from_list(numbers, round_digits_min):
         perc = np.round(round_max * numbers / np.sum(numbers), max_precision())
         round_max -= 0.1
     return perc
+
+
+# From https://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
+def deep_update(source, overrides) -> Dict:
+    """
+    Update a nested dictionary or similar mapping.
+    Modify ``source`` in place.
+    """
+    for key, value in overrides.items():
+        if isinstance(value, collections.abc.Mapping) and value:
+            returned = deep_update(source.get(key, {}), value)
+            source[key] = returned
+        else:
+            source[key] = overrides[key]
+    return source
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def get_uuids_from_dict(_dict: dict) -> List[str]:
+    """ Get all uuids from a dictionary. They follow the pattern '#{'id'}'. """
+    uuids = []
+    for k, v in _dict.items():
+        if isinstance(v, dict):
+            uuids.extend(get_uuids_from_dict(v))
+        elif isinstance(v, list):
+            uuids.extend(get_uuids_from_list(v))
+        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+            uuids.append(v[2:-1])
+    return uuids
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def get_uuids_from_list(_list: list) -> List[str]:
+    """ Get all uuids from a list. They follow the pattern '#{'id'}'. """
+    uuids = []
+    for v in _list:
+        if isinstance(v, dict):
+            uuids.extend(get_uuids_from_dict(v))
+        elif isinstance(v, list):
+            uuids.extend(get_uuids_from_list(v))
+        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+            uuids.append(v[2:-1])
+    return uuids
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def get_data_references_from_dict(_dict: dict, previous_keys: Optional[List[Union[str, int]]] = None) -> \
+        List[List[str]]:
+    """ Get all data references from a dictionary. The key is 'data' and the value is None. """
+    if previous_keys is None:
+        previous_keys = []
+    entries = []
+    for k, v in _dict.items():
+        if isinstance(v, dict):
+            entries.extend(get_data_references_from_dict(v, previous_keys=[*previous_keys, k]))
+        elif isinstance(v, list):
+            entries.extend(get_data_references_from_list(v, previous_keys=[*previous_keys, k]))
+        elif k == 'data' and isinstance(v, type(None)):
+            entries.append([*previous_keys])
+    return entries
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def get_data_references_from_list(_list: list, previous_keys: Optional[List[Union[int, str]]] = None
+                                  ) -> List[List[str]]:
+    """ Get all data references from a list. The key is 'data' and the value is None. """
+    if previous_keys is None:
+        previous_keys = []
+    entries = []
+    for i, v in enumerate(_list):
+        if isinstance(v, dict):
+            entries.extend(get_data_references_from_dict(v, previous_keys=[*previous_keys, i]))
+        elif isinstance(v, list):
+            entries.extend(get_data_references_from_list(v, previous_keys=[*previous_keys, i]))
+        elif v == 'data' and isinstance(v, type(None)):
+            entries.append([*previous_keys, v])
+    return entries
+

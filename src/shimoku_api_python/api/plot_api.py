@@ -3337,7 +3337,7 @@ class PlotApi(BasePlot):
         @logging_before_and_after(logging_level=logger.info)
         async def single_indicator(self, *args, **kwargs):
             # Necessary for time logging and correct execution pool handling
-            await self._create_chart(*args, **kwargs)
+            await self._sync_create_chart(*args, **kwargs)
 
         mandatory_elements: List[str] = [
             header, value
@@ -4406,6 +4406,7 @@ class PlotApi(BasePlot):
 
         if 'sort_values' not in df.columns:
             df['sort_values'] = range(len(df))
+
         return self.free_echarts(
             menu_path=menu_path,
             data=df,
@@ -4993,7 +4994,7 @@ class PlotApi(BasePlot):
         filters: Optional[Dict] = None,
         bentobox_data: Optional[Dict] = None,
         tabs_index: Optional[Tuple[str, str]] = None,
-        modal_name: Optional[str] = None,show_values: Optional[List] = None,
+        modal_name: Optional[str] = None, show_values: Optional[List] = None,
         calculate_percentages: bool = False,
     ):
         """Create a stacked barchart
@@ -5745,7 +5746,7 @@ class PlotApi(BasePlot):
                     'nameGap': 35,
                 },
                 'toolbox': toolbox,
-                'dataZoom': [{'show': True},{'type': 'inside'}],
+                'dataZoom': [{'show': True}, {'type': 'inside'}],
                 'series': [
                     {
                         'data': [(point if isinstance(point, list) else list(matrix[point]))
@@ -7780,44 +7781,411 @@ class PlotApi(BasePlot):
     chart_and_indicators = chart_and_indicators
     indicators_with_header = indicators_with_header
 
-
+from typing import Optional, Tuple, Dict, List, Union, Any, Type, TYPE_CHECKING
 from ..resources.app import App
+from ..resources.report import Report
+from ..resources.data_set import DataSet, Mapping
 from ..resources.reports.charts.indicator import Indicator
+from ..resources.reports.charts.echart import EChart
+from ..resources.reports.charts.EChart_definitions.line import line_chart, area_chart, stacked_area_chart
+from ..resources.reports.charts.EChart_definitions.bar import bar_chart, stacked_bar_chart, \
+    horizontal_bar_chart, stacked_horizontal_bar_chart, zero_centered_bar_chart
+from ..resources.reports.charts.EChart_definitions.scatter import scatter_chart
+from ..resources.reports.charts.EChart_definitions.funnel import funnel_chart
+from ..resources.reports.charts.EChart_definitions.tree import tree_chart
+from ..resources.reports.tabs_group import TabsGroup
+from ..resources.reports.modal import Modal
+from shimoku_api_python.resources.reports.charts.iframe import IFrame
+from ..exceptions import TabsError, ModalError, DataError
+from ..utils import deep_update, get_uuids_from_dict, get_data_references_from_dict
 
 
 class NewPlotApi:
+    """ Plot API """
+
+    def _set_mock_functions(self):
+
+        def single_axis_trend_chart(x: str, y: List[str],  data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
+                        x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
+                        title: Optional[str] = None, bottom_toolbox: bool = True, order: int = 0,
+                        rows_size: Optional[int] = None, cols_size: Optional[int] = None,
+                        padding: Optional[List[int]] = None, show_values: Optional[List[str]] = None):
+            pass
+
+        self.line = single_axis_trend_chart
+        self.bar = single_axis_trend_chart
+        self.area = single_axis_trend_chart
+        self.stacked_area = single_axis_trend_chart
+        self.stacked_bar = single_axis_trend_chart
+        self.horizontal_bar = single_axis_trend_chart
+        self.stacked_horizontal_bar = single_axis_trend_chart
+        self.zero_centered_bar = single_axis_trend_chart
 
     def __init__(self, app: Optional[App], execution_pool_context: ExecutionPoolContext):
-        self._app = app
-        self.current_path: Optional[str] = None
         self.epc = execution_pool_context
+        self._app = app
+        self._current_path: Optional[str] = None
+        self._current_tabs_group: Optional[TabsGroup] = None
+        self._current_tab: Optional[str] = None
+        self._current_modal: Optional[Modal] = None
+        self._shared_data_mapping_to_tuple: Optional[str, Tuple] = None
+
+        if TYPE_CHECKING:
+            self._set_mock_functions()
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def raise_if_cant_change_path(self):
+        """Raise an error if a tabs group or a modal is already open. """
+        if self._current_tabs_group:
+            log_error(logger, 'Cannot change path while a tabs group is open', TabsError)
+        if self._current_modal:
+            log_error(logger, 'Cannot change path while a modal is open', ModalError)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def change_path(self, path: str):
+        """ Change the current path """
+        self.raise_if_cant_change_path()
+        self._current_path = path
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_tabs_index(self, tabs_index: Tuple[str, str], order: int,
+                             include_in_previous_tabs_index: bool = False):
+        """ Set the current tabs index.
+        :param tabs_index: the index of the tabs group
+        :param order: the order of the tabs group in the dashboard
+        :param include_in_previous_tabs_index: whether to include the previous tabs group in the tabs index
+        """
+        r_hash = (f'{self._current_path}_' if self._current_path else '') + tabs_index[0]
+        tabs_group: Optional[TabsGroup] = await self._app.get_report(r_hash=r_hash)
+        if not tabs_group:
+            tabs_group: TabsGroup = await self._app.create_report(TabsGroup, r_hash=r_hash, order=order)
+            logger.info(f'Created tabs group {tabs_index[0]} with id {tabs_group["id"]}')
+        elif order:
+            await self._app.update_report(r_hash=tabs_index[0], order=order)
+
+        if include_in_previous_tabs_index:
+            if not self._current_tabs_group:
+                log_error(logger, f'No previous tabs group to include in tabs index', TabsError)
+            if self._current_tabs_group['id'] == tabs_group['id']:
+                log_error(logger, f'Cannot include tabs group in itself', TabsError)
+            if self._current_modal:
+                log_error(logger, f'Cannot include a tabs group in a modal and in another tabs group', TabsError)
+            if not self._current_tabs_group.has_report(tabs_group):
+                self._current_tabs_group.add_report(tabs_group)
+                logger.info(f'Included tabs group {tabs_index[0]} in tabs group {self._current_tabs_group["id"]}')
+        elif self._current_modal and not self._current_modal.has_report(tabs_group):
+            self._current_modal.add_report(tabs_group)
+            logger.info(f'Included tabs group {tabs_index[0]} in modal {self._current_modal["id"]}')
+
+        if self._current_tabs_group:
+            await self._current_tabs_group.update()
+
+        self._current_tabs_group = tabs_group
+        tabs_group.add_tab(tabs_index[1])
+        self._current_tab = tabs_index[1]
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def pop_out_of_tabs_group(self):
+        """ Pop the current tabs index.
+        """
+        if not self._current_tabs_group:
+            log_error(logger, f'No tabs group to pop out of', TabsError)
+
+        if self._current_tabs_group:
+            await self._current_tabs_group.update()
+            logger.info(f'Updated tabs group {self._current_tabs_group["id"]}')
+
+        self._current_tabs_group = None
+        self._current_tab = None
+
+    @logging_before_and_after(logging_level=logger.info)
+    def change_current_tab(self, tab: str):
+        """ Change the current tab.
+        :param tab: the name of the tab
+        """
+        if not self._current_tabs_group:
+            log_error(logger, f'No tabs group to change tab', TabsError)
+
+        self._current_tabs_group.add_tab(tab)
+        self._current_tab = tab
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_modal(self, modal_name: str, width: Optional[int] = None, height: Optional[int] = None,
+                        open_by_default: Optional[bool] = None):
+        """ Set the current modal.
+        :param modal_name: the name of the modal
+        :param width: the width of the modal
+        :param height: the height of the modal
+        :param open_by_default: whether the modal is open by default
+        """
+        if self._current_tabs_group:
+            log_error(logger, f'Cannot set a modal in a tabs group, pop out of the tabs group first', ModalError)
+
+        modal: Optional[Report] = await self._app.get_report(
+            r_hash=(f'{self._current_path}_' if self._current_path else '') + modal_name)
+        if not modal:
+            modal: Report = await self._app.create_report(Modal, r_hash=modal_name,
+                                                          properties={'width': width,
+                                                                      'height': height,
+                                                                      'open': open_by_default})
+            logger.info(f'Created modal {modal_name} with id {modal["id"]}')
+
+        if self._current_modal:
+            await self._current_modal.update()
+
+        self._current_modal = modal
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def pop_out_of_modal(self):
+        """ Pop the current modal. """
+        if not self._current_modal:
+            log_error(logger, f'No modal to pop out of', ModalError)
+
+        if self._current_tabs_group:
+            log_error(logger,
+                      f'Cannot pop out of a modal when in a tabs group, pop out of the tabs group first', ModalError)
+
+        if self._current_modal:
+            await self._current_modal.update()
+            logger.info(f'Updated modal {self._current_modal["id"]}')
+
+        self._current_modal = None
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_data_mapping_to_tuple(self, df: pd.DataFrame, sort: Optional[Dict] = None
+                                         ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
+        """ Get the data mapping to tuple.
+        :param df: the data frame
+        :return: the data mapping to tuple
+        """
+        if 'sort_values' not in df.columns:
+            df['sort_values'] = range(len(df))
+        sort = {'field': 'sort_values', 'direction': 'asc'} if not sort else sort
+        df = df[[col for col in df.columns.tolist() if col != 'sort_values'] + ['sort_values']]
+        value_columns = [col for col in df.columns.tolist() if col != 'sort_values']
+        column_chunks = [value_columns[i:i + 8] for i in range(0, len(value_columns), 8)]
+        data_mapping_to_tuple = {}
+        res_tuples = await asyncio.gather(*[self._app.append_data_to_dataset(df[chunk + ['sort_values']], sort=sort)
+                                            for chunk in column_chunks])
+        for chunk, (mapping, data_set, res_sort) in zip(column_chunks, res_tuples):
+            logger.info(f'Created data set with id {data_set["id"]}')
+            for (col, map_val) in zip(chunk, mapping):
+                data_mapping_to_tuple[col] = (map_val, data_set, res_sort)
+        return data_mapping_to_tuple
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_dict_mapping_to_tuple(self, data: Dict) -> Dict:
+        """ Get the mapping from a dict.
+        :param data: the data
+        :return: the mapping tuple
+        """
+        mapping, data_set, sort = await self._app.append_data_to_dataset(data)
+        logger.info(f'Created data set with id {data_set["id"]}')
+        return {'data': (mapping, data_set, sort)}
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _choose_data(self, data: Optional[Union[str, List[Dict], pd.DataFrame]] = None):
+        """ Get the data mappings of the data. If the data is not provided, the shared data is used. """
+        if data is None:
+            if not self._shared_data_mapping_to_tuple:
+                log_error(logger, 'No data has been specified, please use the data '
+                                  'parameter or set the shared data', DataError)
+            return self._shared_data_mapping_to_tuple
+
+        if isinstance(data, Dict):
+            return await self._get_dict_mapping_to_tuple(data)
+        data = pd.DataFrame(data)
+        return await self._get_data_mapping_to_tuple(data)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def set_shared_data(self, data: Union[Dict, List[Dict], pd.DataFrame],
+                              sort: Optional[Dict] = None):
+        """ Set the shared data.
+        :param data: the shared data
+        :param sort: the sorting options
+        """
+        if isinstance(data, Dict):
+            self._shared_data_mapping_to_tuple = await self._get_dict_mapping_to_tuple(data)
+            return
+        df = pd.DataFrame(data)
+        self._shared_data_mapping_to_tuple = await self._get_data_mapping_to_tuple(df, sort)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def pop_shared_data(self):
+        """ Pop the shared data. """
+        if not self._shared_data_mapping_to_tuple:
+            log_error(logger, f'No shared data to pop', RuntimeError)
+        self._shared_data_mapping_to_tuple = None
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_chart_report(self, chart_class: Type[Report], order: int,
+                                create_if_not_exists: bool = True) -> Tuple[str, Optional[Report]]:
+        r_hash = f'{order}'
+
+        if self._current_tabs_group:
+            r_hash = f'{self._current_tabs_group["properties"]["hash"]}_{self._current_tab}_{order}'
+        elif self._current_modal:
+            r_hash = f'{self._current_modal["properties"]["hash"]}_{order}'
+        elif self._current_path:
+            r_hash = f'{self._current_path}_{order}'
+
+        report = await self._app.get_report(r_hash=r_hash)
+
+        if not report and create_if_not_exists:
+            report = await self._app.create_report(chart_class, r_hash=r_hash, order=order)
+            logger.info(f'Created {chart_class.__name__} with id {report["id"]}')
+
+        return r_hash, report
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_chart(self, chart_class: Type[Report], order: int, **params) -> Report:
+        """ Create a chart and add it to the current tabs group or modal.
+        :param chart_class: the class of the chart
+        :param order: the order of the chart in the dashboard
+        :param params: the arguments of the chart
+        """
+        if 'logging_func_name' in params:
+            del params['logging_func_name']
+
+        r_hash, chart = await self._get_chart_report(chart_class, order, create_if_not_exists=False)
+
+        if not chart:
+            params['order'] = order
+            chart: Report = await self._app.create_report(chart_class, r_hash=r_hash, **params)
+            logger.info(f'Created {chart_class.__name__} with id {chart["id"]}')
+        elif chart != self._app.mock_create_report(chart_class, r_hash=r_hash, order=order, **params):
+            await self._app.update_report(r_hash=r_hash, **params)
+            logger.info(f'Updated {chart_class.__name__} with id {chart["id"]}')
+        else:
+            logger.info(f'No changes needed for {chart_class.__name__} with id {chart["id"]}')
+            return chart
+
+        if self._current_tabs_group:
+            if not self._current_tabs_group.has_report(chart):
+                self._current_tabs_group.add_report(tab=self._current_tab, report=chart)
+                logger.info(f'Included chart {chart["id"]} in tabs group {self._current_tabs_group["id"]}')
+        elif self._current_modal and not self._current_modal.has_report(chart):
+            self._current_modal.add_report(chart)
+            logger.info(f'Included chart {chart["id"]} in modal {self._current_modal["id"]}')
+
+        return chart
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def _sync_create_chart(self, chart_class: Type[Report], order: int, **params) -> Report:
+        """ Sync version of _create_chart. """
+        return await self._create_chart(chart_class, order, **params)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_report_data_sets_per_mapping(
+            self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[str, Tuple, Dict]],
+            ) -> List[Report.ReportDataSet]:
+        """ Create a dataset per field of a dataframe.
+        :param report: the report
+        :param data_mapping_to_tuple: the mapping of the data
+        :param fields: the fields of the data to be used
+        :return: the list of data sets partitioned by axis and fields
+        """
+        tasks = []
+        for i, f in enumerate(fields):
+            mapping = []
+            data_set = None
+            res_sort = None
+            if isinstance(f, str):
+                if f not in data_mapping_to_tuple:
+                    log_error(logger, f'Field {f} not found in data', DataError)
+                mapping, data_set, res_sort = data_mapping_to_tuple[f]
+            elif isinstance(f, tuple):
+                for f_ in f:
+                    if f_ not in data_mapping_to_tuple:
+                        log_error(logger, f'Field {f_} not found in data', DataError)
+                    mapping_, data_set_, res_sort_ = data_mapping_to_tuple[f_]
+                    mapping.append(mapping_)
+                    data_set = data_set if data_set else data_set_
+                    res_sort = res_sort if res_sort else res_sort_
+                    assert data_set == data_set_
+                    assert res_sort == res_sort_
+            elif isinstance(f, dict):
+                mapping = {k: [] for k in f.keys()}
+                for k, f_ in f.items():
+                    if f_ not in data_mapping_to_tuple:
+                        log_error(logger, f'Field {f_} not found in data', DataError)
+                    mapping_, data_set_, res_sort_ = data_mapping_to_tuple[f_]
+                    mapping[k] = mapping_
+                    data_set = data_set if data_set else data_set_
+                    res_sort = res_sort if res_sort else res_sort_
+                    assert data_set == data_set_
+                    assert res_sort == res_sort_
+            else:
+                log_error(logger, f'Field {f} is not a string or a tuple', DataError)
+            tasks.append(report.create_report_dataset(mapping_data_set_sort=(mapping, data_set, res_sort)))
+
+        report_datasets = await asyncio.gather(*tasks)
+        logger.info(f'Created {len(report_datasets)} report dataset links for report {report["id"]}')
+        return report_datasets
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def iframe(self, url: str, order: int, height=640, cols_size: Optional[int] = None,
+                     bentobox_data: Optional[Dict] = None, padding: Optional[str] = None):
+        """ Create an iframe report in the dashboard.
+        :param url: the url of the iframe
+        :param order: the order of the iframe
+        :param height: the height of the iframe
+        :cols_size: the columns that the iframe occupies
+        :bentobox_data: the bentobox data of the iframe
+        :padding: padding
+        """
+        return await self._create_chart(
+            chart_class=IFrame,
+            order=order,
+            path=self._current_path,
+            dataFields=dict(
+                url=url,
+                height=height,
+            ),
+            sizePadding=padding,
+            bentobox=bentobox_data,
+            sizeColumns=cols_size,
+            sizeRows=ceil(height/240),
+        )
 
     @logging_before_and_after(logging_level=logger.info)
     def indicator(
-        self, data: Union[str, pd.DataFrame, List[Dict], Dict],
-        order: Optional[int] = None, rows_size: Optional[int] = 1, cols_size: int = 12,
-        padding: Optional[str] = None,
-        bentobox_data: Optional[Dict] = None,
-        vertical: Union[bool, str] = False
+        self, data: Union[str, pd.DataFrame, List[Dict], Dict], order: int,
+        vertical: Union[bool, str] = False, **report_params
     ):
         """ Create an indicator report in the dashboard.
+        :param data: the data of the indicator
+        :param vertical: whether the indicator is vertical
+        :param report_params: additional report parameters as key-value pairs
         """
-
-        @async_auto_call_manager()
-        @logging_before_and_after(logging_level=logger.info)
-        async def single_indicator(self, **kwargs):
-            # Necessary for time logging and correct execution pool handling
-            await self._app.create_report(Indicator, **kwargs)
-
         df = pd.DataFrame(data if isinstance(data, list) else [data])
         keep_columns = [k for k in df.columns if k in list(Indicator.default_properties.keys())]
         df = df[keep_columns]
 
+        cols_size = report_params.get('cols_size', 12)
+        rows_size = report_params.get('rows_size', 1)
+        bentobox_data = report_params.get('bentobox_data')
+        padding = report_params.get('padding')
+
         len_df = len(df)
         if vertical and (len_df > 1 or isinstance(vertical, str)):
             if not bentobox_data:
+                bento_hash = f'{order}'
+                if self._current_tabs_group:
+                    bento_hash = f'{self._current_tabs_group["properties"]["hash"]}_{bento_hash}'
+                elif self._current_modal:
+                    bento_hash = f'{self._current_modal["properties"]["hash"]}_{bento_hash}'
+
                 bentobox_data = {
-                    'bentoboxId': str(uuid.uuid1()),
+                    'bentoboxId': f'vertical-indicators-{self._app["id"]}-{self._current_path}-{bento_hash}',
                     'bentoboxOrder': order,
                     'bentoboxSizeColumns': cols_size,
                     'bentoboxSizeRows': rows_size * len_df,
@@ -7864,15 +8232,16 @@ class NewPlotApi:
             elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
-            single_indicator(
-                self=self,
-                path=self.current_path,
+            self._sync_create_chart(
+                chart_class=Indicator,
+                path=self._current_path,
                 order=order,
                 sizePadding=padding,
                 bentobox=bentobox_data,
                 sizeRows=rows_size,
                 sizeColumns=cols_size,
-                properties=df_row.dropna().to_dict()
+                properties=df_row.dropna().to_dict(),
+                logging_func_name='create indicator',
             )
 
             if isinstance(order, int):
@@ -7880,4 +8249,127 @@ class NewPlotApi:
 
         return order
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_echart(self, options: Dict, order: int, data_mapping_to_tuples: Dict,
+                             fields: List[Union[str, Tuple, Dict]],
+                             **report_params):
+        """ Create an echart in the dashboard, fill in the data referenced in the echart_options and create or
+        update the chart and dataset links.
+        :param options: the options of the echart
+        :param data_mapping_to_tuples: the mapping of the data to the tuples
+        :param report_params: additional report parameters as key-value pairs"""
+        data_key_entries = get_data_references_from_dict(options)
+        _, report = await self._get_chart_report(EChart, order=order)
+        # Not the safest option find other options
+        # report_data_set_ids_in_use = get_uuids_from_dict(report['properties']['option'])
+        # # await asyncio.gather(*[report.delete_report_dataset(uuid=r_id) for r_id in report_data_set_ids_in_use])
+        # logger.info(f'Deleted {len(report_data_set_ids_in_use)} report dataset links for report {report["id"]}')
+        rep_ds = await self._get_report_data_sets_per_mapping(report, data_mapping_to_tuples, fields)
 
+        for i, data_key_entry in enumerate(data_key_entries):
+            data = options
+            for key in data_key_entry:
+                data = data[key]
+            data['data'] = '#{'+rep_ds[i]["id"]+'}'
+
+        await self._create_chart(
+            chart_class=EChart,
+            path=self._current_path,
+            properties={'option': options},
+            order=order,
+            title=report_params.get('title'),
+            sizePadding=report_params.get('padding'),
+            bentobox=report_params.get('bentobox'),
+            sizeRows=report_params.get('rows_size'),
+            sizeColumns=report_params.get('cols_size'),
+        )
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_trend_chart(
+        self,
+        axes: Union[List[str], str],
+        order: int,
+        data_mapping_to_tuples: Optional[Dict],
+        echart_options: Dict,
+        series_options: Union[Dict, List[Dict]],
+        values: Optional[Union[List[Union[str, Tuple]], str, Tuple]] = None,
+        x_axis_names: Optional[Union[str, List[str]]] = None,
+        y_axis_names: Optional[Union[str, List[str]]] = None,
+        bottom_toolbox: Optional[bool] = False,
+        show_values: Optional[Union[List[str], str]] = None,
+        **report_params
+    ):
+        """ Create a line chart in the dashboard.
+        :param data: the data of the chart
+        :param axes: the names of the columns to be used as axis
+        :param values: the names of the columns to be used as values
+        :param x_axis_names: the name of the x axes
+        :param y_axis_names: the name of the y axes
+        :param echart_options: the options of the chart
+        :param series_options: the options of the series of the chart
+        :param bottom_toolbox: whether to show the toolbox on top of the chart
+        :param order: the order of the chart in the dashboard
+        :param report_params: additional report parameters as key-value pairs
+        """
+        if isinstance(axes, str):
+            axes = [axes]
+        if isinstance(values, str) or isinstance(values, Tuple):
+            values = [values]
+        if isinstance(x_axis_names, str):
+            x_axis_names = [x_axis_names]
+        if isinstance(y_axis_names, str):
+            y_axis_names = [y_axis_names]
+
+        values = [v for v in data_mapping_to_tuples.keys() if v not in axes] if values is None else values
+
+        remove_data_zoom = x_axis_names is not None
+        for i, axis_options in enumerate(echart_options['xAxis']):
+            axis_options['name'] = x_axis_names[i] if x_axis_names else None
+
+        for i, axis_options in enumerate(echart_options['yAxis']):
+            axis_options['name'] = y_axis_names[i] if y_axis_names else None
+
+        if bottom_toolbox:
+            del echart_options['toolbox']['top']
+            echart_options['toolbox']['bottom'] = "0px"
+            echart_options['legend']['padding'][1] = 5
+            remove_data_zoom = True
+
+        if remove_data_zoom:
+            echart_options['dataZoom'] = []
+            echart_options['grid']['bottom'] = '40px'
+
+        if isinstance(series_options, Dict):
+            series_options = [series_options] * len(values)
+        elif len(series_options) < len(values):
+            series_options = series_options + [series_options[-1]] * (len(values) - len(series_options))
+        elif len(series_options) > len(values):
+            series_options = series_options[:len(values)]
+
+        echart_options['series'] = [
+            deep_update({
+                'name': name if isinstance(name, str) else ' × '.join(name),
+                'label': {'show': show_values == 'all' or name in show_values} if show_values else None,
+            }, series_options[i])
+            for i, name in enumerate(values)
+        ]
+
+        await self._create_echart(
+            order=order,
+            options=echart_options,
+            data_mapping_to_tuples=data_mapping_to_tuples,
+            fields=axes + values,
+            **report_params
+        )
+
+    line = line_chart
+    bar = bar_chart
+    stacked_bar = stacked_bar_chart
+    area = area_chart
+    stacked_area = stacked_area_chart
+    scatter = scatter_chart
+    horizontal_bar = horizontal_bar_chart
+    stacked_horizontal_bar = stacked_horizontal_bar_chart
+    zero_centered_bar = zero_centered_bar_chart
+    funnel = funnel_chart
+    tree = tree_chart

@@ -3,6 +3,7 @@ from typing import Optional, List, Dict, TYPE_CHECKING
 
 from ..base_resource import Resource
 from ..utils import clean_menu_path
+from ..exceptions import BusinessError
 from .role import Role, create_role, get_role, get_roles, delete_role
 from .dashboard import Dashboard
 from .app import App
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
     from .universe import Universe
 
 import logging
-from ..execution_logger import logging_before_and_after
+from ..execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -34,8 +35,12 @@ class Business(Resource):
                          check_params_before_creation=['name'], params_to_serialize=['theme'],
                          params=params)
 
+        self.currently_in_use = False
+
     @logging_before_and_after(logger.debug)
     async def delete(self):
+        if self.currently_in_use:
+            log_error(logger, f'Business {str(self)} is currently in use and cannot be deleted', BusinessError)
         return await self._base_resource.delete()
 
     @logging_before_and_after(logger.debug)
@@ -69,10 +74,16 @@ class Business(Resource):
     @logging_before_and_after(logger.debug)
     async def get_dashboard(self, uuid: Optional[str] = None, name: Optional[str] = None,
                             create_if_not_exists: bool = True) -> Optional[Dashboard]:
-        dashboard = await self._base_resource.get_child(Dashboard, uuid, name, create_if_not_exists)
+        dashboard = await self._base_resource.get_child(Dashboard, uuid, name)
 
         if dashboard:
             logger.info(f'Retrieved dashboard {dashboard["name"]} with id {dashboard["id"]}')
+        elif create_if_not_exists:
+            if not name:
+                log_error(logger, f'Name is required to create a dashboard', ValueError)
+            how_many_dashboards = len(await self.get_dashboards())
+            dashboard = await self._base_resource.create_child(Dashboard, alias=name, order=how_many_dashboards + 1)
+            logger.info(f'Created dashboard {dashboard["name"]} with id {dashboard["id"]}')
 
         return dashboard
 
@@ -93,10 +104,16 @@ class Business(Resource):
         if menu_path:
             name, _ = clean_menu_path(menu_path=menu_path)
 
-        app = await self._base_resource.get_child(App, uuid, name, create_if_not_exists)
+        app = await self._base_resource.get_child(App, uuid, name)
 
         if app:
             logger.info(f'Retrieved app {app["name"]} with id {app["id"]}')
+        elif create_if_not_exists:
+            if not name:
+                log_error(logger, f'Name is required to create an app', ValueError)
+            how_many_apps = len(await self.get_apps())
+            app = await self._base_resource.create_child(App, alias=name, order=how_many_apps + 1)
+            logger.info(f'Created app {app["name"]} with id {app["id"]}')
 
         return app
 

@@ -2,10 +2,9 @@
 from os import getenv
 from typing import Dict, List
 import unittest
-import asyncio
 
 import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
+from shimoku_api_python.exceptions import AppError, CacheError
 from tenacity import RetryError
 
 api_key: str = getenv('API_TOKEN')
@@ -22,9 +21,9 @@ s = shimoku.Client(
     config=config,
     universe_id=universe_id,
     environment=environment,
-    business_id=business_id,
     verbosity=verbosity,
 )
+s.set_business(uuid=business_id)
 
 app_name = 'Main test app'
 app_id = s.app.get_app(menu_path=app_name)['id']
@@ -107,22 +106,19 @@ def test_create_and_delete_app():
     t.check_app_not_exists(app['id'])
 
 
-#TODO make it work
 def test_get_app_reports():
     reports: List[Dict] = s.app.get_app_reports(menu_path=app_name)
     assert reports
     assert reports[0]
 
 
-#TODO make it work
 def test_get_app_report_ids():
-    report_ids: List[str] = s.app.get_app_report_ids(menu_path=app_name)
+    report_ids: List[str] = [r['id'] for r in s.app.get_app_reports(menu_path=app_name)]
     assert report_ids
     assert len(report_ids[0]) > 0
     assert isinstance(report_ids[0], str)
 
 
-#TODO make it work
 def test_get_app_path_names():
     path_names: List[str] = s.app.get_app_path_names(menu_path=app_name)
     assert path_names
@@ -167,10 +163,20 @@ test_get_fake_app()
 test_update_app()
 test_create_and_delete_app()
 test_get_app_activities()
-# TODO make them work
+s.set_menu_path(f'{app_name}/test')
+s.plt.html(html='<h1>test</h1>', order=0)
 test_get_app_reports()
 test_get_app_report_ids()
 test_get_app_path_names()
 
 
-s.run()
+class AuxTest(unittest.TestCase):
+    def test_fake_app(self):
+        with self.assertRaises(AppError):
+            s.app.delete_app(menu_path=app_name)
+
+
+t = AuxTest()
+t.test_fake_app()
+s.pop_out_of_menu_path()
+s.app.delete_app(menu_path=app_name)

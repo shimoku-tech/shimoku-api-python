@@ -52,7 +52,7 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
             enabled_for_debug = logging.root.isEnabledFor(logging.DEBUG)
             func_name = (func.__name__ if not enabled_for_debug else func.__qualname__)
             if 'logging_func_name' in kwargs:
-                func_name = kwargs['logging_func_name']
+                func_name = kwargs.pop('logging_func_name')
 
             underlined_text = '\033[4m' + func_name + '\033[0m'
             logging_level(
@@ -79,6 +79,8 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
         async def awrapper(*args, **kwargs):
             """ Async version of the wrapper. """
             initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
+            if 'logging_func_name' in kwargs:
+                kwargs.pop('logging_func_name')
             result = await func(*args, **kwargs)
             after_call(initial_time, initial_memory, process, underlined_text)
             return result
@@ -87,6 +89,8 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             """ Normal version of the wrapper. """
             initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
+            if 'logging_func_name' in kwargs:
+                kwargs.pop('logging_func_name')
             result = func(*args, **kwargs)
             after_call(initial_time, initial_memory, process, underlined_text)
             return result

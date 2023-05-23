@@ -1,12 +1,15 @@
 import asyncio
 
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Tuple
 from abc import ABC
 
 from ..async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 from ..resources.role import user_delete_role, user_get_role, user_get_roles, user_create_role
 from ..resources.universe import Universe
 from ..resources.business import Business
+from ..resources.app import App
+from ..resources.report import Report
+from ..utils import create_normalized_name
 
 import logging
 from ..execution_logger import logging_before_and_after
@@ -167,6 +170,71 @@ class BusinessMetadataApi(ABC):
             return
         dashboards = await business.get_dashboards()
         await asyncio.gather(*[business.delete_dashboard(uuid=dashboard['id']) for dashboard in dashboards])
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.info)
+    async def change_dashboards_order(self, uuid: Optional[str] = None, name: Optional[str] = None,
+                                      dashboards: List[str] = None):
+        """Change the order of the dashboards of a business
+        :param name: Name of the business
+        :param uuid: UUID of the business
+        :param dashboards: List of dashboard names
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return
+        await asyncio.gather(*[business.update_dashboard(name=d_name, order=i) for i, d_name in enumerate(dashboards)])
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _change_sub_paths_order(self, business: Business, menu_path: str, sub_paths: List[str]):
+        """Change the order of the sub paths of an app
+        :param app: App object
+        :param sub_paths: List of sub paths
+        """
+        app: App = await business.get_app(menu_path=menu_path, create_if_not_exists=False)
+        if not app:
+            logger.warning(f"App with menu path {menu_path} not found")
+            return
+        reports: List[Report] = await app.get_reports()
+        sub_paths = [create_normalized_name(sub_path) for sub_path in sub_paths]
+        non_referenced_reports = [report for report in reports
+                                  if report['path'] is not None and
+                                  create_normalized_name(report['path']) not in sub_paths]
+        how_many_updates = len(non_referenced_reports)
+        tasks = []
+        for i, sub_path in enumerate(sub_paths):
+            _reports = [report for report in reports if create_normalized_name(report['path']) == sub_path]
+            how_many_updates += len(_reports)
+            for report in _reports:
+                tasks.append(app.update_report(uuid=report['id'], pathOrder=i))
+
+        for report in non_referenced_reports:
+            tasks.append(app.update_report(uuid=report['id'], pathOrder=len(sub_paths)))
+
+        logger.info(f'Updating {how_many_updates} reports from app {str(app)}')
+
+        await asyncio.gather(*tasks)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def change_menu_order(self, menu_order: List, uuid: Optional[str] = None, name: Optional[str] = None):
+        """Change the order of the menu of a business
+        :param name: Name of the business
+        :param uuid: UUID of the business
+        :param menu_order: List of menu names
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return
+        tasks = []
+        for i, menu_option in enumerate(menu_order):
+            menu_name = menu_option
+            if isinstance(menu_option, Tuple):
+                menu_name, sub_paths = menu_option
+                tasks.append(self._change_sub_paths_order(business=business, menu_path=menu_name, sub_paths=sub_paths))
+            tasks.append(business.update_app(menu_path=menu_name, order=i))
+
+        await asyncio.gather(*tasks)
 
     # Role management
     get_role = user_get_role

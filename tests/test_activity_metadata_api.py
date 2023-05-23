@@ -17,14 +17,18 @@ s = shimoku.Client(
     environment=environment,
     verbosity=verbose,
     async_execution=async_execution,
-    business_id=business_id,
 )
+s.set_business(uuid=business_id)
 s.set_menu_path(menu_path='test_activity')
 
 activity_name = 'test_activity'
-run_id = getenv('RUN_ID')
 
-activity_id = s.activity.get_activity(name=activity_name)['id']
+_activity = s.activity.get_activity(name=activity_name)
+if not _activity:
+    _activity = s.activity.create_activity(name=activity_name)
+
+activity_id = _activity['id']
+run_id = s.activity.create_run(uuid=activity_id)['id']
 
 
 class MyTestCase(unittest.TestCase):
@@ -293,31 +297,30 @@ def test_button_and_form_execute_activity():
     """
     Creates a button in the dashboard with the capability to execute an activity.
     """
-    menu_path = 'test-activity'
+    s.set_menu_path('test-activity')
 
-    s.plt.button_execute_activity(
+    s.plt.activity_button(
         activity_name=activity_name, order=0, label='test_button',
-        cols_size=12, align='start', menu_path=menu_path
+        cols_size=12, align='start',
     )
-    s.plt.button_execute_activity(
+    s.plt.activity_button(
         activity_name=activity_name, order=1, label='test_button',
-        cols_size=12, align='center', menu_path=menu_path
+        cols_size=12, align='center'
     )
-    s.plt.button_execute_activity(
+    s.plt.activity_button(
         activity_name=activity_name, order=2, label='test_button',
-        rows_size=2, cols_size=12, align='right', menu_path=menu_path
+        rows_size=2, cols_size=12, align='right'
     )
 
     for i in range(6):
-        s.plt.button_execute_activity(
+        s.plt.activity_button(
             activity_name=activity_name, order=3+i, label='test_button',
-            rows_size=2, cols_size=12-i*2, align='stretch', padding=f'0,{i},0,{i}',
-            menu_path=menu_path
+            rows_size=2, cols_size=12-i*2, align='stretch', padding=f'0,{i},0,{i}'
         )
 
-    s.plt.button_execute_activity(
+    s.plt.activity_button(
         activity_name=activity_name, order=9, label='test_button',
-        cols_size=12, align='center', menu_path=menu_path
+        cols_size=12, align='center'
     )
 
     form_sent = (
@@ -339,9 +342,9 @@ def test_button_and_form_execute_activity():
         "</div>"
     )
 
-    s.plt.html(
-        html=form_sent, modal_name='Activity called', order=0, menu_path=menu_path
-    )
+    s.plt.set_modal(modal_name='Activity called')
+    s.plt.html(html=form_sent, order=0)
+    s.plt.pop_out_of_modal()
 
     form_groups = {
         'Personal information': [
@@ -354,10 +357,9 @@ def test_button_and_form_execute_activity():
     }
 
     s.plt.generate_input_form_groups(
-        order=10, menu_path=menu_path,
-        form_groups=form_groups,
-        acivity_name_to_call_on_submit=activity_name,
-        modal_to_open_on_submit='Activity called',
+        order=10, form_groups=form_groups,
+        activity_name=activity_name,
+        modal='Activity called',
     )
     if async_execution:
         s.activate_async_execution()
@@ -372,6 +374,6 @@ if __name__ == '__main__':
     test_create_get_run_logs()
     test_default_activity_settings()
     test_get_run_logs()
-    test_execute_activity()
+    # test_execute_activity()
     test_button_and_form_execute_activity()
     s.activity.get_activities(pretty_print=True)

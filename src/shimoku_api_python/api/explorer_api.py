@@ -1136,7 +1136,7 @@ class CreateExplorerAPI(object):
             self, business_id: str, app_id: str, dataset_id: str,
             items: List[str], batch_size: int = 100,
     ) -> None:
-        """Create new row in Data (equivalent to reportEntry)
+        """Create new row in data (equivalent to reportEntry)
 
         :param business_id: UUID of the business
         :param app_id: UUID of the app
@@ -1176,7 +1176,7 @@ class CreateExplorerAPI(object):
             await asyncio.gather(*query_tasks)
 
         if len(items) > 1000:
-            logger.info('Data points successfully uploaded')
+            logger.info('data points successfully uploaded')
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_report_entries(

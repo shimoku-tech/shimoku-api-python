@@ -1,8 +1,6 @@
 from os import getenv
 import shimoku_api_python as shimoku
-from tenacity import RetryError
 import unittest
-import asyncio
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -18,8 +16,8 @@ s = shimoku.Client(
     environment=environment,
     verbosity=verbose,
     async_execution=async_execution,
-    business_id=business_id,
 )
+s.set_business(uuid=business_id)
 
 
 class TestRoles(unittest.TestCase):

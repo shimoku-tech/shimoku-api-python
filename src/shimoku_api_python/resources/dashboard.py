@@ -3,13 +3,14 @@ from typing import Optional, List, Dict, TYPE_CHECKING
 import asyncio
 
 from ..base_resource import Resource, ResourceCache
+from ..exceptions import DashboardError
 from .role import Role, create_role, get_role, get_roles, delete_role
 from .app import App
 if TYPE_CHECKING:
     from .business import Business
 
 import logging
-from ..execution_logger import logging_before_and_after
+from ..execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -60,9 +61,13 @@ class Dashboard(Resource):
                          children=[Dashboard.AppDashboard, Role],
                          check_params_before_creation=['name'], params=params)
 
+        self.currently_in_use = False
+
     @logging_before_and_after(logger.debug)
     async def delete(self):
         """ Deletes the dashboard """
+        if self.currently_in_use:
+            log_error(logger, f'Business {str(self)} is currently in use and cannot be deleted', DashboardError)
         return await self._base_resource.delete()
 
     @logging_before_and_after(logger.debug)

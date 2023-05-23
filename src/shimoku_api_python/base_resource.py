@@ -26,15 +26,18 @@ class ResourceCache:
         self._cache: Dict[str: IsResource] = {}
         self._aliases: Dict[str: str] = {}
         self._listed = False
-        self.listing_lock = None
+        self._listing_lock = None
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def list(self) -> List[IsResource]:
+    async def list(self, limit: Optional[int] = None) -> List[IsResource]:
+        """ List all child resources
+        :param limit: Limit the number of resources to be listed
+        :return: List of resources
+        """
+        if not self._listing_lock:
+            self._listing_lock = asyncio.Lock()
 
-        if not self.listing_lock:
-            self.listing_lock = asyncio.Lock()
-
-        async with self.listing_lock:
+        async with self._listing_lock:
 
             if self._listed:
                 return list(self._cache.values())
@@ -45,11 +48,13 @@ class ResourceCache:
 
             resources_raw: Dict = await (
                 self._parent.api_client.query_element(
-                    endpoint=endpoint, method='GET',
+                    endpoint=endpoint, method='GET', limit=limit
                 )
             )
             try:
-                resources = resources_raw.get('items')
+                resources = resources_raw.get('items') if isinstance(resources_raw, dict) else resources_raw
+                if not isinstance(resources, list):
+                    raise AttributeError()
             except AttributeError:
                 logger.warning("Resource's json should have an 'items' field")
                 return []
@@ -70,6 +75,7 @@ class ResourceCache:
 
                 resource.empty_changed_params()
 
+        self._listing_lock = None
         return list(self._cache.values())
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -176,13 +182,6 @@ class ResourceCache:
     def cascade_to_dict(self) -> List[Dict[str, Any]]:
         return [resource.cascade_to_dict() for resource in self._cache.values()]
 
-    # @logging_before_and_after(logging_level=logger.debug)
-    def cascade_update_locks(self):
-        """ Update the local lock and the locks of all the resources in the cache"""
-        self.listing_lock = asyncio.Lock()
-        for resource in self._cache.values():
-            resource.cascade_update_locks()
-
     @logging_before_and_after(logging_level=logger.debug)
     def clear(self):
         self._cache = {}
@@ -250,9 +249,9 @@ class BaseResource:
             self.id = await self.create()
         else:
             await self.get()
-            await asyncio.gather(*[cache.list() for cache in self.children.values()])
 
         if self.await_children:
+            await asyncio.gather(*[cache.list() for cache in self.children.values()])
             await asyncio.gather(*[child[1] for c_l in self.children.values() for child in c_l])
 
         return self.wrapper_class_instance
@@ -290,12 +289,18 @@ class BaseResource:
 
             assert isinstance(self.params[field], (dict, list))
 
-        return (await(
+        obj = await(
             self.api_client.query_element(
                 method='POST', endpoint=endpoint,
                 **{'body_params': params}
             )
-        ))['id']
+        )
+
+        for k, v in obj.items():
+            if k in self.params:
+                self.params[k] = v if k not in self.params_to_serialize else json.loads(v)
+
+        return obj['id']
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update(self):
@@ -365,7 +370,7 @@ class BaseResource:
                 )
             await asyncio.gather(*query_tasks)
 
-        logger.info("Data uploaded") if not disable else None
+        logger.info("data uploaded") if not disable else None
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_child(self, resource_class: Type[IsResource], **kwargs) -> IsResource:
@@ -406,12 +411,13 @@ class BaseResource:
         return await self.children[resource_class].update(uuid=uuid, alias=alias, **params)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_children(self, resource_class: Type[IsResource]) -> List[IsResource]:
+    async def get_children(self, resource_class: Type[IsResource], limit: Optional[int] = None) -> List[IsResource]:
         """ Gets all children of a given resource class.
         :param resource_class: The class of the resources to get.
+        :param limit: The maximum number of resources to get.
         :return: A list of resources.
         """
-        return await self.children[resource_class].list()
+        return await self.children[resource_class].list(limit)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_child(
@@ -447,6 +453,12 @@ class BaseResource:
         """
         return await self.children[resource_class].delete(uuid, alias)
 
+    @logging_before_and_after(logging_level=logger.debug)
+    def clear(self):
+        """ Clears the cache. """
+        for resource_cache in self.children.values():
+            resource_cache.clear()
+
     # @logging_before_and_after(logging_level=logger.debug)
     def cascade_to_dict(self) -> Dict[str, Any]:
         """ Returns a dictionary representation of the resource and its children.
@@ -462,18 +474,15 @@ class BaseResource:
 
         return resource_dict
 
-    # @logging_before_and_after(logging_level=logger.debug)
-    def cascade_update_locks(self):
-        """ Updates the locks of all children. """
-        for resource_class, children in self.children.items():
-            children.cascade_update_locks()
-
     def __str__(self):
         """ Returns a string representation of the resource. """
+        alias = None
         if self.alias_field:
-            return self.params[self.alias_field] if not isinstance(self.alias_field, Tuple) \
-                else self.params[self.alias_field[0]][self.alias_field[1]]
-        return self.id
+            if isinstance(self.alias_field, Tuple):
+                alias = self.params[self.alias_field[0]][self.alias_field[1]]
+            else:
+                alias = self.params[self.alias_field]
+        return self.id if not alias else alias
 
     def __eq__(self, other):
         """ Returns True if the resource is equal to another resource. """
@@ -542,10 +551,10 @@ class Resource(ABC):
         """ Returns a dictionary representation of the resource and its children. """
         return self._base_resource.cascade_to_dict()
 
-    # @logging_before_and_after(logging_level=logger.debug)
-    def cascade_update_locks(self):
-        """ Updates all locks of the children. """
-        self._base_resource.cascade_update_locks()
+    @logging_before_and_after(logging_level=logger.debug)
+    def clear(self):
+        """ Clears the resource. """
+        self._base_resource.clear()
 
     @logging_before_and_after(logging_level=logger.debug)
     def set_params(self, **kwargs):
@@ -584,7 +593,7 @@ class Resource(ABC):
                 and not isinstance(self._base_resource.params[key], type(None)) and not isinstance(value, type(None)):
             log_error(logger, f"Value {value} with type {value.__class__} for parameter {key} "
                               f"is not of type {self._base_resource.params[key].__class__}", ValueError)
-        self._base_resource.params[key] = value if value else class_type()
+        self._base_resource.params[key] = value if value is not None else class_type()
         self._base_resource.changed_params.add(key)
 
     def __contains__(self, item):

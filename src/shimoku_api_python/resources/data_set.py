@@ -2,6 +2,7 @@ import json
 
 import datetime as dt
 import pandas as pd
+import asyncio
 from copy import deepcopy
 from typing import List, Dict, Optional, Union, Tuple, TYPE_CHECKING, TypeVar
 
@@ -16,12 +17,13 @@ logger = logging.getLogger(__name__)
 
 Mapping = TypeVar('Mapping', bound=Union[Dict, List[str], str])
 
+
 @logging_before_and_after(logging_level=logger.debug)
 def convert_input_data_to_db_items(
-    data: Union[List[Dict], Dict], sort: Optional[Dict] = None
+    data: Union[List[Dict], Dict], sort: Optional[Dict] = None, dump_whole: bool = False
 ) -> Union[List[Dict], Dict]:
     """Given an input data, for all the keys of the data convert it to
-     a Shimoku body parameter for Data table
+     a Shimoku body parameter for data table
 
       stringField1: String
       stringField2: String
@@ -76,14 +78,21 @@ def convert_input_data_to_db_items(
              }
         ]
     """
-    if type(data) == dict:
+    if dump_whole:
         return {'customField1': data}
     elif type(data) == list:
         d = {}
         str_counter = 0
         float_counter = 0
         date_counter = 0
+        # TODO: Check all data not just the first one
         for k, v in data[0].items():
+            if str_counter > 8:
+                raise ValueError('Too many string fields')
+            if float_counter > 8:
+                raise ValueError('Too many int fields')
+            if date_counter > 5:
+                raise ValueError('Too many date fields')
             type_v = type(v)
             if type_v == str:
                 str_counter += 1
@@ -116,6 +125,7 @@ class DataSet(Resource):
     """
 
     resource_type = 'dataSet'
+    alias_field = 'name'
     plural = 'dataSets'
 
     class DataPoint(Resource):
@@ -127,12 +137,19 @@ class DataSet(Resource):
         def __init__(self, parent: 'DataSet', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
 
             params = dict(
-                reportId=parent['id'],
+                dataSetId=parent['id'],
+                orderField1=None,
+                description=None,
+                customField1={},
             )
+            for i in range(1, 6):
+                params.update({f'dateField{i}': None})
+            for i in range(1, 9):
+                params.update({f'stringField{i}': None})
+                params.update({f'intField{i}': None})
 
             super().__init__(parent=parent, db_resource=db_resource, uuid=uuid, params=params,
-                             check_params_before_creation=['reportId'],
-                             params_to_serialize=['properties'])
+                             params_to_serialize=['customField1'])
 
         @logging_before_and_after(logging_level=logger.debug)
         async def delete(self):
@@ -145,9 +162,14 @@ class DataSet(Resource):
             return await self._base_resource.update()
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, parent: 'App', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
+    def __init__(self, parent: 'App', uuid: Optional[str] = None, alias: Optional[str] = None,
+                 db_resource: Optional[Dict] = None):
 
-        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[self.DataPoint])
+        params = dict(
+            name=alias,
+        )
+        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[self.DataPoint],
+                         check_params_before_creation=['name'], params=params)
 
     @logging_before_and_after(logging_level=logger.debug)
     def delete(self):
@@ -156,17 +178,38 @@ class DataSet(Resource):
 
     # DataPoint methods
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_data_points(self, data_points: Union[List[Dict], Dict], sort: Optional[Dict] = None
-                                 ) -> Tuple[Mapping, Dict]:
+    async def create_data_points(self, data_points: Union[List[Dict], Dict], sort: Optional[Dict] = None,
+                                 dump_whole: bool = False) -> Tuple[Mapping, Dict]:
         """ Create data points for a report
         :param data_points: data points to be created
         :param sort: sort parameter
+        :param dump_whole: whether to dump the whole data into a single field
         :return: mapping
         """
         copy_sort = deepcopy(sort) if sort else None
-        converted_data_points = convert_input_data_to_db_items(data_points, copy_sort)
+        converted_data_points = convert_input_data_to_db_items(data_points, copy_sort, dump_whole=dump_whole)
         if isinstance(converted_data_points, Dict):
             converted_data_points = [converted_data_points]
         await self._base_resource.create_children_batch(self.DataPoint, converted_data_points, unit=' data points')
         keys = [k for k in converted_data_points[0].keys() if not copy_sort or copy_sort['field'] != k]
         return keys, copy_sort
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_data_points(self):
+        """ Delete data points """
+        data_points = await self._base_resource.get_children(self.DataPoint)
+        if data_points:
+            await asyncio.gather(*[self._base_resource.delete_child(self.DataPoint, uuid=dp['id'])
+                                   for dp in data_points])
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_data_points(self, limit: Optional[int] = None):
+        """ Get data points """
+        self.clear()
+        return await self._base_resource.get_children(self.DataPoint, limit=limit)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def get_one_data_point(self) -> Optional['DataSet.DataPoint']:
+        """ Get one data point """
+        data_points = await self._base_resource.get_children(self.DataPoint, limit=1)
+        return data_points[0] if data_points else None

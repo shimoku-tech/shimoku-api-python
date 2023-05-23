@@ -11,9 +11,6 @@ from requests.exceptions import Timeout, ReadTimeout
 
 import pandas as pd
 
-from shimoku_api_python.api.plot_api import BasePlot, PlotApi
-
-
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
@@ -80,7 +77,7 @@ def with_retries(
 
 class AiAPI:
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, plot_api: PlotApi, **kwargs):
+    def __init__(self, plot_api: Any, **kwargs):
         self._plot_api = plot_api
 
         if kwargs.get('business_id'):

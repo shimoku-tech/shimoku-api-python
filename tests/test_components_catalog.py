@@ -24,9 +24,10 @@ s = shimoku.Client(
     access_token=api_key,
     universe_id=universe_id,
     environment=environment,
-    business_id=business_id,
     verbosity=verbosity
 )
+s.set_business(uuid=business_id)
+
 s.activate_async_execution()
 
 components = [f for _, f in s.html_components.__dict__.items() if callable(f)]
@@ -71,6 +72,7 @@ for component_function in components:
         continue
     print(f'passed {component_function.__name__}')
     html = component_function(**call_parameters)
-    s.plt.html(html=html, menu_path=f"Components test/{component_function.__name__}", order=0)
+    s.set_menu_path(f"Components test/{component_function.__name__}")
+    s.plt.html(html=html, order=0)
 
 s.run()

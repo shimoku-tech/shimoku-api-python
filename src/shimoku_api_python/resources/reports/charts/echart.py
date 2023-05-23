@@ -20,11 +20,11 @@ default_toolbox_options = {
     'itemGap': 24,
     'showTitle': True,
     'zlevel': 100,
-    'top': "0px",
-    'right': "24px",
+    'bottom': 0,
+    'right': '24px',
     'feature': {
         'dataView': {
-            'title': 'Data',
+            'title': 'data',
             'readOnly': False,
             'icon': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a555461a3684b16d544e_database.svg',
             'emphasis': {
@@ -73,12 +73,16 @@ default_toolbox_options = {
 
 
 def get_common_echart_options() -> Dict[str, Any]:
+    # toolbox_options = deepcopy(default_toolbox_options)
+    # if bottom_toolbox:
+    #     del toolbox_options['top']
+    #     toolbox_options['bottom'] = "0px"
     return deepcopy({
         'legend': {
             'show': True,
             'type': 'scroll',
             'icon': 'circle',
-            'padding': [5, 400, 5, 5],
+            'padding': [5, 5, 5, 5],
         },
         'tooltip': {
             'trigger': 'item',
@@ -86,27 +90,22 @@ def get_common_echart_options() -> Dict[str, Any]:
         },
         'toolbox': default_toolbox_options,
         'xAxis': [{
-            'data': None,
+            'data': '#set_data#',
             'type': 'category',
             'fontFamily': 'Rubik',
             'name': "",
             'nameLocation': 'middle',
-            'boundaryGap': True,
-            'nameGap': 35,
         }],
         'yAxis': [{
             'name': "",
             'nameLocation': 'middle',
-            'nameGap': 35,
-            'boundaryGap': True,
             'type': 'value',
             'fontFamily': 'Rubik',
         }],
-        'dataZoom': [{'show': True}, {'type': 'inside'}],
         'grid': {
-            'left': '32px',
-            'right': '32px',
-            'bottom': '55px',
+            'left': '1%',
+            'right': '2%',
+            'bottom': 48,
             'containLabel': True
         },
     })
@@ -114,7 +113,7 @@ def get_common_echart_options() -> Dict[str, Any]:
 
 def get_common_series_options() -> Dict[str, Any]:
     return deepcopy({
-        'data': None,
+        'data': '#set_data#',
         'emphasis': {'focus': 'series'},
         'smooth': True,
         'itemStyle': {'borderRadius': [9, 9, 0, 0]},

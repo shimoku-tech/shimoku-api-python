@@ -19,8 +19,8 @@ s = shimoku.Client(
     environment=environment,
     verbosity=verbose,
     async_execution=async_execution,
-    business_id=business_id,
 )
+s.set_business(uuid=business_id)
 
 
 def delete_dashboard_if_exists(name):

@@ -1,10 +1,8 @@
 """"""
 import json
+import time
 from os import getenv
 from typing import Dict, List
-import asyncio
-
-import datetime as dt
 
 import pandas as pd
 
@@ -14,22 +12,17 @@ import shimoku_api_python as shimoku
 access_token: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
-app_id: str = getenv('APP_ID')
-report_id: str = getenv('REPORT_ID')
 verbosity: str = getenv('VERBOSITY')
-report_element: Dict[str, str] = dict(
-    business_id=business_id,
-    app_id=app_id,
-    report_id=report_id
-)
 
 
 s = shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
-    business_id=business_id,
     verbosity=verbosity
 )
+s.set_business(uuid=business_id)
+s.set_menu_path('data_set_test')
+s.plt.clear_menu_path()
 
 # Fixtures
 data: Dict = {
@@ -41,121 +34,35 @@ df = pd.DataFrame(data)
 data_json: str = json.dumps(data_oriented)
 
 
-def test_get_report_data():
-    data_: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-    assert data_
+def test_data_sets():
+    global data_oriented
+    s.data.append_to_data_set(name='test-data-set', data=data_oriented)
+    time.sleep(5)
+    data_ = s.data.get_data_from_data_set(name='test-data-set')
+    data_ = sorted(data_, key=lambda x: x['intField1'])
+    data_oriented = sorted(data_oriented, key=lambda x: x['a'])
+    for i in range(len(data_oriented)):
+        assert data_[i]['intField1'] == data_oriented[i]['a']
+        assert data_[i]['intField2'] == data_oriented[i]['b']
+
+    s.data.append_to_data_set(name='test-data-set', data=data_oriented)
+    time.sleep(5)
+    data_ = s.data.get_data_from_data_set(name='test-data-set')
+    data_ = sorted(data_, key=lambda x: x['intField1'])
+    for i in range(len(data_oriented)):
+        assert data_[i*2]['intField1'] == data_oriented[i]['a']
+        assert data_[i*2]['intField2'] == data_oriented[i]['b']
+
+    s.data.replace_data_from_data_set(name='test-data-set', data=data_oriented)
+    time.sleep(5)
+    data_ = s.data.get_data_from_data_set(name='test-data-set')
+    data_ = sorted(data_, key=lambda x: x['intField1'])
+    for i in range(len(data_oriented)):
+        assert data_[i]['intField1'] == data_oriented[i]['a']
+        assert data_[i]['intField2'] == data_oriented[i]['b']
+
+    s.data.delete_data_set(name='test-data-set')
+    assert not s.data.get_data_from_data_set(name='test-data-set')
 
 
-def test_update_report_data():
-    original_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    asyncio.run(s.data.update_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=data_oriented,
-    ))
-
-    new_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    assert new_data == data_oriented
-
-    # Revert it
-
-    asyncio.run(s.data.update_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=original_data,
-    ))
-
-    restored_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    assert restored_data == original_data
-
-
-def test_append_report_data():
-    original_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    asyncio.run(s.data.append_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=data,
-    ))
-
-    asyncio.run(s.data.append_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=df,
-    ))
-
-    asyncio.run(s.data.append_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=data_json,
-    ))
-
-    new_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    assert new_data
-
-    asyncio.run(s.data.update_report_data(
-        business_id=business_id,
-        app_id=app_id,
-        report_id=report_id,
-        report_data=original_data,
-    ))
-
-    restored_data: List[Dict] = asyncio.run(
-        s.data.get_report_data(
-            business_id=business_id,
-            app_id=app_id,
-            report_id=report_id,
-        )
-    )
-
-    assert restored_data == original_data
-
-
-test_get_report_data()
-test_update_report_data()
-test_append_report_data()
+test_data_sets()

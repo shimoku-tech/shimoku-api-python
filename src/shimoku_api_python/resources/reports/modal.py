@@ -1,5 +1,6 @@
 from ..report import Report
 
+import asyncio
 import logging
 from ...execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
@@ -18,17 +19,39 @@ class Modal(Report):
         height=50,
     )
 
+    def __init__(self, *args, **kwargs):
+        self._dirty = False
+        super().__init__(*args, **kwargs)
+
+    @logging_before_and_after(logger.debug)
+    async def update(self, *args, **kwargs) -> bool:
+        """ Update the modal on the server
+        :return: True if the modal was updated, False otherwise
+        """
+        if not self._dirty:
+            return False
+        self._dirty = False
+        await super().update()
+        return True
+
+    @logging_before_and_after(logger.debug)
+    async def delete(self):
+        """ Delete the modal from the server and all its children """
+        await asyncio.gather(*[self._base_resource.parent.delete_report(rd_id)
+                               for rd_id in self['properties']['reportIds']])
+        await super().delete()
+
     @logging_before_and_after(logger.debug)
     def add_report(self, report: Report):
         """ Add report to the modal without saving it to the server
         :param report: report to add
         """
-
         if report['id'] in self['properties']['reportIds']:
             logger.warning(f"Report {report['id']} already in modal")
             return
 
         self['properties']['reportIds'].append(report['id'])
+        self._dirty = True
 
     @logging_before_and_after(logger.debug)
     def remove_report(self, report: Report):
@@ -41,6 +64,7 @@ class Modal(Report):
             return
 
         self['properties']['reportIds'].remove(report['id'])
+        self._dirty = True
 
     @logging_before_and_after(logger.debug)
     def has_report(self, report: Report):
@@ -49,3 +73,8 @@ class Modal(Report):
         """
         return report['id'] in self['properties']['reportIds']
 
+    @logging_before_and_after(logger.debug)
+    def clear_content(self):
+        """ Remove all reports from the tabs group without saving it to the server """
+        self['properties']['reportIds'] = []
+        self._dirty = True

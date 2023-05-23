@@ -164,10 +164,11 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_run_log(self, run_id: str, message: str, severity: Optional[str] = 'INFO',
-                             tags: Optional[Dict[str, str]] = None, pretty_print: bool = False,
-                             uuid: Optional[str] = None, name: Optional[str] = None
-                             ) -> Dict[str, str]:
+    async def create_run_log(
+        self, run_id: str, message: str, severity: Optional[str] = 'INFO',
+        tags: Optional[Dict[str, str]] = None, pretty_print: bool = False,
+        uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> Dict[str, str]:
         """
         Create a log for a run by its id
         :param name: the name of the activity

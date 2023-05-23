@@ -3,7 +3,7 @@ Used as base Mailchimp:
 https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_marketing/api_client.py
 """
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import datetime
 import requests
@@ -24,7 +24,7 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, universe_id: str, environment: str, config=None):
+    def __init__(self, environment: str, config=None):
 
         if config is None:
             config = {}
@@ -46,11 +46,6 @@ class ApiClient(object):
         # semaphor for async api calls
         self.semaphore_limit = 10
         self.semaphore = None
-        self.locks = {
-            'get_create_app': None,
-            'get_create_tab': None,
-            'get_create_modal': None,
-        }
 
         # DEFAULTS
         # Api key
@@ -68,6 +63,7 @@ class ApiClient(object):
             'User-Agent': 'Swagger-Codegen/0.0/python'
         }
         self.set_config(config)
+        self.call_counter = 0
 
         # Default vars
 
@@ -98,7 +94,8 @@ class ApiClient(object):
            before_sleep=my_before_sleep)
     async def call_api(
             self, resource_path, method, path_params=None, query_params=None,
-            header_params=None, body=None, collection_formats=None, **kwargs
+            header_params=None, body=None, collection_formats=None, limit: Optional[int] = None,
+            **kwargs
     ):
         """Create and call the API request with headers, params and others"""
         # header parameters
@@ -136,6 +133,7 @@ class ApiClient(object):
                 return await self.request(
                     method, url, query_params,
                     headers=header_params, body=body,
+                    limit=limit
                 )
         except Exception as err:
             logger.error(str(err))
@@ -188,12 +186,13 @@ class ApiClient(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def query_element(
-            self, method: str, endpoint: str, **kwargs
+            self, method: str, endpoint: str, limit: Optional[int] = None, **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
         :param method: examples are 'GET', 'POST', etc
         :param endpoint: example: 'business/{businessId}/app/{appId}
+        :param limit: limit the number of results returned
         """
         (
             query_params, header_params,
@@ -211,6 +210,7 @@ class ApiClient(object):
                 path_params,
                 query_params,
                 header_params,
+                limit=limit,
                 body=body_params,
                 post_params=form_params,
                 files=local_var_files,
@@ -231,7 +231,7 @@ class ApiClient(object):
         return element_data
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def request(self, method, url, query_params=None, headers=None, body=None):
+    async def request(self, method, url, query_params=None, headers=None, body=None, limit: Optional[int] = None):
         auth = None
         if self.is_basic_auth:
             auth = ('user', self.api_key)
@@ -256,12 +256,13 @@ class ApiClient(object):
 
                 aux_url = url
                 if method == 'GET':
-                    aux_url += (f'?nextToken={next_token}' if next_token else '?limit=100')
+                    aux_url += (f'?nextToken={next_token}' if next_token else f'?limit={limit if limit else 100}')
 
                 logger.debug(f'method:{method}, url: {aux_url}, headers: {headers},'
                              f'query params: {query_params}, body: {body}')
 
                 async with session.request(method, aux_url, params=query_params, json=body, headers=headers) as res:
+                    self.call_counter += 1
                     try:
                         if 'application/json' in res.headers.get('content-type'):
                             data = await res.json()
@@ -272,7 +273,7 @@ class ApiClient(object):
                             raise ApiClientError(data)
 
                         if 'items' in data:
-                            next_token = data.get('nextToken')
+                            next_token = data.get('nextToken') if not limit else None
                             if data_res.get('items'):
                                 data_res['items'].extend(data.get('items'))
                             else:

@@ -1,5 +1,6 @@
-from typing import List, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import List, Dict, Optional, Tuple, TYPE_CHECKING, Type
 
+import asyncio
 from copy import deepcopy
 import pandas as pd
 import datetime as dt
@@ -190,6 +191,8 @@ class Report(Resource):
         return super().__eq__(other)
 
     def __new__(cls, parent: 'App', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
+        if uuid:
+            return super().__new__(cls)
         if cls is Report:
             if db_resource is None:
                 raise ValueError('You must provide a db_resource to create a Report instance')
@@ -206,8 +209,23 @@ class Report(Resource):
                 from .reports.charts.echart import EChart
                 return EChart(parent=parent, uuid=uuid, db_resource=db_resource)
             elif db_resource['reportType'] == 'IFRAME':
-                from shimoku_api_python.resources.reports.charts.iframe import IFrame
+                from .reports.charts.iframe import IFrame
                 return IFrame(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] == 'HTML':
+                from .reports.charts.html import HTML
+                return HTML(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] == 'TABLE':
+                from .reports.charts.table import Table
+                return Table(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] == 'ANNOTATED_ECHART':
+                from .reports.charts.annotated_chart import AnnotatedEChart
+                return AnnotatedEChart(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] == 'BUTTON':
+                from .reports.charts.button import Button
+                return Button(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] == 'FORM':
+                from .reports.charts.input_form import InputForm
+                return InputForm(parent=parent, uuid=uuid, db_resource=db_resource)
             else:
                 raise ValueError(f'Unknown report type {db_resource["reportType"]}')
         else:
@@ -236,21 +254,38 @@ class Report(Resource):
         self['properties'].update(properties)
         self._base_resource.changed_params.add('properties')
 
+    @logging_before_and_after(logger.debug)
+    async def change_report_type(self, report_class: Type['Report']):
+        """ change the report type of the report """
+        logger.info(f'Changing report type from {self.report_type} to {report_class.report_type}')
+        if self.report_type == report_class.report_type:
+            return
+        await self.delete_report_datasets()
+        self['reportType'] = report_class.report_type
+        r_hash = self['properties'].get('hash')
+        self['properties'] = deepcopy(report_class.default_properties)
+        self['properties']['hash'] = r_hash
+        self['dataFields'] = {}
+        self['chartData'] = []
+        self.__class__ = report_class
+
     # ReportDataSet methods
     @logging_before_and_after(logger.debug)
-    async def create_report_dataset(self, mapping_data_set_sort: Tuple[Mapping, DataSet, Dict]) -> 'ReportDataSet':
+    async def create_report_dataset(self, mapping_data_set_sort: Tuple[Optional[Mapping], DataSet, Optional[Dict]],
+                                    properties: Optional[Dict] = None) -> 'ReportDataSet':
         """ Update the report dataset
         :param mapping_data_set_sort: a tuple of mapping, data_set, sort
+        :param properties: the properties to set
         :return: the updated report dataset
         """
         mapping, data_set, sort = mapping_data_set_sort
         data_set_id = data_set['id']
+        properties = properties if properties is not None else {}
+        properties['mapping'] = mapping
+        properties['sort'] = sort
         params = dict(
             dataSetId=data_set_id,
-            properties=dict(
-                mapping=mapping,
-                sort=sort
-            )
+            properties=properties,
         )
         report_data_set = await self._base_resource.create_child(self.ReportDataSet, **params)
         return report_data_set
@@ -275,6 +310,16 @@ class Report(Resource):
         :return: True if the report dataset was deleted, False otherwise
         """
         return await self._base_resource.delete_child(self.ReportDataSet, uuid=uuid)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def delete_report_datasets(self, log: bool = False):
+        """ Delete the datasets and links that are not in use anymore.
+        :param log: if True, log the actions"""
+        report_data_sets = await self.get_report_datasets()
+        await asyncio.gather(*[self._base_resource.delete_child(self.ReportDataSet, uuid=rds['id'])
+                               for rds in report_data_sets])
+        if log:
+            logger.info(f'Deleted {len(report_data_sets)} report dataset links from report at {str(self)}')
 
     # ReportEntry methods
     @logging_before_and_after(logger.debug)

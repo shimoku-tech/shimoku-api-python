@@ -163,7 +163,7 @@ class Activity(Resource):
 
         runs = await self._base_resource.get_children(Activity.Run)
 
-        await asyncio.gather(*runs)
+        await asyncio.gather(*[run.get_logs() for run in runs])
 
         return sorted(runs, key=runs_ordering)[-how_many_runs:]
 

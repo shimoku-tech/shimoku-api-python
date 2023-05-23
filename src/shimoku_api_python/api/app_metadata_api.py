@@ -46,10 +46,12 @@ class AppMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_app(self, uuid: Optional[str] = None, menu_path: Optional[str] = None,
-                         new_name: Optional[str] = None, hide_title: Optional[bool] = None,
-                         hide_path: Optional[bool] = None, show_breadcrumb: Optional[bool] = None,
-                         show_history_navigation: Optional[bool] = None, order: Optional[int] = None):
+    async def update_app(
+        self, uuid: Optional[str] = None, menu_path: Optional[str] = None,
+        new_name: Optional[str] = None, hide_title: Optional[bool] = None,
+        hide_path: Optional[bool] = None, show_breadcrumb: Optional[bool] = None,
+        show_history_navigation: Optional[bool] = None, order: Optional[int] = None
+    ):
         """ Create an app
         :param uuid: uuid of the app
         :param menu_path: menu path in use
@@ -77,6 +79,7 @@ class AppMetadataApi:
         :param uuid: uuid of the app
         :param menu_path: menu path in use
         """
+
         return await self._business.delete_app(uuid=uuid, menu_path=menu_path)
 
     @async_auto_call_manager(execute=True)
@@ -126,6 +129,42 @@ class AppMetadataApi:
         if not app:
             return
         await asyncio.gather(*[app.delete_report(uuid=report['id']) for report in await app.get_reports()])
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_app_path_names(self, uuid: Optional[str] = None, menu_path: Optional[str] = None) -> List[str]:
+        """ Get the path names of an app
+        :param uuid: uuid of the app
+        :param menu_path: menu path in use
+        """
+        app: Optional[App] = await self._get_app_with_warning(uuid=uuid, menu_path=menu_path)
+        if not app:
+            return []
+        return await app.get_paths_in_order()
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_files(self, uuid: Optional[str] = None, menu_path: Optional[str] = None) -> List[Dict]:
+        """ Get the files of an app
+        :param uuid: uuid of the app
+        :param menu_path: menu path in use
+        """
+        app: Optional[App] = await self._get_app_with_warning(uuid=uuid, menu_path=menu_path)
+        if not app:
+            return []
+        return [file.cascade_to_dict() for file in await app.get_files()]
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_all_app_files(self, uuid: Optional[str] = None, menu_path: Optional[str] = None):
+        """ Delete all files of an app
+        :param uuid: uuid of the app
+        :param menu_path: menu path in use
+        """
+        app: Optional[App] = await self._get_app_with_warning(uuid=uuid, menu_path=menu_path)
+        if not app:
+            return
+        await asyncio.gather(*[app.delete_file(uuid=file['id']) for file in await app.get_files()])
 
     # Role management
     get_role = user_get_role

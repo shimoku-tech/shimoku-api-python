@@ -17,13 +17,13 @@ config = {
 s = shimoku.Client(
     config=config,
     universe_id=universe_id,
-    environment='production',
+    verbosity='DEBUG',
 )
 
 
 def test_get_universe_businesses():
     businesses: List[Dict] = (
-        s.universe.get_universe_businesses()
+        s.universe.get_universe_businesses(uuid=universe_id)
     )
     assert businesses
 

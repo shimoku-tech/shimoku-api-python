@@ -1,11 +1,13 @@
-from typing import List, Callable, Dict, Any, Union, Optional, Tuple
-
-from uuid import uuid1
+from typing import List, Callable, Dict, Any, Union, Optional, Tuple, TYPE_CHECKING
 
 import logging
 
 import pandas as pd
 
+if TYPE_CHECKING:
+    from shimoku_api_python.api.plot_api import PlotApi
+from shimoku_api_python.exceptions import BentoboxError
+from shimoku_api_python.utils import create_normalized_name
 from shimoku_components_catalog.html_components import create_h1_title_with_modal
 
 from ....execution_logger import logging_before_and_after, log_error
@@ -14,113 +16,35 @@ logger = logging.getLogger(__name__)
 
 @logging_before_and_after(logging_level=logger.debug)
 def _call_inner_chart_function_with_parameters(
-    self, menu_path: str, order: int, default_rows_size: int, default_cols_size: int,
-    chart_parameters: Dict, bentobox_data: Dict, tabs_index: Tuple[str, str], modal_name: str,
-    chart_function: Optional[Callable] = None,
+    self: 'PlotApi', order: int, default_rows_size: int, default_cols_size: int,
+    chart_parameters: Dict, chart_function: Optional[Callable] = None,
 ) -> Any:
     if not chart_parameters or not isinstance(chart_parameters, Dict):
         chart_parameters = {}
 
-    restricted_parameters = ['menu_path', 'bentobox_data', 'order', 'tabs_index', 'modal']
+    restricted_parameters = ['order']
 
     for parameter in restricted_parameters:
         if parameter in chart_parameters:
             log_error(logger, f'Parameter {parameter} cannot be used in the inner chart', ValueError)
 
     chart_parameters.update(dict(
-        menu_path=menu_path,
-        bentobox_data=bentobox_data,
-        padding='1,0,0,1' if 'padding' not in chart_parameters else chart_parameters['padding'],
         order=order,
+        padding='1,0,0,1' if 'padding' not in chart_parameters else chart_parameters['padding'],
         rows_size=default_rows_size if 'rows_size' not in chart_parameters else chart_parameters['rows_size'],
         cols_size=default_cols_size if 'cols_size' not in chart_parameters else chart_parameters['cols_size'],
-        tabs_index=tabs_index, modal_name=modal_name
     ))
 
     if chart_function is None:
-        chart_function = self.free_echarts
-        chart_options = {
-            'grid': {
-                'show': False,
-                'Top': '0%',
-                'left': '0%',
-                'right': '0%',
-                'bottom': '0%',
-                'containLabel': True
-            },
-            'tooltip': {
-                'show': True,
-                'trigger': 'axis',
-                'axisPointer': {'type': 'line'}
-            },
-            'toolbox': self._default_toolbox_options_top,
-            'xAxis': {
-                'type': 'category',
-                'show': True,
-                'splitLine': {
-                    'show': False
-                },
-                'axisLine': {
-                    'show': False
-                },
-                'axisTick': {
-                    'show': False
-                },
-                'fontFamily': 'rubik',
-                'name': '',
-                'nameLocation': 'middle',
-                'nameGap': 35,
-            },
-            'yAxis': {
-                'type': 'value',
-                'fontFamily': 'rubik',
-                'axisLine': {
-                    'show': False
-                },
-                'axisTick': {
-                    'show': False
-                },
-            },
-            'series': [{
-                'type': 'bar',
-                'smooth': True,
-                'symbol': 'none',
-                'itemStyle': {
-                    'borderRadius': [8, 8, 0, 0]
-                },
-                'emphasis': {
-                    'focus': 'series'
-                },
-                'label': {
-                    'show': False
-                }},
-            ]
-        }
-
-        if 'data' not in chart_parameters:
-            log_error(logger, "The 'data' argument is required for the default inner chart parameters.", ValueError)
-
-        df = self._plot_aux.validate_data_is_pandarable(chart_parameters['data'])
-        if 'sort_values' not in df.columns:
-            df['sort_values'] = range(len(df))
-
-        chart_parameters.update(dict(
-            data=df,
-            options=chart_options if 'options' not in chart_parameters else chart_parameters['options'],
-            sort={
-                'field': 'sort_values',
-                'direction': 'asc',
-            }
-        ))
+        chart_function = self.bar
 
     return chart_function(**chart_parameters)
 
 
 @logging_before_and_after(logging_level=logger.info)
 def infographics_text_bubble(
-    self, menu_path: str, title: str, text: str, order: int, chart_parameters: Dict,
+    self: 'PlotApi', title: str, text: str, order: int, chart_parameters: Dict,
     rows_size: int = 3, cols_size: int = 12, chart_function: Optional[Callable] = None,
-    tabs_index: Optional[Tuple[str, str]] = None, modal_name: Optional[str] = None,
     background_url: Optional[str] = None, background_color: str = 'var(--background-default)',
     bubble_location: str = 'top', image_url: Optional[str] = None, image_size: int = 100,
 ):
@@ -140,16 +64,21 @@ def infographics_text_bubble(
         image_url = 'https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/63332131120af18c03d2b69a_APAME-about.svg'
 
     bentobox_data = {
-        'bentoboxId': str(uuid1()),
+        'bentoboxId': f'{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
     }
 
+    if self._bentobox_data:
+        log_error(logger, 'This function groups a chart and a text bubble with a bentobox,'
+                          ' so it cannot be used inside another bentobox. Please'
+                          ' pop out of the current bentobox before using this function.', BentoboxError)
+    self._bentobox_data = bentobox_data
+
     _call_inner_chart_function_with_parameters(
-        self=self, menu_path=menu_path, order=order+int(not chart_first),
+        self=self, order=order+int(not chart_first),
         default_rows_size=default_rows_size, default_cols_size=default_cols_size,
-        bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name,
         chart_function=chart_function, chart_parameters=chart_parameters
     )
 
@@ -160,16 +89,17 @@ def infographics_text_bubble(
     html_cols_size = 22 - int(not vertical)*(chart_parameters['cols_size'] + sides_padding)
     html_rows_size = 10 * rows_size - int(vertical)*(chart_parameters['rows_size'] + vertical_padding)
 
-    uuid_str = str(uuid1())
+    r_hash = create_normalized_name(self._get_chart_hash(order))
+
     html = (
         "<head>"
-        f"<style>.block-text-{uuid_str}{{padding:24px; "
+        f"<style>.block-text-{r_hash}{{padding:24px; "
         "color: var(--color-black); font-size: 16px;" +
         (f"background-color: {background_color}; " if background_url is None else "") +
         f"background-size:cover; background-repeat: no-repeat;background-image: url('{background_url}');"
         "background-position: center; border-radius:var(--border-radius-m);}</style>"
         "</head>" 
-        f"<div class='block-text-{uuid_str}'>" +
+        f"<div class='block-text-{r_hash}'>" +
         (f"<img src={image_url} width='{image_size}%'>"
          if image_url else "") +
         f"<h1>{title}</h1>"
@@ -179,33 +109,37 @@ def infographics_text_bubble(
 
     self.html(
         html=html,
-        menu_path=menu_path,
-        bentobox_data=bentobox_data,
         order=order+int(chart_first),
         rows_size=html_rows_size,
         cols_size=html_cols_size,
-        padding=f'{int(bubble_location != "bottom")},1,1,1', tabs_index=tabs_index, modal_name=modal_name
+        padding=f'{int(bubble_location != "bottom")},1,1,1'
     )
+
+    self._bentobox_data = None
 
 
 @logging_before_and_after(logging_level=logger.info)
 def chart_and_modal_button(
-    self, menu_path: str, order: int, chart_parameters: Dict, button_modal: str, rows_size: int = 3,
+    self: 'PlotApi', order: int, chart_parameters: Dict, button_modal: str, rows_size: int = 3,
     cols_size: int = 12, chart_function: Optional[Callable] = None, button_label: str = 'Read more',
-    tabs_index: Optional[Tuple[str, str]] = None, modal_name: Optional[str] = None,
     button_side_text: str = "Click on the button to read more about this topic.",
 ):
     bentobox_data = {
-        'bentoboxId': str(uuid1()),
+        'bentoboxId': f'{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
     }
 
+    if self._bentobox_data:
+        log_error(logger, 'This function groups a chart and a button with a bentobox,'
+                          ' so it cannot be used inside another bentobox. Please'
+                          ' pop out of the current bentobox before using this function.', BentoboxError)
+    self._bentobox_data = bentobox_data
+
     _call_inner_chart_function_with_parameters(
-        self=self, menu_path=menu_path, order=order,
+        self=self, order=order,
         default_rows_size=rows_size*10-6, default_cols_size=22,
-        bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name,
         chart_function=chart_function, chart_parameters=chart_parameters
     )
 
@@ -230,20 +164,19 @@ def chart_and_modal_button(
 
         self.html(
             html=html,
-            menu_path=menu_path,
             bentobox_data=bentobox_data,
             order=order + 1,
             rows_size=button_rows_size,
             cols_size=13 + int(0.5*(cols_size-4)),
-            tabs_index=tabs_index, modal_name=modal_name,
             padding='0,1,0,1'
         )
 
     self.modal_button(
-        menu_path=menu_path, order=order + 2, modal_name_to_open=button_modal, label=button_label,
+        order=order + 2, modal_name_to_open=button_modal, label=button_label,
         bentobox_data=bentobox_data, rows_size=button_rows_size, cols_size=2, padding='0,0,0,1',
-        tabs_index=tabs_index, modal_name=modal_name
     )
+
+    self._bentobox_data = None
 
 # Wait until the new iteration of the bentobox is ready
 
@@ -298,24 +231,27 @@ def chart_and_modal_button(
 
 @logging_before_and_after(logging_level=logger.info)
 def chart_and_indicators(
-    self, menu_path: str, order: int, chart_parameters: Dict,
+    self: 'PlotApi', order: int, chart_parameters: Dict,
     indicators_groups: List[Union[pd.DataFrame, List[Dict]]], indicators_parameters: Dict,
     chart_rows_size: int = 3, cols_size: int = 12,
     chart_function: Optional[Callable] = None,
-    tabs_index: Optional[Tuple[str, str]] = None, modal_name: Optional[str] = None,
 ) -> int:
 
     bentobox_data = {
-        'bentoboxId': str(uuid1()),
+        'bentoboxId': f'{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': chart_rows_size+len(indicators_groups),
     }
 
+    if self._bentobox_data:
+        log_error(logger, 'This function groups a chart and a group of indicators with a bentobox,'
+                          ' so it cannot be used inside another bentobox. Please'
+                          ' pop out of the current bentobox before using this function.', BentoboxError)
+    self._bentobox_data = bentobox_data
+
     _call_inner_chart_function_with_parameters(
-        self=self, menu_path=menu_path, order=order,
-        default_rows_size=chart_rows_size*14, default_cols_size=22,
-        bentobox_data=bentobox_data, tabs_index=tabs_index, modal_name=modal_name,
+        self=self, order=order, default_rows_size=chart_rows_size*14, default_cols_size=22,
         chart_function=chart_function, chart_parameters=chart_parameters
     )
 
@@ -327,17 +263,16 @@ def chart_and_indicators(
     indicators_parameters['padding'] = indicators_parameters.get('padding', '0,0,0,1')
     indicators_parameters['rows_size'] = indicators_parameters.get('rows_size', 8)
     indicators_parameters['cols_size'] = indicators_parameters.get('cols_size', 23)
-    indicators_parameters['bentobox_data'] = bentobox_data
 
     order += 1
     for indicators_group in indicators_groups:
         order = self.indicator(
             data=indicators_group,
-            menu_path=menu_path,
             order=order,
             **indicators_parameters
         )
 
+    self._bentobox_data = None
     return order
 
 

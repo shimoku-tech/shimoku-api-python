@@ -4,7 +4,7 @@ from pandas import DataFrame
 
 from ..echart import get_common_echart_options, get_common_series_options
 if TYPE_CHECKING:
-    from shimoku_api_python.api.plot_api import NewPlotApi
+    from shimoku_api_python.api.plot_api import PlotApi
 
 from shimoku_api_python.async_execution_pool import async_auto_call_manager
 
@@ -15,11 +15,13 @@ logger = logging.getLogger(__name__)
 
 @async_auto_call_manager()
 @logging_before_and_after(logger.info)
-async def tree_chart(self: 'NewPlotApi', order: int, data: Optional[Dict] = None,
-                     radial: bool = False, vertical: bool = False,
-                     title: Optional[str] = None, padding: Optional[List[int]] = None,
-                     rows_size: Optional[int] = None, cols_size: Optional[int] = None,
-                     ):
+async def tree_chart(
+    self: 'PlotApi', order: int, data: Optional[Union[Dict, List[Dict]]] = None,
+    radial: bool = False, vertical: bool = False,
+    title: Optional[str] = None, padding: Optional[List[int]] = None,
+    rows_size: Optional[int] = None, cols_size: Optional[int] = None,
+    option_modifications: Optional[Dict] = None,
+):
     """ Create a tree chart """
     if radial and vertical:
         logger.warning('Radial and vertical options are mutually exclusive. Vertical option will be ignored.')
@@ -30,7 +32,7 @@ async def tree_chart(self: 'NewPlotApi', order: int, data: Optional[Dict] = None
     del common_options['toolbox']['feature']['magicType']
     series_options.update({
         'type': 'tree',
-        'data': None,
+        'data': '#set_data#',
         'symbolSize': 7,
         'initialTreeDepth': 3,
         'layout': 'orthogonal' if not radial else 'radial',
@@ -69,7 +71,10 @@ async def tree_chart(self: 'NewPlotApi', order: int, data: Optional[Dict] = None
         del common_options['series']['leaves']
         del common_options['series']['label']
 
+    if isinstance(data, dict):
+        data = [data]
+
     await self._create_echart(
-        data_mapping_to_tuples=await self._choose_data(data),
-        fields=['data'], options=common_options, order=order, title=title,
+        data_mapping_to_tuples=await self._choose_data(order, data, dump_whole=True),
+        fields=['data'], options=common_options, order=order, title=title, option_modifications=option_modifications,
         rows_size=rows_size, cols_size=cols_size, padding=padding)

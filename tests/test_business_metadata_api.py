@@ -29,7 +29,7 @@ s = shimoku.Client(
 
 
 def test_get_business():
-    result = s.business.get_business(business_id)
+    result = s.business.get_business(uuid=business_id)
     print(result)
 
 
@@ -39,7 +39,7 @@ def test_get_fake_business():
             with self.assertRaises(RetryError):
                 business_id_: str = 'this is a test'
                 s.business.get_business(
-                    business_id=business_id_,
+                    uuid=business_id_,
                 )
 
     t = MyTestCase()
@@ -47,6 +47,10 @@ def test_get_fake_business():
 
 
 def test_create_and_delete_business():
+
+    if s.business.get_business(name='auto-test'):
+        s.business.delete_business(name='auto-test')
+
     business: Dict = s.business.create_business(name='auto-test')
     business_id_: str = business['id']
 
@@ -54,11 +58,11 @@ def test_create_and_delete_business():
 
     business_from_db: Dict = (
         s.business.get_business(
-            business_id=business_id_,
+            uuid=business_id_,
         )
     )
 
-    business_roles = s.business.get_roles(business_id=business_id_)
+    business_roles = s.business.get_roles(name='auto-test')
 
     assert len(business_roles) == 4
     resources = ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']
@@ -86,13 +90,13 @@ def test_create_and_delete_business():
     }
     del business_from_db
 
-    s.business.delete_business(business_id=business_id_)
+    s.business.delete_business(uuid=business_id_)
 
     class MyBusinessDeletedCase(unittest.TestCase):
         def test_business_deleted(self):
             with self.assertRaises(RetryError):
                 s.business.get_business(
-                    business_id=business_id_,
+                    uuid=business_id_,
                 )
 
     t = MyBusinessDeletedCase()
@@ -100,15 +104,13 @@ def test_create_and_delete_business():
 
 
 def test_theme_customization():
-    s.business.update_business_theme(
-        business_id=business_id,
+    s.business.update_business(
+        uuid=business_id,
         theme={},
     )
-    business: Dict = (
-        s.business.get_business(business_id)
-    )
+    business: Dict = s.business.get_business(uuid=business_id)
 
-    assert business['theme'] == '{}'
+    assert business['theme'] == {}
 
     theme = {
         "palette": {
@@ -133,33 +135,27 @@ def test_theme_customization():
         }
     }
 
-    s.business.update_business_theme(
-        business_id=business_id,
-        theme=theme,
-    )
+    s.business.update_business(uuid=business_id, theme=theme)
 
-    business: Dict = (
-        s.business.get_business(business_id)
-    )
+    business: Dict = s.business.get_business(uuid=business_id)
 
-    assert json.loads(business['theme']) == theme
+    assert business['theme'] == theme
 
 
 def test_update_business():
-    business_original: Dict = (
-        s.business.get_business(business_id)
-    )
+    business_original: Dict = s.business.get_business(uuid=business_id)
+
     business_name: str = business_original['name']
     new_business_name: str = f'{business_name}_changed'
 
-    new_business: Dict = (
-        s.business.update_business(
-            business_id=business_id,
-            business_data={'name': new_business_name},
-        )
+    s.business.update_business(
+        uuid=business_id,
+        new_name=new_business_name,
     )
 
-    business_changed: Dict = s.business.get_business(business_id)
+    new_business: Dict = s.business.get_business(uuid=business_id)
+
+    business_changed: Dict = s.business.get_business(name=new_business_name)
     assert {
         k: v
         for k, v in business_changed.items()
@@ -178,61 +174,14 @@ def test_update_business():
     assert new_business_name == business_changed['name']
 
     # Restore previous name
-    _ = (
-        s.business.update_business(
-            business_id=business_id,
-            business_data={'name': business_name},
-        )
-    )
-    business_restored: Dict = s.business.get_business(business_id)
-    assert business_name == business_restored['name']
+    s.business.update_business(name=new_business_name, new_name=business_name)
 
-
-def test_rename_business():
-    business_original: Dict = (
-        s.business.get_business(business_id)
-    )
-    business_name: str = business_original['name']
-    new_business_name: str = f'{business_name}_changed'
-
-    new_business: Dict = (
-        s.business.rename_business(
-            business_id=business_id,
-            new_name=new_business_name,
-        )
-    )
-
-    business_changed: Dict = s.business.get_business(business_id)
-    assert {
-        k: v
-        for k, v in business_changed.items()
-        if k in [
-            'id', 'name',
-            'universe', '__typename',
-        ]
-    } == {
-        k: v
-        for k, v in new_business.items()
-        if k in [
-            'id', 'name',
-            'universe', '__typename',
-        ]
-    }
-    assert new_business_name == business_changed['name']
-
-    # Restore previous name
-    _ = (
-        s.business.rename_business(
-            business_id=business_id,
-            new_name=business_name,
-        )
-    )
-    business_restored: Dict = s.business.get_business(business_id)
+    business_restored: Dict = s.business.get_business(name=business_name)
     assert business_name == business_restored['name']
 
 
 def test_get_business_apps():
-    apps: List[Dict] = s.business.get_business_apps(business_id)
+    apps: List[Dict] = s.business.get_business_apps(uuid=business_id)
     assert apps
 
 
@@ -241,5 +190,4 @@ test_get_fake_business()
 test_create_and_delete_business()
 test_theme_customization()
 test_update_business()
-test_rename_business()
 test_get_business_apps()

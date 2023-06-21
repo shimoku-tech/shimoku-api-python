@@ -2,7 +2,6 @@ import datetime as dt
 
 import asyncio
 
-
 from typing import List, Dict, Optional, Union, TYPE_CHECKING
 
 from ..base_resource import Resource

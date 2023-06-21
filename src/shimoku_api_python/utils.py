@@ -20,6 +20,12 @@ def create_normalized_name(name: str) -> str:
     # "name": "   Test Borrar_grafico    "
     # "normalizedName": "test-borrar-grafico"
     """
+    if any([c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- ' for c in name]):
+        log_error(logger,
+                  f'You can only use letters, numbers, spaces, "-" and "_" in your name | '
+                  f'you introduced {name}',
+                  ValueError
+                  )
     # remove empty spaces at the beginning and end
     name: str = name.strip()
     # replace "_" for www protocol it is not good
@@ -72,6 +78,7 @@ def calculate_percentages_from_list(numbers, round_digits_min):
     :param round_digits_min: minimum number of digits to round
     :return: list of percentages
     """
+
     def max_precision():
         max_p = 0
         for n in numbers:
@@ -212,7 +219,7 @@ def validate_data_is_pandarable(data: Union[str, DataFrame, List[Dict], Dict]) -
 
 @logging_before_and_after(logging_level=logger.debug)
 def validate_table_data(
-    self, data: Union[str, DataFrame, List[Dict], Dict], elements: List[str],
+        self, data: Union[str, DataFrame, List[Dict], Dict], elements: List[str],
 ):
     """"""
     df_: DataFrame = self._validate_data_is_pandarable(data)
@@ -240,7 +247,7 @@ def validate_table_data(
 
 @logging_before_and_after(logging_level=logger.debug)
 def validate_tree_data(
-    self, data: Union[str, List[Dict]], vals: List[str],
+        self, data: Union[str, List[Dict]], vals: List[str],
 ):
     """To validate Tree and Treemap data"""
     if isinstance(data, list):

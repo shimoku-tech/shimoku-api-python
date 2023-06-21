@@ -7,7 +7,7 @@ import asyncio
 
 from ..base_resource import Resource, ResourceCache
 from ..utils import create_normalized_name
-from ..exceptions import AppError, FileError
+from ..exceptions import MenuPathError, FileError
 from .activity import Activity
 from .role import Role, create_role, get_role, get_roles, delete_role
 from .report import Report
@@ -57,7 +57,7 @@ class App(Resource):
     async def delete(self):
         """ Delete the app """
         if self.currently_in_use:
-            log_error(logger, f'App {str(self)} is currently in use and cannot be deleted', AppError)
+            log_error(logger, f'Menu path {str(self)} is currently in use and cannot be deleted', MenuPathError)
         return await self._base_resource.delete()
 
     @logging_before_and_after(logger.debug)
@@ -161,7 +161,7 @@ class App(Resource):
         params = deepcopy(params)
         if 'properties' in params:
             if 'hash' in params['properties']:
-                log_error(logger, 'Cannot update the hash of a report.', ValueError)
+                log_error(logger, 'Cannot update the hash of a component.', ValueError)
             report.set_properties(**params.pop('properties'))
 
         report.set_params(**params)
@@ -230,7 +230,7 @@ class App(Resource):
         if not data_set:
             return False
         reports = await self.get_reports()
-        report_data_sets_lists = await asyncio.gather(*[report.get_report_datasets() for report in reports])
+        report_data_sets_lists = await asyncio.gather(*[report.get_report_data_sets() for report in reports])
         delete_tasks = []
         for i, report_data_sets in enumerate(report_data_sets_lists):
             await asyncio.gather(*[reports[i].delete_report_dataset(rds['id'])
@@ -245,13 +245,13 @@ class App(Resource):
         """ Deletes all the unused datasets of the app.
         :param log: Whether to log the deletion."""
         all_reports = await self.get_reports()
-        all_rds = await asyncio.gather(*[report.get_report_datasets() for report in all_reports])
+        all_rds = await asyncio.gather(*[report.get_report_data_sets() for report in all_reports])
         all_datasets_in_use = [rds['dataSetId'] for _rds_list in all_rds for rds in _rds_list]
         all_datasets = await self.get_data_sets()
         dataset_ids_to_delete = [ds['id'] for ds in all_datasets if ds['id'] not in all_datasets_in_use]
         await asyncio.gather(*[self._base_resource.delete_child(DataSet, ds_id) for ds_id in dataset_ids_to_delete])
         if log:
-            logger.info(f'Deleted {len(dataset_ids_to_delete)} unused datasets from the app {str(self)}')
+            logger.info(f'Deleted {len(dataset_ids_to_delete)} unused datasets from the menu path {str(self)}')
 
     # File methods
     @logging_before_and_after(logger.debug)

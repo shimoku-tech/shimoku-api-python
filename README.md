@@ -71,7 +71,7 @@ shimoku-components-catalog==0.2
 
 ### Step 3 - Start Client, Plotting and Menu Handling
 
-Go ahead and copy paste to see 🪄
+Go ahead and copy-paste to see 🪄
 
 ```python
 from os import getenv
@@ -79,15 +79,17 @@ import shimoku_api_python as Shimoku
 
 access_token = getenv('SHIMOKU_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
-business_id: str = getenv('BUSINESS_ID')
+workspace_id: str = getenv('WORKSPACE_ID')
 
 s = Shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
-    business_id=business_id,
 )
+s.set_workspace(uuid=workspace_id)
 
-s.plt.set_dashboard('Custom Dashboard')
+s.set_board('Custom Board')
+
+s.set_menu_path('catalog', 'bar-example')
 
 language_expressiveness = [
     {'Language': 'C', 'Statements ratio': 1.0, 'Lines ratio': 1.0},
@@ -100,10 +102,9 @@ language_expressiveness = [
 ]
 
 s.plt.bar(
-  menu_path='catalog/bar-example', order=0,
-  title='Language expressiveness',
-  data=language_expressiveness, x='Language',
-  y=['Statements ratio', 'Lines ratio'],
+    order=0, title='Language expressiveness',
+    data=language_expressiveness, x='Language',
+    y=['Statements ratio', 'Lines ratio'],
 )
 
 ```
@@ -112,14 +113,14 @@ Once you execute this piece of code you can see the following plot in your shimo
 
 ![First Shimoku App](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FmCPi73lrkbroOqpLDNLI%2Fimatge.png?alt=media&token=58bd4a30-a316-4237-9319-ab9fc5552ed1)
 
-### Step 4 - Dashboard
+### Step 4 - Board
 
-As it can be seen in the previous image the first element in the menu is called 'Custom Dashboard', this element is a dashboard. The dashboards are necessary for the contents of an app to be seen, if an app is not included in a dashboard it will not appear in the page. For this reason the SDK always attaches the apps to a dashboard when creating content, ideally the user should define which name to use for the dashboard, but when it is not specified it will use the name 'Default Name'.
+As can be seen in the previous image the first element in the menu is called 'Custom Board', this element is a board. The boards are necessary for the contents of an app to be seen, if an app is not included in a dashboard it will not appear in the page. For this reason the SDK always attaches the apps to a dashboard when creating content, ideally the user should define which name to use for the dashboard, but when it is not specified it will use the name 'Default Name'.
 
-The method to specify the dashboard's name that the SDK should use is:
+The method to specify the board's name that the SDK should use is:
 
 ```python
-s.plt.set_dashboard(dashboard_name: str)
+s.set_board(name: str)
 ```
 
 This will ensure that all the apps used after that point are included in dashboard_name.
@@ -133,13 +134,13 @@ There is a possible issue that can arise from executing code multiple times with
 In case this wasn't the expected result, it can be solved very easily using the method:
 
 ```python
-s.dashboard.force_delete_dashboard(dashboard_name:  str, dashboard_id:  str)
+s.boards.force_delete_board(name: str, uuid: str)
 ```
 
 This will delete a specified dashboard, but first it will delete all of it's links to it's apps, so it will always be able to delete an existing dashboard without having to touch the app. In this case the method should be used like this:
 
 ```python
-s.dashboard.force_delete_dashboard('Default Name')
+s.boards.force_delete_board(name='Default Name')
 ```
 
 Then there will only exist the 'Custom Dashboard' linking to the 'catalog' app.
@@ -156,7 +157,6 @@ There is now the option to monitor the SDK flow of execution, with three levels 
 s = Shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
-    business_id=business_id,
     verbosity='INFO',
 )
 ```
@@ -169,7 +169,7 @@ The logging level of the Shimoku SDK can be configured dynamically during execut
 
 #### Asynchronous execution
 
-Asynchronous execution which means that code execution doesn't need to stop for requests, freeing up time to make more requests. To enable it, simply set the async_execution parameter to True when creating the client object:
+Asynchronous execution means that code execution doesn't need to stop for requests, freeing up time to make more requests. To enable it, simply set the async_execution parameter to True when creating the client object:
 
 ```python
 s = Shimoku.Client(
@@ -197,28 +197,29 @@ Be sure to call s.run() at the end of your code to ensure all tasks are executed
 from os import getenv
 import shimoku_api_python as Shimoku
 
-access_token = getenv('SHIMOKU_TOKEN')  
-universe_id: str = getenv('UNIVERSE_ID') 
-business_id: str = getenv('BUSINESS_ID')
+access_token = getenv('SHIMOKU_TOKEN')
+universe_id: str = getenv('UNIVERSE_ID')
+workspace_id: str = getenv('WORKSPACE_ID')
 
 s = Shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
-    business_id=business_id,
     verbosity='INFO',
     async_execution=True,
 )
+s.set_workspace(workspace_id)
 
-s.plt.set_dashboard('Custom Dashboard')
+s.set_board('Custom Dashboard')
+
+s.set_menu_path('catalog', 'bar-example')
 
 language_expressiveness = pd.read_html(
     'https://en.wikipedia.org/wiki/Comparison_of_programming_languages')[2]
 
 s.plt.bar(
-  menu_path='catalog/bar-example', order=0, 
-  title='Language expressiveness',
-  data=language_expressiveness, x='Language',
-  y=['Statements ratio[48]', 'Lines ratio[49]'],
+    order=0, title='Language expressiveness',
+    data=language_expressiveness, x='Language',
+    y=['Statements ratio[48]', 'Lines ratio[49]'],
 )
 
 s.run()

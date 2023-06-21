@@ -18,27 +18,27 @@ s = shimoku.Client(
     verbosity=verbose,
     async_execution=async_execution,
 )
-s.set_business(uuid=business_id)
-s.set_menu_path(menu_path='test_activity')
+s.set_workspace(uuid=business_id)
+s.set_menu_path('test_activity')
 
 activity_name = 'test_activity'
 
-_activity = s.activity.get_activity(name=activity_name)
+_activity = s.activities.get_activity(name=activity_name)
 if not _activity:
-    _activity = s.activity.create_activity(name=activity_name)
+    _activity = s.activities.create_activity(name=activity_name)
 
 activity_id = _activity['id']
-run_id = s.activity.create_run(uuid=activity_id)['id']
+run_id = s.activities.create_run(uuid=activity_id)['id']
 
 
 class MyTestCase(unittest.TestCase):
     def activity_doesnt_exist(self, _activity_name):
         with self.assertRaises(CacheError):
-            s.activity.delete_activity(name=_activity_name)
+            s.activities.delete_activity(name=_activity_name)
 
     def cant_create_activity(self, _activity_name):
         with self.assertRaises(CacheError):
-            s.activity.create_activity(name=_activity_name)
+            s.activities.create_activity(name=_activity_name)
 
 
 def delete_new_activity_if_it_exists():
@@ -46,7 +46,7 @@ def delete_new_activity_if_it_exists():
     Deletes the activity created in the test_create_delete_get_activities test.
     """
     try:
-        s.activity.delete_activity(name='new_'+activity_name)
+        s.activities.delete_activity(name='new_' + activity_name)
     except CacheError:
         pass
 
@@ -55,10 +55,10 @@ def test_get_run_settings():
     """
     Makes a call to the activity metadata API to get run settings.
     """
-    s.activity.get_run_settings(uuid=activity_id, run_id=run_id)
-    s.activity.get_run_settings(uuid=activity_id, run_id=run_id)
-    s.activity.get_run_settings(name=activity_name, run_id=run_id)
-    s.activity.get_run_settings(name=activity_name, run_id=run_id)
+    s.activities.get_run_settings(uuid=activity_id, run_id=run_id)
+    s.activities.get_run_settings(uuid=activity_id, run_id=run_id)
+    s.activities.get_run_settings(name=activity_name, run_id=run_id)
+    s.activities.get_run_settings(name=activity_name, run_id=run_id)
 
 
 def test_create_delete_get_activities():
@@ -67,26 +67,26 @@ def test_create_delete_get_activities():
     """
 
     new_activity_name = 'new_'+activity_name
-    n_activities_before = len(s.activity.get_activities())
+    n_activities_before = len(s.activities.get_activities())
 
-    activity = s.activity.create_activity(name=new_activity_name)
+    activity = s.activities.create_activity(name=new_activity_name)
     
     new_activity_id = activity['id']
 
     assert activity['name'] == 'new_'+activity_name
     assert activity['runs'] == []
 
-    n_activities_mid = len(s.activity.get_activities())
+    n_activities_mid = len(s.activities.get_activities())
     assert n_activities_mid == n_activities_before + 1
 
-    s.set_menu_path(menu_path='test_activity')
+    s.set_menu_path(name='test_activity')
 
-    n_activities_mid = len(s.activity.get_activities())
+    n_activities_mid = len(s.activities.get_activities())
     assert n_activities_mid == n_activities_before + 1
 
-    s.activity.delete_activity(uuid=new_activity_id)
+    s.activities.delete_activity(uuid=new_activity_id)
 
-    n_activities_after = len(s.activity.get_activities())
+    n_activities_after = len(s.activities.get_activities())
 
     assert n_activities_before == n_activities_after
 
@@ -100,26 +100,26 @@ def test_update_activity():
     """
     new_activity_name = 'new_'+activity_name
 
-    n_activities_before = len(s.activity.get_activities())
+    n_activities_before = len(s.activities.get_activities())
 
-    activity = s.activity.create_activity(name=new_activity_name)
+    activity = s.activities.create_activity(name=new_activity_name)
 
     new_activity_id = activity['id']
 
     assert activity['name'] == new_activity_name
 
-    s.activity.update_activity(uuid=new_activity_id, new_name='updated '+new_activity_name)
+    s.activities.update_activity(uuid=new_activity_id, new_name='updated ' + new_activity_name)
 
-    assert not s.activity.get_activity(name=new_activity_name)
-    assert s.activity.get_activity(name='updated '+new_activity_name)
-    assert s.activity.create_activity(name=new_activity_name)
+    assert not s.activities.get_activity(name=new_activity_name)
+    assert s.activities.get_activity(name='updated ' + new_activity_name)
+    assert s.activities.create_activity(name=new_activity_name)
     t = MyTestCase()
     t.cant_create_activity(new_activity_name)
 
-    s.activity.delete_activity(uuid=new_activity_id)
-    s.activity.delete_activity(name=new_activity_name)
+    s.activities.delete_activity(uuid=new_activity_id)
+    s.activities.delete_activity(name=new_activity_name)
 
-    n_activities_after = len(s.activity.get_activities())
+    n_activities_after = len(s.activities.get_activities())
 
     assert n_activities_before == n_activities_after
 
@@ -129,23 +129,23 @@ def test_create_get_runs():
     Makes various calls to the activity metadata API to create, and get runs.
     """
     new_activity_name = 'new_'+activity_name
-    activity = s.activity.create_activity(name=new_activity_name)
+    activity = s.activities.create_activity(name=new_activity_name)
     new_activity_id = activity['id']
 
     assert activity['name'] == new_activity_name
     assert activity['runs'] == []
 
-    run1 = s.activity.create_run(name=new_activity_name)
-    run2 = s.activity.create_run(uuid=new_activity_id)
-    run3 = s.activity.create_run(name=new_activity_name)
+    run1 = s.activities.create_run(name=new_activity_name)
+    run2 = s.activities.create_run(uuid=new_activity_id)
+    run3 = s.activities.create_run(name=new_activity_name)
 
-    activity = s.activity.get_activity(uuid=new_activity_id, how_many_runs=1)
+    activity = s.activities.get_activity(uuid=new_activity_id, how_many_runs=1)
 
     assert activity['name'] == new_activity_name
     assert len(activity['runs']) == 1
     assert activity['runs'][0]['id'] in [run1['id'], run2['id'], run3['id']]
 
-    activity = s.activity.get_activity(name=new_activity_name, how_many_runs=3)
+    activity = s.activities.get_activity(name=new_activity_name, how_many_runs=3)
     activities_run_ids = [run['id'] for run in activity['runs']]
 
     assert activity['name'] == new_activity_name
@@ -155,7 +155,7 @@ def test_create_get_runs():
     assert run3['id'] in activities_run_ids
 
     # delete the activity and test that it doesn't exist
-    s.activity.delete_activity(name=new_activity_name)
+    s.activities.delete_activity(name=new_activity_name)
 
     t = MyTestCase()
     t.activity_doesnt_exist(new_activity_name)
@@ -166,24 +166,24 @@ def test_create_get_run_logs():
     Makes various calls to the activity metadata API to create, and get logs.
     """
     new_activity_name = 'new_'+activity_name
-    activity = s.activity.create_activity(name=new_activity_name)
+    activity = s.activities.create_activity(name=new_activity_name)
     new_activity_id = activity['id']
 
     assert activity['name'] == new_activity_name
     assert activity['runs'] == []
 
-    run = s.activity.create_run(name=new_activity_name)
+    run = s.activities.create_run(name=new_activity_name)
 
-    log1 = s.activity.create_run_log(name=new_activity_name, run_id=run['id'],
-                                     message='test message 1', severity='INFO')
-    log2 = s.activity.create_run_log(uuid=new_activity_id, run_id=run['id'],
-                                     message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
-    log3 = s.activity.create_run_log(name=new_activity_name, run_id=run['id'],
-                                     message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
+    log1 = s.activities.create_run_log(name=new_activity_name, run_id=run['id'],
+                                       message='test message 1', severity='INFO')
+    log2 = s.activities.create_run_log(uuid=new_activity_id, run_id=run['id'],
+                                       message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
+    log3 = s.activities.create_run_log(name=new_activity_name, run_id=run['id'],
+                                       message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
 
-    activity = s.activity.get_activity(name=new_activity_name, how_many_runs=1)
+    activity = s.activities.get_activity(name=new_activity_name, how_many_runs=1)
     run = activity['runs'][0]
-    logs = s.activity.get_run_logs(uuid=new_activity_id, run_id=run['id'])
+    logs = s.activities.get_run_logs(uuid=new_activity_id, run_id=run['id'])
 
     # test that the logs are in the correct order, they are ordered by creation time
     assert len(logs) == 3
@@ -192,7 +192,7 @@ def test_create_get_run_logs():
     assert log3 == logs[2]
 
     # delete the activity and test that it doesn't exist
-    s.activity.delete_activity(name=new_activity_name)
+    s.activities.delete_activity(name=new_activity_name)
 
     t = MyTestCase()
     t.activity_doesnt_exist(new_activity_name)
@@ -205,18 +205,18 @@ def test_default_activity_settings():
     new_activity_name = 'new_' + activity_name
     # test that the default settings are being set
     settings = {'name': 'test1', 'value': 'test1'}
-    activity = s.activity.create_activity(name=new_activity_name, settings=settings)
+    activity = s.activities.create_activity(name=new_activity_name, settings=settings)
 
     assert activity['settings'] == settings
 
     # test that the default settings persist in the API
-    s.set_menu_path(menu_path='test_activity')
+    s.set_menu_path(name='test_activity')
 
-    activity = s.activity.get_activity(uuid=activity['id'])
+    activity = s.activities.get_activity(uuid=activity['id'])
     assert activity['settings'] == settings
 
     # delete the activity and test that it doesn't exist
-    s.activity.delete_activity(name=new_activity_name)
+    s.activities.delete_activity(name=new_activity_name)
 
     t = MyTestCase()
     t.activity_doesnt_exist(new_activity_name)
@@ -227,30 +227,30 @@ def test_get_run_logs():
     Makes various calls to the activity metadata API to create, and get logs.
     """
     new_activity_name = 'new_'+activity_name
-    activity = s.activity.create_activity(name=new_activity_name)
+    activity = s.activities.create_activity(name=new_activity_name)
     new_activity_id = activity['id']
 
-    run = s.activity.create_run(name=new_activity_name)
+    run = s.activities.create_run(name=new_activity_name)
 
-    log1 = s.activity.create_run_log(name=new_activity_name, run_id=run['id'],
-                                     message='test message 1', severity='INFO')
-    log2 = s.activity.create_run_log(uuid=new_activity_id, run_id=run['id'],
-                                     message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
-    log3 = s.activity.create_run_log(name=new_activity_name, run_id=run['id'],
-                                     message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
+    log1 = s.activities.create_run_log(name=new_activity_name, run_id=run['id'],
+                                       message='test message 1', severity='INFO')
+    log2 = s.activities.create_run_log(uuid=new_activity_id, run_id=run['id'],
+                                       message='test message 2', severity='DEBUG', tags={'tag1': 'tag1', 'tag2': 'tag2'})
+    log3 = s.activities.create_run_log(name=new_activity_name, run_id=run['id'],
+                                       message='test message 3', severity='ERROR', tags={'tag1': 'tag1'})
 
-    activity = s.activity.get_activity(name=new_activity_name, how_many_runs=1)
+    activity = s.activities.get_activity(name=new_activity_name, how_many_runs=1)
     run = activity['runs'][0]
 
     # test that the logs can be retrieved by run id
-    logs = s.activity.get_run_logs(uuid=new_activity_id, run_id=run['id'])
+    logs = s.activities.get_run_logs(uuid=new_activity_id, run_id=run['id'])
     assert len(logs) == 3
     assert log1 == logs[0]
     assert log2 == logs[1]
     assert log3 == logs[2]
 
     # delete the activity and test that it doesn't exist
-    s.activity.delete_activity(name=new_activity_name)
+    s.activities.delete_activity(name=new_activity_name)
 
     t = MyTestCase()
     t.activity_doesnt_exist(new_activity_name)
@@ -262,9 +262,9 @@ def test_execute_activity():
     settings are being passed correctly.
     The activity must have a webhook linked for it to work.
     """
-    run = s.activity.execute_activity(name=activity_name)
+    run = s.activities.execute_activity(name=activity_name)
 
-    activity = s.activity.get_activity(name=activity_name, how_many_runs=1)
+    activity = s.activities.get_activity(name=activity_name, how_many_runs=1)
 
     # Runs are ordered by execution time, so the first run is the most recently executed
     assert activity['runs'][0]['id'] == run['id']
@@ -272,12 +272,12 @@ def test_execute_activity():
 
     settings = [{'name': 'test1', 'value': 'test1'}, {'name': 'test2', 'value': 'test2'}]
 
-    run1 = s.activity.execute_activity(name=activity_name, run_settings=settings[0])
-    run2 = s.activity.execute_activity(name=activity_name, run_settings=settings[1])
-    run3 = s.activity.create_run(name=activity_name, settings=run2['id'])
-    s.activity.execute_run(name=activity_name, run_id=run3['id'])
+    run1 = s.activities.execute_activity(name=activity_name, run_settings=settings[0])
+    run2 = s.activities.execute_activity(name=activity_name, run_settings=settings[1])
+    run3 = s.activities.create_run(name=activity_name, settings=run2['id'])
+    s.activities.execute_run(name=activity_name, run_id=run3['id'])
 
-    activity = s.activity.get_activity(name=activity_name, how_many_runs=4)
+    activity = s.activities.get_activity(name=activity_name, how_many_runs=4)
 
     assert activity['runs'][0]['id'] == run['id']
     assert activity['runs'][0]['settings'] == {}
@@ -297,7 +297,7 @@ def test_button_and_form_execute_activity():
     """
     Creates a button in the dashboard with the capability to execute an activity.
     """
-    s.set_menu_path('test-activity')
+    s.set_menu_path('test_activity')
 
     s.plt.activity_button(
         activity_name=activity_name, order=0, label='test_button',
@@ -376,4 +376,4 @@ if __name__ == '__main__':
     test_get_run_logs()
     # test_execute_activity()
     test_button_and_form_execute_activity()
-    s.activity.get_activities(pretty_print=True)
+    s.activities.get_activities(pretty_print=True)

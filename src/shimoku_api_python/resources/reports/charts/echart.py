@@ -1,6 +1,6 @@
 from ...report import Report
 from copy import deepcopy
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 
 
 class EChart(Report):

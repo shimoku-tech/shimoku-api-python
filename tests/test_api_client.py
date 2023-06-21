@@ -13,7 +13,7 @@ s = shimoku.Client(
     universe_id=universe_id,
     verbosity=verbosity,
 )
-s.set_business(uuid=business_id)
+s.set_workspace(uuid=business_id)
 
 
 def test_ping():

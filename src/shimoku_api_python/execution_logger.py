@@ -1,7 +1,7 @@
 import logging
 import os
 from sys import stdout
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional
 from io import TextIOWrapper
 from functools import wraps
 from inspect import stack

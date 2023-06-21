@@ -40,7 +40,7 @@ class TabsGroup(Report):
         delete_tasks = []
         for tab_dict in self['properties']['tabs'].values():
             for rd_id in tab_dict['reportIds']:
-                delete_tasks.append(self._base_resource.parent.delete_report(rd_id))
+                delete_tasks.append(self._base_resource.parent.delete_component(rd_id))
         await asyncio.gather(*delete_tasks)
         await super().delete()
 

@@ -5,7 +5,7 @@ import pandas as pd
 
 import shimoku_api_python as shimoku
 
-
+# TODO: what to do with this test?
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
@@ -18,7 +18,7 @@ s = shimoku.Client(
     universe_id=universe_id,
     environment=environment,
 )
-s.ai.set_business(business_id)
+s.ai.set_workspace(business_id)
 
 filename: str = '../data/churn_test.csv'
 df_test: pd.DataFrame = pd.read_csv(filename, index_col=0).head(10)

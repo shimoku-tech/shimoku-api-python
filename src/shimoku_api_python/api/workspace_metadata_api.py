@@ -28,13 +28,15 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_business(self, name: str, create_default_roles: bool = True,
-                              theme: Optional[Dict] = None) -> Dict:
-        """Create a new business and the necessary roles if specified
-        :param name: Name of the business
-        :param create_default_roles: Create the default roles for the business
-        :param theme: Theme of the business
-        :return: Business data
+    async def create_workspace(
+        self, name: str, create_default_roles: bool = True,
+        theme: Optional[Dict] = None
+    ) -> Dict:
+        """Create a new workspace and the necessary roles if specified
+        :param name: Name of the workspace
+        :param create_default_roles: Create the default roles for the workspace
+        :param theme: Theme of the workspace
+        :return: workspace data
         """
         business = await self._universe.create_business(name=name, theme=theme)
 
@@ -55,13 +57,15 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_business(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                              new_name: Optional[str] = None, theme: Optional[Dict] = None):
-        """Update a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
-        :param new_name: New name of the business
-        :param theme: New theme of the business
+    async def update_workspace(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        new_name: Optional[str] = None, theme: Optional[Dict] = None
+    ):
+        """Update a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param new_name: New name of the workspace
+        :param theme: New theme of the workspace
         """
         params = {}
 
@@ -75,31 +79,36 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_business(self, uuid: Optional[str] = None, name: Optional[str] = None):
-        """Delete a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def delete_workspace(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
+        """Delete a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         """
         return await self._universe.delete_business(uuid=uuid, name=name)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _get_business_with_warning(self, uuid: Optional[str] = None, name: Optional[str] = None
-                                         ) -> Optional[Business]:
+    async def _get_business_with_warning(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> Optional[Business]:
         """ Get the business
         :param name: name of the business
         :param uuid: UUID of the business
         """
         business: Business = await self._universe.get_business(uuid=uuid, name=name)
         if not business:
-            logger.warning(f"Business with {name if name else uuid} not found")
+            logger.warning(f"Workspace with {name if name else uuid} not found")
         return business
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_business(self, uuid: Optional[str] = None, name: Optional[str] = None) -> Dict:
-        """Get a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def get_workspace(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> Dict:
+        """Get a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
@@ -108,10 +117,12 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_business_apps(self, uuid: Optional[str] = None, name: Optional[str] = None) -> List[Dict]:
-        """Get the apps of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def get_workspace_menu_paths(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> List[Dict]:
+        """Get the apps of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         :return: List of apps
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
@@ -121,10 +132,12 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_business_app_ids(self, uuid: Optional[str] = None, name: Optional[str] = None) -> List[Dict]:
-        """Get the apps of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def get_workspace_menu_path_ids(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> List[Dict]:
+        """Get the apps of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         :return: List of app ids
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
@@ -134,10 +147,12 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_business_dashboards(self, uuid: Optional[str] = None, name: Optional[str] = None) -> List[Dict]:
-        """Get the apps of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def get_workspace_boards(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> List[Dict]:
+        """Get the apps of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         :return: List of dashboards
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
@@ -147,10 +162,12 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_all_business_apps(self, uuid: Optional[str] = None, name: Optional[str] = None):
-        """Delete all apps of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def delete_all_workspace_menu_paths(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
+        """Delete all apps of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
@@ -160,10 +177,12 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_all_business_dashboards(self, uuid: Optional[str] = None, name: Optional[str] = None):
-        """Delete all dashboards of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def delete_all_workspace_boards(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
+        """Delete all dashboards of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
@@ -173,27 +192,31 @@ class BusinessMetadataApi(ABC):
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def change_dashboards_order(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                                      dashboards: List[str] = None):
-        """Change the order of the dashboards of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
-        :param dashboards: List of dashboard names
+    async def change_boards_order(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        boards: List[str] = None
+    ):
+        """Change the order of the boards of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param boards: List of dashboard names
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
             return
-        await asyncio.gather(*[business.update_dashboard(name=d_name, order=i) for i, d_name in enumerate(dashboards)])
+        await asyncio.gather(*[business.update_dashboard(name=d_name, order=i) for i, d_name in enumerate(boards)])
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _change_sub_paths_order(self, business: Business, menu_path: str, sub_paths: List[str]):
+    async def _change_sub_paths_order(
+        self, business: Business, menu_path: str, sub_paths: List[str]
+    ):
         """Change the order of the sub paths of an app
         :param app: App object
         :param sub_paths: List of sub paths
         """
-        app: App = await business.get_app(menu_path=menu_path, create_if_not_exists=False)
+        app: App = await business.get_app(name=menu_path, create_if_not_exists=False)
         if not app:
-            logger.warning(f"App with menu path {menu_path} not found")
+            logger.warning(f"Menu path {menu_path} not found")
             return
         reports: List[Report] = await app.get_reports()
         sub_paths = [create_normalized_name(sub_path) for sub_path in sub_paths]
@@ -211,16 +234,18 @@ class BusinessMetadataApi(ABC):
         for report in non_referenced_reports:
             tasks.append(app.update_report(uuid=report['id'], pathOrder=len(sub_paths)))
 
-        logger.info(f'Updating {how_many_updates} reports from app {str(app)}')
+        logger.info(f'Updating {how_many_updates} components from menu path {str(app)}')
 
         await asyncio.gather(*tasks)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def change_menu_order(self, menu_order: List, uuid: Optional[str] = None, name: Optional[str] = None):
-        """Change the order of the menu of a business
-        :param name: Name of the business
-        :param uuid: UUID of the business
+    async def change_menu_order(
+        self, menu_order: List, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
+        """Change the order of the menu of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
         :param menu_order: List of menu names
         """
         business = await self._get_business_with_warning(uuid=uuid, name=name)
@@ -232,7 +257,7 @@ class BusinessMetadataApi(ABC):
             if isinstance(menu_option, Tuple):
                 menu_name, sub_paths = menu_option
                 tasks.append(self._change_sub_paths_order(business=business, menu_path=menu_name, sub_paths=sub_paths))
-            tasks.append(business.update_app(menu_path=menu_name, order=i))
+            tasks.append(business.update_app(name=menu_name, order=i))
 
         await asyncio.gather(*tasks)
 

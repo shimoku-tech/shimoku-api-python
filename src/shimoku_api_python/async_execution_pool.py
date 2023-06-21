@@ -1,13 +1,10 @@
 import asyncio
 from functools import wraps
-from typing import Optional, Callable, Coroutine, Dict, TYPE_CHECKING
+from typing import Optional, Callable, Coroutine, Dict
 import logging
 from IPython.lib import backgroundjobs as bg
 import time
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
-
-if TYPE_CHECKING:
-    from shimoku_api_python.api.plot_api import PlotApi
 
 from copy import copy
 logger = logging.getLogger(__name__)
@@ -71,7 +68,9 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
         async def execute_ending_tasks(epc: ExecutionPoolContext):
             epc.task_pool.clear()
             if epc.ending_tasks:
-                await asyncio.gather(*epc.ending_tasks.values())
+                ending_tasks = copy(epc.ending_tasks)
+                epc.ending_tasks.clear()
+                await asyncio.gather(*ending_tasks.values())
                 epc.ending_tasks = {}
 
         async def execute_tasks(epc: ExecutionPoolContext):
@@ -80,12 +79,16 @@ def async_auto_call_manager(execute: Optional[bool] = False) -> Callable:
 
             # if just one task it's the same as sequential
             if len(epc.task_pool) == 1:
-                result = await epc.task_pool[0]
+                task = epc.task_pool[0]
+                epc.task_pool.clear()
+                result = await task
                 await execute_ending_tasks(epc)
                 epc.free_context = {}
                 return result
 
-            await asyncio.gather(*epc.task_pool)
+            task_pool = copy(epc.task_pool)
+            epc.task_pool.clear()
+            await asyncio.gather(*task_pool)
             await execute_ending_tasks(epc)
             epc.free_context = {}
 

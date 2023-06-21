@@ -21,9 +21,9 @@ s = shimoku.Client(
     verbosity=verbosity,
     async_execution=True
 )
-s.set_business(uuid=business_id)
+s.set_workspace(uuid=business_id)
 s.set_menu_path('File test')
-s.app.delete_all_app_files(menu_path='File test')
+s.menu_paths.delete_all_menu_path_files(name='File test')
 
 
 def test_general_files():
@@ -36,19 +36,20 @@ def test_general_files():
     filename = 'helloworld'
     s.io.post_object(file_name=filename, obj=file_object)
 
-    files = s.app.get_files(menu_path='File test')
+    files = s.menu_paths.get_menu_path_files(name='File test')
     assert 'helloworld' in [file['name'] for file in files]
 
     class MyTestCase(unittest.TestCase):
         def test_cant_create_duplicate_files(self):
             with self.assertRaises(CacheError):
                 s.io.post_object(file_name=filename, obj=file_object)
+                s.run()
 
     t = MyTestCase()
     t.test_cant_create_duplicate_files()
 
     s.io.delete_file(file_name=filename)
-    files = s.app.get_files(menu_path='File test')
+    files = s.menu_paths.get_menu_path_files(name='File test')
     assert 'helloworld' not in [file['name'] for file in files]
 
 
@@ -85,7 +86,7 @@ def test_post_get_model():
 
 
 def test_big_data():
-    filename = '../data/classification_dataset_short.csv'
+    filename = '../data/bulidata.csv'
     df = pd.read_csv(filename)
     df.reset_index(inplace=True)
 

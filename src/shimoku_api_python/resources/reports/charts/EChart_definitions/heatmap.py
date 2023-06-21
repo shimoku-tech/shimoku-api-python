@@ -1,7 +1,5 @@
 from typing import Optional, Dict, List, Tuple, Union, TYPE_CHECKING
 
-from copy import deepcopy
-
 import pandas as pd
 
 from ..echart import get_common_echart_options, get_common_series_options

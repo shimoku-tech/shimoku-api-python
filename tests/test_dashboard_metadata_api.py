@@ -3,7 +3,7 @@ import shimoku_api_python as shimoku
 from tenacity import RetryError
 from shimoku_api_python.exceptions import CacheError
 import unittest
-import asyncio
+
 
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -20,12 +20,12 @@ s = shimoku.Client(
     verbosity=verbose,
     async_execution=async_execution,
 )
-s.set_business(uuid=business_id)
+s.set_workspace(uuid=business_id)
 
 
 def delete_dashboard_if_exists(name):
-    if s.dashboard.get_dashboard(name=name):
-        s.dashboard.force_delete_dashboard(name=name)
+    if s.boards.get_board(name=name):
+        s.boards.force_delete_board(name=name)
 
 
 class TestDashboardMetadataApi(unittest.TestCase):
@@ -35,53 +35,53 @@ class TestDashboardMetadataApi(unittest.TestCase):
         delete_dashboard_if_exists(name)
         delete_dashboard_if_exists(name + ' updated')
 
-        dashboard = s.dashboard.create_dashboard(name=name)
+        dashboard = s.boards.create_board(name=name)
 
         assert dashboard['name'] == name
 
-        dashboard = s.dashboard.get_dashboard(uuid=dashboard['id'])
+        dashboard = s.boards.get_board(uuid=dashboard['id'])
         assert dashboard['name'] == name
 
-        s.dashboard.update_dashboard(uuid=dashboard['id'], new_name=name + ' updated')
+        s.boards.update_board(uuid=dashboard['id'], new_name=name + ' updated')
 
-        dashboard = s.dashboard.get_dashboard(uuid=dashboard['id'])
+        dashboard = s.boards.get_board(uuid=dashboard['id'])
         assert dashboard['name'] == name+' updated'
 
-        assert s.dashboard.create_dashboard(name=name)
+        assert s.boards.create_board(name=name)
         with self.assertRaises(CacheError):
-            s.dashboard.create_dashboard(name=name)
+            s.boards.create_board(name=name)
         with self.assertRaises(CacheError):
-            s.dashboard.create_dashboard(name=name + ' updated')
+            s.boards.create_board(name=name + ' updated')
 
-        s.dashboard.delete_dashboard(name=name)
-        s.dashboard.delete_dashboard(name=name+' updated')
+        s.boards.delete_board(name=name)
+        s.boards.delete_board(name=name + ' updated')
 
-        assert not s.dashboard.get_dashboard(name=name)
-        assert not s.dashboard.get_dashboard(name=name + ' updated')
+        assert not s.boards.get_board(name=name)
+        assert not s.boards.get_board(name=name + ' updated')
 
     def test_create_and_delete_app_dashboard_link(self):
         name = 'Testing dashboard for appdashboards'
 
         app_name = 'Testing app'
-        s.app.delete_app(uuid=s.app.get_app(menu_path=app_name)['id'])
+        s.menu_paths.delete_menu_path(uuid=s.menu_paths.get_menu_path(name=app_name)['id'])
 
         delete_dashboard_if_exists(name)
         delete_dashboard_if_exists(name + ' updated')
 
-        s.dashboard.create_dashboard(name=name)
-        app_id = s.app.get_app(menu_path=app_name)['id']
+        s.boards.create_board(name=name)
+        app_id = s.menu_paths.get_menu_path(name=app_name)['id']
 
-        s.dashboard.add_app_in_dashboard(name=name, app_id=app_id)
+        s.boards.add_menu_path_in_board(name=name, menu_path_id=app_id)
 
-        app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        app_ids = s.boards.get_board_menu_path_ids(name=name)
         assert app_id == app_ids[0]
 
         with self.assertRaises(RetryError):
-            s.dashboard.delete_dashboard(name=name)
+            s.boards.delete_board(name=name)
 
-        s.dashboard.remove_app_from_dashboard(name=name, app_id=app_id)
-        s.dashboard.delete_dashboard(name=name)
-        s.app.delete_app(uuid=app_id)
+        s.boards.remove_menu_path_from_board(name=name, menu_path_id=app_id)
+        s.boards.delete_board(name=name)
+        s.menu_paths.delete_menu_path(uuid=app_id)
 
     def test_delete_all_app_dashboards_links(self):
         name = 'Testing dashboard for appdashboards delete all'
@@ -89,34 +89,34 @@ class TestDashboardMetadataApi(unittest.TestCase):
         app_names = ['Testing app 1', 'Testing app 2', 'Testing app 3']
 
         for app_name in app_names:
-            s.app.delete_app(uuid=s.app.get_app(menu_path=app_name)['id'])
+            s.menu_paths.delete_menu_path(uuid=s.menu_paths.get_menu_path(name=app_name)['id'])
 
         delete_dashboard_if_exists(name)
 
         app_ids = []
-        s.dashboard.create_dashboard(name=name)
+        s.boards.create_board(name=name)
         for app_name in app_names:
-            app_id = s.app.get_app(menu_path=app_name)['id']
-            s.dashboard.add_app_in_dashboard(name=name, app_id=app_id)
+            app_id = s.menu_paths.get_menu_path(name=app_name)['id']
+            s.boards.add_menu_path_in_board(name=name, menu_path_id=app_id)
             app_ids.append(app_id)
 
-        dashboard_app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        dashboard_app_ids = s.boards.get_board_menu_path_ids(name=name)
         assert len(dashboard_app_ids) == len(app_names)
 
-        s.dashboard.remove_all_apps_from_dashboard(name=name)
+        s.boards.remove_all_menu_paths_from_board(name=name)
 
-        dashboard_app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        dashboard_app_ids = s.boards.get_board_menu_path_ids(name=name)
         assert len(dashboard_app_ids) == 0
 
         for app_id in app_ids:
-            s.dashboard.add_app_in_dashboard(name=name, app_id=app_id)
+            s.boards.add_menu_path_in_board(name=name, menu_path_id=app_id)
 
-        s.dashboard.force_delete_dashboard(name=name)
+        s.boards.force_delete_board(name=name)
 
-        assert not s.dashboard.get_dashboard(name=name)
+        assert not s.boards.get_board(name=name)
 
         for app_id in app_ids:
-            s.app.delete_app(uuid=app_id)
+            s.menu_paths.delete_menu_path(uuid=app_id)
 
     def test_group_apps(self):
         name = 'Testing dashboard for grouping apps'
@@ -124,54 +124,54 @@ class TestDashboardMetadataApi(unittest.TestCase):
         app_names = ['Testing app 1', 'Testing app 2', 'Testing app 3']
 
         for app_name in app_names:
-            s.app.delete_app(uuid=s.app.get_app(menu_path=app_name)['id'])
+            s.menu_paths.delete_menu_path(uuid=s.menu_paths.get_menu_path(name=app_name)['id'])
 
         delete_dashboard_if_exists(name)
 
         app_ids = []
-        s.dashboard.create_dashboard(name=name)
+        s.boards.create_board(name=name)
         for app_name in app_names:
-            app_id = s.app.get_app(menu_path=app_name)['id']
+            app_id = s.menu_paths.get_menu_path(name=app_name)['id']
             app_ids.append(app_id)
 
-        s.dashboard.group_apps(menu_paths=app_names, name=name)
-        dashboard_app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        s.boards.group_menu_paths(menu_path_names=app_names, name=name)
+        dashboard_app_ids = s.boards.get_board_menu_path_ids(name=name)
 
         for app_id, app_name in zip(app_ids, app_names):
             assert app_id in dashboard_app_ids
-            s.dashboard.remove_app_from_dashboard(menu_path=app_name, name=name)
+            s.boards.remove_menu_path_from_board(menu_path_name=app_name, name=name)
             dashboard_app_ids.remove(app_id)
 
         assert len(dashboard_app_ids) == 0
 
-        s.dashboard.group_apps(app_ids=app_ids, name=name)
-        dashboard_app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        s.boards.group_menu_paths(menu_path_ids=app_ids, name=name)
+        dashboard_app_ids = s.boards.get_board_menu_path_ids(name=name)
 
         for app_id, app_name in zip(app_ids, app_names):
             assert app_id in dashboard_app_ids
-            s.dashboard.remove_app_from_dashboard(menu_path=app_name, name=name)
+            s.boards.remove_menu_path_from_board(menu_path_name=app_name, name=name)
             dashboard_app_ids.remove(app_id)
 
         assert len(dashboard_app_ids) == 0
 
-        all_app_ids = s.business.get_business_app_ids(uuid=business_id)
+        all_app_ids = s.workspaces.get_workspace_menu_path_ids(uuid=business_id)
 
-        s.dashboard.group_apps(menu_paths='all', name=name)
-        dashboard_app_ids = s.dashboard.get_dashboard_app_ids(name=name)
+        s.boards.group_menu_paths(menu_path_names='all', name=name)
+        dashboard_app_ids = s.boards.get_board_menu_path_ids(name=name)
 
         for app_id in all_app_ids:
             assert app_id in dashboard_app_ids
-            s.dashboard.remove_app_from_dashboard(app_id=app_id, name=name)
+            s.boards.remove_menu_path_from_board(menu_path_id=app_id, name=name)
             dashboard_app_ids.remove(app_id)
 
         assert len(dashboard_app_ids) == 0
 
-        s.dashboard.delete_dashboard(name=name)
+        s.boards.delete_board(name=name)
 
-        assert not s.dashboard.get_dashboard(name=name)
+        assert not s.boards.get_board(name=name)
 
         for app_id in app_ids:
-            s.app.delete_app(uuid=app_id)
+            s.menu_paths.delete_menu_path(uuid=app_id)
 
 
 

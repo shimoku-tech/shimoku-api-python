@@ -1,5 +1,3 @@
-import json
-
 import datetime as dt
 import pandas as pd
 import asyncio
@@ -153,12 +151,12 @@ class DataSet(Resource):
 
         @logging_before_and_after(logging_level=logger.debug)
         async def delete(self):
-            """ Delete the report entry """
+            """ Delete the data point """
             return await self._base_resource.delete()
 
         @logging_before_and_after(logging_level=logger.debug)
         async def update(self):
-            """ Update the report entry """
+            """ Update the data point """
             return await self._base_resource.update()
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -173,7 +171,7 @@ class DataSet(Resource):
 
     @logging_before_and_after(logging_level=logger.debug)
     def delete(self):
-        """ Delete the report entry """
+        """ Delete the data point """
         return self._base_resource.delete()
 
     # DataPoint methods

@@ -18,27 +18,27 @@ class ReportMetadataApi:
         self.epc = execution_pool_context
 
     @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.debug)
-    async def get_reports_in_sub_path(self, path: str) -> List[Dict]:
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_components_in_sub_path(self, path: str) -> List[Dict]:
         """
-        :param path: path to the report
-        :return: list of reports
+        :param path: path to the components
+        :return: list of components
         """
         return [report.cascade_to_dict() for report in (await self._app.get_reports()) if report['path'] == path]
 
     @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.debug)
-    async def get_report(self, uuid: str) -> Dict:
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_component(self, uuid: str) -> Dict:
         """
-        :param uuid: uuid of the report
-        :return: report
+        :param uuid: uuid of the component
+        :return: component
         """
         return (await self._app.get_report(uuid=uuid)).cascade_to_dict()
 
     @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.debug)
-    async def delete_report(self, uuid: str):
+    @logging_before_and_after(logging_level=logger.info)
+    async def delete_component(self, uuid: str):
         """
-        :param uuid: uuid of the report
+        :param uuid: uuid of the component
         """
         await self._app.delete_report(uuid=uuid)

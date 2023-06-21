@@ -7,11 +7,8 @@ from typing import List, Dict, Optional
 
 import datetime
 import requests
-import json
-import asyncio
 from tenacity import retry, wait_exponential, stop_after_attempt
 from shimoku_api_python.exceptions import ApiClientError
-from functools import wraps
 
 import aiohttp
 import logging
@@ -128,16 +125,12 @@ class ApiClient(object):
             url = url.replace('server', self.server)
 
         # perform request and return response
-        try:
-            async with self.semaphore:
-                return await self.request(
-                    method, url, query_params,
-                    headers=header_params, body=body,
-                    limit=limit
-                )
-        except Exception as err:
-            logger.error(str(err))
-            raise ApiClientError(err)
+        async with self.semaphore:
+            return await self.request(
+                method, url, query_params,
+                headers=header_params, body=body,
+                limit=limit
+            )
 
     @logging_before_and_after(logging_level=logger.debug)
     def set_http_info(self, **kwargs):  # noqa: E501
@@ -230,6 +223,23 @@ class ApiClient(object):
 
         return element_data
 
+    @staticmethod
+    @logging_before_and_after(logging_level=logger.debug)
+    def raise_api_exception(response: str) -> None:
+        """Raise an ApiClientError with the message changed to be more user friendly
+        :param response: the response from the API
+        """
+        replace_words = {
+            'report': 'component',
+            'app': 'menu path',
+            'business': 'workspace',
+            'dashboard': 'board',
+        }
+        for word, replacement in replace_words.items():
+            response = response.replace(word, replacement)
+        logger.error(response)
+        raise ApiClientError(response)
+
     @logging_before_and_after(logging_level=logger.debug)
     async def request(self, method, url, query_params=None, headers=None, body=None, limit: Optional[int] = None):
         auth = None
@@ -270,7 +280,7 @@ class ApiClient(object):
                             data = await res.text()
 
                         if not res.ok:
-                            raise ApiClientError(data)
+                            self.raise_api_exception(data)
 
                         if 'items' in data:
                             next_token = data.get('nextToken') if not limit else None
@@ -285,7 +295,7 @@ class ApiClient(object):
                         logger.debug(data)
 
                     except Exception as e:
-                        raise ApiClientError(e)
+                        self.raise_api_exception(str(e))
 
                 if not next_token:
                     break

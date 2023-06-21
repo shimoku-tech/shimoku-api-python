@@ -37,7 +37,7 @@ class Modal(Report):
     @logging_before_and_after(logger.debug)
     async def delete(self):
         """ Delete the modal from the server and all its children """
-        await asyncio.gather(*[self._base_resource.parent.delete_report(rd_id)
+        await asyncio.gather(*[self._base_resource.parent.delete_component(rd_id)
                                for rd_id in self['properties']['reportIds']])
         await super().delete()
 

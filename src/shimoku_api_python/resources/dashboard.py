@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, TYPE_CHECKING
 import asyncio
 
 from ..base_resource import Resource, ResourceCache
-from ..exceptions import DashboardError
+from ..exceptions import BoardError
 from .role import Role, create_role, get_role, get_roles, delete_role
 from .app import App
 if TYPE_CHECKING:
@@ -67,7 +67,7 @@ class Dashboard(Resource):
     async def delete(self):
         """ Deletes the dashboard """
         if self.currently_in_use:
-            log_error(logger, f'Business {str(self)} is currently in use and cannot be deleted', DashboardError)
+            log_error(logger, f'Workspace {str(self)} is currently in use and cannot be deleted', BoardError)
         return await self._base_resource.delete()
 
     @logging_before_and_after(logger.debug)
@@ -88,7 +88,7 @@ class Dashboard(Resource):
         :param app: The App to insert
         """
         await self._base_resource.create_child(Dashboard.AppDashboard, appId=app['id'])
-        logger.info(f"App {str(app)} added to dashboard {str(self)}")
+        logger.info(f"Menu path {str(app)} added to board {str(self)}")
 
     @logging_before_and_after(logger.debug)
     async def remove_app(self, app: App):
@@ -103,7 +103,7 @@ class Dashboard(Resource):
                 tasks.append(cache.delete(uuid=app_dashboard['id']))
 
         await asyncio.gather(*tasks)
-        logger.info(f"App {str(app)} removed from dashboard {str(self)}")
+        logger.info(f"Menu path {str(app)} removed from board {str(self)}")
 
     @logging_before_and_after(logger.debug)
     async def remove_all_apps(self):

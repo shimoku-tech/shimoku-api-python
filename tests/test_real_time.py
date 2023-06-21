@@ -5,7 +5,7 @@ import json
 
 import shimoku_api_python as shimoku
 
-
+#TODO what to do with this test?
 api_key: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
@@ -20,7 +20,7 @@ s = shimoku.Client(
     universe_id=universe_id,
     environment=environment,
 )
-s.plt.set_business(business_id=business_id)
+s.plt.set_workspace(business_id=business_id)
 
 # disappear = s.plt.delete_path(menu_path='realtime-test')
 
@@ -49,7 +49,7 @@ def test_real_time_feed():
         real_time=True,
     )
 
-    app: Dict = s.app.get_app_by_name(business_id=business_id, name=menu_path)
+    app: Dict = s.menu_paths.get_app_by_name(business_id=business_id, name=menu_path)
     app_id = app['id']
     
     count = 5
@@ -64,7 +64,7 @@ def test_real_time_feed():
 
         }])
 
-        s.report.update_report(
+        s.components.update_report(
             business_id=business_id,
             app_id=app_id,
             report_id=report_id,

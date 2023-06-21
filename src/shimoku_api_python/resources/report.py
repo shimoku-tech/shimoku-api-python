@@ -257,10 +257,10 @@ class Report(Resource):
     @logging_before_and_after(logger.debug)
     async def change_report_type(self, report_class: Type['Report']):
         """ change the report type of the report """
-        logger.info(f'Changing report type from {self.report_type} to {report_class.report_type}')
+        logger.info(f'Changing component type from {self.report_type} to {report_class.report_type}')
         if self.report_type == report_class.report_type:
             return
-        await self.delete_report_datasets()
+        await self.delete_report_data_sets()
         self['reportType'] = report_class.report_type
         r_hash = self['properties'].get('hash')
         self['properties'] = deepcopy(report_class.default_properties)
@@ -271,8 +271,8 @@ class Report(Resource):
 
     # ReportDataSet methods
     @logging_before_and_after(logger.debug)
-    async def create_report_dataset(self, mapping_data_set_sort: Tuple[Optional[Mapping], DataSet, Optional[Dict]],
-                                    properties: Optional[Dict] = None) -> 'ReportDataSet':
+    async def create_report_data_set(self, mapping_data_set_sort: Tuple[Optional[Mapping], DataSet, Optional[Dict]],
+                                     properties: Optional[Dict] = None) -> 'ReportDataSet':
         """ Update the report dataset
         :param mapping_data_set_sort: a tuple of mapping, data_set, sort
         :param properties: the properties to set
@@ -299,7 +299,7 @@ class Report(Resource):
         return await self._base_resource.get_child(self.ReportDataSet, uuid=uuid)
 
     @logging_before_and_after(logger.debug)
-    async def get_report_datasets(self) -> List['ReportDataSet']:
+    async def get_report_data_sets(self) -> List['ReportDataSet']:
         """ Get all the report datasets of the report """
         return await self._base_resource.get_children(self.ReportDataSet)
 
@@ -312,18 +312,18 @@ class Report(Resource):
         return await self._base_resource.delete_child(self.ReportDataSet, uuid=uuid)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def delete_report_datasets(self, log: bool = False):
+    async def delete_report_data_sets(self, log: bool = False):
         """ Delete the datasets and links that are not in use anymore.
         :param log: if True, log the actions"""
-        report_data_sets = await self.get_report_datasets()
+        report_data_sets = await self.get_report_data_sets()
         await asyncio.gather(*[self._base_resource.delete_child(self.ReportDataSet, uuid=rds['id'])
                                for rds in report_data_sets])
         if log:
-            logger.info(f'Deleted {len(report_data_sets)} report dataset links from report at {str(self)}')
+            logger.info(f'Deleted {len(report_data_sets)} component data set links from component at {str(self)}')
 
     # ReportEntry methods
     @logging_before_and_after(logger.debug)
     async def create_report_entries(self, report_entries: pd.DataFrame, sorting_columns_map: Optional[Dict] = None):
         converted_report_entries = convert_dataframe_to_report_entry(report_entries, sorting_columns_map)
         return await self._base_resource.create_children_batch(self.ReportEntry, converted_report_entries,
-                                                               batch_size=999, unit=' report entries')
+                                                               batch_size=999, unit=' component entries')

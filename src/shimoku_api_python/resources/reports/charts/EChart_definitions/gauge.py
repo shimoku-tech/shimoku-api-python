@@ -1,7 +1,6 @@
-from typing import Optional, Dict,  Union, List, Tuple, TYPE_CHECKING
+from typing import Optional, Dict, List, TYPE_CHECKING
 
 import pandas as pd
-from pandas import DataFrame
 
 from ..echart import get_common_echart_options, get_common_series_options
 if TYPE_CHECKING:

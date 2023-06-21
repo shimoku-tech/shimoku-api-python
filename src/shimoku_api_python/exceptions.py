@@ -57,19 +57,19 @@ class BentoboxError(Exception):
         self.status_code = status_code
 
 
-class DashboardError(Exception):
+class BoardError(Exception):
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code
 
 
-class AppError(Exception):
+class MenuPathError(Exception):
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code
 
 
-class BusinessError(Exception):
+class WorkspaceError(Exception):
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code

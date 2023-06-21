@@ -1,16 +1,8 @@
 """"""
 from os import getenv
-from typing import Dict, List
-import unittest
-
-import datetime as dt
-import pandas as pd
-import numpy as np
-import random
 import inspect
 
 import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -26,7 +18,7 @@ s = shimoku.Client(
     environment=environment,
     verbosity=verbosity
 )
-s.set_business(uuid=business_id)
+s.set_workspace(uuid=business_id)
 
 s.activate_async_execution()
 
@@ -72,7 +64,7 @@ for component_function in components:
         continue
     print(f'passed {component_function.__name__}')
     html = component_function(**call_parameters)
-    s.set_menu_path(f"Components test/{component_function.__name__}")
+    s.set_menu_path(f"Components test", f"{component_function.__name__}")
     s.plt.html(html=html, order=0)
 
 s.run()

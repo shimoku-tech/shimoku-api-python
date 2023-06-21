@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ActivityMetadataApi:
     """
-    This class is used to interact with the activities that are available in an app, through the API.
+    This class is used to interact with the activities that are available in a menu path, through the API.
     """
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -24,7 +24,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_activity(self, name: str, settings: Optional[Dict] = None) -> Dict:
+    async def create_activity(
+        self, name: str, settings: Optional[Dict] = None
+    ) -> Dict:
         """
         Create an activity by its name and app id
         :param name: the name of the activity
@@ -35,7 +37,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def delete_activity(self, uuid: Optional[str] = None, name: Optional[str] = None):
+    async def delete_activity(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
         """
         Delete an activity by its name and app id
         :param name: the name of the activity
@@ -46,8 +50,10 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def update_activity(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                              new_name: Optional[str] = None, settings: Optional[Dict] = None):
+    async def update_activity(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        new_name: Optional[str] = None, settings: Optional[Dict] = None
+    ):
         """
         Update an activity by its name or id
         :param name: the name of the activity
@@ -60,8 +66,10 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def execute_activity(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                               run_settings: Union[Dict, str] = None) -> Dict:
+    async def execute_activity(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        run_settings: Union[Dict, str] = None
+    ) -> Dict:
         """
         Execute an activity by its name or id
         :param name: the name of the activity
@@ -78,8 +86,10 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_activity(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                           pretty_print: bool = False, how_many_runs: Optional[int] = None) -> Optional[Dict]:
+    async def get_activity(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        pretty_print: bool = False, how_many_runs: Optional[int] = None
+    ) -> Optional[Dict]:
         """
         Get an activity by its name
         :param name: the name of the activity
@@ -105,7 +115,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_activities(self, pretty_print: bool = False, print_names: bool = False) -> List[Dict]:
+    async def get_activities(
+        self, pretty_print: bool = False, print_names: bool = False
+    ) -> List[Dict]:
         """
         Get the list of activities in the app
         :param pretty_print: if True, the activities are printed in a pretty format
@@ -126,8 +138,10 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def create_run(self, uuid: Optional[str] = None, name: Optional[str] = None,
-                         settings: Union[Dict, str] = None) -> Dict[str, Any]:
+    async def create_run(
+        self, uuid: Optional[str] = None, name: Optional[str] = None,
+        settings: Union[Dict, str] = None
+    ) -> Dict[str, Any]:
         """
         Create a run for an activity by its name
         :param name: the name of the activity
@@ -146,7 +160,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def execute_run(self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None):
+    async def execute_run(
+        self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None
+    ):
         """
         Execute a run by its id
         :param name: the name of the activity
@@ -193,8 +209,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_run_settings(self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None
-                               ) -> Dict[str, Any]:
+    async def get_run_settings(
+        self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Get the settings of a run by its id
         :param name: the name of the activity
@@ -209,8 +226,9 @@ class ActivityMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def get_run_logs(self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None
-                           ) -> List[Dict[str, Any]]:
+    async def get_run_logs(
+        self, run_id: str, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get the logs of a run by its id
         :param name: the name of the activity

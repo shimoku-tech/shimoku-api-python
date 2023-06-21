@@ -173,7 +173,7 @@ class PlotApi:
             container.clear_content()
 
         await asyncio.gather(*[self._app.delete_report(report['id']) for report in reports])
-        logger.info(f'Deleted {len(reports)} reports')
+        logger.info(f'Deleted {len(reports)} components')
         await self._app.delete_unused_data_sets(log=True)
 
     @async_auto_call_manager(execute=True)
@@ -637,7 +637,7 @@ class PlotApi:
         """
         report_data_set_mapping = report_data_set['properties']['mapping']
         if report_data_set_mapping != mapping:
-            logger.warning(f'Mapping inconsistent in report data set {str(report_data_set)}')
+            logger.warning(f'Mapping inconsistent in component data set link {str(report_data_set)}')
         return report_data_set_mapping == mapping
 
     @async_auto_call_manager()
@@ -952,7 +952,7 @@ class PlotApi:
 
         _, report = await self._get_chart_report(order, Table)
 
-        rds = await report.get_report_datasets()
+        rds = await report.get_report_data_sets()
 
         if self.reuse_data_sets and report['properties'].get('columns') and \
                 report['properties']['columns'] != columns_dicts:
@@ -960,11 +960,11 @@ class PlotApi:
                               f" don't use the reuse_data_sets option in this case", DataError)
 
         if rds and (not self.reuse_data_sets or any(rd['dataSetId'] != data_set['id'] for rd in rds)):
-            await report.delete_report_datasets(log=True)
+            await report.delete_report_data_sets(log=True)
             rds = []
 
         if not rds:
-            await report.create_report_dataset((None, data_set, None))
+            await report.create_report_data_set((None, data_set, None))
 
         pagination = {'pageSize': page_size}
         if page_size_options:
@@ -1052,19 +1052,20 @@ class PlotApi:
         r_hash, report = await self._get_chart_report(order, InputForm)
         _, data_set, _ = list((await self._create_data_set(report['id'], initial_data, dump_whole=True)).values())[0]
 
-        rds = await report.get_report_datasets()
+        rds = await report.get_report_data_sets()
         if len(rds) > 1:
-            log_error(logger, f"Input form can only have one report dataset, this is an SDK bug please report it and "
+            log_error(logger, f"Input form can only have one component data set link, "
+                              f"this is an SDK bug please report it and "
                               f"delete the form to solve the issue", DataError)
 
         if rds and (not self.reuse_data_sets or rds[0]['dataSetId'] != data_set['id']
                     or rds[0]['properties']['fields'] != options['fields']):
-            await report.delete_report_datasets(log=True)
+            await report.delete_report_data_sets(log=True)
             rds = []
 
         if not rds:
-            await report.create_report_dataset(('customField1', data_set, None), properties=options)
-            logger.info(f"Created 1 report dataset link for input form at {r_hash}")
+            await report.create_report_data_set(('customField1', data_set, None), properties=options)
+            logger.info(f"Created 1 component data set link for input form at {r_hash}")
 
         await self._create_chart(
             chart_class=InputForm,
@@ -1103,9 +1104,9 @@ class PlotApi:
         :param activity_name: the activity name to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
         """
-        report_dataset_properties = {'fields': []}
+        report_data_set_properties = {'fields': []}
         if auto_send:
-            report_dataset_properties['variant'] = 'autoSend'
+            report_data_set_properties['variant'] = 'autoSend'
 
         r_hash = self._get_chart_hash(order)
 
@@ -1119,13 +1120,13 @@ class PlotApi:
                 next_id = f'{r_hash}_{next_group_index}'
                 form_group_json['nextFormGroup'] = {'id': next_id, 'label': next_group_label}
                 next_group_index += 1
-            report_dataset_properties['fields'] += [form_group_json]
+            report_data_set_properties['fields'] += [form_group_json]
 
         if next_id:
-            del report_dataset_properties['fields'][-1]['nextFormGroup']
+            del report_data_set_properties['fields'][-1]['nextFormGroup']
 
         self.input_form(
-            options=report_dataset_properties,
+            options=report_data_set_properties,
             order=order, rows_size=rows_size, cols_size=cols_size,
             padding=padding, modal=modal, activity_id=activity_id, activity_name=activity_name,
             on_submit_events=on_submit_events,
@@ -1134,8 +1135,8 @@ class PlotApi:
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_input_form_data(self, input_form: InputForm):
         """ Get the input form data. """
-        report_dataset = (await input_form.get_report_datasets())[0]
-        data_set = await self._app.get_data_set(report_dataset['dataSetId'])
+        report_data_set = (await input_form.get_report_data_sets())[0]
+        data_set = await self._app.get_data_set(report_data_set['dataSetId'])
         data_point = await data_set.get_one_data_point()
         logger.info(f"Got input form data for {str(input_form)}")
         return {
@@ -1198,7 +1199,7 @@ class PlotApi:
         if self.reuse_data_sets:
             rd_ids = get_uuids_from_dict(report['properties']['option'])
             if len(rd_ids) == len(y):
-                rep_ds: List[Report.ReportDataSet] = await report.get_report_datasets()
+                rep_ds: List[Report.ReportDataSet] = await report.get_report_data_sets()
                 rep_ds = [next((rd for rd in rep_ds if rd['id'] == rd_id), None) for rd_id in rd_ids]
                 if any(rd['dataSetId'] != ds['id'] or
                        rd['properties']['mapping'] != {'values': ['dateField1', 'intField1'], 'label': 'stringField1'}
@@ -1206,10 +1207,10 @@ class PlotApi:
                     rd_ids = None
 
         if not rd_ids:
-            await report.delete_report_datasets(log=True)
+            await report.delete_report_data_sets(log=True)
             mapping: Mapping = {'values': ['dateField1', 'intField1'], 'label': 'stringField1'}
             report_data_sets = await asyncio.gather(*[
-                report.create_report_dataset((mapping, data_set, None)) for data_set in data_sets
+                report.create_report_data_set((mapping, data_set, None)) for data_set in data_sets
             ])
             rd_ids = [rd['id'] for rd in report_data_sets]
 
@@ -1255,7 +1256,7 @@ class PlotApi:
     async def _get_report_data_sets_per_mapping(
         self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[str, Tuple, Dict]],
     ) -> List[Report.ReportDataSet]:
-        """ Create a dataset per field of a dataframe.
+        """ Create a data_set per field of a dataframe.
         :param report: the report
         :param data_mapping_to_tuple: the mapping of the data
         :param fields: the fields of the data to be used
@@ -1293,11 +1294,11 @@ class PlotApi:
                     assert res_sort == res_sort_
             else:
                 log_error(logger, f'Field {f} is not a string, tuple, list or dict', DataError)
-            tasks.append(report.create_report_dataset(mapping_data_set_sort=(mapping, data_set, res_sort)))
+            tasks.append(report.create_report_data_set(mapping_data_set_sort=(mapping, data_set, res_sort)))
 
-        report_datasets = await asyncio.gather(*tasks)
-        logger.info(f'Created {len(report_datasets)} report dataset links for report {str(report)}')
-        return report_datasets
+        report_data_sets = await asyncio.gather(*tasks)
+        logger.info(f'Created {len(report_data_sets)} component data set links for component {str(report)}')
+        return report_data_sets
 
     @logging_before_and_after(logging_level=logger.debug)
     def _update_options(self, options: Dict, option_modifications: Optional[Dict]):
@@ -1328,7 +1329,7 @@ class PlotApi:
         **report_params
     ):
         """ Create an echart in the dashboard, fill in the data referenced in the echart_options and create or
-        update the chart and dataset links.
+        update the chart and data set links.
         :param options: the options of the echart
         :param data_mapping_to_tuples: the mapping of the data to the tuples
         :param report_params: additional report parameters as key-value pairs"""
@@ -1339,7 +1340,7 @@ class PlotApi:
         if self.reuse_data_sets:
             rd_ids = get_uuids_from_dict(report['properties']['option'])
             if len(rd_ids) == len(fields):
-                rep_ds: List[Report.ReportDataSet] = await report.get_report_datasets()
+                rep_ds: List[Report.ReportDataSet] = await report.get_report_data_sets()
                 mapped_f = [self._get_field_mapping(field, data_mapping_to_tuples) for field in fields]
                 for i, rd_id in enumerate(rd_ids):
                     report_data_set = next((rd for rd in rep_ds if rd['id'] == rd_id), None)
@@ -1350,9 +1351,9 @@ class PlotApi:
                 rd_ids = None
 
         if not rd_ids:
-            await report.delete_report_datasets(log=True)
-            report_datasets = await self._get_report_data_sets_per_mapping(report, data_mapping_to_tuples, fields)
-            rd_ids = [rd['id'] for rd in report_datasets]
+            await report.delete_report_data_sets(log=True)
+            report_data_sets = await self._get_report_data_sets_per_mapping(report, data_mapping_to_tuples, fields)
+            rd_ids = [rd['id'] for rd in report_data_sets]
 
         self._update_options(options, option_modifications)
 

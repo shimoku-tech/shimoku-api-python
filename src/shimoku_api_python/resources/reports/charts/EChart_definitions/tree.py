@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 @async_auto_call_manager()
 @logging_before_and_after(logger.info)
 async def tree_chart(
-    self: 'PlotApi', order: int, data: Optional[Union[Dict, List[Dict]]] = None,
+    self: 'PlotApi', order: int, data: Union[str, Dict, List[Dict]],
     radial: bool = False, vertical: bool = False,
     title: Optional[str] = None, padding: Optional[List[int]] = None,
     rows_size: Optional[int] = None, cols_size: Optional[int] = None,

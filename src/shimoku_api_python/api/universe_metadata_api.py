@@ -17,7 +17,7 @@ class UniverseMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    def get_universe_businesses(self, uuid: str):
+    def get_universe_workspaces(self, uuid: str):
         universe = Universe(api_client=self._api_client, uuid=uuid)
         return universe.get_businesses()
 

@@ -20,7 +20,8 @@ def create_normalized_name(name: str) -> str:
     # "name": "   Test Borrar_grafico    "
     # "normalizedName": "test-borrar-grafico"
     """
-    if any([c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_- ' for c in name]):
+    if any([c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- '
+            for c in name.encode('ascii', 'ignore').decode()]):
         log_error(logger,
                   f'You can only use letters, numbers, spaces, "-" and "_" in your name | '
                   f'you introduced {name}',
@@ -370,6 +371,16 @@ def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
         "base-icon": "var(--color-base-icon)",
         "background": "var(--background-default)",
         "background-paper": "var(--background-paper)",
+        "primary": "var(--color-primary)",
+        "primary-light": "var(--color-primary-light)",
+        "primary-dark": "var(--color-primary-dark)",
+        "main": "var(--chart-C1)",
+        "secondary": "var(--color-secondary)",
+        "secondary-light": "var(--color-secondary-light)",
+        "secondary-dark": "var(--color-secondary-dark)",
+        "active": "var(--chart-C2)",
+        "caution": "var(--chart-C3)",
+
     }
 
     if isinstance(color_def, int):

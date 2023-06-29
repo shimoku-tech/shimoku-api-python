@@ -15,7 +15,7 @@ def gauge_indicator(
     self: 'PlotApi', order: int, value: int,
     title: Optional[str] = "", description: Optional[str] = "",
     cols_size: Optional[int] = 6, rows_size: Optional[int] = 1,
-    color: Optional[Union[str, int]] = 1,
+    color: Union[str, int] = 1,
 ):
     bentobox_data = {
         'bentoboxId': f'{order}',

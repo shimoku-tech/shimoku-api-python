@@ -5,7 +5,7 @@ import shimoku_api_python.async_execution_pool
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi, Universe
-from shimoku_api_python.api.workspace_metadata_api import BusinessMetadataApi, Business
+from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi, Business
 from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi, Dashboard
 from shimoku_api_python.api.app_metadata_api import AppMetadataApi, App
 from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
@@ -86,7 +86,7 @@ class Client(object):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def set_workspace(self, uuid: str, name: str = None):
+    async def set_workspace(self, uuid: Optional[str] = None, name: Optional[str] = None):
         """Set workspace id for the client.
         :param uuid: Workspace uuid
         :param name: Workspace name
@@ -118,6 +118,18 @@ class Client(object):
         self.data = DataSetManagingApi(app=None, execution_pool_context=self.epc)
         self.io = FileMetadataApi(app=None, execution_pool_context=self.epc)
 
+    @logging_before_and_after(logging_level=logger.debug)
+    def pop_out_of_menu_path(self):
+        """ Pop out of the menu path. """
+        self.run()
+        data_names = self.plt.get_shared_data_names()
+        if data_names:
+            logger.info(f'Shared data entries will no longer be available: {data_names}, set them again if needed.')
+        self.plt.clear_context()
+        self._app_object.currently_in_use = False
+        self._app_object = None
+        self.menu_path_id = None
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_board(self, name: str):
@@ -125,9 +137,7 @@ class Client(object):
         :param name: board name
         """
         if self._app_object:
-            log_error(logger,
-                      "A board can not be set when using a menu path. "
-                      "Please pop out of the menu path first.", BoardError)
+            self.pop_out_of_menu_path()
         if self._dashboard_object:
             self._dashboard_object.currently_in_use = False
         self._dashboard_object: Dashboard = await self._business_object.get_dashboard(name=name)
@@ -174,7 +184,7 @@ class Client(object):
         self.menu_path_id = self._app_object['id']
 
     @logging_before_and_after(logging_level=logger.info)
-    def set_menu_path(self, name: str, sub_path: str = None):
+    def set_menu_path(self, name: str, sub_path: Optional[str] = None):
         """Set menu path for the client.
         :param name: Menu path
         :param sub_path: Sub path
@@ -192,20 +202,6 @@ class Client(object):
         self.plt.change_path(path)
         if data_names:
             logger.info(f'Shared data entries will no longer be available: {data_names}, set them again if needed.')
-
-    @logging_before_and_after(logging_level=logger.info)
-    def pop_out_of_menu_path(self):
-        """ Pop out of the menu path. """
-        self.run()
-        if not self._app_object:
-            log_error(logger, 'No menu path is currently in use.', MenuPathError)
-        self.plt.raise_if_cant_change_path()
-        data_names = self.plt.get_shared_data_names()
-        if data_names:
-            logger.info(f'Shared data entries will no longer be available: {data_names}, set them again if needed.')
-        self._app_object.currently_in_use = False
-        self._app_object = None
-        self.menu_path_id = None
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config: Dict):
@@ -230,7 +226,7 @@ class Client(object):
 
     def __getattribute__(self, item):
         """ Get attribute of the client. """
-        if item in ['workspaces', 'menu_paths'] and not self._business_object:
+        if item in ['boards', 'menu_paths'] and not self._business_object:
             log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
         if item in ['activities', 'plt', 'reports', 'data', 'io'] and not self._app_object:
             log_error(logger, 'Menu path not set. Please use set_menu_path() method first.', AttributeError)

@@ -60,11 +60,15 @@ class PlotApi:
 
     def _set_mock_functions(self):
 
-        def single_axis_trend_chart(x: str, y: List[str],  data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
-                                    x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
-                                    title: Optional[str] = None, bottom_toolbox: bool = True, order: int = 0,
-                                    rows_size: Optional[int] = None, cols_size: Optional[int] = None,
-                                    padding: Optional[List[int]] = None, show_values: Optional[List[str]] = None):
+        def single_axis_trend_chart(
+            order: int, x: str, y: Union[str, List[str]],
+            data: Union[str, DataFrame, List[Dict]],
+            x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
+            title: Optional[str] = None, rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None, padding: Optional[List[int]] = None,
+            show_values: Optional[List[str]] = None,
+            option_modifications: Optional[Dict] = None, **kwargs
+        ):
             pass
 
         self.line = single_axis_trend_chart
@@ -94,7 +98,7 @@ class PlotApi:
             self._set_mock_functions()
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _clear_context(self):
+    def clear_context(self):
         if self._bentobox_data:
             self.pop_out_of_bentobox()
             logger.info('Popped out of bentobox')
@@ -118,7 +122,7 @@ class PlotApi:
 
         if r_hash in free_context['list_for_conflicts']:
             epc.clear()
-            self._clear_context()
+            self.clear_context()
             log_error(logger, 'Chart order collision, two charts with the same order can not be executed '
                               'at the same time', RuntimeError)
 
@@ -357,6 +361,7 @@ class PlotApi:
             properties['open'] = open_by_default
         if properties:
             await self._app.update_report(r_hash=r_hash, properties=properties, path=self._current_path)
+            logger.info(f'Updated modal {modal_name} with id {modal["id"]}')
         return modal
 
     @async_auto_call_manager(execute=True)
@@ -643,7 +648,7 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def iframe(
-        self, url: str, order: int, height=640, cols_size: Optional[int] = None,
+        self, url: str, order: int, height: int = 640, cols_size: Optional[int] = None,
         padding: Optional[str] = None
     ):
         """ Create an iframe report in the dashboard.
@@ -1158,7 +1163,7 @@ class PlotApi:
     @logging_before_and_after(logging_level=logger.debug)
     async def annotated_chart(
         self, data: Union[List[DataFrame], List[List[Dict]]], order: int,
-        x: str, y: List[str], annotations: Optional[str] = 'annotation',
+        x: str, y: List[str], annotations: str = 'annotation',
         rows_size: Optional[int] = None, cols_size: Optional[int] = None,
         padding: Optional[str] = None,
         title: Optional[str] = None,

@@ -85,11 +85,11 @@ def convert_input_data_to_db_items(
         date_counter = 0
         # TODO: Check all data not just the first one
         for k, v in data[0].items():
-            if str_counter > 8:
+            if str_counter > 50:
                 raise ValueError('Too many string fields')
-            if float_counter > 8:
+            if float_counter > 50:
                 raise ValueError('Too many int fields')
-            if date_counter > 5:
+            if date_counter > 50:
                 raise ValueError('Too many date fields')
             type_v = type(v)
             if type_v == str:

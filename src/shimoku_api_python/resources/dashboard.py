@@ -87,6 +87,11 @@ class Dashboard(Resource):
         """ Inserts an app in the dashboard
         :param app: The App to insert
         """
+        dashboards = await self._base_resource.parent.get_dashboards()
+        app_ids_lists = await asyncio.gather(*[dashboard.list_app_ids() for dashboard in dashboards])
+        app_ids = [app_id for app_ids_list in app_ids_lists for app_id in app_ids_list]
+        if app['id'] in app_ids:
+            logger.warning(f"Menu path {str(app)} already exists in another board, it will appear in both boards")
         await self._base_resource.create_child(Dashboard.AppDashboard, appId=app['id'])
         logger.info(f"Menu path {str(app)} added to board {str(self)}")
 

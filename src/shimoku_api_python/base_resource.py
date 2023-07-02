@@ -112,6 +112,9 @@ class ResourceCache:
     @logging_before_and_after(logging_level=logger.debug)
     async def get(self, uuid: Optional[str] = None, alias: Optional[str] = None) -> Optional[IsResource]:
 
+        if uuid and alias:
+            log_error(logger, "Only one of uuid or alias can be provided", CacheError)
+
         if alias in self._aliases:
             uuid = self._aliases[alias]
 

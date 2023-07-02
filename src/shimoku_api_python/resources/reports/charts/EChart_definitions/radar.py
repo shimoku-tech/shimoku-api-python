@@ -16,9 +16,8 @@ logger = logging.getLogger(__name__)
 @async_auto_call_manager()
 @logging_before_and_after(logger.info)
 async def radar_chart(
-    self: 'PlotApi', order: int, names: str, values: Optional[List[str]] = None,
-    max_field: Optional[str] = None, fill_area: bool = False,
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
+    self: 'PlotApi', order: int, names: str, data: Union[str, DataFrame, List[Dict]],
+    values: Optional[List[str]] = None, max_field: Optional[str] = None, fill_area: bool = False,
     title: Optional[str] = None, rows_size: Optional[int] = None,
     cols_size: Optional[int] = None, padding: Optional[List[int]] = None,
     option_modifications: Optional[Dict] = None,

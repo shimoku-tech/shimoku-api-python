@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @logging_before_and_after(logger.info)
 async def pie_chart(
     self: 'PlotApi', order: int, names: str, values: str,
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
+    data: Union[str, DataFrame, List[Dict]],
     title: Optional[str] = None, rows_size: Optional[int] = 2,
     cols_size: Optional[int] = 3, padding: Optional[List[int]] = None,
     option_modifications: Optional[Dict] = None,
@@ -48,7 +48,7 @@ async def pie_chart(
 @logging_before_and_after(logger.info)
 async def doughnut_chart(
     self: 'PlotApi', order: int, names: str, values: str,
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
+    data: Union[str, DataFrame, List[Dict]],
     title: Optional[str] = None, rows_size: Optional[int] = 2,
     cols_size: Optional[int] = 3, padding: Optional[List[int]] = None,
     option_modifications: Optional[Dict] = None,
@@ -82,7 +82,7 @@ async def doughnut_chart(
 @logging_before_and_after(logger.info)
 async def rose_chart(
     self: 'PlotApi', order: int, names: str, values: str,
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
+    data: Union[str, DataFrame, List[Dict]],
     title: Optional[str] = None, rows_size: Optional[int] = 2,
     cols_size: Optional[int] = 3, padding: Optional[List[int]] = None,
     option_modifications: Optional[Dict] = None,

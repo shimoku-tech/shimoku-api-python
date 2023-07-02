@@ -1,3 +1,4 @@
+import datetime as dt
 import pandas as pd
 
 from ...report import Report
@@ -29,6 +30,8 @@ def interpret_label_map(values: list[str], label_map: Union[str, List, tuple], v
     for val in values:
         if isinstance(val, float) and int(val) - val == 0:
             val = int(val)
+        if not isinstance(val, str) and not isinstance(val, int) and not isinstance(val, dt.datetime):
+            val = float(val)
         label_options = {'value': val, 'backgroundColor': color_def}
         if variant == 'outlined':
             label_options['color'] = color_def

@@ -17,8 +17,7 @@ logger = logging.getLogger(__name__)
 @logging_before_and_after(logger.info)
 async def scatter_chart(
     self: 'PlotApi', order: int, point_fields: Union[List[Tuple[str, str]], Tuple[str, str]],
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
-    x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
+    data: Union[str, DataFrame, List[Dict]], x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
     title: Optional[str] = None, rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     padding: Optional[List[int]] = None, show_values: Optional[List[str]] = None,
     option_modifications: Optional[Dict] = None,

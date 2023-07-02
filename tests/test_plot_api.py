@@ -12,7 +12,6 @@ import random
 from copy import deepcopy
 
 import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import ApiClientError
 
 
 api_key: str = getenv('API_TOKEN')
@@ -377,7 +376,7 @@ def test_delete_path():
     s.plt.clear_menu_path()
     assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
 
-    s.pop_out_of_menu_path()
+    s.set_menu_path('test')
     s.menu_paths.delete_menu_path(name=menu_path)
 
 
@@ -387,7 +386,7 @@ def test_delete():
     assert s.menu_paths.get_menu_path_components(name='test-delete')
     s.plt.delete_chart_by_order(order=0)
     assert not s.menu_paths.get_menu_path_components(name='test-delete')
-    s.pop_out_of_menu_path()
+    s.set_menu_path('test')
     s.menu_paths.delete_menu_path(name='test-delete')
 
 
@@ -722,8 +721,7 @@ def test_stacked_bar_chart():
     s.set_menu_path('test-free-echarts', 'stacked-bar-chart')
 
     s.plt.stacked_bar(
-        data='stacked data',
-        x="Segment",
+        data='stacked data', x="Segment",
         x_axis_name='Distribution and weight of the Drivers',
         order=0, show_values=['Price'],
     )
@@ -733,10 +731,8 @@ def test_stacked_horizontal_bar_chart():
     s.set_menu_path('test-free-echarts', 'horizontal-stacked-bar-chart')
 
     s.plt.stacked_horizontal_bar(
-        data='stacked data',
-        x="Segment",
+        data='stacked data', x="Segment", order=0,
         x_axis_name='Distribution and weight of the Drivers',
-        order=0,
     )
 
 
@@ -3063,7 +3059,7 @@ def test_same_position_charts():
 
     assert 0 == len(s.menu_paths.get_menu_path_components(name='test-same-position'))
 
-    s.pop_out_of_menu_path()
+    s.set_menu_path('test')
     s.menu_paths.delete_menu_path(name='test-same-position')
 
 
@@ -3708,17 +3704,14 @@ test_chart_and_indicators()
 # test_bar_with_filters()
 
 # Tabs
-s.pop_out_of_menu_path()
 s.set_board("Tabs dashboard")
 test_tabs()
 
 # Modal
-s.pop_out_of_menu_path()
 s.set_board("Modals dashboard")
 test_modal()
 
 # Others
-s.pop_out_of_menu_path()
 s.set_board('Others')
 test_input_form()
 test_dynamic_conditional_and_auto_send_input_form()

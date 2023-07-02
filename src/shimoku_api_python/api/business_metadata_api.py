@@ -10,9 +10,10 @@ from ..resources.business import Business
 from ..resources.app import App
 from ..resources.report import Report
 from ..utils import create_normalized_name
+from ..exceptions import WorkspaceError
 
 import logging
-from ..execution_logger import logging_before_and_after
+from ..execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -26,6 +27,15 @@ class BusinessMetadataApi(ABC):
 
         self._get_for_roles = self._get_business_with_warning
 
+    async def _check_similar_name(self, name: str):
+        """ Check if there exists a workspace with a very similar name
+        :param name: Name of the workspace """
+        all_business = await self._universe.get_businesses()
+        normalized_name = create_normalized_name(name)
+        if normalized_name in [create_normalized_name(business['name']) for business in all_business]:
+            raise log_error(logger, 'There exists a workspace with a very similar name, please choose another name',
+                            WorkspaceError)
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def create_workspace(
@@ -38,6 +48,8 @@ class BusinessMetadataApi(ABC):
         :param theme: Theme of the workspace
         :return: workspace data
         """
+        await self._check_similar_name(name)
+
         business = await self._universe.create_business(name=name, theme=theme)
 
         if create_default_roles:
@@ -70,6 +82,7 @@ class BusinessMetadataApi(ABC):
         params = {}
 
         if new_name:
+            await self._check_similar_name(new_name)
             params['new_name'] = new_name
 
         if isinstance(theme, dict):
@@ -120,7 +133,7 @@ class BusinessMetadataApi(ABC):
     async def get_workspace_menu_paths(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ) -> List[Dict]:
-        """Get the apps of a workspace
+        """Get the menu paths of a workspace
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         :return: List of apps
@@ -135,7 +148,7 @@ class BusinessMetadataApi(ABC):
     async def get_workspace_menu_path_ids(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ) -> List[Dict]:
-        """Get the apps of a workspace
+        """Get the menu path ids of a workspace
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         :return: List of app ids
@@ -150,7 +163,7 @@ class BusinessMetadataApi(ABC):
     async def get_workspace_boards(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ) -> List[Dict]:
-        """Get the apps of a workspace
+        """Get the boards of a workspace
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         :return: List of dashboards
@@ -165,7 +178,7 @@ class BusinessMetadataApi(ABC):
     async def delete_all_workspace_menu_paths(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ):
-        """Delete all apps of a workspace
+        """Delete all menu paths of a workspace
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         """
@@ -180,7 +193,7 @@ class BusinessMetadataApi(ABC):
     async def delete_all_workspace_boards(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ):
-        """Delete all dashboards of a workspace
+        """Delete all boards of a workspace
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         """
@@ -193,8 +206,7 @@ class BusinessMetadataApi(ABC):
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def change_boards_order(
-        self, uuid: Optional[str] = None, name: Optional[str] = None,
-        boards: List[str] = None
+        self, boards: List[str], uuid: Optional[str] = None, name: Optional[str] = None,
     ):
         """Change the order of the boards of a workspace
         :param name: Name of the workspace

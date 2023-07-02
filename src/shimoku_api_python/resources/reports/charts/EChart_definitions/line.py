@@ -74,10 +74,10 @@ async def stacked_area_chart(self: 'PlotApi', *args, x: str, **kwargs):
 @async_auto_call_manager()
 @logging_before_and_after(logger.info)
 async def predictive_line_chart(
-    self: 'PlotApi', order: int, x: str, y: Optional[Union[List[str], str]] = None,
+    self: 'PlotApi', data: Union[str, DataFrame, List[Dict]],
+    order: int, x: str, y: Optional[Union[List[str], str]] = None,
     min_value_mark: Optional[str] = None, max_value_mark: Optional[str] = None,
     color_mark: str = 'rgba(255, 173, 177, 0.4)',
-    data: Optional[Union[List[str], DataFrame, List[Dict]]] = None,
     x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
     title: Optional[str] = None, rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     padding: Optional[List[int]] = None, show_values: Optional[List[str]] = None,

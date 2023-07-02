@@ -1,6 +1,8 @@
 """"""
 from os import getenv
 from typing import Dict, List
+from shimoku_api_python.exceptions import WorkspaceError, CacheError
+
 import unittest
 
 import shimoku_api_python as shimoku
@@ -179,8 +181,48 @@ def test_update_business():
 
 
 def test_get_business_apps():
-    apps: List[Dict] = s.workspaces.get_business_apps(uuid=business_id)
+    apps: List[Dict] = s.workspaces.get_workspace_menu_paths(uuid=business_id)
     assert apps
+
+
+def test_cant_create_business_with_similar_name():
+    if s.workspaces.get_workspace(name='auto-test'):
+        s.workspaces.delete_workspace(name='auto-test')
+
+    s.workspaces.create_workspace(name='auto-test')
+
+    class SimilarBusinessCase(unittest.TestCase):
+        def test_create_similar(self):
+            with self.assertRaises(WorkspaceError):
+                s.workspaces.create_workspace(
+                    name='auto-TEST',
+                )
+
+        def test_update_similar(self):
+            with self.assertRaises(WorkspaceError):
+                s.workspaces.update_workspace(
+                    name='auto-test',
+                    new_name='auto-TEST',
+                )
+    sbc = SimilarBusinessCase()
+    sbc.test_create_similar()
+    sbc.test_update_similar()
+    s.workspaces.delete_workspace(name='auto-test')
+
+
+def test_cant_get_with_id_and_name():
+    if s.workspaces.get_workspace(name='auto-test'):
+        s.workspaces.delete_workspace(name='auto-test')
+
+    wid = s.workspaces.create_workspace(name='auto-test')['id']
+
+    class SetBoth(unittest.TestCase):
+        def test_set_both(self):
+            with self.assertRaises(CacheError):
+                s.set_workspace(uuid=wid, name='auto-test')
+
+    sbc = SetBoth()
+    sbc.test_set_both()
 
 
 test_get_business()
@@ -189,3 +231,5 @@ test_create_and_delete_business()
 test_theme_customization()
 test_update_business()
 test_get_business_apps()
+test_cant_create_business_with_similar_name()
+test_cant_get_with_id_and_name()

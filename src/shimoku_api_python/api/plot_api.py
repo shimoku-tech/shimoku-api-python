@@ -39,6 +39,7 @@ from ..resources.reports.charts.bentobox_charts import chart_and_modal_button, i
     indicators_with_header, chart_and_indicators
 from ..resources.reports.charts.table import Table, interpret_label_info
 from ..resources.reports.charts.annotated_chart import AnnotatedEChart
+from ..resources.reports.filter_data_set import FilterDataSet
 from ..resources.reports.tabs_group import TabsGroup
 from ..resources.reports.modal import Modal
 from ..resources.reports.charts.iframe import IFrame
@@ -514,9 +515,10 @@ class PlotApi:
         await asyncio.gather(*tasks)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _choose_data(self, order: int, data: Union[List[Dict], pd.DataFrame, Dict, str],
-                           chart_class: Type[Report] = EChart, dump_whole: bool = False
-                           ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
+    async def _choose_data(
+        self, order: int, data: Union[List[Dict], pd.DataFrame, Dict, str],
+        chart_class: Type[Report] = EChart, dump_whole: bool = False
+    ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
         """ Get the data mappings of the data. If the data is a string, it is assumed to be a shared data entry.
         :param order: the order of the chart
         :param data: the data
@@ -532,6 +534,30 @@ class PlotApi:
         name = report['id']
 
         return await self._create_data_set(name, data, dump_whole)
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.debug)
+    async def filter(
+        self, order: int, data: str, field: str
+    ):
+        """ Filter the data set.
+        :param order: the order of the chart
+        :param data: the data
+        :param field: the field to filter
+        """
+        r_t = await self._get_chart_report(order, chart_class=FilterDataSet)
+        filter_ds: FilterDataSet = r_t[1]
+
+        if not isinstance(data, str):
+            log_error(logger, f'To filter a data set, the data must be a shared data entry', DataError)
+
+        if data not in self._shared_data_map:
+            log_error(logger, f'No shared data with name {data} found', DataError)
+
+        _, data_set, _ = self._shared_data_map[data][field]
+        data = self._shared_data[data]
+
+        await filter_ds.link_to_data_set(data_set, data, field)
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _check_previous_paths(self):

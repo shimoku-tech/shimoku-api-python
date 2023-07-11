@@ -93,9 +93,9 @@ class ApiClient(object):
     @retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=2, min=1, max=16),
            before_sleep=my_before_sleep)
     async def call_api(
-            self, resource_path, method, path_params=None, query_params=None,
-            header_params=None, body=None, collection_formats=None, limit: Optional[int] = None,
-            **kwargs
+        self, resource_path, method, path_params=None, query_params=None,
+        header_params=None, body=None, collection_formats=None, limit: Optional[int] = None,
+        **kwargs
     ):
         """Create and call the API request with headers, params and others"""
         # header parameters

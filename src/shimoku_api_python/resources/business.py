@@ -26,7 +26,7 @@ class Business(Resource):
                  db_resource: Optional[Dict] = None):
 
         params = {
-            'name': alias,
+            'name': alias if alias else '',
             'theme': {},
         }
 

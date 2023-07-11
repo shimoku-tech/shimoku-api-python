@@ -1,22 +1,10 @@
 from os import getenv
-import shimoku_api_python as shimoku
 import unittest
+from utils import initiate_shimoku
 
-api_key: str = getenv('API_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
+s = initiate_shimoku()
+
 business_id: str = getenv('BUSINESS_ID')
-environment: str = getenv('ENVIRONMENT')
-verbose: str = getenv('VERBOSITY')
-async_execution: bool = False
-
-
-s = shimoku.Client(
-    access_token=api_key,
-    universe_id=universe_id,
-    environment=environment,
-    verbosity='INFO',
-    async_execution=async_execution,
-)
 s.set_workspace(uuid=business_id)
 
 

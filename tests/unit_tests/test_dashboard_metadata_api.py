@@ -1,25 +1,14 @@
 from os import getenv
-import shimoku_api_python as shimoku
 from tenacity import RetryError
 from shimoku_api_python.exceptions import CacheError
 import unittest
+from utils import initiate_shimoku
 
+s = initiate_shimoku()
 
-api_key: str = getenv('API_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
 business_id: str = getenv('BUSINESS_ID')
-environment: str = getenv('ENVIRONMENT')
-verbose: str = getenv('VERBOSITY')
-async_execution: bool = getenv('ASYNC_EXECUTION') == 'TRUE'
+mock: bool = getenv('MOCK') == 'TRUE'
 
-
-s = shimoku.Client(
-    access_token=api_key,
-    universe_id=universe_id,
-    environment=environment,
-    verbosity=verbose,
-    async_execution=async_execution,
-)
 s.set_workspace(uuid=business_id)
 
 
@@ -76,8 +65,9 @@ class TestDashboardMetadataApi(unittest.TestCase):
         app_ids = s.boards.get_board_menu_path_ids(name=name)
         assert app_id == app_ids[0]
 
-        with self.assertRaises(RetryError):
-            s.boards.delete_board(name=name)
+        if not mock:
+            with self.assertRaises(RetryError):
+                s.boards.delete_board(name=name)
 
         s.boards.remove_menu_path_from_board(name=name, menu_path_id=app_id)
         s.boards.delete_board(name=name)

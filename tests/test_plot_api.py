@@ -32,6 +32,7 @@ s = shimoku.Client(
     verbosity=verbose,
     async_execution=async_execution
 )
+
 s.set_workspace(uuid=workspace_id)
 
 delete_paths: bool = False
@@ -349,14 +350,18 @@ def test_delete_path():
     sub_path_2: str = 'line-test-2'
     sub_path_3: str = 'line-test-3'
 
+    s.set_menu_path(menu_path)
+    s.plt.clear_menu_path()
+
     s.set_menu_path(menu_path, sub_path)
+
     s.plt.line(data=data, x='date', order=0)
     s.plt.line(data=data, x='date', order=1)
 
     reports: List[Dict] = s.menu_paths.get_menu_path_components(name=menu_path)
     assert len(reports) == 2
 
-    s.plt.clear_menu_path(path='line-test')
+    s.plt.clear_menu_path()
 
     assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
     for i in range(10):
@@ -370,9 +375,11 @@ def test_delete_path():
 
     assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 12
 
-    s.plt.clear_menu_path(path='line-test')
+    s.set_menu_path(menu_path, sub_path)
+    s.plt.clear_menu_path()
     assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 2
 
+    s.set_menu_path(menu_path)
     s.plt.clear_menu_path()
     assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
 
@@ -3055,6 +3062,7 @@ def test_same_position_charts():
     t.check_order_conflict_path()
     t.check_order_conflict_tabs()
 
+    s.set_menu_path('test-same-position')
     s.plt.clear_menu_path()
 
     assert 0 == len(s.menu_paths.get_menu_path_components(name='test-same-position'))

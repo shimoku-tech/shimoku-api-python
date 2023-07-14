@@ -9,6 +9,7 @@ import datetime
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
 from shimoku_api_python.exceptions import ApiClientError
+from pkg_resources import get_distribution
 
 import aiohttp
 import logging
@@ -22,6 +23,8 @@ class ApiClient(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(self, environment: str, config=None):
+
+        self.cache_enabled = True
 
         if config is None:
             config = {}
@@ -251,6 +254,7 @@ class ApiClient(object):
         elif self.is_oauth:
             headers = headers or {}
             headers.update({'Authorization': 'Bearer ' + self.access_token})
+            headers.update({'shimoku-api-version': get_distribution("shimoku_api_python").version})
 
         if method not in ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'POST', 'PUT', 'PATCH']:
             raise ValueError(

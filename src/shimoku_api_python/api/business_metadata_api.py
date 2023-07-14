@@ -238,7 +238,8 @@ class BusinessMetadataApi(ABC):
         how_many_updates = len(non_referenced_reports)
         tasks = []
         for i, sub_path in enumerate(sub_paths):
-            _reports = [report for report in reports if create_normalized_name(report['path']) == sub_path]
+            _reports = [report for report in reports if (report['path'] is not None and
+                        create_normalized_name(report['path']) == create_normalized_name(sub_path))]
             how_many_updates += len(_reports)
             for report in _reports:
                 tasks.append(app.update_report(uuid=report['id'], pathOrder=i))

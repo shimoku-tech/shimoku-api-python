@@ -2,6 +2,7 @@ import logging
 import asyncio
 import json
 
+from copy import copy
 from typing import Optional, Dict, Any, List, TypeVar, Type, Set, Tuple, Union
 from tqdm import tqdm
 
@@ -39,8 +40,16 @@ class ResourceCache:
 
         async with self._listing_lock:
 
-            if self._listed:
-                return list(self._cache.values())
+            if self._parent.api_client.cache_enabled:
+                if self._listed:
+                    logger.debug("Resource cache already listed")
+                    return list(self._cache.values())
+            else:
+                await asyncio.gather(*[resource.update()
+                                       for resource in self._cache.values()
+                                       if 'dirty' in dir(resource) and resource.dirty])
+                self._cache = {}
+                self._aliases = {}
 
             self._listed = True
             endpoint: str = f'{self._parent["base_url"]}{self._parent.resource_type}/' \
@@ -100,7 +109,13 @@ class ResourceCache:
             log_error(logger, f"Resource {resource_id} has the wrong resource type", CacheError)
 
         if resource_id in self._cache:
-            log_error(logger, f"Resource {resource_id} already exists in cache", CacheError)
+            if self._parent.api_client.cache_enabled:
+                log_error(logger, f"Resource {resource_id} already exists in cache", CacheError)
+            del self._cache[resource_id]
+            for alias_key, alias_value in list(self._aliases.items()):
+                if alias_value == resource_id:
+                    del self._aliases[alias_key]
+                    break
 
         if alias:
             self._aliases[alias] = resource_id
@@ -118,7 +133,8 @@ class ResourceCache:
         if alias in self._aliases:
             uuid = self._aliases[alias]
 
-        if uuid in self._cache:
+        if uuid in self._cache and self._parent.api_client.cache_enabled:
+            logger.debug(f"CACHE HIT: Resource {uuid}")
             return self._cache[uuid]
 
         if not uuid:
@@ -179,7 +195,9 @@ class ResourceCache:
     async def raise_if_alias_exists(self, alias: str):
         await self.list()
         if alias in self._aliases:
-            log_error(logger, f"Alias {alias} already exists in cache", CacheError)
+            if self._parent.api_client.cache_enabled:
+                log_error(logger, f"Alias {alias} already exists in cache", CacheError)
+            del self._aliases[alias]
 
     # @logging_before_and_after(logging_level=logger.debug)
     def cascade_to_dict(self) -> List[Dict[str, Any]]:

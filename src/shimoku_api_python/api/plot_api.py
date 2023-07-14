@@ -6,7 +6,7 @@ from pandas import DataFrame
 from math import ceil
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
-from typing import Callable, Optional, Tuple, Dict, List, Union, Any, Type, TYPE_CHECKING
+from typing import Callable, Optional, Tuple, Dict, List, Union, Any, Type
 
 from ..resources.app import App
 from ..resources.report import Report
@@ -58,28 +58,6 @@ logger = logging.getLogger(__name__)
 class PlotApi:
     """ Plot API """
 
-    def _set_mock_functions(self):
-
-        def single_axis_trend_chart(
-            order: int, x: str, y: Union[str, List[str]],
-            data: Union[str, DataFrame, List[Dict]],
-            x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
-            title: Optional[str] = None, rows_size: Optional[int] = None,
-            cols_size: Optional[int] = None, padding: Optional[List[int]] = None,
-            show_values: Optional[List[str]] = None,
-            option_modifications: Optional[Dict] = None, **kwargs
-        ):
-            pass
-
-        self.line = single_axis_trend_chart
-        self.bar = single_axis_trend_chart
-        self.area = single_axis_trend_chart
-        self.stacked_area = single_axis_trend_chart
-        self.stacked_bar = single_axis_trend_chart
-        self.horizontal_bar = single_axis_trend_chart
-        self.stacked_horizontal_bar = single_axis_trend_chart
-        self.zero_centered_bar = single_axis_trend_chart
-
     def __init__(self, app: Optional[App], execution_pool_context: ExecutionPoolContext, reuse_data_sets: bool = False):
         self.epc = execution_pool_context
         self._app = app
@@ -93,9 +71,6 @@ class PlotApi:
         self._shared_data_map: Dict[str, Dict[str, Tuple[Mapping, DataSet, Dict]]] = {}
         self._shared_data: Dict[str, Any] = {}
         self._execution_path_orders: List[str] = []
-
-        if TYPE_CHECKING:
-            self._set_mock_functions()
 
     @logging_before_and_after(logging_level=logger.debug)
     def clear_context(self):
@@ -164,11 +139,11 @@ class PlotApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    async def clear_menu_path(self, path: Optional[str] = None):
+    async def clear_menu_path(self):
         """ Clear the current path or a subpath """
         reports = await self._app.get_reports()
-        if path:
-            path = create_normalized_name(path)
+        if self._current_path is not None:
+            path = create_normalized_name(self._current_path)
             reports = [report for report in reports if create_normalized_name(report['path']) == path]
 
         containers: List = [report for report in reports if report.report_type in ['TABS', 'MODAL']]
@@ -176,9 +151,12 @@ class PlotApi:
         for container in containers:
             container.clear_content()
 
+        rds = await asyncio.gather(*[report.get_report_data_sets() for report in reports])
+        touched_data_set_ids = [rd['dataSetId'] for rds in rds for rd in rds]
+
         await asyncio.gather(*[self._app.delete_report(report['id']) for report in reports])
         logger.info(f'Deleted {len(reports)} components')
-        await self._app.delete_unused_data_sets(log=True)
+        await self._app.delete_unused_data_sets(log=True, data_set_ids=touched_data_set_ids)
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -672,8 +650,10 @@ class PlotApi:
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
-    async def html(self, html: str, order: int, cols_size: Optional[int] = None,
-                   rows_size: Optional[int] = None, padding: Optional[str] = None):
+    async def html(
+        self, html: str, order: int, cols_size: Optional[int] = None,
+        rows_size: Optional[int] = None, padding: Optional[str] = None
+    ):
         """ Create an html report in the dashboard.
         :param html: the html code
         :param order: the order of the html
@@ -692,11 +672,12 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.info)
     def indicator(
-            self, data: Union[str, pd.DataFrame, List[Dict], Dict], order: int,
-            vertical: Union[bool, str] = False, **report_params
+        self, data: Union[str, pd.DataFrame, List[Dict], Dict], order: int,
+        vertical: Union[bool, str] = False, **report_params
     ):
         """ Create an indicator report in the dashboard.
         :param data: the data of the indicator
+        :param order: the order of the indicator
         :param vertical: whether the indicator is vertical
         :param report_params: additional report parameters as key-value pairs
         """
@@ -1259,7 +1240,7 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_report_data_sets_per_mapping(
-        self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[str, Tuple, Dict]],
+        self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[Tuple, Dict]],
     ) -> List[Report.ReportDataSet]:
         """ Create a data_set per field of a dataframe.
         :param report: the report
@@ -1268,6 +1249,7 @@ class PlotApi:
         :return: the list of data sets partitioned by axis and fields
         """
         tasks = []
+        fields = fields if fields else []
         for i, f in enumerate(fields):
             mapping = []
             data_set = None
@@ -1361,6 +1343,10 @@ class PlotApi:
             rd_ids = [rd['id'] for rd in report_data_sets]
 
         self._update_options(options, option_modifications)
+
+        if len(rd_ids) != len(data_key_entries):
+            log_error(logger, f'The number of data references and fields must be equal, '
+                              f'they are {len(rd_ids)} and {len(data_key_entries)} respectively.', DataError)
 
         for i, data_key_entry in enumerate(data_key_entries):
             data = options

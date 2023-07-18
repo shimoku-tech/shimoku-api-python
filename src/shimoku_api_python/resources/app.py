@@ -241,14 +241,18 @@ class App(Resource):
         return True
 
     @logging_before_and_after(logger.debug)
-    async def delete_unused_data_sets(self, log: bool = False):
+    async def delete_unused_data_sets(self, log: bool = False, data_set_ids: Optional[List[str]] = None):
         """ Deletes all the unused datasets of the app.
-        :param log: Whether to log the deletion."""
+        :param log: Whether to log the deletion.
+        :param data_set_ids: The ids of the datasets to delete.
+        """
         all_reports = await self.get_reports()
         all_rds = await asyncio.gather(*[report.get_report_data_sets() for report in all_reports])
         all_datasets_in_use = [rds['dataSetId'] for _rds_list in all_rds for rds in _rds_list]
         all_datasets = await self.get_data_sets()
-        dataset_ids_to_delete = [ds['id'] for ds in all_datasets if ds['id'] not in all_datasets_in_use]
+        dataset_ids_to_delete = [ds['id'] for ds in all_datasets
+                                 if ds['id'] not in all_datasets_in_use
+                                 and (ds['id'] in data_set_ids or data_set_ids is None)]
         await asyncio.gather(*[self._base_resource.delete_child(DataSet, ds_id) for ds_id in dataset_ids_to_delete])
         if log:
             logger.info(f'Deleted {len(dataset_ids_to_delete)} unused datasets from the menu path {str(self)}')

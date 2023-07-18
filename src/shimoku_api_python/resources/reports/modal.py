@@ -20,7 +20,7 @@ class Modal(Report):
     )
 
     def __init__(self, *args, **kwargs):
-        self._dirty = False
+        self.dirty = False
         super().__init__(*args, **kwargs)
 
     @logging_before_and_after(logger.debug)
@@ -28,9 +28,9 @@ class Modal(Report):
         """ Update the modal on the server
         :return: True if the modal was updated, False otherwise
         """
-        if not self._dirty:
+        if not self.dirty:
             return False
-        self._dirty = False
+        self.dirty = False
         await super().update()
         return True
 
@@ -51,7 +51,7 @@ class Modal(Report):
             return
 
         self['properties']['reportIds'].append(report['id'])
-        self._dirty = True
+        self.dirty = True
 
     @logging_before_and_after(logger.debug)
     def remove_report(self, report: Report):
@@ -64,7 +64,7 @@ class Modal(Report):
             return
 
         self['properties']['reportIds'].remove(report['id'])
-        self._dirty = True
+        self.dirty = True
 
     @logging_before_and_after(logger.debug)
     def has_report(self, report: Report):
@@ -77,4 +77,4 @@ class Modal(Report):
     def clear_content(self):
         """ Remove all reports from the tabs group without saving it to the server """
         self['properties']['reportIds'] = []
-        self._dirty = True
+        self.dirty = True

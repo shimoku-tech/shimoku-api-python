@@ -136,6 +136,8 @@ class Client(object):
         """Set the board in use for the following apps being called.
         :param name: board name
         """
+        if not self._business_object:
+            log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
         if self._app_object:
             self.pop_out_of_menu_path()
         if self._dashboard_object:
@@ -143,6 +145,16 @@ class Client(object):
         self._dashboard_object: Dashboard = await self._business_object.get_dashboard(name=name)
         self._dashboard_object.currently_in_use = True
         self.board_id = self._dashboard_object['id']
+
+    @logging_before_and_after(logging_level=logger.info)
+    def enable_caching(self):
+        """ Enable caching. """
+        self._api_client.cache_enabled = True
+
+    @logging_before_and_after(logging_level=logger.info)
+    def disable_caching(self):
+        """ Disable caching. """
+        self._api_client.cache_enabled = False
 
     @logging_before_and_after(logging_level=logger.info)
     def reuse_data_sets(self):
@@ -189,12 +201,14 @@ class Client(object):
         :param name: Menu path
         :param sub_path: Sub path
         """
+        if not self._business_object:
+            log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
         app_name = create_normalized_name(name)
-        path = create_normalized_name(sub_path) if sub_path else None
+        path = sub_path if sub_path else None
         data_names = []
         if self._app_object:
             self.plt.raise_if_cant_change_path()
-            if self._app_object['name'] == app_name:
+            if self._app_object['normalizedName'] == app_name:
                 self.plt.change_path(path)
                 return
             data_names = self.plt.get_shared_data_names()

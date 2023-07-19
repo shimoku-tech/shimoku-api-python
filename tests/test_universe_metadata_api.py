@@ -20,10 +20,8 @@ s = shimoku.Client(
 
 
 def test_get_universe_businesses():
-    businesses: List[Dict] = (
-        s.universes.get_universe_businesses(uuid=universe_id)
-    )
-    assert businesses
+    workspaces: List[Dict] = s.universes.get_universe_workspaces(uuid=universe_id)
+    assert workspaces
 
 
 test_get_universe_businesses()

@@ -20,14 +20,15 @@ class Role(Resource):
 
     @logging_before_and_after(logger.debug)
     def __init__(self, parent: Union['Business', 'Dashboard', 'App'], uuid: Optional[str] = None,
-                 alias: Optional[str] = None):
+                 alias: Optional[str] = None, db_resource: Optional[Dict] = None):
         params = dict(
             permission='READ',
             resource='BUSINESS_INFO',
             target='GROUP',
             role=alias,
         )
-        super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['role'], params=params)
+        super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['role'], params=params,
+                         db_resource=db_resource)
 
     @logging_before_and_after(logger.debug)
     async def delete(self):

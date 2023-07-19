@@ -117,7 +117,9 @@ class ResourceCache:
                     del self._aliases[alias_key]
                     break
 
-        if alias:
+        alias = resource[resource.alias_field] if not alias and resource.alias_field else alias
+
+        if alias is not None:
             self._aliases[alias] = resource_id
 
         self._cache[resource_id] = resource
@@ -138,7 +140,7 @@ class ResourceCache:
             return self._cache[uuid]
 
         if not uuid:
-            if alias:
+            if alias is not None:
                 logger.debug(f"CACHE MISS: Alias {alias}")
 
                 await self.list()
@@ -167,7 +169,7 @@ class ResourceCache:
         if not resource:
             return False
 
-        if params.get('new_alias'):
+        if params.get('new_alias') is not None:
             await self.raise_if_alias_exists(params['new_alias'])
             params[resource.alias_field] = params['new_alias']
             del params['new_alias']
@@ -442,9 +444,9 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_child(
-            self, resource_class: Type[IsResource],
-            uuid: Optional[str] = None, alias: Optional[str] = None,
-            create_if_not_exists: bool = False
+        self, resource_class: Type[IsResource],
+        uuid: Optional[str] = None, alias: Optional[str] = None,
+        create_if_not_exists: bool = False
     ) -> Optional[IsResource]:
         """ Gets a child resource.
         :param resource_class: The class of the resource to get.
@@ -452,7 +454,7 @@ class BaseResource:
         :param alias: The alias of the resource to get.
         :param create_if_not_exists: If True, creates the resource if it does not exist.
         """
-        if not uuid and not alias:
+        if not uuid and alias is None:
             log_error(logger, f"Cannot get child without uuid or alias", ValueError)
 
         res_cache: ResourceCache = self.children[resource_class]

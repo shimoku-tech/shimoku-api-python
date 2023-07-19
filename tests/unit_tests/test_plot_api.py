@@ -11,28 +11,12 @@ import numpy as np
 import random
 from copy import deepcopy
 
-import shimoku_api_python as shimoku
+from utils import initiate_shimoku
 
-
-api_key: str = getenv('API_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
+s = initiate_shimoku()
+# s.workspaces.delete_all_workspace_menu_paths(uuid=workspace_id)
+# s.workspaces.delete_all_workspace_boards(uuid=workspace_id)
 workspace_id: str = getenv('BUSINESS_ID')
-environment: str = getenv('ENVIRONMENT')
-verbose: str = getenv('VERBOSITY')
-async_execution: bool = getenv('ASYNC_EXECUTION') == 'TRUE'
-
-config = {
-    'access_token': api_key,
-}
-
-s = shimoku.Client(
-    config=config,
-    universe_id=universe_id,
-    environment=environment,
-    verbosity=verbose,
-    async_execution=async_execution
-)
-
 s.set_workspace(uuid=workspace_id)
 
 delete_paths: bool = False
@@ -343,60 +327,6 @@ tree_data = [
 ]
 
 
-def test_delete_path():
-    print('test_delete_path')
-    menu_path: str = 'test-path'
-    sub_path: str = 'line-test'
-    sub_path_2: str = 'line-test-2'
-    sub_path_3: str = 'line-test-3'
-
-    s.set_menu_path(menu_path)
-    s.plt.clear_menu_path()
-
-    s.set_menu_path(menu_path, sub_path)
-
-    s.plt.line(data=data, x='date', order=0)
-    s.plt.line(data=data, x='date', order=1)
-
-    reports: List[Dict] = s.menu_paths.get_menu_path_components(name=menu_path)
-    assert len(reports) == 2
-
-    s.plt.clear_menu_path()
-
-    assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
-    for i in range(10):
-        s.plt.line(data=data, x='date', order=i)
-
-    s.set_menu_path(menu_path, sub_path_2)
-    s.plt.line(data=data, x='date', order=0)
-
-    s.set_menu_path(menu_path, sub_path_3)
-    s.plt.line(data=data, x='date', order=0)
-
-    assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 12
-
-    s.set_menu_path(menu_path, sub_path)
-    s.plt.clear_menu_path()
-    assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 2
-
-    s.set_menu_path(menu_path)
-    s.plt.clear_menu_path()
-    assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
-
-    s.set_menu_path('test')
-    s.menu_paths.delete_menu_path(name=menu_path)
-
-
-def test_delete():
-    s.set_menu_path('test-delete', 'line-test')
-    s.plt.line(data=data, x='date', order=0)
-    assert s.menu_paths.get_menu_path_components(name='test-delete')
-    s.plt.delete_chart_by_order(order=0)
-    assert not s.menu_paths.get_menu_path_components(name='test-delete')
-    s.set_menu_path('test')
-    s.menu_paths.delete_menu_path(name='test-delete')
-
-
 def test_table():
     s.set_menu_path('test', 'table')
 
@@ -547,11 +477,12 @@ def test_table_with_labels():
         },
     )
 
+
 def test_bar_with_filters():
     print('test_bar_with_filters')
     menu_path: str = 'test', 'multifilter-bar-test'
     # First reset
-    data_ = pd.read_csv('../data/test_multifilter.csv')
+    data_ = pd.read_csv('../../data/test_multifilter.csv')
     y: List[str] = [
         'Acné', 'Adeslas', 'Asisa',
         'Aspy', 'Caser', 'Clínica Navarra', 'Cualtis', 'Cáncer', 'DKV',
@@ -824,8 +755,9 @@ def test_scatter():
     s.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6)
 
     # https://figshare.com/articles/dataset/Age_height_and_weight_raw_data/16920130
-    df_ = pd.read_csv('../data/scatter_test.csv')[['AgeGroup1', 'AgeGroup2', 'AgeGroup3', 'AllGroupAge', 'WeightGroup1',
-                                                   'WeightGroup2', 'WeightGroup3', 'AllGroupWeight']]
+    df_ = pd.read_csv('../../data/scatter_test.csv')[
+        ['AgeGroup1', 'AgeGroup2', 'AgeGroup3', 'AllGroupAge', 'WeightGroup1',
+         'WeightGroup2', 'WeightGroup3', 'AllGroupWeight']]
 
     s.plt.scatter(
         data=df_, point_fields=[
@@ -842,16 +774,16 @@ def test_scatter_with_effect():
     s.set_menu_path('test-free-echarts', 'scatter-with-effect-test')
 
     scatter_data_raw = [[161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
-                      [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
-                      [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0],
-                      [147.2, 49.8], [168.2, 49.2], [175.0, 73.2], [157.0, 47.8], [167.6, 68.8],
-                      [159.5, 50.6], [175.0, 82.5], [166.8, 57.2], [176.5, 87.8], [170.2, 72.8],
-                      [174.0, 54.5], [173.0, 59.8], [179.9, 67.3], [170.5, 67.8], [160.0, 47.0],
-                      [154.4, 46.2], [162.0, 55.0], [176.5, 83.0], [160.0, 54.4], [152.0, 45.8],
-                      [162.1, 53.6], [170.0, 73.2], [160.2, 52.1], [161.3, 67.9], [166.4, 56.6],
-                      [168.9, 62.3], [163.8, 58.5], [167.6, 54.5], [160.0, 50.2], [161.3, 60.3],
-                      [167.6, 58.3], [165.1, 56.2], [160.0, 50.2], [170.0, 72.9], [157.5, 59.8],
-                      ]
+                        [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
+                        [172.5, 55.2], [170.9, 54.2], [172.9, 62.5], [153.4, 42.0], [160.0, 50.0],
+                        [147.2, 49.8], [168.2, 49.2], [175.0, 73.2], [157.0, 47.8], [167.6, 68.8],
+                        [159.5, 50.6], [175.0, 82.5], [166.8, 57.2], [176.5, 87.8], [170.2, 72.8],
+                        [174.0, 54.5], [173.0, 59.8], [179.9, 67.3], [170.5, 67.8], [160.0, 47.0],
+                        [154.4, 46.2], [162.0, 55.0], [176.5, 83.0], [160.0, 54.4], [152.0, 45.8],
+                        [162.1, 53.6], [170.0, 73.2], [160.2, 52.1], [161.3, 67.9], [166.4, 56.6],
+                        [168.9, 62.3], [163.8, 58.5], [167.6, 54.5], [160.0, 50.2], [161.3, 60.3],
+                        [167.6, 58.3], [165.1, 56.2], [160.0, 50.2], [170.0, 72.9], [157.5, 59.8],
+                        ]
 
     scatter_source = [
         {
@@ -1223,12 +1155,12 @@ def test_doughnut():
         {'value': 300, 'name': 'Video Ads'}
     ]
     s.plt.doughnut(data=data, names='date', values='x', order=0)
-    s.plt.doughnut(data=data_, names='name', values='value',  order=1)
+    s.plt.doughnut(data=data_, names='name', values='value', order=1)
 
-    df = pd.read_csv('../data/test_stack_distribution.csv')
+    df = pd.read_csv('../../data/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
-    df = df[['Segment']+value_columns]
+    df = df[['Segment'] + value_columns]
 
     doughnut_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
@@ -1248,12 +1180,12 @@ def test_rose():
         {'value': 300, 'name': 'Video Ads'}
     ]
     s.plt.rose(data='main data', names='date', values='x', order=0)
-    s.plt.rose(data=data_, names='name', values='value',  order=1)
+    s.plt.rose(data=data_, names='name', values='value', order=1)
 
-    df = pd.read_csv('../data/test_stack_distribution.csv')
+    df = pd.read_csv('../../data/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
-    df = df[['Segment']+value_columns]
+    df = df[['Segment'] + value_columns]
 
     rose_data = pd.DataFrame(columns=["name", "value"])
     df_transposed = df.transpose().reset_index().drop(0)
@@ -1265,10 +1197,10 @@ def test_rose():
 
 def test_shimoku_gauges():
     s.set_menu_path('test-free-echarts', 'shimoku-gauges')
-    df = pd.read_csv('../data/test_stack_distribution.csv')
+    df = pd.read_csv('../../data/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
-    df = df[['Segment']+value_columns]
+    df = df[['Segment'] + value_columns]
 
     gauges_data = pd.DataFrame(columns=["name", "value", "color"])
     df_transposed = df.transpose().reset_index().drop(0)
@@ -1307,7 +1239,7 @@ def test_speed_gauge():
     s.plt.speed_gauge(name='Third', value=60, min_value=0, max_value=70, order=0)
 
 
-#TODO implement
+# TODO implement
 def test_change_report_type():
     pass
 
@@ -1345,7 +1277,7 @@ def test_ring_gauge():
 
 def test_sunburst():
     s.set_menu_path('test', 'sunburst')
-    #Using the data set from the tree test
+    # Using the data set from the tree test
     s.plt.sunburst(data='tree_data', order=0)
     s.plt.sunburst(data=sunburst_data, order=1)
 
@@ -1539,7 +1471,7 @@ def test_iframe():
     s.set_menu_path('test', 'iframe-test')
     url = 'https://www.marca.com/'
     s.plt.iframe(url=url, order=0)
-    s.plt.iframe(url=url, order=1, height=160*8, cols_size=6, padding='0,3,0,3')
+    s.plt.iframe(url=url, order=1, height=160 * 8, cols_size=6, padding='0,3,0,3')
 
 
 def test_html():
@@ -2893,7 +2825,7 @@ def test_tabs():
     for i in range(2, 5):
         s.plt.set_tabs_index(
             (f"Deepness {i}", "Indicators 2"), order=1,
-            parent_tabs_index=(f"Deepness {i-1}", "Indicators 1"),
+            parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
             sticky=False, just_labels=True
         )
         s.plt.indicator(data=indicators_data_2, order=0)
@@ -2979,98 +2911,6 @@ def test_gauge_indicators():
     )
 
 
-def test_same_position_charts():
-    s.set_menu_path('test-same-position', 'no conflict path 1')
-
-    s.activate_async_execution()
-
-    s.plt.clear_menu_path()
-    s.plt.gauge_indicator(
-        order=0,
-        value=83,
-        description='Síntomas coincidientes | Mareo, Dolor cervical',
-        title='Sobrecarga muscular en cervicales y espalda',
-    )
-
-    s.set_menu_path('test-same-position', 'no conflict path 2')
-    s.plt.gauge_indicator(
-        order=1,
-        value=31, color=2,
-        description='Síntomas coincidientes | Dolor cervical',
-        title='Bruxismo',
-    )
-
-    s.set_menu_path('test-same-position', 'no conflict tabs')
-    s.plt.set_tabs_index(tabs_index=('tabs', '1'), order=0)
-    s.plt.gauge_indicator(
-        order=0,
-        value=83,
-        description='Síntomas coincidientes | Mareo, Dolor cervical',
-        title='Sobrecarga muscular en cervicales y espalda',
-    )
-
-    s.plt.change_current_tab("2")
-    s.plt.gauge_indicator(
-        order=1,
-        value=31, color=2,
-        description='Síntomas coincidientes | Dolor cervical',
-        title='Bruxismo',
-    )
-
-    s.plt.pop_out_of_tabs_group()
-    s.run()
-
-    class MyTestCase(unittest.TestCase):
-        def check_order_conflict_path(self):
-            with self.assertRaises(RuntimeError):
-                s.set_menu_path('test-same-position', 'conflict')
-                s.plt.gauge_indicator(
-                    order=0,
-                    value=83,
-                    description='Síntomas coincidientes | Mareo, Dolor cervical',
-                    title='Sobrecarga muscular en cervicales y espalda',
-                )
-
-                s.plt.gauge_indicator(
-                    order=1,
-                    value=31, color=2,
-                    description='Síntomas coincidientes | Dolor cervical',
-                    title='Bruxismo',
-                )
-                s.run()
-
-        def check_order_conflict_tabs(self):
-            with self.assertRaises(RuntimeError):
-                s.set_menu_path('test-same-position', 'conflict')
-                s.plt.set_tabs_index(tabs_index=('conflict', 'conflict'), order=0)
-                s.plt.gauge_indicator(
-                    order=0,
-                    value=83,
-                    description='Síntomas coincidientes | Mareo, Dolor cervical',
-                    title='Sobrecarga muscular en cervicales y espalda',
-                )
-
-                s.plt.gauge_indicator(
-                    order=1,
-                    value=31, color=2,
-                    description='Síntomas coincidientes | Dolor cervical',
-                    title='Bruxismo',
-                )
-                s.run()
-
-    t = MyTestCase()
-    t.check_order_conflict_path()
-    t.check_order_conflict_tabs()
-
-    s.set_menu_path('test-same-position')
-    s.plt.clear_menu_path()
-
-    assert 0 == len(s.menu_paths.get_menu_path_components(name='test-same-position'))
-
-    s.set_menu_path('test')
-    s.menu_paths.delete_menu_path(name='test-same-position')
-
-
 def test_annotation_chart():
     s.set_menu_path('test', 'Annotation Chart')
     annotatted_data = [
@@ -3120,9 +2960,11 @@ def test_rainfall_area():
     how_many = 100
 
     data = []
-    for i in range(0, len(flow), max(3, len(flow)//how_many)):
-        data.append({'Date': time[i], 'flow': flow[i], 'flow+1': flow[(i + 101) % len(flow)], 'flow+2': flow[(i + 202) %len(flow)],
-                     'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)], 'rainfall+2': rainfall[(i + 202) % len(flow)]})
+    for i in range(0, len(flow), max(3, len(flow) // how_many)):
+        data.append({'Date': time[i], 'flow': flow[i], 'flow+1': flow[(i + 101) % len(flow)],
+                     'flow+2': flow[(i + 202) % len(flow)],
+                     'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)],
+                     'rainfall+2': rainfall[(i + 202) % len(flow)]})
 
     s.plt.top_bottom_area(
         data=data, order=0,
@@ -3131,7 +2973,7 @@ def test_rainfall_area():
     )
 
     data = []
-    for i in range(0, len(flow), max(1, len(flow)//how_many)):
+    for i in range(0, len(flow), max(1, len(flow) // how_many)):
         data.append({'Date': time[i], 'flow': flow[i], 'rainfall': rainfall[i]})
 
     s.plt.top_bottom_area(
@@ -3146,9 +2988,11 @@ def test_rainfall_line():
     how_many = 100
 
     data = []
-    for i in range(0, len(flow), max(3, len(flow)//how_many)):
-        data.append({'Date': time[i], 'flow': flow[i], 'flow+1': flow[(i + 101) % len(flow)], 'flow+2': flow[(i + 202) %len(flow)],
-                     'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)], 'rainfall+2': rainfall[(i + 202) % len(flow)]})
+    for i in range(0, len(flow), max(3, len(flow) // how_many)):
+        data.append({'Date': time[i], 'flow': flow[i], 'flow+1': flow[(i + 101) % len(flow)],
+                     'flow+2': flow[(i + 202) % len(flow)],
+                     'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)],
+                     'rainfall+2': rainfall[(i + 202) % len(flow)]})
 
     s.plt.top_bottom_line(
         data=data, order=0,
@@ -3157,7 +3001,7 @@ def test_rainfall_line():
     )
 
     data = []
-    for i in range(0, len(flow), max(1, len(flow)//how_many)):
+    for i in range(0, len(flow), max(1, len(flow) // how_many)):
         data.append({'Date': time[i], 'flow': flow[i], 'rainfall': rainfall[i]})
 
     s.plt.top_bottom_line(
@@ -3264,7 +3108,7 @@ def test_segmented_line_chart():
         {
             'date': data[i][0],
             'y': data[i][1],
-            'y_displaced': data[(i + 10)%len(data)][1],
+            'y_displaced': data[(i + 10) % len(data)][1],
             'y_multiplied': data[i][1] * 2,
         } for i in range(len(data))
     ])
@@ -3552,7 +3396,7 @@ def test_chart_and_indicators():
             },
             {
                 "description": "% of times the algorithm has predicted the relative position of "
-                          "NY prices with respect to HK prices correctly",
+                               "NY prices with respect to HK prices correctly",
                 "title": "Accuracy",
                 "value": "76.67%",
                 "align": "left",
@@ -3571,7 +3415,7 @@ def test_chart_and_indicators():
             },
             {
                 "description": "% of times the algorithm has predicted the relative position of "
-                          "NY prices with respect to HK prices correctly",
+                               "NY prices with respect to HK prices correctly",
                 "title": "Accuracy",
                 "value": "76.67%",
                 "align": "left",
@@ -3580,7 +3424,7 @@ def test_chart_and_indicators():
             },
             {
                 "description": "% of times the algorithm has predicted the relative position of "
-                          "NY prices with respect to HK prices correctly",
+                               "NY prices with respect to HK prices correctly",
                 "title": "Accuracy",
                 "value": "76.67%",
                 "align": "left",
@@ -3605,136 +3449,293 @@ def test_chart_and_indicators():
     )
 
 
-def test_menu_order():
-    s.workspaces.change_boards_order(
-        uuid=workspace_id,
-        boards=[
-            'Dashboard',
-            'Others',
-            'Modals dashboard',
-            'Tabs dashboard',
-            '---'
-        ]
-    )
-    s.workspaces.change_menu_order(
-        uuid=workspace_id,
-        menu_order=[
-            ('test', [
-                'line-test',
-                'bar-test',
-                'pie-test',
-                'area-test',
-                'scatter-test',
-                'radar-test',
+class TestPlotApi(unittest.TestCase):
+    def test_delete_path(self):
+        init_time = perf_counter()
+        menu_path: str = 'test-path'
+        sub_path: str = 'line-test'
+        sub_path_2: str = 'line-test-2'
+        sub_path_3: str = 'line-test-3'
+
+        s.set_menu_path(menu_path)
+        s.plt.clear_menu_path()
+
+        s.set_menu_path(menu_path, sub_path)
+
+        s.plt.line(data=data, x='date', order=0)
+        s.plt.line(data=data, x='date', order=1)
+
+        reports: List[Dict] = s.menu_paths.get_menu_path_components(name=menu_path)
+        assert len(reports) == 2
+
+        s.plt.clear_menu_path()
+
+        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
+        for i in range(10):
+            s.plt.line(data=data, x='date', order=i)
+
+        s.set_menu_path(menu_path, sub_path_2)
+        s.plt.line(data=data, x='date', order=0)
+
+        s.set_menu_path(menu_path, sub_path_3)
+        s.plt.line(data=data, x='date', order=0)
+
+        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 12
+
+        s.set_menu_path(menu_path, sub_path)
+        s.plt.clear_menu_path()
+        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 2
+
+        s.set_menu_path(menu_path)
+        s.plt.clear_menu_path()
+        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
+
+        s.set_menu_path('test')
+        s.menu_paths.delete_menu_path(name=menu_path)
+
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_delete(self):
+        init_time = perf_counter()
+        s.set_menu_path('test-delete', 'line-test')
+        s.plt.line(data=data, x='date', order=0)
+        assert s.menu_paths.get_menu_path_components(name='test-delete')
+        s.plt.delete_chart_by_order(order=0)
+        assert not s.menu_paths.get_menu_path_components(name='test-delete')
+        s.set_menu_path('test')
+        s.menu_paths.delete_menu_path(name='test-delete')
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+    def test_charts(self):
+        init_time = perf_counter()
+
+        s.reuse_data_sets()
+
+        s.set_menu_path('test')
+        s.plt.set_shared_data(
+            dfs={
+                'main data': data,
+                'zero centered data': zero_centered_data,
+                'funnel data': funnel_data,
+                'heatmap data': heatmap_data,
+            },
+            custom_data={
+                'tree_data': tree_data,
+                'sunburst_data': sunburst_data,
+            }
+        )
+        test_indicator()
+        test_speed_gauge()
+        test_line()
+        test_predictive_line()
+        test_bar()
+        test_scatter()
+        test_area()
+        test_horizontal_bar_chart()
+        test_zero_centered_barchart()
+        test_funnel()
+        test_iframe()
+        test_bentobox()
+        test_radar()
+        test_pie()
+        test_rose()
+        test_doughnut()
+        test_html()
+        test_tree()
+        test_sunburst()
+        test_treemap()
+        test_sankey()
+        test_heatmap()
+        test_table()
+        s.update_data_sets()
+        test_table_with_labels()
+        s.reuse_data_sets()
+        test_annotation_chart()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_free_echarts(self):
+        init_time = perf_counter()
+        s.set_menu_path('test-free-echarts')
+        stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
+        s.plt.set_shared_data({'stacked data': stacked_data})
+        test_stacked_bar_chart()
+        test_stacked_horizontal_bar_chart()
+        test_stacked_area_chart()
+        test_shimoku_gauges()
+        test_gauge_indicators()
+        test_free_echarts()
+        test_rainfall_area()
+        test_rainfall_line()
+        test_line_with_confidence_area()
+        test_scatter_with_effect()
+        test_waterfall()
+        test_bar_and_line_chart()
+        test_segmented_line_chart()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_bento_box(self):
+        init_time = perf_counter()
+        test_infographics()
+        test_chart_and_indicators()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    # Filters and sequential needed TODO resolve with filter dataset
+    # test_heatmap_with_filters()
+    # test_bar_with_filters_with_aggregation_methods()
+    # test_bar_with_filters()
+
+    def test_tabs(self):
+        init_time = perf_counter()
+        s.set_board("Tabs dashboard")
+        test_tabs()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_modals(self):
+        init_time = perf_counter()
+        s.set_board("Modals dashboard")
+        test_modal()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_forms(self):
+        init_time = perf_counter()
+        s.set_board('Others')
+        test_input_form()
+        test_dynamic_conditional_and_auto_send_input_form()
+        test_get_input_forms()
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
+
+    def test_menu_order(self):
+        init_time = perf_counter()
+        s.workspaces.change_boards_order(
+            uuid=workspace_id,
+            boards=[
+                'Dashboard',
+                'Others',
+                'Modals dashboard',
+                'Tabs dashboard',
                 '---'
-            ]),
-            ('test-bentobox', [
-                'chart-and-indicators',
-                'Infographics',
-            ]),
-            'test-free-echarts',
-            '---'
-        ]
-    )
+            ]
+        )
+        s.workspaces.change_menu_order(
+            uuid=workspace_id,
+            menu_order=[
+                ('test', [
+                    'line-test',
+                    'bar-test',
+                    'pie-test',
+                    'area-test',
+                    'scatter-test',
+                    'radar-test',
+                    '---'
+                ]),
+                ('test-bentobox', [
+                    'chart-and-indicators',
+                    'Infographics',
+                ]),
+                'test-free-echarts',
+                '---'
+            ]
+        )
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')
 
+    def test_same_position_charts(self):
+        init_time = perf_counter()
+        s.set_menu_path('test-same-position', 'no conflict path 1')
 
-init_time = perf_counter()
+        s.activate_async_execution()
 
-s.reuse_data_sets()
-# s.workspaces.delete_all_workspace_menu_paths(uuid=workspace_id)
-# s.workspaces.delete_all_workspace_boards(uuid=workspace_id)
-s.set_menu_path('test')
-s.plt.set_shared_data(
-    dfs={
-        'main data': data,
-        'zero centered data': zero_centered_data,
-        'funnel data': funnel_data,
-        'heatmap data': heatmap_data,
-    },
-    custom_data={
-        'tree_data': tree_data,
-        'sunburst_data': sunburst_data,
-    }
-)
-# s.activate_sequential_execution()
-# Charts
-test_indicator()
-test_speed_gauge()
-test_line()
-test_predictive_line()
-test_bar()
-test_scatter()
-test_area()
-test_horizontal_bar_chart()
-test_zero_centered_barchart()
-test_funnel()
-test_iframe()
-test_bentobox()
-test_radar()
-test_pie()
-test_rose()
-test_doughnut()
-test_html()
-test_tree()
-test_sunburst()
-test_treemap()
-test_sankey()
-test_heatmap()
-test_table()
-s.update_data_sets()
-test_table_with_labels()
-s.reuse_data_sets()
-test_annotation_chart()
+        s.plt.clear_menu_path()
+        s.plt.gauge_indicator(
+            order=0,
+            value=83,
+            description='Síntomas coincidientes | Mareo, Dolor cervical',
+            title='Sobrecarga muscular en cervicales y espalda',
+        )
 
-s.set_menu_path('test-free-echarts')
-stacked_data = pd.read_csv('../data/test_stack_distribution.csv')
-s.plt.set_shared_data({'stacked data': stacked_data})
-test_stacked_bar_chart()
-test_stacked_horizontal_bar_chart()
-test_stacked_area_chart()
-test_shimoku_gauges()
-test_gauge_indicators()
-test_free_echarts()
-test_rainfall_area()
-test_rainfall_line()
-test_line_with_confidence_area()
-test_scatter_with_effect()
-test_waterfall()
-test_bar_and_line_chart()
-test_segmented_line_chart()
+        s.set_menu_path('test-same-position', 'no conflict path 2')
+        s.plt.gauge_indicator(
+            order=1,
+            value=31, color=2,
+            description='Síntomas coincidientes | Dolor cervical',
+            title='Bruxismo',
+        )
 
-test_infographics()
-test_chart_and_indicators()
+        s.set_menu_path('test-same-position', 'no conflict tabs')
+        s.plt.set_tabs_index(tabs_index=('tabs', '1'), order=0)
+        s.plt.gauge_indicator(
+            order=0,
+            value=83,
+            description='Síntomas coincidientes | Mareo, Dolor cervical',
+            title='Sobrecarga muscular en cervicales y espalda',
+        )
 
-# Filters and sequential needed TODO resolve with filter dataset
-# test_heatmap_with_filters()
-# test_bar_with_filters_with_aggregation_methods()
-# test_bar_with_filters()
+        s.plt.change_current_tab("2")
+        s.plt.gauge_indicator(
+            order=1,
+            value=31, color=2,
+            description='Síntomas coincidientes | Dolor cervical',
+            title='Bruxismo',
+        )
 
-# Tabs
-s.set_board("Tabs dashboard")
-test_tabs()
+        s.plt.pop_out_of_tabs_group()
+        s.run()
 
-# Modal
-s.set_board("Modals dashboard")
-test_modal()
+        with self.assertRaises(RuntimeError):
+            s.set_menu_path('test-same-position', 'conflict')
+            s.plt.gauge_indicator(
+                order=0,
+                value=83,
+                description='Síntomas coincidientes | Mareo, Dolor cervical',
+                title='Sobrecarga muscular en cervicales y espalda',
+            )
 
-# Others
-s.set_board('Others')
-test_input_form()
-test_dynamic_conditional_and_auto_send_input_form()
-test_get_input_forms()
-test_menu_order()
-test_delete()
-test_delete_path()
-test_same_position_charts()
+            s.plt.gauge_indicator(
+                order=1,
+                value=31, color=2,
+                description='Síntomas coincidientes | Dolor cervical',
+                title='Bruxismo',
+            )
+            s.run()
 
-# TODO
-# test_cohorts()
-# test_themeriver()
-# test_candlestick()
-# test_scatter_with_confidence_area()
-# test_bubble_chart()
-# test_line_with_confidence_area()
-print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-print(f'Total api calls {s.get_api_calls_counter()}')
+        with self.assertRaises(RuntimeError):
+            s.set_menu_path('test-same-position', 'conflict')
+            s.plt.set_tabs_index(tabs_index=('conflict', 'conflict'), order=0)
+            s.plt.gauge_indicator(
+                order=0,
+                value=83,
+                description='Síntomas coincidientes | Mareo, Dolor cervical',
+                title='Sobrecarga muscular en cervicales y espalda',
+            )
+
+            s.plt.gauge_indicator(
+                order=1,
+                value=31, color=2,
+                description='Síntomas coincidientes | Dolor cervical',
+                title='Bruxismo',
+            )
+            s.run()
+
+        s.set_menu_path('test-same-position')
+        s.plt.clear_menu_path()
+
+        assert 0 == len(s.menu_paths.get_menu_path_components(name='test-same-position'))
+
+        s.set_menu_path('test')
+        s.menu_paths.delete_menu_path(name='test-same-position')
+
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Total api calls {s.get_api_calls_counter()}')

@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class File(Resource):
-    """ Report resource class """
+    """ File resource class """
 
     resource_type = 'file'
     plural = 'files'

@@ -58,7 +58,7 @@ class BusinessMetadataApi(ABC):
             for role_permission_resource in ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']:
                 create_roles_tasks.append(
                     business.create_role(
-                        role='business_read',
+                        role='business_read_'+role_permission_resource,
                         resource=role_permission_resource,
                     )
                 )
@@ -81,7 +81,7 @@ class BusinessMetadataApi(ABC):
         """
         params = {}
 
-        if new_name:
+        if new_name is not None:
             await self._check_similar_name(new_name)
             params['new_name'] = new_name
 

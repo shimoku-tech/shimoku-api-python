@@ -5,6 +5,7 @@ from utils import initiate_shimoku
 
 s = initiate_shimoku()
 business_id: str = getenv('BUSINESS_ID')
+mock: bool = getenv('MOCK') == 'TRUE'
 async_execution: bool = getenv('ASYNC_EXECUTION') == 'TRUE'
 
 s.set_workspace(uuid=business_id)
@@ -224,40 +225,41 @@ class TestActivity(unittest.TestCase):
 
         self.activity_doesnt_exist(new_activity_name)
 
-    # def test_execute_activity(self):
-    #     """
-    #     Executes an activity and tests that the activity and run are created, also tests that the run has a log
-    #     and that the settings are being passed correctly. The activity must have a webhook linked for it to work.
-    #     """
-    #     run = s.activities.execute_activity(name=activity_name)
-    #
-    #     activity = s.activities.get_activity(name=activity_name, how_many_runs=1)
-    #
-    #     # Runs are ordered by execution time, so the first run is the most recently executed
-    #     assert activity['runs'][0]['id'] == run['id']
-    #     assert len(activity['runs'][0]['logs']) == 1
-    #
-    #     settings = [{'name': 'test1', 'value': 'test1'}, {'name': 'test2', 'value': 'test2'}]
-    #
-    #     run1 = s.activities.execute_activity(name=activity_name, run_settings=settings[0])
-    #     run2 = s.activities.execute_activity(name=activity_name, run_settings=settings[1])
-    #     run3 = s.activities.create_run(name=activity_name, settings=run2['id'])
-    #     s.activities.execute_run(name=activity_name, run_id=run3['id'])
-    #
-    #     activity = s.activities.get_activity(name=activity_name, how_many_runs=4)
-    #
-    #     assert activity['runs'][0]['id'] == run['id']
-    #     assert activity['runs'][0]['settings'] == {}
-    #     assert len(activity['runs'][0]['logs']) == 1
-    #     assert activity['runs'][1]['id'] == run1['id']
-    #     assert activity['runs'][1]['settings'] == settings[0]
-    #     assert len(activity['runs'][1]['logs']) == 1
-    #     assert activity['runs'][2]['id'] == run2['id']
-    #     assert activity['runs'][2]['settings'] == settings[1]
-    #     assert len(activity['runs'][2]['logs']) == 1
-    #     assert activity['runs'][3]['id'] == run3['id']
-    #     assert activity['runs'][3]['settings'] == settings[1]
-    #     assert len(activity['runs'][3]['logs']) == 1
+    def test_execute_activity(self):
+        """
+        Executes an activity and tests that the activity and run are created, also tests that the run has a log
+        and that the settings are being passed correctly. The activity must have a webhook linked for it to work.
+        """
+        s.activities.create_webhook(name=activity_name, url='https://www.google.com')
+
+        run = s.activities.execute_activity(name=activity_name)
+        activity = s.activities.get_activity(name=activity_name, how_many_runs=1)
+
+        # Runs are ordered by execution time, so the first run is the most recently executed
+        assert activity['runs'][0]['id'] == run['id']
+        assert len(activity['runs'][0]['logs']) == 1 or mock
+
+        settings = [{'name': 'test1', 'value': 'test1'}, {'name': 'test2', 'value': 'test2'}]
+
+        run1 = s.activities.execute_activity(name=activity_name, run_settings=settings[0])
+        run2 = s.activities.execute_activity(name=activity_name, run_settings=settings[1])
+        run3 = s.activities.create_run(name=activity_name, settings=run2['id'])
+        s.activities.execute_run(name=activity_name, run_id=run3['id'])
+
+        activity = s.activities.get_activity(name=activity_name, how_many_runs=4)
+
+        assert activity['runs'][0]['id'] == run['id']
+        assert activity['runs'][0]['settings'] == {}
+        assert len(activity['runs'][0]['logs']) == 1 or mock
+        assert activity['runs'][1]['id'] == run1['id']
+        assert activity['runs'][1]['settings'] == settings[0]
+        assert len(activity['runs'][1]['logs']) == 1 or mock
+        assert activity['runs'][2]['id'] == run2['id']
+        assert activity['runs'][2]['settings'] == settings[1]
+        assert len(activity['runs'][2]['logs']) == 1 or mock
+        assert activity['runs'][3]['id'] == run3['id']
+        assert activity['runs'][3]['settings'] == settings[1]
+        assert len(activity['runs'][3]['logs']) == 1 or mock
 
     def test_button_and_form_execute_activity(self):
         """

@@ -74,3 +74,9 @@ class WorkspaceError(Exception):
         self.text = text
         self.status_code = status_code
 
+
+class ActivityError(Exception):
+    def __init__(self, text, status_code=None):
+        self.text = text
+        self.status_code = status_code
+

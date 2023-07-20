@@ -78,10 +78,7 @@ class App(Resource):
 
     @logging_before_and_after(logger.debug)
     async def get_activity(self, uuid: Optional[str] = None, name: Optional[str] = None) -> Optional[Activity]:
-        result = await self._base_resource.get_child(Activity, uuid, name)
-        if not result:
-            logger.warning(f'Activity {name if name else uuid} not found')
-        return result
+        return await self._base_resource.get_child(Activity, uuid, name)
 
     @logging_before_and_after(logger.debug)
     async def get_activities(self) -> List[Activity]:

@@ -4,11 +4,12 @@ from typing import List, Dict, Optional, Union, Any
 
 from ..resources.app import App
 from ..resources.activity import Activity
+from ..exceptions import ActivityError
 
 import json
 
 import logging
-from shimoku_api_python.execution_logger import logging_before_and_after
+from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 
@@ -64,6 +65,35 @@ class ActivityMetadataApi:
         """
         await self._app.update_activity(uuid=uuid, name=name, new_name=new_name, settings=settings)
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_activity_with_error(self, uuid: Optional[str], name: Optional[str]):
+        """
+        Get an activity by its name or id, with error handling
+        :param name: the name of the activity
+        :param uuid: the id of the activity
+        """
+        activity: Activity = await self._app.get_activity(uuid=uuid, name=name)
+        if not activity:
+            log_error(logger, f'Activity {name if name else uuid} not found', ActivityError)
+        return activity
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def create_webhook(
+        self, url: str,  uuid: Optional[str] = None, name: Optional[str] = None,
+        method: str = 'GET', headers: Optional[Dict] = None
+    ):
+        """
+        Create a webhook by its name and app id
+        :param name: the name of the activity
+        :param uuid: the id of the activity
+        :param url: the url of the webhook
+        :param method: the method of the webhook
+        :param headers: the headers of the webhook
+        """
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
+        await activity.create_webhook(url=url, method=method, headers=headers or {})
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def execute_activity(
@@ -77,7 +107,7 @@ class ActivityMetadataApi:
         :param run_settings: the settings of the run, or the id of the run to clone settings from
         :return: the run of the activity as a dictionary
         """
-        activity: Activity = await self._app.get_activity(uuid=uuid, name=name)
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.create_run(settings=run_settings)
         result = await run.trigger_webhook()
         await run
@@ -150,8 +180,7 @@ class ActivityMetadataApi:
         :return: the run created as a dictionary
         """
 
-        activity = await self._app.get_activity(uuid=uuid, name=name)
-
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.create_run(settings=settings)
 
         logger.info(f'New run with id {run["id"]} created for activity {name if name else uuid}.')
@@ -170,8 +199,7 @@ class ActivityMetadataApi:
         :param run_id: the id of the run
         :return:
         """
-        activity = await self._app.get_activity(uuid=uuid, name=name)
-
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.get_run(uuid=run_id)
         result = await run.trigger_webhook()
         await run
@@ -196,7 +224,7 @@ class ActivityMetadataApi:
         :param pretty_print: if True, the log is printed in a pretty format
         :return:
         """
-        activity = await self._app.get_activity(uuid=uuid, name=name)
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run: Activity.Run = await activity.get_run(uuid=run_id)
         log: Dict = (
             await run.create_log(message=message, severity=severity, tags=tags if tags else {})
@@ -220,7 +248,7 @@ class ActivityMetadataApi:
         :return: the settings of the run as a dictionary
         """
 
-        activity = await self._app.get_activity(uuid=uuid, name=name)
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.get_run(uuid=run_id)
         return run["settings"]
 
@@ -237,6 +265,6 @@ class ActivityMetadataApi:
         :return: the logs of the run as a list of dictionaries
         """
 
-        activity = await self._app.get_activity(uuid=uuid, name=name)
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.get_run(uuid=run_id)
         return [log.cascade_to_dict() for log in await run.get_logs()]

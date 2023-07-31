@@ -1,6 +1,6 @@
 from typing import Dict, Optional, TYPE_CHECKING
 
-from ..utils import create_normalized_name
+import re
 from ..base_resource import Resource
 if TYPE_CHECKING:
     from .app import App
@@ -23,7 +23,7 @@ class File(Resource):
 
         params = dict(
             name=alias,
-            fileName=create_normalized_name(alias) if alias else None,
+            fileName=re.sub('[^0-9a-zA-Z]+', '-', alias).lower() if alias else None,
             url='',
             contentType='',
         )

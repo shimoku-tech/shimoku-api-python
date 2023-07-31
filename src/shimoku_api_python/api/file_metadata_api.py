@@ -26,22 +26,34 @@ class FileMetadataApi:
         self.epc = execution_pool_context
 
     @async_auto_call_manager(execute=True)
-    @logging_before_and_after(logging_level=logger.debug)
+    @logging_before_and_after(logging_level=logger.info)
     async def delete_file(self, file_name: str):
         """
         :param file_name: name of the file
         """
         await self._app.delete_file(name=file_name)
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _overwrite_file(self, file_name: str, overwrite: bool = True):
+        """
+        :param file_name: name of the file
+        :param overwrite: if True, overwrite the file if it already exists
+        """
+        if overwrite and file_name in [file['name'] for file in await self._app.get_files()]:
+            logger.info(f'Overwriting file {file_name}')
+            await self._app.delete_file(name=file_name)
+
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def post_object(
-        self, file_name: str, obj: bytes,
+        self, file_name: str, obj: bytes, overwrite: bool = True
     ):
         """
         :param file_name: name of the file
         :param obj: object to be saved
+        :param overwrite: if True, overwrite the file if it already exists
         """
+        await self._overwrite_file(file_name=file_name, overwrite=overwrite)
         await self._app.create_file(name=file_name, file_object=obj)
 
     @async_auto_call_manager(execute=True)
@@ -81,13 +93,13 @@ class FileMetadataApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def post_dataframe(
-        self, file_name: str, df: pd.DataFrame,
+        self, file_name: str, df: pd.DataFrame, overwrite: bool = True
         # split_by_size: bool = True
     ):
         """
         :param file_name: name of the file
         :param df: dataframe to be saved
-        :param split_by_size: if True, split the dataframe into chunks of 5MB
+        :param overwrite: if True, overwrite the file if it already exists
         :return: object
         """
         # chunks = self.get_chunks(df) if split_by_size else None
@@ -100,6 +112,7 @@ class FileMetadataApi:
         #         )
         #         list(await asyncio.gather(*posting_tasks))
         # else:
+        await self._overwrite_file(file_name=file_name, overwrite=overwrite)
         dataframe_binary: bytes = df.to_csv(index=False).encode('utf-8')
         await self._app.create_file(name=file_name, file_object=dataframe_binary)
 
@@ -128,16 +141,34 @@ class FileMetadataApi:
         """
         return await self._get_dataframe(file_name=file_name)
 
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def deleted_batched_dataframe(
+        self, file_name: str
+    ):
+        """
+        :param file_name: name of the file
+        """
+        files = await self._app.get_files()
+        files = [file for file in files if file['name'].startswith(file_name+'_batch_')]
+        if files:
+            logger.info(f'Deleting {len(files)} files to overwrite {file_name}')
+            await asyncio.gather(*[self._app.delete_file(name=file['name']) for file in files])
+
     @logging_before_and_after(logging_level=logger.info)
     def post_batched_dataframe(
-        self, file_name: str, df: pd.DataFrame, batch_size: int = 10000,
+        self, file_name: str, df: pd.DataFrame, batch_size: int = 10000, overwrite: bool = True
     ):
         """
         Uploads a dataframe in batches, for big dataframes
         :param file_name: name of the file
         :param df: dataframe to be saved
         :param batch_size: size of the batches
+        :param overwrite: if True, overwrite the file if it already exists
         """
+        if overwrite:
+            self.deleted_batched_dataframe(file_name=file_name)
+
         batches = [df[i:i+batch_size] for i in range(0, df.shape[0], batch_size)]
         for i, batch in enumerate(batches):
             self.post_dataframe(file_name=f'{file_name}_batch_{i}', df=batch)
@@ -160,12 +191,14 @@ class FileMetadataApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def post_ai_model(
-        self, model_name: str, model: Callable,
+        self, model_name: str, model: Callable, overwrite: bool = True
     ):
         """
         :param model_name: name of the model
         :param model: model to be saved
+        :param overwrite: if True, overwrite the file if it already exists
         """
+        await self._overwrite_file(file_name=model_name, overwrite=overwrite)
         model_binary: bytes = pickle.dumps(model)
         return await self._app.create_file(name=model_name, file_object=model_binary)
 

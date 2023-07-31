@@ -23,7 +23,7 @@ s = shimoku.Client(
 )
 s.set_workspace(uuid=business_id)
 s.set_menu_path('File test')
-s.menu_paths.delete_all_menu_path_files(name='File test')
+# s.menu_paths.delete_all_menu_path_files(name='File test')
 
 
 def test_general_files():
@@ -33,16 +33,16 @@ def test_general_files():
     }
     df = pd.DataFrame(data)
     file_object = df.to_csv(index=False)
-    filename = 'helloworld'
+    filename = 'helloworld.csv'
     s.io.post_object(file_name=filename, obj=file_object)
 
     files = s.menu_paths.get_menu_path_files(name='File test')
-    assert 'helloworld' in [file['name'] for file in files]
+    assert 'helloworld.csv' in [file['name'] for file in files]
 
     class MyTestCase(unittest.TestCase):
         def test_cant_create_duplicate_files(self):
             with self.assertRaises(CacheError):
-                s.io.post_object(file_name=filename, obj=file_object)
+                s.io.post_object(file_name=filename, obj=file_object, overwrite=False)
                 s.run()
 
     t = MyTestCase()
@@ -50,7 +50,7 @@ def test_general_files():
 
     s.io.delete_file(file_name=filename)
     files = s.menu_paths.get_menu_path_files(name='File test')
-    assert 'helloworld' not in [file['name'] for file in files]
+    assert 'helloworld.csv' not in [file['name'] for file in files]
 
 
 def test_get_object():
@@ -59,7 +59,6 @@ def test_get_object():
     s.io.post_object(file_name, object_data)
     file = s.io.get_object(file_name=file_name)
     assert file == object_data
-    s.io.delete_file(file_name=file_name)
 
 
 def test_post_dataframe():
@@ -68,7 +67,6 @@ def test_post_dataframe():
     s.io.post_dataframe(file_name, df=df)
     file = s.io.get_dataframe(file_name=file_name)
     assert file.to_dict() == df.to_dict()
-    s.io.delete_file(file_name=file_name)
 
 
 def test_post_get_model():
@@ -94,6 +92,8 @@ def test_big_data():
 
     dataset: pd.DataFrame = s.io.get_batched_dataframe(file_name='test-big-df')
     assert len(dataset) == len(df)
+
+    s.io.post_object(file_name='test-big-df.csv', obj=df.to_csv(index=False))
 
 
 test_general_files()

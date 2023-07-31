@@ -327,7 +327,7 @@ tree_data = [
 ]
 
 
-def test_table():
+def table():
     s.set_menu_path('test', 'table')
 
     s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', page_size_options=[3, 5, 10],
@@ -335,7 +335,7 @@ def test_table():
                 categorical_columns=['filtA', 'filtB'])
 
 
-def test_table_with_labels():
+def table_with_labels():
     s.set_menu_path('test', 'table-test-with-labels')
 
     data_ = [
@@ -478,7 +478,7 @@ def test_table_with_labels():
     )
 
 
-def test_bar_with_filters():
+def bar_with_filters():
     print('test_bar_with_filters')
     menu_path: str = 'test', 'multifilter-bar-test'
     # First reset
@@ -566,7 +566,7 @@ def test_bar_with_filters():
         s.plt.delete_path(menu_path=f'{menu_path}-bysize')
 
 
-def test_bar_with_filters_with_aggregation_methods():
+def bar_with_filters_with_aggregation_methods():
     print("test_bar_with_filters_with_aggregation_methods")
     menu_path = "test2/bar-with-filters-with-aggregation-methods"
     data = [
@@ -639,7 +639,7 @@ def test_bar_with_filters_with_aggregation_methods():
         s.plt.delete_path(menu_path=menu_path)
 
 
-def test_bar():
+def bar():
     s.set_menu_path('test', 'bar-test')
     data_ = [{'date': dt.date(2021, 1, 1), 'x': 50000000, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
@@ -655,7 +655,7 @@ def test_bar():
     s.plt.bar(data='main data', x='date', order=1)
 
 
-def test_stacked_bar_chart():
+def stacked_bar_chart():
     s.set_menu_path('test-free-echarts', 'stacked-bar-chart')
 
     s.plt.stacked_bar(
@@ -665,7 +665,7 @@ def test_stacked_bar_chart():
     )
 
 
-def test_stacked_horizontal_bar_chart():
+def stacked_horizontal_bar_chart():
     s.set_menu_path('test-free-echarts', 'horizontal-stacked-bar-chart')
 
     s.plt.stacked_horizontal_bar(
@@ -674,7 +674,7 @@ def test_stacked_horizontal_bar_chart():
     )
 
 
-def test_stacked_area_chart():
+def stacked_area_chart():
     print("test_area_chart")
     s.set_menu_path('test-free-echarts', 'stacked-area-chart')
     data_ = [
@@ -694,7 +694,7 @@ def test_stacked_area_chart():
     )
 
 
-def test_zero_centered_barchart():
+def zero_centered_barchart():
     s.set_menu_path('test', 'zero-centered-bar-test')
 
     s.plt.zero_centered_bar(
@@ -714,7 +714,7 @@ def test_zero_centered_barchart():
     )
 
 
-def test_horizontal_bar_chart():
+def horizontal_bar_chart():
     s.set_menu_path('test', 'horizontal-bar-test')
 
     data_ = [
@@ -737,19 +737,19 @@ def test_horizontal_bar_chart():
     )
 
 
-def test_line():
+def line():
     s.set_menu_path('test', 'line-test')
     s.plt.line(data='main data', x='date', order=0)
     s.plt.line(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
-def test_area():
+def area():
     s.set_menu_path('test', 'area-test')
     s.plt.area(data='main data', x='date', order=0)
     s.plt.area(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
-def test_scatter():
+def scatter():
     s.set_menu_path('test', 'scatter-test')
 
     s.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6)
@@ -770,7 +770,7 @@ def test_scatter():
     )
 
 
-def test_scatter_with_effect():
+def scatter_with_effect():
     s.set_menu_path('test-free-echarts', 'scatter-with-effect-test')
 
     scatter_data_raw = [[161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
@@ -802,7 +802,7 @@ def test_scatter_with_effect():
     )
 
 
-def test_waterfall():
+def waterfall():
     s.set_menu_path('test-free-echarts', 'waterfall-test')
 
     data = [
@@ -862,7 +862,7 @@ def test_waterfall():
     s.reuse_data_sets()
 
 
-def test_line_with_confidence_area():
+def line_with_confidence_area():
     s.set_menu_path('test-free-echarts', 'Line with confidence area')
 
     # Download the data
@@ -887,7 +887,7 @@ def test_line_with_confidence_area():
     )
 
 
-def test_funnel():
+def funnel():
     s.set_menu_path('test', 'funnel-test')
 
     s.plt.funnel(
@@ -901,7 +901,7 @@ def test_funnel():
     )
 
 
-def test_heatmap():
+def heatmap():
     s.set_menu_path('test', 'heatmap')
 
     s.plt.heatmap(data=heatmap_data, x='xAxis', y='yAxis', values='value', order=0, calculate_color_range=True)
@@ -910,7 +910,7 @@ def test_heatmap():
                   title='Heatmap Chart', rows_size=2, cols_size=12, x_axis_name='xAxis', y_axis_name='yAxis')
 
 
-def test_heatmap_with_filters():
+def heatmap_with_filters():
     print('test_heatmap_with_filters')
     menu_path: str = 'test', 'heatmap-with-filters-test'
     data_ = [
@@ -1145,7 +1145,7 @@ def test_heatmap_with_filters():
         s.plt.delete_path(menu_path)
 
 
-def test_doughnut():
+def doughnut():
     s.set_menu_path('test', 'doughnut')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
@@ -1170,7 +1170,7 @@ def test_doughnut():
     s.plt.doughnut(data=doughnut_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
 
 
-def test_rose():
+def rose():
     s.set_menu_path('test', 'rose')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
@@ -1195,7 +1195,7 @@ def test_rose():
     s.plt.rose(data=rose_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
 
 
-def test_shimoku_gauges():
+def shimoku_gauges():
     s.set_menu_path('test-free-echarts', 'shimoku-gauges')
     df = pd.read_csv('../../data/test_stack_distribution.csv')
 
@@ -1232,7 +1232,7 @@ def test_shimoku_gauges():
     )
 
 
-def test_speed_gauge():
+def speed_gauge():
     s.set_menu_path('test', 'speed-gauge-test')
 
     # s.plt.iframe('https://www.marca.com', order=0)
@@ -1240,11 +1240,11 @@ def test_speed_gauge():
 
 
 # TODO implement
-def test_change_report_type():
+def change_report_type():
     pass
 
 
-def test_ring_gauge():
+def ring_gauge():
     s.set_menu_path('test', 'ring-gauge-test')
     data_ = [
         {
@@ -1275,14 +1275,14 @@ def test_ring_gauge():
     )
 
 
-def test_sunburst():
+def sunburst():
     s.set_menu_path('test', 'sunburst')
     # Using the data set from the tree test
     s.plt.sunburst(data='tree_data', order=0)
     s.plt.sunburst(data=sunburst_data, order=1)
 
 
-def test_tree():
+def tree():
     s.set_menu_path('test', 'tree-test')
 
     s.plt.tree(data=sunburst_data, order=0)
@@ -1291,14 +1291,14 @@ def test_tree():
     s.plt.tree(data='tree_data', order=3, rows_size=4, cols_size=12, title='Tree', radial=True, vertical=True)
 
 
-def test_treemap():
+def treemap():
     s.set_menu_path('test', 'treemap-test')
     # Using the data set from the tree test
     s.plt.treemap(data=tree_data, order=0)
     s.plt.treemap(data=sunburst_data, order=1)
 
 
-def test_radar():
+def radar():
     s.set_menu_path('test', 'radar-test')
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
@@ -1319,7 +1319,7 @@ def test_radar():
     # s.plt.radar(data=data_, names='name', order=2, rows_size=2, cols_size=12, max_field='max', fill_area=True)
 
 
-def test_indicator():
+def indicator():
     s.set_menu_path('test', 'indicators')
     data_ = [
         {
@@ -1409,7 +1409,7 @@ def test_indicator():
     )
 
 
-def test_predictive_line():
+def predictive_line():
     s.set_menu_path('test', 'predictive-line-test')
     s.plt.predictive_line(
         data='main data', x='date', min_value_mark=3, max_value_mark=4,
@@ -1417,7 +1417,7 @@ def test_predictive_line():
     )
 
 
-def test_sankey():
+def sankey():
     s.set_menu_path('test', 'sankey-test')
     data_ = [
         {
@@ -1454,7 +1454,7 @@ def test_sankey():
     s.plt.sankey(data=data_, sources='source', targets='target', values='value', order=0)
 
 
-def test_pie():
+def pie():
     s.set_menu_path('test', 'pie-test')
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
@@ -1467,14 +1467,14 @@ def test_pie():
     s.plt.pie(data=data_, names='name', values='value', order=1, rows_size=2, cols_size=12)
 
 
-def test_iframe():
+def iframe():
     s.set_menu_path('test', 'iframe-test')
     url = 'https://www.marca.com/'
     s.plt.iframe(url=url, order=0)
     s.plt.iframe(url=url, order=1, height=160 * 8, cols_size=6, padding='0,3,0,3')
 
 
-def test_html():
+def html():
     s.set_menu_path('test', 'html-test')
     html = (
         "<p style='background-color: #daf4f0';>"
@@ -1486,7 +1486,7 @@ def test_html():
     s.plt.html(html=html, order=1, rows_size=2, cols_size=12)
 
 
-def test_bentobox():
+def bentobox():
     s.set_menu_path('test', 'bentobox-test')
 
     s.plt.set_bentobox(cols_size=8, rows_size=3)
@@ -1505,13 +1505,13 @@ def test_bentobox():
     s.plt.pop_out_of_bentobox()
 
 
-def test_cohorts():
+def cohorts():
     print('test_cohorts')
     # s.plt.cohort()
     raise NotImplementedError
 
 
-def test_free_echarts():
+def free_echarts():
     # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
     s.set_menu_path('test-free-echarts', 'raw')
     raw_options = """
@@ -2613,13 +2613,13 @@ def test_free_echarts():
     """
 
 
-def test_input_form():
+def input_form():
     """ Test input form """
     s.set_menu_path('Input forms')
     s.plt.input_form(order=0, options=input_form_data)
 
 
-def test_dynamic_conditional_and_auto_send_input_form():
+def dynamic_conditional_and_auto_send_input_form():
     s.set_menu_path('Input forms', 'dynamic conditional and auto send')
 
     form_groups = {
@@ -2729,7 +2729,7 @@ def test_dynamic_conditional_and_auto_send_input_form():
     )
 
 
-def test_get_input_forms():
+def get_input_forms():
     s.set_menu_path('Input forms', 'get input forms')
     s.plt.input_form(order=0, options=input_form_data)
     rs: List[Dict] = s.plt.get_input_forms()
@@ -2737,7 +2737,7 @@ def test_get_input_forms():
     assert rs
 
 
-def test_tabs():
+def tabs():
     s.set_menu_path("test-tabs")
     # s.plt.clear_menu_path()
     s.plt.set_shared_data(dfs={'main data': data})
@@ -2893,7 +2893,7 @@ def test_tabs():
     # assert 0 == len(s.app.get_app_reports(menu_path='test_delete_tabs'))
 
 
-def test_gauge_indicators():
+def gauge_indicators():
     s.set_menu_path('test-free-echarts', 'gauge-indicator')
 
     s.plt.gauge_indicator(
@@ -2911,7 +2911,7 @@ def test_gauge_indicators():
     )
 
 
-def test_annotation_chart():
+def annotation_chart():
     s.set_menu_path('test', 'Annotation Chart')
     annotatted_data = [
         {'date': '2021-01-01', 'x': 1},
@@ -2955,7 +2955,7 @@ def test_annotation_chart():
     )
 
 
-def test_rainfall_area():
+def rainfall_area():
     s.set_menu_path('test-free-echarts', 'rainfall-area')
     how_many = 100
 
@@ -2983,7 +2983,7 @@ def test_rainfall_area():
     )
 
 
-def test_rainfall_line():
+def rainfall_line():
     s.set_menu_path('test-free-echarts', 'rainfall-line')
     how_many = 100
 
@@ -3011,7 +3011,7 @@ def test_rainfall_line():
     )
 
 
-def test_modal():
+def modal():
     prediction_header = (
         "<head>"
         "<style>"  # Styles title
@@ -3050,7 +3050,7 @@ def test_modal():
     s.plt.modal_button(order=1, modal='Test modal', label='Open modal')
 
 
-def test_bar_and_line_chart():
+def bar_and_line_chart():
     s.set_menu_path('test-free-echarts', 'Bar and line chart')
 
     _data = [
@@ -3097,7 +3097,7 @@ def test_bar_and_line_chart():
     )
 
 
-def test_segmented_line_chart():
+def segmented_line_chart():
     res = requests.get(url='https://echarts.apache.org/examples/data/asset/data/aqi-beijing.json')
 
     # Convert it to json
@@ -3129,7 +3129,7 @@ def test_segmented_line_chart():
     )
 
 
-def test_x_axis_tandem_chart():
+def x_axis_tandem_chart():
     menu_path = 'test-free-echarts', 'X Axis Tandem Chart'
     top_axis_name = 'months of 2015'
     bottom_axis_name = 'months of 2016'
@@ -3162,7 +3162,7 @@ def test_x_axis_tandem_chart():
     s.run()
 
 
-def test_infographics():
+def infographics():
     s.set_menu_path('test-bentobox', 'Infographics')
     title = 'Lorem ipsum'
     text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et " \
@@ -3322,7 +3322,7 @@ def test_infographics():
     )
 
 
-def test_chart_and_indicators():
+def chart_and_indicators():
     s.set_menu_path('test-bentobox', 'chart-and-indicators')
     indicator_groups = [
         [
@@ -3525,33 +3525,33 @@ class TestPlotApi(unittest.TestCase):
                 'sunburst_data': sunburst_data,
             }
         )
-        test_indicator()
-        test_speed_gauge()
-        test_line()
-        test_predictive_line()
-        test_bar()
-        test_scatter()
-        test_area()
-        test_horizontal_bar_chart()
-        test_zero_centered_barchart()
-        test_funnel()
-        test_iframe()
-        test_bentobox()
-        test_radar()
-        test_pie()
-        test_rose()
-        test_doughnut()
-        test_html()
-        test_tree()
-        test_sunburst()
-        test_treemap()
-        test_sankey()
-        test_heatmap()
-        test_table()
+        indicator()
+        speed_gauge()
+        line()
+        predictive_line()
+        bar()
+        scatter()
+        area()
+        horizontal_bar_chart()
+        zero_centered_barchart()
+        funnel()
+        iframe()
+        bentobox()
+        radar()
+        pie()
+        rose()
+        doughnut()
+        html()
+        tree()
+        sunburst()
+        treemap()
+        sankey()
+        heatmap()
+        table()
         s.update_data_sets()
-        test_table_with_labels()
+        table_with_labels()
         s.reuse_data_sets()
-        test_annotation_chart()
+        annotation_chart()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
@@ -3561,27 +3561,27 @@ class TestPlotApi(unittest.TestCase):
         s.set_menu_path('test-free-echarts')
         stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
         s.plt.set_shared_data({'stacked data': stacked_data})
-        test_stacked_bar_chart()
-        test_stacked_horizontal_bar_chart()
-        test_stacked_area_chart()
-        test_shimoku_gauges()
-        test_gauge_indicators()
-        test_free_echarts()
-        test_rainfall_area()
-        test_rainfall_line()
-        test_line_with_confidence_area()
-        test_scatter_with_effect()
-        test_waterfall()
-        test_bar_and_line_chart()
-        test_segmented_line_chart()
+        stacked_bar_chart()
+        stacked_horizontal_bar_chart()
+        stacked_area_chart()
+        shimoku_gauges()
+        gauge_indicators()
+        free_echarts()
+        rainfall_area()
+        rainfall_line()
+        line_with_confidence_area()
+        scatter_with_effect()
+        waterfall()
+        bar_and_line_chart()
+        segmented_line_chart()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
 
     def test_bento_box(self):
         init_time = perf_counter()
-        test_infographics()
-        test_chart_and_indicators()
+        infographics()
+        chart_and_indicators()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
@@ -3594,7 +3594,7 @@ class TestPlotApi(unittest.TestCase):
     def test_tabs(self):
         init_time = perf_counter()
         s.set_board("Tabs dashboard")
-        test_tabs()
+        tabs()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
@@ -3602,7 +3602,7 @@ class TestPlotApi(unittest.TestCase):
     def test_modals(self):
         init_time = perf_counter()
         s.set_board("Modals dashboard")
-        test_modal()
+        modal()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
@@ -3610,9 +3610,9 @@ class TestPlotApi(unittest.TestCase):
     def test_forms(self):
         init_time = perf_counter()
         s.set_board('Others')
-        test_input_form()
-        test_dynamic_conditional_and_auto_send_input_form()
-        test_get_input_forms()
+        input_form()
+        dynamic_conditional_and_auto_send_input_form()
+        get_input_forms()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')

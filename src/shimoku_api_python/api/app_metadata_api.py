@@ -66,7 +66,7 @@ class AppMetadataApi:
         :param order: order of the menu path in the side menu
         :return: menu path metadata
         """
-        return await self._business.update_app(
+        await self._business.update_app(
             uuid=uuid, name=name, new_name=new_name,
             normalizedName=create_normalized_name(new_name) if new_name else None,
             hideTitle=hide_title, hidePath=hide_path,
@@ -84,7 +84,6 @@ class AppMetadataApi:
         :param uuid: uuid of the app
         :param name: 
         """
-
         return await self._business.delete_app(uuid=uuid, name=name)
 
     @async_auto_call_manager(execute=True)

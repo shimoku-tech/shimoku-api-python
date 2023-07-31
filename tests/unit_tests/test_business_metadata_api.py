@@ -12,6 +12,7 @@ s = initiate_shimoku()
 
 business_id: str = getenv('BUSINESS_ID')
 mock: bool = getenv('MOCK') == 'TRUE'
+playground: bool = getenv('PLAYGROUND') == 'TRUE'
 
 
 class TestBusinesses(unittest.TestCase):
@@ -21,13 +22,16 @@ class TestBusinesses(unittest.TestCase):
         assert result
 
     def test_get_fake_business(self):
-        if not mock:
+        if not mock and not playground:
             with self.assertRaises(RetryError):
                 s.workspaces.get_workspace(
                     uuid='this is a test',
                 )
 
     def test_create_and_delete_business(self):
+        if playground:
+            return
+
         if s.workspaces.get_workspace(name='auto-test'):
             s.workspaces.delete_workspace(name='auto-test')
 
@@ -164,6 +168,9 @@ class TestBusinesses(unittest.TestCase):
         assert len(apps) == how_many_apps
 
     def test_cant_create_business_with_similar_name(self):
+        if playground:
+            return
+
         if s.workspaces.get_workspace(name='auto-test'):
             s.workspaces.delete_workspace(name='auto-test')
 
@@ -188,6 +195,9 @@ class TestBusinesses(unittest.TestCase):
         s.workspaces.delete_workspace(name='auto-test')
 
     def test_cant_get_with_id_and_name(self):
+        if playground:
+            return
+
         if s.workspaces.get_workspace(name='auto-test'):
             s.workspaces.delete_workspace(name='auto-test')
 

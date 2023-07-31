@@ -20,16 +20,6 @@ Mapping = TypeVar('Mapping', bound=Union[Dict, List[str], str])
 
 
 @logging_before_and_after(logging_level=logger.debug)
-def check_for_null_values(value, row, column):
-    if value is None or pd.isna(value) or pd.isnull(value):
-        log_error(
-            logger,
-            f'Value ({value}) in row ({row}) and column ({column}) is a null value please check for missing values',
-            DataError
-        )
-
-
-@logging_before_and_after(logging_level=logger.debug)
 def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
     """ Given a data point, return a dictionary with the column names as keys and their types as values
     :param data_point: a data point
@@ -40,7 +30,6 @@ def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
     float_counter = 0
     date_counter = 0
     for k, v in data_point.items():
-        check_for_null_values(v, 0, k)
         if str_counter > 50:
             raise ValueError('Too many string fields')
         if float_counter > 50:
@@ -70,52 +59,36 @@ def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
 
 
 @logging_before_and_after(logging_level=logger.debug)
-def check_correct_type(value, types: Union[type, Tuple[type, ...]], row_number: int, column_name: str):
-    """ Check if the value is of the correct type
-    :param value: value to check
-    :param types: type or tuple of types to check
-    :param row_number: row number of the value
-    :param column_name: column name of the value
-    """
-    if not isinstance(value, types):
-        log_error(
-            logger,
-            f'Value ({value}) in row ({row_number}) and column ({column_name}) '
-            + (f'is not of the correct type {types}' if not isinstance(types, tuple) else
-               f'is not one of the correct types {types}'),
-            DataError
-        )
-
-
-@logging_before_and_after(logging_level=logger.debug)
-def change_keys(data: Union[List[Dict], Dict], mapping: Dict) -> List[Dict]:
+def change_keys_df(df: pd.DataFrame, mapping: Dict) -> List[Dict]:
     """ Given a data and a mapping, change the keys of the data to the values of the mapping
-    :param data: data to change the keys
+    :param df: data to change the keys
     :param mapping: mapping of the keys to change
     """
-    changed_keys_data = []
-    for i, datum in enumerate(data):
-        changed_keys_datum = {}
-        for k, v in datum.items():
-            check_for_null_values(v, i, k)
-            k_mapping = mapping[k]
-            if k_mapping.startswith('stringField'):
-                check_correct_type(v, (str, bool), i, k)
-                v = str(v)
-            elif k_mapping.startswith('intField') or k_mapping.startswith('orderField'):
-                check_correct_type(v, Number, i, k)
-                v = float(v)
-            elif k_mapping.startswith('dateField'):
-                check_correct_type(v, (dt.date, dt.datetime, pd.Timestamp), i, k)
-                v = pd.to_datetime(v).isoformat() + 'Z'
-            changed_keys_datum[k_mapping] = v
-        changed_keys_data.append(changed_keys_datum)
-    return changed_keys_data
+    df = df.rename(columns=mapping)
+    for k in mapping.values():
+        # test if all the values are of the same type
+        if 'int' in k or 'order' in k:
+            try:
+                df[k] = df[k].astype(float)
+            except ValueError:
+                log_error(logger, f'Column {k} contains values that cannot be converted to float', DataError)
+        elif 'string' in k:
+            try:
+                df[k] = df[k].astype(str)
+            except ValueError:
+                log_error(logger, f'Column {k} contains values that cannot be converted to string', DataError)
+        elif 'date' in k:
+            try:
+                df[k] = pd.to_datetime(df[k]).dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+            except ValueError:
+                log_error(logger,f'Column {k} contains values that cannot be converted to date ', DataError)
+
+    return df.to_dict('records')
 
 
 @logging_before_and_after(logging_level=logger.debug)
 def convert_input_data_to_db_items(
-    data: Union[List[Dict], Dict],
+    data: Union[pd.DataFrame, Dict],
     sort: Optional[Dict] = None, dump_whole: bool = False,
     column_types: Optional[Dict] = None
 ) -> Union[List[Dict], Dict]:
@@ -177,9 +150,12 @@ def convert_input_data_to_db_items(
     """
     if dump_whole:
         return {'customField1': data}
-    elif isinstance(data, list):
-        column_mapping = get_column_types(data[0], sort) if column_types is None else column_types
-        return change_keys(data, column_mapping)
+    elif isinstance(data, pd.DataFrame):
+        first_element = data.iloc[0].to_dict()
+        column_mapping = get_column_types(first_element, sort) if column_types is None else column_types
+        if data.isnull().values.any():
+            log_error(logger, 'Data contains null values please check for missing values', DataError)
+        return change_keys_df(data, column_mapping)
     else:
         log_error(logger, f'Unknown data type {type(data)}', DataError)
 
@@ -205,7 +181,7 @@ class DataSet(Resource):
                 dataSetId=parent['id'],
                 orderField1=None,
                 description=None,
-                customField1={},
+                customField1=None,
             )
             for i in range(1, 6):
                 params.update({f'dateField{i}': None})
@@ -244,8 +220,8 @@ class DataSet(Resource):
     # DataPoint methods
     @logging_before_and_after(logging_level=logger.debug)
     async def create_data_points(
-        self, data_points: Union[List[Dict], Dict], sort: Optional[Dict] = None,
-        dump_whole: bool = False, column_types: Optional[dict] = None
+            self, data_points: Union[pd.DataFrame, Dict], sort: Optional[Dict] = None,
+            dump_whole: bool = False, column_types: Optional[dict] = None
     ) -> Tuple[Mapping, Dict]:
         """ Create data points for a report
         :param data_points: data points to be created

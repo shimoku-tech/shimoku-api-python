@@ -8,6 +8,7 @@ from enum import Enum
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
+import socket
 
 from shimoku_api_python.resources.data_set import convert_input_data_to_db_items
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
@@ -23,7 +24,7 @@ def create_normalized_name(name: str) -> str:
     # "name": "   Test Borrar_grafico    "
     # "normalizedName": "test-borrar-grafico"
     """
-    if any([c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- '
+    if any([c not in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._- &$'
             for c in name.encode('ascii', 'ignore').decode()]):
         log_error(logger,
                   f'You can only use letters, numbers, spaces, "-" and "_" in your name | '
@@ -124,7 +125,7 @@ def convert_data_and_get_series_name(data: pd.DataFrame, field: str) -> Tuple[pd
     :param field: field to get the series name
     :return: converted data and the converted series name
     """
-    converted_data = pd.DataFrame(convert_input_data_to_db_items(data.to_dict(orient='records')))
+    converted_data = pd.DataFrame(convert_input_data_to_db_items(data))
 
     converted_data_columns = converted_data.columns.to_list()
     data_columns = data.columns.to_list()

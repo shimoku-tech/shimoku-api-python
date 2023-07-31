@@ -60,8 +60,11 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
                 (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
             )
             initial_time = perf_counter()
-            process = psutil.Process(os.getpid())
-            initial_memory = process.memory_info().rss / 1024 ** 2
+            process = None
+            initial_memory = None
+            if enabled_for_debug:
+                process = psutil.Process(os.getpid())
+                initial_memory = process.memory_info().rss / 1024 ** 2
             return initial_time, initial_memory, process, underlined_text
 
         def after_call(initial_time, initial_memory, process, underlined_text):

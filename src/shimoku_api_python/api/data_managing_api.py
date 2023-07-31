@@ -36,21 +36,20 @@ class DataSetManagingApi:
         :return: dataset id
         """
         df = validate_data_is_pandarable(data)
-        data = df.to_dict(orient='records')
 
         data_set = await self._app.get_data_set(uuid=uuid, name=name)
         data_point = await data_set.get_one_data_point()
 
         column_types = None
         if data_point:
-            first_db_item = convert_input_data_to_db_items(data)[0]
+            converted_data = convert_input_data_to_db_items(df)
             data_point_keys = [col for col in data_point if data_point[col] is not None]
-            db_items_keys = set(convert_input_data_to_db_items(data)[0].keys())
+            db_items_keys = set(converted_data[0].keys())
             if [key for key in db_items_keys if key not in data_point_keys]:
                 log_error(logger, f"The input data has different fields than the existing data set.", DataError)
-            column_types = {k: v for k, v in zip(data[0].keys(), first_db_item.keys())}
+            column_types = {k: v for k, v in zip(data[0].keys(), db_items_keys)}
 
-        await self._app.append_data_to_data_set(data, uuid=uuid, name=name, column_types=column_types)
+        await self._app.append_data_to_data_set(df, uuid=uuid, name=name, column_types=column_types)
 
         return data_set['id']
 
@@ -75,14 +74,11 @@ class DataSetManagingApi:
         :param data: data to be stored in the dataset
         """
         df = validate_data_is_pandarable(data)
-        data = df.to_dict(orient='records')
 
-        db_items = convert_input_data_to_db_items(data)
         data_set = await self._app.get_data_set(uuid=uuid, name=name)
-
         await data_set.delete_data_points()
 
-        await self._app.append_data_to_data_set(db_items, uuid=uuid, name=name)
+        await self._app.append_data_to_data_set(df, uuid=uuid, name=name)
         
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

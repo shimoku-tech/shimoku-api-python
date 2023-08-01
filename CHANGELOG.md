@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 1.0.1 (2023-08-01)
+
+### Fixes
+
+- Solved an issue that didn't let the user create files with characters such as ',..
+- Files could not be overwritten, now a parameter has been added to specify if the files want to be overwritten or not, by default set to True.
+
+---
+
 ## 1.0.0 (2023-07-18)
 
 ### Improvements
@@ -45,6 +54,8 @@
 - Filters have been removed as the behavior is very similar to tabs, in next versions a filter that is applied to data sets will be added.
 - Local aggregation of data has been removed as it does not fit well with all solutions with the current data sets.
 
+---
+
 ## 0.20.0 (2023-05-10)
 
 This version enables embedding, it's time to share dashboards with the internet!
@@ -80,5 +91,3 @@ See the updated documentation in:
 - [Quick Start](https://docs.shimoku.com/development/getting-started/quickstart)
 - [Menu]
 - [Managing Dashboards](https://docs.shimoku.com/development/advanced-usage/management/managing-dashboards)
-
-

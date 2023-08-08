@@ -51,7 +51,7 @@ from ..resources.reports.charts.input_form import InputForm
 from ..exceptions import TabsError, ModalError, DataError, BentoboxError
 from ..utils import deep_update, get_uuids_from_dict, get_data_references_from_dict, validate_data_is_pandarable, \
     add_sorting_to_df, transform_dict_js_to_py, retrieve_data_from_options, validate_input_form_data, \
-    create_normalized_name
+    create_normalized_name, convert_data_and_get_series_name
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
@@ -537,30 +537,6 @@ class PlotApi:
 
         return await self._create_data_set(name, data, dump_whole)
 
-    @async_auto_call_manager()
-    @logging_before_and_after(logging_level=logger.debug)
-    async def filter(
-        self, order: int, data: str, field: str
-    ):
-        """ Filter the data set.
-        :param order: the order of the chart
-        :param data: the data
-        :param field: the field to filter
-        """
-        r_t = await self._get_chart_report(order, chart_class=FilterDataSet)
-        filter_ds: FilterDataSet = r_t[1]
-
-        if not isinstance(data, str):
-            log_error(logger, f'To filter a data set, the data must be a shared data entry', DataError)
-
-        if data not in self._shared_data_map:
-            log_error(logger, f'No shared data with name {data} found', DataError)
-
-        _, data_set, _ = self._shared_data_map[data][field]
-        data = self._shared_data[data]
-
-        await filter_ds.link_to_data_set(data_set, data, field)
-
     @logging_before_and_after(logging_level=logger.debug)
     async def _check_previous_paths(self):
         """ Check if there are paths that have not been executed yet. """
@@ -581,6 +557,15 @@ class PlotApi:
         """
         if 'logging_func_name' in params:
             del params['logging_func_name']
+
+        if not params.get('title'):
+            params['title'] = ''
+        if not params.get('sizeRows'):
+            params['sizeRows'] = 3
+        if not params.get('sizeColumns'):
+            params['sizeColumns'] = 12
+        if not params.get('sizePadding'):
+            params['sizePadding'] = '0,0,0,0'
 
         params['bentobox'] = self._get_bentobox_data(order=order)
         params['path'] = self._current_path
@@ -651,6 +636,74 @@ class PlotApi:
             logger.warning(f'Mapping inconsistent in component data set link {str(report_data_set)}')
         return report_data_set_mapping == mapping
 
+    @staticmethod
+    def _get_filter_properties(
+        series_name: str, converted_data: pd.DataFrame, multi_select: bool
+    ) -> Tuple[Optional[List[str]], Optional[List[str]], FilterDataSet.InputType]:
+        if series_name.startswith('date'):
+            return None, ['contains'], FilterDataSet.InputType.DATERANGE
+        elif series_name.startswith('int'):
+            return None, None, FilterDataSet.InputType.NUMERIC
+        elif series_name.startswith('string'):
+            return (converted_data[series_name].unique().tolist(), ['eq'],
+                    FilterDataSet.InputType.CATEGORICAL_SINGLE
+                    if not multi_select else FilterDataSet.InputType.CATEGORICAL_MULTI)
+        log_error(logger, f"Field type {series_name} is not supported", NotImplementedError)
+
+    @async_auto_call_manager()
+    @logging_before_and_after(logging_level=logger.debug)
+    async def filter(
+        self, order: int, data: str, field: str, multi_select: bool = False,
+        cols_size: int = 4,  rows_size: int = 1, padding: Optional[str] = None
+    ):
+        """ Filter the data set.
+        :param order: the order of the chart
+        :param data: the data
+        :param field: the field to filter
+        :param multi_select: whether to allow multi select
+        :param cols_size: the size of the columns
+        :param rows_size: the size of the rows
+        :param padding: the padding
+        """
+
+        if not isinstance(data, str):
+            log_error(logger, f'To filter a data set, the data must be a shared data entry', DataError)
+
+        if data not in self._shared_data_map:
+            log_error(logger, f'No shared data with name {data} found', DataError)
+
+        _, data_set, _ = self._shared_data_map[data][field]
+        data = self._shared_data[data]
+
+        converted_data, series_name = convert_data_and_get_series_name(data, field)
+        options, operations, input_type = self._get_filter_properties(series_name, converted_data, multi_select)
+
+        properties = {
+            'filter': [{
+                'field': field,
+                'inputType': input_type.value,
+            }],
+            'mapping': [{
+                field: series_name,
+                'id': data_set['id']
+            }]
+        }
+
+        if operations:
+            properties['filter'][0]['operations'] = operations
+        if options:
+            properties['filter'][0]['options'] = options
+
+        await self._create_chart(
+            chart_class=FilterDataSet,
+            order=order,
+            title='',
+            sizeRows=rows_size,
+            sizeColumns=cols_size,
+            sizePadding=padding,
+            properties=properties,
+        )
+
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def iframe(
@@ -661,8 +714,8 @@ class PlotApi:
         :param url: the url of the iframe
         :param order: the order of the iframe
         :param height: the height of the iframe
-        :cols_size: the columns that the iframe occupies
-        :padding: padding
+        :param cols_size: the columns that the iframe occupies
+        :param padding: padding
         """
         await self._create_chart(
             chart_class=IFrame,

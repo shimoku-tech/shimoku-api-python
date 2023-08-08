@@ -5,8 +5,10 @@ import logging
 from typing import Tuple, Dict, List, Optional, Union
 
 import numpy as np
+import pandas as pd
 from pandas import DataFrame
 
+from shimoku_api_python.resources.data_set import convert_input_data_to_db_items
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 
 logger = logging.getLogger(__name__)
@@ -113,6 +115,21 @@ def deep_update(source, overrides) -> Dict:
         else:
             source[key] = overrides[key]
     return source
+
+
+def convert_data_and_get_series_name(data: pd.DataFrame, field: str) -> Tuple[pd.DataFrame, str]:
+    """ Convert data to a format that can be used by the API and get the series name of a field.
+    :param data: data to convert
+    :param field: field to get the series name
+    :return: converted data and the converted series name
+    """
+    converted_data = pd.DataFrame(convert_input_data_to_db_items(data.to_dict(orient='records')))
+
+    converted_data_columns = converted_data.columns.to_list()
+    data_columns = data.columns.to_list()
+    series_name = converted_data_columns[data_columns.index(field)]
+
+    return converted_data, series_name
 
 
 @logging_before_and_after(logging_level=logger.debug)

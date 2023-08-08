@@ -584,7 +584,7 @@ class Resource(ABC):
         """ Sets the parameters of the resource. """
         for key, value in kwargs.items():
             if isinstance(key, tuple) and len(key) == 2 and isinstance(key[0], str) and isinstance(key[1], str):
-                value[key[0]][key[1]] = value
+                self[key[0]][key[1]] = value
             elif value is not None:
                 self[key] = value
 

@@ -18,6 +18,7 @@ class Indicator(Report):
         title=None,
         value=None,
         description=None,
+        targetPath=None,
         color='neutral',
         align='right',
         variant='default',

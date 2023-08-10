@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.0.2 (2023-08-10)
+
+### Fixes
+
+- Linked Indicators: Now, when a user sets the targetPath in the Indicator parameters, the indicator will be interactive and redirect to the specified link.
+
 ## 1.0.1 (2023-08-01)
 
 ### Fixes

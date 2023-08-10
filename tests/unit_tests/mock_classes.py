@@ -51,6 +51,9 @@ class MockApiClient:
 
         body_params.update(dict(id=uuid))
 
+        if 'triggerWebhook' in endpoint:
+            body_params['STATUS'] = 'OK'
+
         return body_params
 
 

@@ -1,6 +1,7 @@
 import datetime as dt
 
 import asyncio
+import json
 
 from typing import List, Dict, Optional, Union, TYPE_CHECKING
 
@@ -133,6 +134,31 @@ class Activity(Resource):
     async def update(self):
         """ Updates the activity. """
         return await self._base_resource.update()
+
+    # Webhook methods
+    @logging_before_and_after(logging_level=logger.debug)
+    async def create_webhook(self, url: str, method: str, headers: Dict[str, str]):
+        """ Creates a webhook for the activity.
+        :param url: The url of the webhook.
+        :param method: The method of the webhook.
+        :param headers: The headers of the webhook.
+        """
+        if not headers:
+            headers = {}
+        if not isinstance(headers, Dict) or any([not isinstance(key, str) or not isinstance(value, str)
+                                                for key, value in headers.items()]):
+            log_error(logger, 'The headers must be a dictionary of strings.', ValueError)
+
+        endpoint = self._base_resource.base_url + f'activity/{self._base_resource.id}/webhook'
+        params = dict(
+            url=url,
+            method=method,
+            headers=json.dumps(headers),
+        )
+        await self._base_resource.api_client.query_element(
+            method='POST', endpoint=endpoint,
+            **{'body_params': params}
+        )
 
     # Run methods
     @logging_before_and_after(logging_level=logger.debug)

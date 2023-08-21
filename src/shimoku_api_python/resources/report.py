@@ -229,6 +229,9 @@ class Report(Resource):
             elif db_resource['reportType'] == 'FILTERDATASET':
                 from .reports.filter_data_set import FilterDataSet
                 return FilterDataSet(parent=parent, uuid=uuid, db_resource=db_resource)
+            elif db_resource['reportType'] in ['INDICATORS', 'MULTIFILTER', 'ECHARTS', None]:
+                from .reports.unsupported import Unsupported
+                return Unsupported(parent=parent, uuid=uuid, db_resource=db_resource)
             else:
                 raise ValueError(f'Unknown report type {db_resource["reportType"]}')
         else:

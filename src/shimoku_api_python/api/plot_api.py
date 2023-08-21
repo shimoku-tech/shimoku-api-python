@@ -2,6 +2,8 @@ import pandas as pd
 import asyncio
 import numpy as np
 
+from copy import deepcopy
+
 from pandas import DataFrame
 from math import ceil
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
@@ -66,7 +68,7 @@ class PlotApi:
         self._current_tabs_group: Optional[TabsGroup] = None
         self._current_tab: Optional[str] = None
         self._current_modal: Optional[Modal] = None
-        self._bentobox_data: Optional[Dict] = None
+        self._bentobox_data: Dict = {}
         self.reuse_data_sets: bool = reuse_data_sets
         self._delete_data_set_lock = None
         self._shared_data_map: Dict[str, Dict[str, Tuple[Mapping, DataSet, Dict]]] = {}
@@ -188,7 +190,7 @@ class PlotApi:
             log_error(logger, f'No modal found with name {name}', ModalError)
         await self._app.delete_report(r_hash=r_hash)
 
-    @logging_before_and_after(logging_level=logger.debug)
+    @logging_before_and_after(logging_level=logger.info)
     def set_bentobox(self, cols_size: int, rows_size: int):
         """ Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
@@ -200,20 +202,20 @@ class PlotApi:
             'bentoboxSizeRows': rows_size,
         }
 
-    @logging_before_and_after(logging_level=logger.debug)
+    @logging_before_and_after(logging_level=logger.info)
     def pop_out_of_bentobox(self):
         """ Stop using a bentobox """
-        self._bentobox_data = None
+        self._bentobox_data = {}
 
     @logging_before_and_after(logging_level=logger.debug)
-    def _get_bentobox_data(self, order: int) -> Optional[Dict]:
+    def _get_bentobox_data(self, order: int) -> Dict:
         """ Get the bentobox data """
-        if self._bentobox_data is None:
-            return None
+        if not self._bentobox_data:
+            return {}
         if not self._bentobox_data['bentoboxId']:
             if not self._bentobox_data['bentoboxId']:
                 self._bentobox_data.update({
-                    'bentoboxId': str(order),
+                    'bentoboxId': '_'+str(order),
                     'bentoboxOrder': order,
                 })
         return self._bentobox_data
@@ -248,11 +250,11 @@ class PlotApi:
         tabs_group: Optional[TabsGroup] = await self._app.get_report(r_hash=r_hash)
         params = {'properties': {}}
         if cols_size:
-            params['colsSize'] = cols_size
+            params['sizeColumns'] = cols_size
         if padding:
-            params['padding'] = padding
+            params['sizePadding'] = padding
         if rows_size:
-            params['rowsSize'] = rows_size
+            params['sizeRows'] = rows_size
         if isinstance(just_labels, bool):
             params['properties']['variant'] = 'solidRounded' if just_labels else 'enclosedSolidRounded'
         if isinstance(sticky, bool):
@@ -276,7 +278,7 @@ class PlotApi:
             parent_tabs_group: Optional[TabsGroup] = await self._app.get_report(r_hash=p_hash)
             if not parent_tabs_group:
                 log_error(logger, f'No tabs group found with name {parent_tabs_index[0]}', TabsError)
-            if self._current_tabs_group['id'] == tabs_group['id']:
+            if parent_tabs_group['id'] == tabs_group['id']:
                 log_error(logger, f'Cannot include tabs group in itself', TabsError)
             if self._current_modal:
                 log_error(logger, f'Cannot include a tabs group in a modal and in another tabs group', TabsError)
@@ -662,7 +664,7 @@ class PlotApi:
         :cols_size: the columns that the iframe occupies
         :padding: padding
         """
-        return await self._create_chart(
+        await self._create_chart(
             chart_class=IFrame,
             order=order,
             dataFields=dict(
@@ -687,7 +689,7 @@ class PlotApi:
         :rows_size: the rows that the html occupies
         :padding: padding
         """
-        return await self._create_chart(
+        await self._create_chart(
             chart_class=HTML,
             order=order,
             chartData=[{'value': html}],
@@ -730,7 +732,7 @@ class PlotApi:
 
             # fixexd cols_size for bentobox and variable rows size
             cols_size = 22
-            rows_size = rows_size * 10 - 2 * int(bentobox_data is not None)
+            rows_size = rows_size * 10 - 2 * int(bool(bentobox_data))
 
             padding = '1,1,0,1'
             if isinstance(vertical, str):
@@ -753,10 +755,10 @@ class PlotApi:
             padding_right_int = int(padding[2]) + extra_padding + remaining_cols % 2
 
             padding_left = f'{padding[0]},0,{padding[4]},{padding_left_int}'
-            padding_right = f'{padding[0]},{padding_right_int},{padding[4]},{int(bentobox_data is not None)}'
-            padding_else = f'{padding[0]},0,{padding[4]},{int(bentobox_data is not None)}'
+            padding_right = f'{padding[0]},{padding_right_int},{padding[4]},{int(bool(bentobox_data))}'
+            padding_else = f'{padding[0]},0,{padding[4]},{int(bool(bentobox_data))}'
 
-            cols_size = cols_size // len_df - int(bentobox_data is not None)
+            cols_size = cols_size // len_df - int(bool(bentobox_data))
             if cols_size < 2:
                 log_error(logger, f'The calculation of the individual cols_size for each indicator '
                                   f'is too small (cols_size/len(df)): {cols_size}', ValueError)
@@ -789,7 +791,7 @@ class PlotApi:
             if isinstance(order, int):
                 order += 1
         if vertical:
-            self._bentobox_data = None
+            self._bentobox_data = {}
         return order
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -1372,7 +1374,7 @@ class PlotApi:
 
         if len(rd_ids) != len(data_key_entries):
             log_error(logger, f'The number of data references and fields must be equal, '
-                              f'they are {len(rd_ids)} and {len(data_key_entries)} respectively.', DataError)
+                              f'they are {len(data_key_entries)} and {len(rd_ids)} respectively.', DataError)
 
         for i, data_key_entry in enumerate(data_key_entries):
             data = options
@@ -1495,6 +1497,8 @@ class PlotApi:
             data = retrieve_data_from_options(options)
             options['dataset'] = {'source': '#set_data#'}
             fields = [list(data[0].keys())]
+        else:
+            options = deepcopy(options)
 
         await self._create_echart(
             order=order, data_mapping_to_tuples=await self._choose_data(order, data),

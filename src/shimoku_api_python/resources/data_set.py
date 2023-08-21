@@ -92,7 +92,7 @@ def convert_input_data_to_db_items(
             if date_counter > 50:
                 raise ValueError('Too many date fields')
             type_v = type(v)
-            if type_v == str:
+            if type_v == str or type_v == bool:
                 str_counter += 1
                 d.update({k: f'stringField{str_counter}'})
             elif type_v == float or type_v == int:

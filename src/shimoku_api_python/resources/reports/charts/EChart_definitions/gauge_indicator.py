@@ -18,7 +18,7 @@ def gauge_indicator(
     color: Union[str, int] = 1,
 ):
     bentobox_data = {
-        'bentoboxId': f'{order}',
+        'bentoboxId': f'_{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
@@ -114,6 +114,6 @@ def gauge_indicator(
         padding='1, 0, 1, 0',
         logging_func_name='gi_gauge'
     )
-    self._bentobox_data = None
+    self._bentobox_data = {}
 
 

@@ -14,9 +14,10 @@ from copy import deepcopy
 from utils import initiate_shimoku
 
 s = initiate_shimoku()
+s.reuse_data_sets()
+workspace_id: str = getenv('BUSINESS_ID')
 # s.workspaces.delete_all_workspace_menu_paths(uuid=workspace_id)
 # s.workspaces.delete_all_workspace_boards(uuid=workspace_id)
-workspace_id: str = getenv('BUSINESS_ID')
 s.set_workspace(uuid=workspace_id)
 
 delete_paths: bool = False
@@ -3507,10 +3508,9 @@ class TestPlotApi(unittest.TestCase):
         s.menu_paths.delete_menu_path(name='test-delete')
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Total api calls {s.get_api_calls_counter()}')
+
     def test_charts(self):
         init_time = perf_counter()
-
-        s.reuse_data_sets()
 
         s.set_menu_path('test')
         s.plt.set_shared_data(

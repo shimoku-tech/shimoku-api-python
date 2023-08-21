@@ -1,5 +1,6 @@
 from ..async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 from ..resources.universe import Universe
+from typing import List, Dict
 
 import logging
 from ..execution_logger import logging_before_and_after
@@ -17,7 +18,7 @@ class UniverseMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
-    def get_universe_workspaces(self, uuid: str):
+    async def get_universe_workspaces(self, uuid: str) -> List[Dict]:
         universe = Universe(api_client=self._api_client, uuid=uuid)
-        return universe.get_businesses()
+        return [b.cascade_to_dict() for b in await universe.get_businesses()]
 

@@ -64,7 +64,7 @@ def infographics_text_bubble(
         image_url = 'https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/63332131120af18c03d2b69a_APAME-about.svg'
 
     bentobox_data = {
-        'bentoboxId': f'{order}',
+        'bentoboxId': f'_{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
@@ -115,7 +115,7 @@ def infographics_text_bubble(
         padding=f'{int(bubble_location != "bottom")},1,1,1'
     )
 
-    self._bentobox_data = None
+    self._bentobox_data = {}
 
 
 @logging_before_and_after(logging_level=logger.info)
@@ -125,7 +125,7 @@ def chart_and_modal_button(
     button_side_text: str = "Click on the button to read more about this topic.",
 ):
     bentobox_data = {
-        'bentoboxId': f'{order}',
+        'bentoboxId': f'_{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
@@ -138,8 +138,7 @@ def chart_and_modal_button(
     self._bentobox_data = bentobox_data
 
     _call_inner_chart_function_with_parameters(
-        self=self, order=order,
-        default_rows_size=rows_size*10-6, default_cols_size=22,
+        self=self, order=order, default_rows_size=rows_size*10-6, default_cols_size=22,
         chart_function=chart_function, chart_parameters=chart_parameters
     )
 
@@ -164,7 +163,6 @@ def chart_and_modal_button(
 
         self.html(
             html=html,
-            bentobox_data=bentobox_data,
             order=order + 1,
             rows_size=button_rows_size,
             cols_size=13 + int(0.5*(cols_size-4)),
@@ -172,11 +170,11 @@ def chart_and_modal_button(
         )
 
     self.modal_button(
-        order=order + 2, modal_name_to_open=button_modal, label=button_label,
-        bentobox_data=bentobox_data, rows_size=button_rows_size, cols_size=2, padding='0,0,0,1',
+        order=order + 2, modal=button_modal, label=button_label,
+        rows_size=button_rows_size, cols_size=2, padding='0,0,0,1',
     )
 
-    self._bentobox_data = None
+    self._bentobox_data = {}
 
 # Wait until the new iteration of the bentobox is ready
 
@@ -238,7 +236,7 @@ def chart_and_indicators(
 ) -> int:
 
     bentobox_data = {
-        'bentoboxId': f'{order}',
+        'bentoboxId': f'_{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': chart_rows_size+len(indicators_groups),
@@ -272,23 +270,20 @@ def chart_and_indicators(
             **indicators_parameters
         )
 
-    self._bentobox_data = None
+    self._bentobox_data = {}
     return order
 
 
 @logging_before_and_after(logging_level=logger.info)
 def indicators_with_header(
-    self, menu_path: str, order: int, indicators_groups: List[Union[pd.DataFrame, List[Dict]]],
+    self, order: int, indicators_groups: List[Union[pd.DataFrame, List[Dict]]],
     indicators_parameters: Dict, title: str, subtitle: str = '', background_color: str = 'var(--color-primary)',
     text_color: str = 'var(--background-paper)', cols_size: int = 12,
     icon_url: str = 'https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/63e3615716d4435d29e0b82c_Acurracy.svg',
-    tabs_index: Optional[Tuple[str, str]] = None, modal_name: Optional[str] = None,
 ) -> int:
     return chart_and_indicators(
-        self=self,
-        menu_path=menu_path, order=order,
+        self=self, order=order,
         chart_rows_size=1, cols_size=cols_size,
-        tabs_index=tabs_index, modal_name=modal_name,
         chart_function=self.html,
         chart_parameters=dict(
             html=create_h1_title_with_modal(

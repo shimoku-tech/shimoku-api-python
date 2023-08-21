@@ -128,7 +128,7 @@ def shimoku_gauges_group(
             gauges_data[i]['value'] = percentages[i]
 
     bentobox_data = {
-        'bentoboxId': f'{order}',
+        'bentoboxId': f'_{order}',
         'bentoboxOrder': order,
         'bentoboxSizeColumns': cols_size,
         'bentoboxSizeRows': rows_size,
@@ -147,5 +147,5 @@ def shimoku_gauges_group(
             cols_size=gauge['cols_size'] if gauge.get('cols_size') else gauges_cols_size,
             is_percentage=gauge['is_percentage'] if gauge.get('is_percentage') else True,
         )
-    self._bentobox_data = None
+    self._bentobox_data = {}
     return order + 1

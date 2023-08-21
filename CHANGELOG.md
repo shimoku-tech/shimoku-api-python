@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 1.1.0 (2023-08-21)
+
+### Improvements
+
+- Created a function in the s.activities module that enables the creation of webhooks for the activities.
+
+### Fixes
+
+- Get businesses returns a list of dicts
+- Free echarts make a copy of the options
+- Bentobox ids begin with '_' so that an issue in the FE doesnt appear
+- The default bentobox has been set to {}, so that it can be unset from charts
+- The SDK now understands some unsupported report types, for it not to crash
+- Data sets now support bool values
+
 ## 1.0.2 (2023-08-10)
 
 ### Fixes

@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from shimoku_api_python.api.plot_api import PlotApi
 
 from shimoku_api_python.async_execution_pool import async_auto_call_manager
-from shimoku_api_python.utils import validate_data_is_pandarable
+from shimoku_api_python.utils import validate_data_is_pandarable, ShimokuPalette
 from shimoku_api_python.exceptions import DataError
 
 from pandas import DataFrame
@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 @logging_before_and_after(logger.info)
 async def waterfall_chart(
     self: 'PlotApi',
-    data: Union[str, DataFrame, List[Dict]], order: Optional[int] = None,
-    x: str = 'x', positive: str = 'Income', negative: str = 'Expenses',
+    data: Union[str, DataFrame, List[Dict]], order: int,
+    x: str, positive: str, negative: str,
     rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     padding: Optional[str] = None, title: Optional[str] = None,
     x_axis_name: Optional[str] = None, y_axis_name: Optional[str] = None,
-    show_balance: Optional[bool] = False,
+    show_balance: bool = False, variant: Optional[str] = None,
     option_modifications: Optional[Dict] = None,
 ):
     if isinstance(data, str):
@@ -102,14 +102,14 @@ async def waterfall_chart(
             'symbol': 'none',
             'type': 'line',
             'itemStyle': {
-                'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                'color': ShimokuPalette.CHART_C3.value if show_balance else 'transparent',
             },
             'emphasis': {
                 'itemStyle': {
-                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                    'color': ShimokuPalette.CHART_C3.value if show_balance else 'transparent',
                 },
                 'lineStyle': {
-                    'color': f'var(--chart-C3)' if show_balance else 'transparent',
+                    'color': ShimokuPalette.CHART_C3.value if show_balance else 'transparent',
                 }
             },
             'zlevel': 0,
@@ -139,11 +139,11 @@ async def waterfall_chart(
             'stack': 'Total',
             'silent': True,
             'itemStyle': {
-                'color': f'var(--chart-C6)',
+                'color': ShimokuPalette.CHART_C6.value,
             },
             'emphasis': {
                 'itemStyle': {
-                    'color': f'var(--chart-C6)',
+                    'color': ShimokuPalette.CHART_C6.value,
                 },
             },
             'zlevel': 1,
@@ -156,11 +156,11 @@ async def waterfall_chart(
             'stack': 'Total',
             'silent': True,
             'itemStyle': {
-                'color': f'var(--chart-C2)',
+                'color': ShimokuPalette.CHART_C2.value,
             },
             'emphasis': {
                 'itemStyle': {
-                    'color': f'var(--chart-C2)',
+                    'color': ShimokuPalette.CHART_C2.value,
                 },
             },
             'zlevel': 1,
@@ -173,12 +173,12 @@ async def waterfall_chart(
             'stack': 'Total',
             'itemStyle': {
                 'borderRadius': [0, 0, 9, 9],
-                'color': f'var(--chart-C6)',
+                'color': ShimokuPalette.CHART_C6.value,
             },
             'emphasis': {
                 'itemStyle': {
                     'borderRadius': [0, 0, 9, 9],
-                    'color': f'var(--chart-C6)',
+                    'color': ShimokuPalette.CHART_C6.value,
                 },
             },
             'zlevel': 1,
@@ -190,12 +190,12 @@ async def waterfall_chart(
             'stack': 'Total',
             'itemStyle': {
                 'borderRadius': [9, 9, 0, 0],
-                'color': f'var(--chart-C2)',
+                'color': ShimokuPalette.CHART_C2.value,
             },
             'emphasis': {
                 'itemStyle': {
                     'borderRadius': [9, 9, 0, 0],
-                    'color': f'var(--chart-C2)',
+                    'color': ShimokuPalette.CHART_C2.value,
                 },
             },
             'zlevel': 1,
@@ -207,5 +207,5 @@ async def waterfall_chart(
         values=['Balance', 'Base', 'VisibleNegBase', 'VisiblePosBase', 'Negative', 'Positive'],
         rows_size=rows_size, cols_size=cols_size, padding=padding, title=title, x_axis_names=x_axis_name,
         y_axis_names=y_axis_name, echart_options=common_options, series_options=series_options,
-        option_modifications=option_modifications
+        option_modifications=option_modifications, variant=variant
     )

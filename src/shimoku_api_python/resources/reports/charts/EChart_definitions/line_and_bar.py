@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from shimoku_api_python.api.plot_api import PlotApi
 
 from shimoku_api_python.async_execution_pool import async_auto_call_manager
-from shimoku_api_python.utils import validate_data_is_pandarable
+from shimoku_api_python.utils import validate_data_is_pandarable, ShimokuPalette
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after
@@ -18,16 +18,17 @@ logger = logging.getLogger(__name__)
 @async_auto_call_manager()
 @logging_before_and_after(logger.info)
 async def line_and_bar_charts(
-    self: 'PlotApi', order: int, x: str = 'x',
+    self: 'PlotApi', order: int, x: str,
+    data: Optional[Union[str, DataFrame, List[Dict]]],
     bar_names: Optional[List[str]] = None,
     line_names: Optional[List[str]] = None,
-    data: Optional[Union[str, DataFrame, List[Dict]]] = None,
     x_axis_name: Optional[str] = None,
     bar_axis_name: Optional[str] = None, bar_suffix: Optional[str] = None,
     line_axis_name: Optional[str] = None, line_suffix: Optional[str] = None,
     title: Optional[str] = None, rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     padding: Optional[List[int]] = None,
     option_modifications: Optional[Dict] = None,
+    variant: Optional[str] = None
 ):
     """ Create a chart with bars and lines. """
     data_mappings_to_tuples = await self._choose_data(order, data)
@@ -84,7 +85,7 @@ async def line_and_bar_charts(
                 'axisLine': {
                     'show': True,
                     'lineStyle': {
-                        'color': f'var(--chart-C1)'
+                        'color': ShimokuPalette.CHART_C1.value
                     }
                 },
                 'splitNumber': 5,
@@ -166,6 +167,6 @@ async def line_and_bar_charts(
         axes=x, values=bar_names+line_names, option_modifications=option_modifications,
         data_mapping_to_tuples=data_mappings_to_tuples,
         order=order, x_axis_names=x_axis_name,
-        y_axis_names=[bar_axis_name, line_axis_name],
+        y_axis_names=[bar_axis_name, line_axis_name], variant=variant,
         title=title, rows_size=rows_size, cols_size=cols_size, padding=padding,
     )

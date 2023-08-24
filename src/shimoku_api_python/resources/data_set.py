@@ -209,7 +209,7 @@ class DataSet(Resource):
             )
             for i in range(1, 6):
                 params.update({f'dateField{i}': None})
-            for i in range(1, 9):
+            for i in range(1, 51):
                 params.update({f'stringField{i}': None})
                 params.update({f'intField{i}': None})
 

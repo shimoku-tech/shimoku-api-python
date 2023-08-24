@@ -3,7 +3,7 @@ from typing import Optional,  Union, TYPE_CHECKING
 if TYPE_CHECKING:
     from shimoku_api_python.api.plot_api import PlotApi
 from shimoku_api_python.exceptions import BentoboxError
-from shimoku_api_python.utils import interpret_color
+from shimoku_api_python.utils import interpret_color, ShimokuPalette
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
@@ -95,7 +95,7 @@ def gauge_indicator(
                     'fontSize': 24,
                     'fontFamily': 'Rubik',
                     'font': 'inherit',
-                    'color': 'var(--color-black)',
+                    'color': ShimokuPalette.BLACK.value,
                     'borderColor': 'auto',
                     'borderWidth': 0,
                     'formatter': '{value}%',

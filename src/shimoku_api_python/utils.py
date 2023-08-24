@@ -3,6 +3,7 @@ import json
 import json5
 import logging
 from typing import Tuple, Dict, List, Optional, Union
+from enum import Enum
 
 import numpy as np
 import pandas as pd
@@ -354,6 +355,48 @@ def add_sorting_to_df(df: DataFrame, sort: Optional[Dict] = None) -> Tuple[DataF
     return df, sort
 
 
+class ShimokuPalette(Enum):
+    """Enum for color variables"""
+    SUCCESS = 'var(--color-success)'
+    SUCCESS_LIGHT = 'var(--color-success-light)'
+    WARNING = 'var(--color-warning)'
+    WARNING_LIGHT = 'var(--color-warning-light)'
+    ERROR = 'var(--color-error)'
+    ERROR_LIGHT = 'var(--color-error-light)'
+    STATUS_ERROR = 'var(--color-status-error)'
+    WHITE = 'var(--color-white)'
+    BLACK = 'var(--color-black)'
+    GRAY = 'var(--color-gray)'
+    BASE_ICON = 'var(--color-base-icon)'
+    BACKGROUND = 'var(--background-default)'
+    BACKGROUND_PAPER = 'var(--background-paper)'
+    PRIMARY = 'var(--color-primary)'
+    PRIMARY_LIGHT = 'var(--color-primary-light)'
+    PRIMARY_DARK = 'var(--color-primary-dark)'
+    SECONDARY = 'var(--color-secondary)'
+    SECONDARY_LIGHT = 'var(--color-secondary-light)'
+    SECONDARY_DARK = 'var(--color-secondary-dark)'
+    STRIPE = 'var(--color-stripe)'
+    STRIPE_LIGHT = 'var(--color-stripe-light)'
+    COM_RED = 'var(--complementary-red)'
+    COM_RED_LIGHT = 'var(--complementary-red-light)'
+    COM_GREEN = 'var(--complementary-green)'
+    COM_YELLOW = 'var(--complementary-yellow)'
+    COM_ORANGE = 'var(--complementary-orange)'
+    COM_AQUA = 'var(--complementary-aqua)'
+    COM_VIOLET = 'var(--complementary-violet)'
+    CHART_C1 = 'var(--chart-C1)'
+    CHART_C2 = 'var(--chart-C2)'
+    CHART_C3 = 'var(--chart-C3)'
+    CHART_C4 = 'var(--chart-C4)'
+    CHART_C5 = 'var(--chart-C5)'
+    CHART_C6 = 'var(--chart-C6)'
+    CHART_C7 = 'var(--chart-C7)'
+    CHART_C8 = 'var(--chart-C8)'
+    CHART_C9 = 'var(--chart-C9)'
+    CHART_C10 = 'var(--chart-C10)'
+
+
 @logging_before_and_after(logging_level=logger.debug)
 def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
     def rbg_to_hex(r: int, g: int, b: int) -> str:
@@ -376,33 +419,33 @@ def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
         "gray": "#929591",
         "violet": "#9a0eea",
         "cyan": "#00ffff",
-        "success": "var(--color-success)",
-        "success-light": "var(--color-success-light)",
-        "warning": "var(--color-warning)",
-        "warning-light": "var(--color-warning-light)",
-        "error": "var(--color-error)",
-        "error-light": "var(--color-error-light)",
-        "status-error": "var(--color-status-error)",
-        "white": "var(--color-white)",
-        "black": "var(--color-black)",
-        "base-icon": "var(--color-base-icon)",
-        "background": "var(--background-default)",
-        "background-paper": "var(--background-paper)",
-        "primary": "var(--color-primary)",
-        "primary-light": "var(--color-primary-light)",
-        "primary-dark": "var(--color-primary-dark)",
-        "main": "var(--chart-C1)",
-        "secondary": "var(--color-secondary)",
-        "secondary-light": "var(--color-secondary-light)",
-        "secondary-dark": "var(--color-secondary-dark)",
-        "active": "var(--chart-C2)",
-        "caution": "var(--chart-C3)",
+        "success": ShimokuPalette.SUCCESS.value,
+        "success-light": ShimokuPalette.SUCCESS_LIGHT.value,
+        "warning": ShimokuPalette.WARNING.value,
+        "warning-light": ShimokuPalette.WARNING_LIGHT.value,
+        "error": ShimokuPalette.ERROR.value,
+        "error-light": ShimokuPalette.ERROR_LIGHT.value,
+        "status-error": ShimokuPalette.STATUS_ERROR.value,
+        "white": ShimokuPalette.WHITE.value,
+        "black": ShimokuPalette.BLACK.value,
+        "base-icon": ShimokuPalette.BASE_ICON.value,
+        "background": ShimokuPalette.BACKGROUND.value,
+        "background-paper": ShimokuPalette.BACKGROUND_PAPER.value,
+        "primary": ShimokuPalette.PRIMARY.value,
+        "primary-light": ShimokuPalette.PRIMARY_LIGHT.value,
+        "primary-dark": ShimokuPalette.PRIMARY_DARK.value,
+        "main": ShimokuPalette.CHART_C1.value,
+        "secondary": ShimokuPalette.SECONDARY.value,
+        "secondary-light": ShimokuPalette.SECONDARY_LIGHT.value,
+        "secondary-dark": ShimokuPalette.SECONDARY_DARK.value,
+        "active": ShimokuPalette.CHART_C2.value,
+        "caution": ShimokuPalette.CHART_C3.value,
 
     }
 
     if isinstance(color_def, int):
         return f'var(--chart-C{abs(color_def)})'
-    elif isinstance(color_def, list):
+    elif isinstance(color_def, (list, tuple)):
         color_def = rbg_to_hex(color_def[0], color_def[1], color_def[2])
     elif color_def in color_defs:
         color_def = color_defs[color_def]

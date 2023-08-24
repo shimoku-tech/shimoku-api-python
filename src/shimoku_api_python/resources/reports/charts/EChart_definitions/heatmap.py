@@ -24,7 +24,7 @@ async def heatmap_chart(
     title: Optional[str] = None, padding: Optional[List[int]] = None,
     rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     calculate_color_range: Optional[bool] = False, continuous: Optional[bool] = False,
-    option_modifications: Optional[Dict] = None,
+    option_modifications: Optional[Dict] = None, variant: Optional[str] = None
 ):
     """ Create a heatmap chart """
     color_range = (0, 10) if color_range is None else color_range
@@ -42,7 +42,7 @@ async def heatmap_chart(
     common_options['yAxis'][0].update({'type': 'category', 'nameGap': 64})
     common_options['visualMap'] = {'calculable': True, 'orient': 'vertical',
                                    'type': 'continuous' if continuous else 'piecewise',
-                                   'left': 'right', 'top': 'center',
+                                   'left': 'right', 'top': 'center', 'show': variant != 'minimal',
                                    'min': color_range[0], 'max': color_range[1]}
     common_options['grid'].update({'top': '5%', 'right': 80, 'bottom': 28, 'left': '5%' if y_axis_name else '1%'})
 
@@ -54,5 +54,5 @@ async def heatmap_chart(
         data_mapping_to_tuples=await self._choose_data(order, data), axes=[], values=[(x, y, values)],
         echart_options=common_options, series_options=series_options, order=order, title=title, padding=padding,
         rows_size=rows_size, cols_size=cols_size, show_values='all', x_axis_names=x_axis_name, y_axis_names=y_axis_name,
-        option_modifications=option_modifications
+        option_modifications=option_modifications, variant=variant
     )

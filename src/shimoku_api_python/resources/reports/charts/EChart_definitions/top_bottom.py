@@ -24,8 +24,8 @@ async def top_bottom_area_charts(
     rows_size: Optional[int] = None, cols_size: Optional[int] = None,
     padding: Optional[str] = None, title: Optional[str] = None,
     x_axis_name: Optional[str] = None, top_axis_name: Optional[str] = None,
-    bottom_axis_name: Optional[str] = None,
-    option_modifications: Optional[Dict] = None,
+    bottom_axis_name: Optional[str] = None, option_modifications: Optional[Dict] = None,
+    variant: Optional[str] = None
 ):
     if top_names is None:
         top_names = ['up']
@@ -94,7 +94,7 @@ async def top_bottom_area_charts(
         data_mapping_to_tuples=await self._choose_data(order, data), order=order, axes=x, values=bottom_names+top_names,
         rows_size=rows_size, cols_size=cols_size, padding=padding, title=title, x_axis_names=x_axis_name,
         y_axis_names=[bottom_axis_name, top_axis_name], echart_options=common_options, series_options=series,
-        option_modifications=option_modifications
+        option_modifications=option_modifications, variant=variant
     )
 
 
@@ -102,13 +102,12 @@ async def top_bottom_area_charts(
 @logging_before_and_after(logger.info)
 async def top_bottom_line_charts(
     self: 'PlotApi',
-    data: Union[str, DataFrame, List[Dict]], order: Optional[int] = None,
-    x: str = 'x', top_names: Optional[List[str]] = None, bottom_names: Optional[List[str]] = None,
-    rows_size: Optional[int] = 4, cols_size: Optional[int] = None,
+    data: Union[str, DataFrame, List[Dict]], order: int,
+    x: str, top_names: Optional[List[str]] = None, bottom_names: Optional[List[str]] = None,
+    rows_size: int = 4, cols_size: Optional[int] = None,
     padding: Optional[str] = None, title: Optional[str] = None,
     x_axis_name: Optional[str] = None, top_axis_name: Optional[str] = None,
-    bottom_axis_name: Optional[str] = None,
-    option_modifications: Optional[Dict] = None,
+    bottom_axis_name: Optional[str] = None, option_modifications: Optional[Dict] = None,
 ):
     if top_names is None:
         top_names = ['up']

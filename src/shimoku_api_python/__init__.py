@@ -16,7 +16,7 @@ from shimoku_api_python.api.ai_api import AiAPI
 from shimoku_api_python.api.ping_api import PingApi
 from shimoku_api_python.api.activity_metadata_api import ActivityMetadataApi
 
-from shimoku_api_python.utils import create_normalized_name
+from shimoku_api_python.utils import create_normalized_name, ShimokuPalette
 
 from shimoku_api_python.client import ApiClient
 from shimoku_api_python.exceptions import BoardError, MenuPathError, WorkspaceError

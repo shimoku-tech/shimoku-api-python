@@ -3453,6 +3453,7 @@ def chart_and_indicators():
 class TestPlotApi(unittest.TestCase):
     def test_delete_path(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         menu_path: str = 'test-path'
         sub_path: str = 'line-test'
         sub_path_2: str = 'line-test-2'
@@ -3495,10 +3496,11 @@ class TestPlotApi(unittest.TestCase):
         s.menu_paths.delete_menu_path(name=menu_path)
 
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_delete(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_menu_path('test-delete', 'line-test')
         s.plt.line(data=data, x='date', order=0)
         assert s.menu_paths.get_menu_path_components(name='test-delete')
@@ -3507,10 +3509,11 @@ class TestPlotApi(unittest.TestCase):
         s.set_menu_path('test')
         s.menu_paths.delete_menu_path(name='test-delete')
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_charts(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
 
         s.set_menu_path('test')
         s.plt.set_shared_data(
@@ -3554,10 +3557,11 @@ class TestPlotApi(unittest.TestCase):
         annotation_chart()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_free_echarts(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_menu_path('test-free-echarts')
         stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
         s.plt.set_shared_data({'stacked data': stacked_data})
@@ -3576,15 +3580,40 @@ class TestPlotApi(unittest.TestCase):
         segmented_line_chart()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_bento_box(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         infographics()
         chart_and_indicators()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        
+    def test_filters(self):
+        init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
+        s.set_board('Test')
+        s.set_menu_path('test-filters')
+        s.plt.set_shared_data(
+            dfs={
+                'table': pd.DataFrame(table_data),
+            }
+        )
+        s.plt.filter(order=0, data='table', field='date')
+        s.plt.filter(order=1, data='table', field='x')
+        s.plt.filter(order=2, data='table', field='filtA')
+        s.plt.filter(order=3, data='table', field='filtB', multi_select=True, padding='0,0,0,8')
+
+        s.plt.bar(data='table', order=4, cols_size=6, x='date', y=['x', 'y'])
+        s.plt.line(data='table', order=5, cols_size=6, x='date', y=['x', 'y'])
+        s.plt.stacked_bar(data='table', x='date', y=['x', 'y'], order=6)
+        s.plt.table(data=table_data * 10, order=7, rows_size=3, title='Table test',
+                    categorical_columns=['filtA', 'filtB'])
+        s.run()
+        print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     # Filters and sequential needed TODO resolve with filter dataset
     # test_heatmap_with_filters()
@@ -3593,32 +3622,36 @@ class TestPlotApi(unittest.TestCase):
 
     def test_tabs(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_board("Tabs dashboard")
         tabs()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_modals(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_board("Modals dashboard")
         modal()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_forms(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_board('Others')
         input_form()
         dynamic_conditional_and_auto_send_input_form()
         get_input_forms()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_menu_order(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.workspaces.change_boards_order(
             uuid=workspace_id,
             boards=[
@@ -3650,10 +3683,11 @@ class TestPlotApi(unittest.TestCase):
             ]
         )
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
 
     def test_same_position_charts(self):
         init_time = perf_counter()
+        ini_calls = s.get_api_calls_counter()
         s.set_menu_path('test-same-position', 'no conflict path 1')
 
         s.activate_async_execution()
@@ -3738,4 +3772,4 @@ class TestPlotApi(unittest.TestCase):
         s.menu_paths.delete_menu_path(name='test-same-position')
 
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Total api calls {s.get_api_calls_counter()}')
+        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')

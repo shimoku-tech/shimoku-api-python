@@ -17,8 +17,8 @@ verbosity: str = getenv('VERBOSITY')
 
 
 s = shimoku.Client(
-    access_token=access_token,
-    universe_id=universe_id,
+    # access_token=access_token,
+    # universe_id=universe_id,
     verbosity=verbosity
 )
 s.set_workspace(uuid=business_id)
@@ -38,7 +38,7 @@ data_json: str = json.dumps(data_oriented)
 def test_data_sets():
     global data_oriented
     s.data.append_to_data_set(name='test-data-set', data=data_oriented)
-    time.sleep(5)
+    # time.sleep(5)
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
     for i in range(len(data_oriented)):
@@ -46,7 +46,7 @@ def test_data_sets():
         assert data_[i]['intField2'] == data_oriented[i]['b']
 
     s.data.append_to_data_set(name='test-data-set', data=data_oriented)
-    time.sleep(5)
+    # time.sleep(5)
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
     for i in range(len(data_oriented)):
@@ -54,9 +54,10 @@ def test_data_sets():
         assert data_[i*2]['intField2'] == data_oriented[i]['b']
 
     s.data.replace_data_from_data_set(name='test-data-set', data=data_oriented)
-    time.sleep(5)
+    # time.sleep(5)
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
+    assert len(data_) == len(data_oriented)
     for i in range(len(data_oriented)):
         assert data_[i]['intField1'] == data_oriented[i]['a']
         assert data_[i]['intField2'] == data_oriented[i]['b']
@@ -69,7 +70,7 @@ class TestBadDfs(TestCase):
 
     bad_dfs = [
         [{'a': 1, 'b': 2}, {'a': 1, 'b': 2, 'c': 3}],
-        [{'a': 1, 'b': 2}, {'a': 1, 'b': '2'}],
+        [{'a': 1, 'b': 2}, {'a': 1, 'b': 'c'}],
         [{'a': 1, 'b': 2}, {'a': None, 'b': 2}],
     ]
 
@@ -80,7 +81,7 @@ class TestBadDfs(TestCase):
 
     def test_bad_append_to_existing_df(self):
         s.data.replace_data_from_data_set(name='test-data-set', data=data_oriented)
-        time.sleep(5)
+        # time.sleep(5)
         print(s.data.get_data_from_data_set(name='test-data-set'))
         for i, bad_df in enumerate(self.bad_dfs):
             bad_df_aux = [bad_df[1]]

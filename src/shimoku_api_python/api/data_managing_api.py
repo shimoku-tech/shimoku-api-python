@@ -40,16 +40,14 @@ class DataSetManagingApi:
         data_set = await self._app.get_data_set(uuid=uuid, name=name)
         data_point = await data_set.get_one_data_point()
 
-        column_types = None
         if data_point:
             converted_data = convert_input_data_to_db_items(df)
             data_point_keys = [col for col in data_point if data_point[col] is not None]
             db_items_keys = set(converted_data[0].keys())
             if [key for key in db_items_keys if key not in data_point_keys]:
                 log_error(logger, f"The input data has different fields than the existing data set.", DataError)
-            column_types = {k: v for k, v in zip(data[0].keys(), db_items_keys)}
 
-        await self._app.append_data_to_data_set(df, uuid=uuid, name=name, column_types=column_types)
+        await self._app.append_data_to_data_set(df, uuid=uuid, name=name)
 
         return data_set['id']
 

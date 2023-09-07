@@ -1,4 +1,4 @@
-from typing import List, Optional, Union, Dict, TYPE_CHECKING
+from typing import List, Optional, Union, Dict, TypedDict, TYPE_CHECKING
 from ..base_resource import Resource
 from ..async_execution_pool import async_auto_call_manager
 
@@ -18,14 +18,20 @@ class Role(Resource):
     alias_field = 'role'
     plural = 'roles'
 
+    class RoleParams(TypedDict):
+        permission: str
+        resource: str
+        target: str
+        role: str
+
     @logging_before_and_after(logger.debug)
     def __init__(self, parent: Union['Business', 'Dashboard', 'App'], uuid: Optional[str] = None,
                  alias: Optional[str] = None, db_resource: Optional[Dict] = None):
-        params = dict(
+        params: Role.RoleParams = dict(
             permission='READ',
             resource='BUSINESS_INFO',
             target='GROUP',
-            role=alias,
+            role=alias if alias else '',
         )
         super().__init__(parent=parent, uuid=uuid, check_params_before_creation=['role'], params=params,
                          db_resource=db_resource)
@@ -66,33 +72,44 @@ class Role(Resource):
 
 # Parent class methods
 @logging_before_and_after(logging_level=logger.debug)
-async def create_role(self, role: str, permission: str = 'READ',
-                      resource: str = 'BUSINESS_INFO', target: str = 'GROUP') -> Role:
+async def create_role(
+    self: Union['Business', 'Dashboard', 'App'], role: str, permission: str = 'READ',
+    resource: str = 'BUSINESS_INFO', target: str = 'GROUP'
+) -> Role:
     return await self._base_resource.create_child(Role, alias=role, permission=permission,
                                                   resource=resource, target=target)
 
 
 @logging_before_and_after(logging_level=logger.debug)
-async def get_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> Optional[Role]:
+async def get_role(
+    self: Union['Business', 'Dashboard', 'App'], uuid: Optional[str] = None, role: Optional[str] = None
+) -> Optional[Role]:
     return await self._base_resource.get_child(Role, uuid, role)
 
 
 @logging_before_and_after(logging_level=logger.debug)
-async def get_roles(self) -> List[Role]:
+async def get_roles(
+    self: Union['Business', 'Dashboard', 'App']
+) -> List[Role]:
     return await self._base_resource.get_children(Role)
 
 
 @logging_before_and_after(logging_level=logger.debug)
-async def delete_role(self, uuid: Optional[str] = None, role: Optional[str] = None) -> Role:
+async def delete_role(
+    self: Union['Business', 'Dashboard', 'App'], uuid: Optional[str] = None, role: Optional[str] = None
+) -> Role:
     return await self._base_resource.delete_child(Role, uuid, role)
 
 
 # User level methods
 @async_auto_call_manager(execute=True)
 @logging_before_and_after(logging_level=logger.info)
-async def user_create_role(self, name: Optional[str] = None, uuid: Optional[str] = None,
-                           resource: Optional[str] = None, role_name: Optional[str] = None,
-                           permission: Optional[str] = None, target: Optional[str] = None) -> Dict:
+async def user_create_role(
+    self: Union['Business', 'Dashboard', 'App'],
+    name: Optional[str] = None, uuid: Optional[str] = None,
+    resource: Optional[str] = None, role_name: Optional[str] = None,
+    permission: Optional[str] = None, target: Optional[str] = None
+) -> Dict:
     """ Create a role
     :param name: name of the parent resource
     :param uuid: UUID of the parent resource
@@ -110,8 +127,11 @@ async def user_create_role(self, name: Optional[str] = None, uuid: Optional[str]
 
 @async_auto_call_manager()
 @logging_before_and_after(logging_level=logger.info)
-async def user_delete_role(self, name: Optional[str] = None, uuid: Optional[str] = None,
-                           role_id: Optional[str] = None, role_name: Optional[str] = None):
+async def user_delete_role(
+    self: Union['Business', 'Dashboard', 'App'],
+    name: Optional[str] = None, uuid: Optional[str] = None,
+    role_id: Optional[str] = None, role_name: Optional[str] = None
+):
     """ Delete a role
     :param name: name of the parent resource
     :param uuid: UUID of the parent resource
@@ -126,8 +146,11 @@ async def user_delete_role(self, name: Optional[str] = None, uuid: Optional[str]
 
 @async_auto_call_manager(execute=True)
 @logging_before_and_after(logging_level=logger.info)
-async def user_get_role(self, name: Optional[str] = None, uuid: Optional[str] = None,
-                        role_name: Optional[str] = None) -> List[Dict]:
+async def user_get_role(
+    self: Union['Business', 'Dashboard', 'App'],
+    name: Optional[str] = None, uuid: Optional[str] = None,
+    role_name: Optional[str] = None
+) -> List[Dict]:
     """ Get the list of roles by name
     :param name: name of the parent resource
     :param uuid: UUID of the parent resource
@@ -147,7 +170,10 @@ async def user_get_role(self, name: Optional[str] = None, uuid: Optional[str] = 
 
 @async_auto_call_manager(execute=True)
 @logging_before_and_after(logging_level=logger.info)
-async def user_get_roles(self, name: Optional[str] = None, uuid: Optional[str] = None) -> List[Dict]:
+async def user_get_roles(
+    self: Union['Business', 'Dashboard', 'App'],
+    name: Optional[str] = None, uuid: Optional[str] = None
+) -> List[Dict]:
     """ Get the list of roles
     :param name: name of the parent resource
     :param uuid: UUID of the parent resource

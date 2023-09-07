@@ -7,7 +7,7 @@ tenacity~=8.1.0
 shimoku-components-catalog>=0.2.1
 tqdm~=4.64.1
 psutil~=5.9.4
-aiohttp~=3.8.3
+aiohttp==3.9.1
 ipython>=8.10
 uvicorn~=0.23.2
 graphene~=3.3

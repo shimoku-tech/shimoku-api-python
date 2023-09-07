@@ -2,8 +2,7 @@ import logging
 import asyncio
 import json
 
-from copy import copy
-from typing import Optional, Dict, Any, List, TypeVar, Type, Set, Tuple, Union
+from typing import Optional, Dict, Any, List, TypeVar, Type, Set, Tuple, Union, NewType
 from tqdm import tqdm
 
 from abc import ABC
@@ -15,6 +14,8 @@ from .execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 IsResource = TypeVar('IsResource', bound='Resource')
+Alias = NewType('Alias', Union[str, Tuple[str, ...]])
+AliasField = NewType('AliasField', Union[str, Tuple[str, ...]])
 
 
 class ResourceCache:
@@ -63,7 +64,8 @@ class ResourceCache:
 
             resources_raw: Dict = await (
                 self._parent.api_client.query_element(
-                    endpoint=endpoint, method='GET', limit=limit
+                    endpoint=endpoint, method='GET', limit=limit,
+                    elastic_supported=self._resource_class.elastic_supported
                 )
             )
             try:
@@ -74,20 +76,17 @@ class ResourceCache:
                 logger.warning("Resource's json should have an 'items' field")
                 return []
 
+            # Sort resources by id to ensure consistent ordering for alias collision resolution
+            resources = sorted(resources, key=lambda x: x.get('id'))
+
             for resource_dict in resources:
                 resource = self._resource_class(db_resource=resource_dict, parent=self._parent)
-                self._cache[resource_dict.get('id')] = resource
-
-                alias_field = self._resource_class.alias_field
-                alias_entry = None
-                if alias_field in resource_dict:
-                    alias_entry = resource_dict.get(alias_field)
-                elif isinstance(alias_field, Tuple) and alias_field[0] in resource_dict:
-                    alias_entry = resource[alias_field[0]].get(alias_field[1])
-
+                alias_entry = resource['alias']
                 if alias_entry:
+                    if alias_entry in self._aliases:
+                        continue
                     self._aliases[alias_entry] = resource_dict.get('id')
-
+                self._cache[resource_dict.get('id')] = resource
                 resource.empty_changed_params()
 
         self._listing_lock = None
@@ -95,7 +94,7 @@ class ResourceCache:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def add(
-            self, resource: Optional[IsResource] = None, alias: Optional[str] = None,
+            self, resource: Optional[IsResource] = None, alias: Optional[Alias] = None,
             params: Optional[Dict[str, Any]] = None
     ) -> IsResource:
         if alias:
@@ -124,7 +123,7 @@ class ResourceCache:
                     del self._aliases[alias_key]
                     break
 
-        alias = resource[resource.alias_field] if not alias and resource.alias_field else alias
+        alias = resource['alias']
 
         if alias is not None:
             self._aliases[alias] = resource_id
@@ -135,7 +134,7 @@ class ResourceCache:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get(
-            self, uuid: Optional[str] = None, alias: Optional[str] = None
+            self, uuid: Optional[str] = None, alias: Optional[Alias] = None
     ) -> Optional[IsResource]:
         if uuid and alias:
             log_error(logger, "Only one of uuid or alias can be provided", CacheError)
@@ -171,18 +170,18 @@ class ResourceCache:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update(
-            self, uuid: Optional[str] = None, alias: Optional[str] = None, **params
+        self, uuid: Optional[str] = None, alias: Optional[Alias] = None, **params
     ) -> bool:
         resource: IsResource = await self.get(uuid=uuid, alias=alias)
         if not resource:
             return False
 
-        if params.get('new_alias') is not None:
-            await self.raise_if_alias_exists(params['new_alias'])
-            params[resource.alias_field] = params['new_alias']
+        if params.get('new_alias'):
+            new_alias = resource.get_alias_from_other_params(params)
+            await self.raise_if_alias_exists(new_alias)
+            del self._aliases[resource['alias']]
+            self._aliases[new_alias] = resource['id']
             del params['new_alias']
-            del self._aliases[resource[resource.alias_field]]
-            self._aliases[params[resource.alias_field]] = resource['id']
 
         resource.set_params(**params)
         await resource.update()
@@ -191,7 +190,7 @@ class ResourceCache:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def delete(
-            self, uuid: Optional[str] = None, alias: Optional[str] = None
+            self, uuid: Optional[str] = None, alias: Optional[Alias] = None
     ) -> bool:
         resource: IsResource = await self.get(uuid=uuid, alias=alias)
         if not resource:
@@ -204,7 +203,7 @@ class ResourceCache:
         return True
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def raise_if_alias_exists(self, alias: str):
+    async def raise_if_alias_exists(self, alias: Alias):
         await self.list()
         if alias in self._aliases:
             if self._parent.api_client.cache_enabled:
@@ -241,11 +240,11 @@ class BaseResource:
     """ Base class for all the resources in the API """
 
     def __init__(
-            self, parent: Optional[IsResource] = None, uuid: Optional[str] = None,
-            api_client: Optional[ApiClient] = None, params: Optional[Dict[str, Any]] = None,
-            alias_field: Optional[Union[str, Tuple[str, str]]] = None, resource_type: Optional[str] = None,
-            params_to_serialize: Optional[List[str]] = None, await_children: Optional[bool] = False,
-            wrapper_class_instance: Optional[IsResource] = None
+        self, parent: Optional[IsResource] = None, uuid: Optional[str] = None,
+        api_client: Optional[ApiClient] = None, params: Optional[Dict[str, Any]] = None,
+        alias_field: Optional[AliasField] = None, resource_type: Optional[str] = None,
+        params_to_serialize: Optional[List[str]] = None, await_children: Optional[bool] = False,
+        wrapper_class_instance: Optional[IsResource] = None
     ):
         self.alias_field = alias_field
         self.resource_type = resource_type
@@ -272,6 +271,32 @@ class BaseResource:
 
         if not self.api_client:
             log_error(logger, f"Api client has not been defined", ValueError)
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def get_alias_field_value(self, alias_field: str, params: Optional[dict]) -> str:
+        """ Returns the value of one of the fields used to create the alias
+        :param alias_field: The name of the field
+        :param params: The params to use to get the value of the field
+        :return: The value of the field
+        """
+        if not params:
+            params = self.params
+        path = alias_field.split('/')
+        alias = params[path[0]]
+        for path_step in path[1:]:
+            alias = alias[path_step]
+        return alias
+
+    @logging_before_and_after(logging_level=logger.debug)
+    def get_alias(self, params: Optional[dict] = None) -> Optional[Alias]:
+        if self.alias_field:
+            if isinstance(self.alias_field, tuple):
+                return tuple(self.get_alias_field_value(alias_field, params=params) for alias_field in self.alias_field)
+            if isinstance(self.alias_field, str):
+                return self.get_alias_field_value(self.alias_field, params=params)
+            log_error(logger, f"Alias field {self.alias_field} is not a string or a tuple", ValueError)
+        else:
+            return None
 
     @logging_before_and_after(logging_level=logger.debug)
     async def async_init(self):
@@ -323,6 +348,8 @@ class BaseResource:
 
             assert isinstance(self.params[field], (dict, list))
 
+        params = {k: v for k, v in params.items() if v is not None}
+
         obj = await (
             self.api_client.query_element(
                 method='POST', endpoint=endpoint,
@@ -373,8 +400,8 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def create_children_batch(
-            self, resource_class: Type[IsResource], children_params: List[Dict],
-            unit: str, batch_size: int = 100
+        self, resource_class: Type[IsResource], children_params: List[Dict],
+        unit: str, batch_size: int = 100
     ):
         """ Creates a batch of children of a given resource class. It doesn't return the created resources,
         And it doesn't save them in the cache.
@@ -447,9 +474,9 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def update_child(
-            self, resource_class: Type[IsResource],
-            uuid: Optional[str] = None, alias: Optional[str] = None,
-            **params
+        self, resource_class: Type[IsResource],
+        uuid: Optional[str] = None, alias: Optional[Alias] = None,
+        **params
     ) -> bool:
         """ Updates a child of a given resource class.
         :param resource_class: The class of the resource to update.
@@ -474,7 +501,7 @@ class BaseResource:
     @logging_before_and_after(logging_level=logger.debug)
     async def get_child(
             self, resource_class: Type[IsResource],
-            uuid: Optional[str] = None, alias: Optional[str] = None,
+            uuid: Optional[str] = None, alias: Optional[Alias] = None,
             create_if_not_exists: bool = False
     ) -> Optional[IsResource]:
         """ Gets a child resource.
@@ -497,8 +524,8 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def delete_child(
-            self, resource_class: Type[IsResource],
-            uuid: Optional[str] = None, alias: Optional[str] = None
+        self, resource_class: Type[IsResource],
+        uuid: Optional[str] = None, alias: Optional[Alias] = None
     ) -> bool:
         """ Deletes a child resource.
         :param resource_class: The class of the resource to delete.
@@ -530,12 +557,7 @@ class BaseResource:
 
     def __str__(self):
         """ Returns a string representation of the resource. """
-        alias = None
-        if self.alias_field:
-            if isinstance(self.alias_field, Tuple):
-                alias = self.params[self.alias_field[0]][self.alias_field[1]]
-            else:
-                alias = self.params[self.alias_field]
+        alias = self.get_alias()
         return self.id if not alias else alias
 
     def __eq__(self, other):
@@ -544,9 +566,10 @@ class BaseResource:
 
 
 class Resource(ABC):
-    alias_field: Optional[str] = None
+    alias_field: Optional[AliasField] = None
     resource_type: Optional[str] = None
     plural: Optional[str] = None
+    elastic_supported: bool = False
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(
@@ -567,10 +590,12 @@ class Resource(ABC):
         else:
             db_resource = {}
 
-        self._base_resource = BaseResource(api_client=api_client, uuid=uuid, parent=parent, params=params,
-                                           resource_type=self.resource_type, alias_field=self.alias_field,
-                                           params_to_serialize=params_to_serialize, await_children=await_children,
-                                           wrapper_class_instance=self)
+        self._base_resource = BaseResource(
+            api_client=api_client, uuid=uuid, parent=parent, params=params,
+            resource_type=self.resource_type, alias_field=self.alias_field,
+            params_to_serialize=params_to_serialize, await_children=await_children,
+            wrapper_class_instance=self
+        )
 
         self._base_resource.children = {
             res_class: ResourceCache(res_class, self) for res_class in children
@@ -578,6 +603,7 @@ class Resource(ABC):
 
         self._check_params_before_creation = check_params_before_creation if check_params_before_creation else []
         self.api_client: ApiClient = self._base_resource.api_client
+        self.parent = self._base_resource.parent
         self.params_to_serialize = self._base_resource.params_to_serialize
 
         for field, value in db_resource.items():
@@ -624,12 +650,19 @@ class Resource(ABC):
         """ Empties the changed_params set. """
         self._base_resource.changed_params = set()
 
+    @logging_before_and_after(logging_level=logger.debug)
+    def get_alias_from_other_params(self, params: dict) -> Optional[str]:
+        """ Returns the alias of the resource based on the given parameters. """
+        return self._base_resource.get_alias(params)
+
     def __getitem__(self, item):
         """ Returns the value of the parameter with the given name. """
         if item == 'id':
             return self._base_resource.id
         elif item == 'base_url':
             return self._base_resource.base_url
+        elif item == 'alias':
+            return self._base_resource.get_alias()
         elif item in self._base_resource.params:
             result = self._base_resource.params[item]
             if isinstance(result, (dict, list)):

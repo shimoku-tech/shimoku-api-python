@@ -16,6 +16,7 @@ class File(Resource):
     resource_type = 'file'
     plural = 'files'
     alias_field = 'name'
+    elastic_supported = True
 
     @logging_before_and_after(logger.debug)
     def __init__(self, parent: 'App', uuid: Optional[str] = None, alias: Optional[str] = None,
@@ -26,10 +27,12 @@ class File(Resource):
             fileName=re.sub('[^0-9a-zA-Z]+', '-', alias).lower() if alias else None,
             url='',
             contentType='',
+            tags=[],
+            metadata={},
         )
 
         super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, params=params,
-                         check_params_before_creation=['name'])
+                         check_params_before_creation=['name'], params_to_serialize=['metadata'])
 
     @logging_before_and_after(logger.debug)
     async def delete(self):

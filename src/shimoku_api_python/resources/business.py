@@ -84,8 +84,9 @@ class Business(Resource):
 
     @logging_before_and_after(logger.debug)
     async def update_dashboard(self, uuid: Optional[str] = None, name: Optional[str] = None, **params):
-        if 'new_name' in params:
-            params['new_alias'] = params.pop('new_name')
+        if params.get('new_name') is not None:
+            params['name'] = params.pop('new_name')
+            params['new_alias'] = True
         dashboard = await self.get_dashboard(uuid, name, create_if_not_exists=False)
         if not dashboard:
             logger.warning(f'Dashboard {name} not found, cannot update it')
@@ -158,8 +159,9 @@ class Business(Resource):
 
     @logging_before_and_after(logger.debug)
     async def update_app(self, uuid: Optional[str] = None, name: Optional[str] = None, **params):
-        if 'new_name' in params:
-            params['new_alias'] = params.pop('new_name')
+        if params.get('new_name') is not None:
+            params['name'] = params.pop('new_name')
+            params['new_alias'] = True
         app = await self.get_app(uuid, name, create_if_not_exists=False)
         if not app:
             logger.warning(f'App {name} not found, cannot update it')

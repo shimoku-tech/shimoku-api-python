@@ -243,6 +243,7 @@ class DataSet(Resource):
     @logging_before_and_after(logging_level=logger.debug)
     async def delete_data_points(self):
         """ Delete data points """
+        self.clear()
         data_points = await self._base_resource.get_children(self.DataPoint)
         if data_points:
             await asyncio.gather(*[self._base_resource.delete_child(self.DataPoint, uuid=dp['id'])
@@ -257,5 +258,6 @@ class DataSet(Resource):
     @logging_before_and_after(logging_level=logger.debug)
     async def get_one_data_point(self) -> Optional['DataSet.DataPoint']:
         """ Get one data point """
+        self.clear()
         data_points = await self._base_resource.get_children(self.DataPoint, limit=1)
         return data_points[0] if data_points else None

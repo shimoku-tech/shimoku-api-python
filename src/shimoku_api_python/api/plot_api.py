@@ -175,7 +175,8 @@ class PlotApi:
         touched_data_set_ids = []
         if self._current_path is not None:
             path = create_normalized_name(self._current_path)
-            reports = [report for report in reports if create_normalized_name(report['path']) == path]
+            reports = [report for report in reports
+                       if report['path'] and create_normalized_name(report['path']) == path]
         else:
             touched_data_set_ids = [ds['id'] for ds in await self._app.get_data_sets()]
 
@@ -1275,7 +1276,7 @@ class PlotApi:
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _get_input_form_data(self, input_form: InputForm):
+    async def _get_input_form_data(self, input_form: InputForm) -> dict:
         """ Get the input form data. """
         report_data_set = (await input_form.get_report_data_sets())[0]
         data_set = await self._app.get_data_set(report_data_set['dataSetId'])

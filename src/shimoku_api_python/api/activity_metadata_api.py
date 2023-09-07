@@ -1,6 +1,6 @@
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
-from typing import List, Dict, Optional, Union, Any
+from typing import List, Dict, Optional, Union, Any, Tuple
 
 from ..resources.app import App
 from ..resources.activity import Activity
@@ -23,30 +23,62 @@ class ActivityMetadataApi:
         self._app = app
         self.epc: ExecutionPoolContext = execution_pool_context
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _get_activity_with_error(self, uuid: Optional[str], name: Optional[str]):
+        """
+        Get an activity by its name or id, with error handling
+        :param name: the name of the activity
+        :param uuid: the id of the activity
+        """
+        activity: Activity = await self._app.get_activity(uuid=uuid, name=name)
+        if not activity:
+            log_error(logger, f'Activity ({name}) not found', ActivityError)
+        return activity
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def create_activity(
-        self, name: str, settings: Optional[Dict] = None
+        self, name: str, settings: Optional[Dict] = None,
+        template_id: Optional[str] = None, template_name_version: Optional[Tuple[str, str]] = None,
+        template_mode: str = 'LIGHT', universe_api_key: str = ''
     ) -> Dict:
         """
         Create an activity by its name and app id
         :param name: the name of the activity
         :param settings: the settings of the activity
+        :param template_id: the template id of the activity
+        :param template_name_version: the template name and version of the activity
+        :param template_mode: the template mode of the activity
+        :param universe_api_key: the universe api key of the activity
         :return: the dictionary representation of the activity
         """
-        return (await self._app.create_activity(name=name, settings=settings)).cascade_to_dict()
+        return (
+            await self._app.create_activity(
+                name=name, settings=settings, template_id=template_id,
+                template_name_version=template_name_version, template_mode=template_mode,
+                universe_api_key=universe_api_key
+            )
+        ).cascade_to_dict()
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def delete_activity(
-        self, uuid: Optional[str] = None, name: Optional[str] = None
+        self, uuid: Optional[str] = None, name: Optional[str] = None, with_linked_to_templates: Optional[bool] = False
     ):
         """
         Delete an activity by its name and app id
         :param name: the name of the activity
         :param uuid: the id of the activity
-        :return:
+        :param with_linked_to_templates: if the activity is linked to a template, delete it anyway
         """
+        activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
+        if not with_linked_to_templates and activity['activityTemplateWithMode']:
+            log_error(
+                logger,
+                f'Activity ({str(activity)}) is linked to a template please use the '
+                f'(with_linked_to_templates) parameter set to True to delete it',
+                ActivityError
+            )
         await self._app.delete_activity(uuid=uuid, name=name)
 
     @async_auto_call_manager(execute=True)
@@ -64,18 +96,6 @@ class ActivityMetadataApi:
         :return: the updated activity as a dictionary
         """
         await self._app.update_activity(uuid=uuid, name=name, new_name=new_name, settings=settings)
-
-    @logging_before_and_after(logging_level=logger.debug)
-    async def _get_activity_with_error(self, uuid: Optional[str], name: Optional[str]):
-        """
-        Get an activity by its name or id, with error handling
-        :param name: the name of the activity
-        :param uuid: the id of the activity
-        """
-        activity: Activity = await self._app.get_activity(uuid=uuid, name=name)
-        if not activity:
-            log_error(logger, f'Activity {name if name else uuid} not found', ActivityError)
-        return activity
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)

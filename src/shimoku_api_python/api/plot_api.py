@@ -327,10 +327,9 @@ class PlotApi:
         r_hash = self._get_hash_for_container(modal_name)
         modal: Optional[Modal] = await self._app.get_report(r_hash=r_hash)
         if not modal:
-            modal: Report = await self._app.create_report(Modal, r_hash=r_hash,
-                                                          properties={'width': width,
-                                                                      'height': height,
-                                                                      'open': open_by_default})
+            modal: Report = await self._app.create_report(
+                Modal, r_hash=r_hash, path=self._current_path,
+                properties={'width': width, 'height': height, 'open': open_by_default})
             logger.info(f'Created modal {modal_name} with id {modal["id"]}')
             return modal
         properties = {}

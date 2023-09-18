@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.1.1 (2023-09-18)
+
+### Fixed
+
+- Fixed modals issue when on a subpath
+
 ## 1.1.0 (2023-08-21)
 
 ### Improvements

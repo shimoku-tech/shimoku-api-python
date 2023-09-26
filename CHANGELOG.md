@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 1.2 (2023-09-26)
+
+### Improvements
+
+- Dataset filters have been implemented with 4 input types: 
+    - Numerical
+    - Date range
+    - Categorical single selection
+    - Categorical multiple selections
+
 ## 1.1.1 (2023-09-18)
 
 ### Fixed

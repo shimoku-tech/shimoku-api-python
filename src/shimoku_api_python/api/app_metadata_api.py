@@ -144,7 +144,7 @@ class AppMetadataApi:
     async def delete_all_menu_path_components(
         self, uuid: Optional[str] = None, name: Optional[str] = None
     ):
-        """ Delete all reports of an menu path
+        """ Delete all reports of a menu path
         :param uuid: uuid of the menu path
         :param name: name of the menu path
         """
@@ -152,6 +152,20 @@ class AppMetadataApi:
         if not app:
             return
         await asyncio.gather(*[app.delete_report(uuid=report['id']) for report in await app.get_reports()])
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_menu_path_data_sets(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> List[Dict]:
+        """ Get the datasets of a menu path
+        :param uuid: uuid of the menu path
+        :param name: name of the menu path
+        """
+        app = await self._get_app_with_warning(uuid=uuid, name=name)
+        if not app:
+            return []
+        return [data_set.cascade_to_dict() for data_set in await app.get_data_sets()]
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -214,4 +228,3 @@ class AppMetadataApi:
     get_roles = user_get_roles
     create_role = user_create_role
     delete_role = user_delete_role
-

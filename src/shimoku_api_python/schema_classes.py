@@ -185,6 +185,7 @@ class DataSetExposed(graphene.ObjectType):
     app = graphene.Field(lambda: AppExposed)
     universeId = graphene.String()
     name = graphene.String()
+    columns = graphene.String()
 
 
 class ReportDataSetExposed(graphene.ObjectType):

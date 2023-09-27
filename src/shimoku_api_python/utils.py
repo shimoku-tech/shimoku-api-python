@@ -4,16 +4,64 @@ import json5
 import logging
 from typing import Tuple, Dict, List, Optional, Union
 from enum import Enum
+import unicodedata
 
+import inspect
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
-import socket
 
 from shimoku_api_python.resources.data_set import convert_input_data_to_db_items
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
 
 logger = logging.getLogger(__name__)
+
+
+def get_arg_names(func):
+    signature = inspect.signature(func)
+    return [k for k, v in signature.parameters.items()]
+
+
+def get_default_args(func):
+    signature = inspect.signature(func)
+    return {
+        k: v.default if v.default is not inspect.Parameter.empty else None
+        for k, v in signature.parameters.items()
+    }
+
+
+def change_data_set_name_with_report(data_set, report):
+    """ Change the name of a data set to include the report name.
+    :param data_set: data set to change name for
+    :param report: report to change name for
+    """
+    return data_set["name"].replace(report['id'], report['properties']['hash'])
+
+
+def create_function_name(name: Optional[str]) -> str:
+    """ Create a valid function name from a string
+    :param name: string to create function name from
+    :return: valid function name
+    """
+
+    def check_correct_character(character: str) -> bool:
+        """ Check if a character is valid for a function name
+        :param character: character to check
+        :return: True if character is valid, False otherwise
+        """
+        return character.isalnum() or character in ['_', '-', ' ']
+
+    if name is None:
+        return 'no_path'
+
+    # Normalize to ASCII
+    normalized_name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+
+    # Change Uppercase to '_' + lowercase if previous character is in abecedary
+    normalized_name = ''.join(['_' + c.lower() if c.isupper() and i > 0 and normalized_name[i - 1].isalpha() else c
+                               for i, c in enumerate(normalized_name) if check_correct_character(c)])
+
+    return create_normalized_name(normalized_name).replace('-', '_')
 
 
 def create_normalized_name(name: str) -> str:
@@ -135,8 +183,46 @@ def convert_data_and_get_series_name(data: pd.DataFrame, field: str) -> Tuple[pd
 
 
 @logging_before_and_after(logging_level=logger.debug)
+def revert_uuids_from_dict(_dict: dict) -> List[str]:
+    """ Revert all uuids from a dictionary to the form '#set_data#'. They follow the pattern '#{id}'.
+    :param _dict: dictionary to revert uuids
+    :return: list of uuids in order
+    """
+    uuids = []
+    for k, v in _dict.items():
+        if isinstance(v, dict):
+            uuids.extend(revert_uuids_from_dict(v))
+        elif isinstance(v, list):
+            uuids.extend(revert_uuids_from_list(v))
+        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+            uuids.append(v[2:-1])
+            _dict[k] = '#set_data#'
+    return uuids
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def revert_uuids_from_list(_list: list) -> List[str]:
+    """ Revert all uuids from a list to the form '#set_data#'. They follow the pattern '#{id}'.
+    :param _list: list to revert uuids
+    :return: list of uuids in order
+    """
+    uuids = []
+    for i, v in enumerate(_list):
+        if isinstance(v, dict):
+            uuids.extend(revert_uuids_from_dict(v))
+        elif isinstance(v, list):
+            uuids.extend(revert_uuids_from_list(v))
+        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+            uuids.append(v[2:-1])
+            _list[i] = '#set_data#'
+    return uuids
+
+
+@logging_before_and_after(logging_level=logger.debug)
 def get_uuids_from_dict(_dict: dict) -> List[str]:
-    """ Get all uuids from a dictionary. They follow the pattern '#{'id'}'. """
+    """ Get all uuids from a dictionary. They follow the pattern '#{id}'.
+    :param _dict: dictionary to get uuids
+    """
     uuids = []
     for k, v in _dict.items():
         if isinstance(v, dict):
@@ -150,7 +236,10 @@ def get_uuids_from_dict(_dict: dict) -> List[str]:
 
 @logging_before_and_after(logging_level=logger.debug)
 def get_uuids_from_list(_list: list) -> List[str]:
-    """ Get all uuids from a list. They follow the pattern '#{'id'}'. """
+    """ Get all uuids from a list. They follow the pattern '#{id}'.
+    :param _list: list to get uuids
+    :return: list of uuids
+    """
     uuids = []
     for v in _list:
         if isinstance(v, dict):
@@ -165,7 +254,11 @@ def get_uuids_from_list(_list: list) -> List[str]:
 @logging_before_and_after(logging_level=logger.debug)
 def get_data_references_from_dict(_dict: dict, previous_keys: Optional[List[Union[str, int]]] = None) -> \
         List[List[str]]:
-    """ Get all data references from a dictionary. They follow the pattern '#set_data#'. """
+    """ Get all data references from a dictionary. They follow the pattern '#set_data#'.
+    :param _dict: dictionary to get data references
+    :param previous_keys: previous keys
+    :return: list of data references
+    """
     if previous_keys is None:
         previous_keys = []
     entries = []
@@ -180,9 +273,14 @@ def get_data_references_from_dict(_dict: dict, previous_keys: Optional[List[Unio
 
 
 @logging_before_and_after(logging_level=logger.debug)
-def get_data_references_from_list(_list: list, previous_keys: Optional[List[Union[int, str]]] = None
-                                  ) -> List[List[str]]:
-    """ Get all data references from a list. They follow the pattern '#set_data#'. """
+def get_data_references_from_list(
+    _list: list, previous_keys: Optional[List[Union[int, str]]] = None
+) -> List[List[str]]:
+    """ Get all data references from a list. They follow the pattern '#set_data#'.
+    :param _list: list to get data references
+    :param previous_keys: previous keys
+    :return: list of data references
+    """
     if previous_keys is None:
         previous_keys = []
     entries = []

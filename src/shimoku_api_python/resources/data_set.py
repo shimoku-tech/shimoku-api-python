@@ -208,14 +208,21 @@ class DataSet(Resource):
 
         params = dict(
             name=alias,
+            columns=None,
         )
         super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[self.DataPoint],
-                         check_params_before_creation=['name'], params=params)
+                         check_params_before_creation=['name'], params=params,
+                         params_to_serialize=['columns'])
 
     @logging_before_and_after(logging_level=logger.debug)
     def delete(self):
         """ Delete the data point """
         return self._base_resource.delete()
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def update(self):
+        """ Update the data point """
+        return await self._base_resource.update()
 
     # DataPoint methods
     @logging_before_and_after(logging_level=logger.debug)
@@ -238,6 +245,11 @@ class DataSet(Resource):
             converted_data_points = [converted_data_points]
         await self._base_resource.create_children_batch(self.DataPoint, converted_data_points, unit=' data points')
         keys = [k for k in converted_data_points[0].keys() if not copy_sort or copy_sort['field'] != k]
+        if self.api_client.playground and isinstance(data_points, (pd.DataFrame, list)) and len(data_points) > 0:
+            if isinstance(data_points, pd.DataFrame):
+                data_points = data_points.to_dict('records')
+            self['columns'] = {k: m for k, m in zip(data_points[0].keys(), converted_data_points[0].keys())}
+            await self.update()
         return keys, copy_sort
 
     @logging_before_and_after(logging_level=logger.debug)

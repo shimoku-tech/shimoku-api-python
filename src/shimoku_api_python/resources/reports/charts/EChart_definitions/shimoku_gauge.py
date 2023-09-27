@@ -113,7 +113,7 @@ async def shimoku_gauge_chart(
 
 @logging_before_and_after(logger.info)
 def shimoku_gauges_group(
-        self, gauges_data: Union[DataFrame, List[Dict]], order: int,
+        self: 'PlotApi', gauges_data: Union[DataFrame, List[Dict]], order: int,
         rows_size: Optional[int] = None, cols_size: Optional[int] = 12,
         gauges_padding: Optional[str] = '3, 1, 1, 1',
         gauges_rows_size: Optional[int] = 9, gauges_cols_size: Optional[int] = 4,
@@ -127,16 +127,10 @@ def shimoku_gauges_group(
         for i in range(len(percentages)):
             gauges_data[i]['value'] = percentages[i]
 
-    bentobox_data = {
-        'bentoboxId': f'_{order}',
-        'bentoboxOrder': order,
-        'bentoboxSizeColumns': cols_size,
-        'bentoboxSizeRows': rows_size,
-    }
     if self._bentobox_data:
         log_error(logger, 'The gauges group uses a bentobox, so it cannot be used inside another bentobox. Please'
                           ' pop out of the current bentobox before using this function.', BentoboxError)
-    self._bentobox_data = bentobox_data
+    self.set_bentobox(cols_size, rows_size)
     for gauge in gauges_data:
         order += 1
         self.shimoku_gauge(
@@ -147,5 +141,5 @@ def shimoku_gauges_group(
             cols_size=gauge['cols_size'] if gauge.get('cols_size') else gauges_cols_size,
             is_percentage=gauge['is_percentage'] if gauge.get('is_percentage') else True,
         )
-    self._bentobox_data = {}
+    self.pop_out_of_bentobox()
     return order + 1

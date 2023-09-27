@@ -303,12 +303,14 @@ class CreateDataSetInput(BaseModel):
     name: Union[str, None] = None
     dataSetAppId: Union[str, None] = None
     universeId: Union[str, None] = None
+    columns: Union[str, None] = None
 
 
 @strawberry.type
 class UpdateDataSetInput(BaseModel):
     id: Union[str, None] = None
     name: Union[str, None] = None
+    columns: Union[str, None] = None
     dataSetAppId: Union[str, None] = None
     universeId: Union[str, None] = None
 

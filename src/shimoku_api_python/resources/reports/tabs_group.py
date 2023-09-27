@@ -13,7 +13,7 @@ class TabsGroup(Report):
     report_type = 'TABS'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         tabs=dict(),
         sticky=False,
         variant='enclosedSolidRounded',

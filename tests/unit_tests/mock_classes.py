@@ -28,6 +28,7 @@ class MockApiClient:
     semaphore_limit = 10
     call_counter = 0
     cache_enabled = True
+    playground = False
 
     @logging_before_and_after(logging_level=logger.debug)
     async def query_element(
@@ -64,6 +65,11 @@ class MockClient(Client):
     def __init__(
             self, verbosity: str = None, async_execution: bool = False
     ):
+        self.playground = False
+        self._access_token = None
+        self.access_token = None
+        self.environment = None
+        self.universe_id = None
         self.workspace_id = None
         self.board_id = None
         self.menu_path_id = None

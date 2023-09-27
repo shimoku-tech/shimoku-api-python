@@ -139,12 +139,13 @@ class ResourceCache:
         if uuid and alias:
             log_error(logger, "Only one of uuid or alias can be provided", CacheError)
 
-        if alias in self._aliases:
-            uuid = self._aliases[alias]
+        if self._parent.api_client.cache_enabled:
+            if alias in self._aliases:
+                uuid = self._aliases[alias]
 
-        if uuid in self._cache and self._parent.api_client.cache_enabled:
-            logger.debug(f"CACHE HIT: Resource {uuid}")
-            return self._cache[uuid]
+            if uuid in self._cache:
+                logger.debug(f"CACHE HIT: Resource {uuid}")
+                return self._cache[uuid]
 
         if not uuid:
             if alias is not None:
@@ -340,13 +341,14 @@ class BaseResource:
 
         self.changed_params = set()
 
-        params = self.params.copy()
+        params = {param: p_value for param, p_value in self.params.copy().items() if p_value is not None}
 
         for field in self.params_to_serialize:
-            if field in self.params:
-                params[field] = json.dumps(params[field])
-
-            assert isinstance(self.params[field], (dict, list))
+            if field in params:
+                try:
+                    params[field] = json.dumps(params[field])
+                except TypeError:
+                    log_error(logger, f"Field {field} is not serializable", TypeError)
 
         params = {k: v for k, v in params.items() if v is not None}
 
@@ -359,7 +361,13 @@ class BaseResource:
 
         for k, v in obj.items():
             if k in self.params:
-                self.params[k] = v if k not in self.params_to_serialize else json.loads(v)
+                if v is None or k not in self.params_to_serialize:
+                    self.params[k] = v
+                else:
+                    try:
+                        self.params[k] = json.loads(v)
+                    except TypeError:
+                        log_error(logger, f"Field {k} is not deserializable", TypeError)
 
         return obj['id']
 

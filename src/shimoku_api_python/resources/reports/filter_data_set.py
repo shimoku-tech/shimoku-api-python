@@ -10,7 +10,7 @@ class FilterDataSet(Report):
     report_type = 'FILTERDATASET'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         filter=[],
         mapping=[],
     )

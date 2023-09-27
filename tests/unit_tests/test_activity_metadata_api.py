@@ -1,5 +1,5 @@
 from os import getenv
-from shimoku_api_python.exceptions import CacheError
+from shimoku_api_python.exceptions import ActivityError, CacheError
 import unittest
 from utils import initiate_shimoku
 
@@ -27,7 +27,7 @@ def delete_new_activity_if_it_exists():
     """
     try:
         s.activities.delete_activity(name='new_' + activity_name)
-    except CacheError:
+    except ActivityError:
         pass
 
 
@@ -333,7 +333,7 @@ class TestActivity(unittest.TestCase):
             s.activate_async_execution()
 
     def activity_doesnt_exist(self, _activity_name):
-        with self.assertRaises(CacheError):
+        with self.assertRaises(ActivityError):
             s.activities.delete_activity(name=_activity_name)
 
     def cant_create_activity(self, _activity_name):

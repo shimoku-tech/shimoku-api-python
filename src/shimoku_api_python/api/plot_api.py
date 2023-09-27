@@ -630,6 +630,11 @@ class PlotApi:
         params['bentobox'] = self._get_bentobox_data(order=order)
         params['path'] = self._current_path
 
+        if hasattr(self, 'code_generation_metadata'):
+            if 'properties' not in params:
+                params['properties'] = {}
+            params['properties']['code_generation_metadata'] = getattr(self, 'code_generation_metadata')
+
         event_type: EventType = EventType.REPORT_UPDATED
         r_hash, chart = await self._get_chart_report(order, chart_class, create_if_not_exists=False)
         if chart:
@@ -834,6 +839,7 @@ class PlotApi:
         cols_size = report_params.get('cols_size', 12)
         rows_size = report_params.get('rows_size', 1)
         padding = report_params.get('padding')
+        original_padding = padding
 
         len_df = len(df)
         if vertical and (len_df > 1 or isinstance(vertical, str)):
@@ -881,11 +887,14 @@ class PlotApi:
         for index, df_row in df.iterrows():
 
             if not vertical:
-                padding = padding_else
-                if index == first_index:
+                if index == first_index and index == last_index:
+                    padding = original_padding
+                elif index == first_index:
                     padding = padding_left
                 elif index == last_index:
                     padding = padding_right
+                else:
+                    padding = padding_else
             elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
@@ -1467,16 +1476,33 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_echart(
-            self, options: Dict, order: int, data_mapping_to_tuples: Dict,
+            self, options: Dict, order: int,
             fields: List[Union[str, Tuple, Dict]],
+            data_mapping_to_tuples: Optional[Dict] = None,
+            data: Optional[Union[str, pd.DataFrame]] = None,
+            dump_whole: bool = False,
             option_modifications: Optional[Dict] = None,
-            **report_params
+            title: Optional[str] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[str] = None,
     ):
         """ Create an echart in the dashboard, fill in the data referenced in the echart_options and create or
         update the chart and data set links.
         :param options: the options of the echart
         :param data_mapping_to_tuples: the mapping of the data to the tuples
-        :param report_params: additional report parameters as key-value pairs"""
+        :param data: the data of the echart
+        :param dump_whole: whether to dump the whole data
+        :param option_modifications: the modifications to apply to the options
+        :param title: the title of the echart
+        :param rows_size: the rows size of the echart
+        :param cols_size: the columns size of the echart
+        :param padding: the padding of the echart
+        """
+
+        if data is not None:
+            data_mapping_to_tuples = await self._choose_data(order, data, dump_whole=dump_whole)
+
         data_key_entries = get_data_references_from_dict(options)
         _, report = await self._get_chart_report(order, EChart)
 
@@ -1515,10 +1541,10 @@ class PlotApi:
             chart_class=EChart,
             properties={'option': options},
             order=order,
-            title=report_params.get('title'),
-            sizePadding=report_params.get('padding'),
-            sizeRows=report_params.get('rows_size'),
-            sizeColumns=report_params.get('cols_size'),
+            title=title,
+            sizePadding=padding,
+            sizeRows=rows_size,
+            sizeColumns=cols_size,
         )
 
     @staticmethod
@@ -1635,6 +1661,7 @@ class PlotApi:
             cols_size: Optional[int] = None,
             padding: Optional[str] = None,
             fields: Optional[List] = None,
+            data_is_not_df: bool = False,
     ):
         if not options and not raw_options:
             log_error(logger, 'Either options or raw_options must be provided', ValueError)
@@ -1652,7 +1679,7 @@ class PlotApi:
             options = deepcopy(options)
 
         await self._create_echart(
-            order=order, data_mapping_to_tuples=await self._choose_data(order, data),
+            order=order, data_mapping_to_tuples=await self._choose_data(order, data, dump_whole=data_is_not_df),
             fields=fields, options=options, title=title,
             rows_size=rows_size, cols_size=cols_size, padding=padding
         )

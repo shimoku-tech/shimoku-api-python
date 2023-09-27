@@ -5,7 +5,7 @@ class AnnotatedEChart(Report):
     report_type = 'ANNOTATED_ECHART'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         option={},
         slider={},
     )

@@ -29,11 +29,18 @@ async def heatmap_chart(
     """ Create a heatmap chart """
     color_range = (0, 10) if color_range is None else color_range
     if calculate_color_range:
-        if isinstance(data, pd.DataFrame):
-            data = data.to_dict('records')
-        if not isinstance(data, list):
-            log_error(logger, 'Cannot calculate color range without providing explicit data', DataError)
-        color_range = (min([row[values] for row in data]), max([row[values] for row in data]))
+        aux_data = data
+        if isinstance(aux_data, str):
+            if aux_data not in self._shared_data:
+                log_error(
+                    logger,
+                    f"Shared data set ({aux_data}) not found in the menu path ({str(self._app)})",
+                    DataError
+                )
+            aux_data = self._shared_data[aux_data]
+        if isinstance(aux_data, pd.DataFrame):
+            aux_data = aux_data.to_dict('records')
+        color_range = (min([row[values] for row in aux_data]), max([row[values] for row in aux_data]))
     common_options = get_common_echart_options()
     series_options = get_common_series_options()
     del common_options['legend']

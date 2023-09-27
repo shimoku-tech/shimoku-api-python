@@ -1,5 +1,11 @@
 from __future__ import absolute_import
+
+import shutil
 from typing import Dict, Optional
+
+import tempfile
+import subprocess
+import tqdm
 
 import shimoku_api_python.async_execution_pool
 from shimoku_api_python.async_execution_pool import async_auto_call_manager, ExecutionPoolContext
@@ -18,7 +24,9 @@ from shimoku_api_python.api.ping_api import PingApi
 from shimoku_api_python.api.activity_metadata_api import ActivityMetadataApi
 from shimoku_api_python.websockets_server import EventType
 
-from shimoku_api_python.utils import create_normalized_name, ShimokuPalette
+from shimoku_api_python.code_generation.main_code_gen import generate_code
+
+from shimoku_api_python.utils import create_normalized_name, ShimokuPalette, create_function_name
 
 from shimoku_api_python.client import ApiClient
 from shimoku_api_python.exceptions import BoardError, MenuPathError, WorkspaceError
@@ -29,6 +37,7 @@ import shimoku_components_catalog.html_components
 
 import logging
 from shimoku_api_python.execution_logger import configure_logging, logging_before_and_after, log_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -53,18 +62,19 @@ class Client(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(
-        self, universe_id: str = 'local', environment: str = 'production',
-        access_token: Optional[str] = None, config: Optional[Dict] = None,
-        verbosity: str = None, async_execution: bool = False,
-        local_port: int = 8000, open_browser_for_local_server: bool = False,
-        retry_attempts: int = 5
+            self, universe_id: str = 'local', environment: str = 'production',
+            access_token: Optional[str] = None, config: Optional[Dict] = None,
+            verbosity: str = None, async_execution: bool = False,
+            local_port: int = 8000, open_browser_for_local_server: bool = False,
+            retry_attempts: int = 5
     ):
-        playground: bool = universe_id == 'local' and not access_token
-        if playground:
+        self.playground: bool = universe_id == 'local' and not access_token
+        if self.playground:
             access_token = 'local'
-        if universe_id == 'local' and not playground:
+        if universe_id == 'local' and not self.playground:
             log_error(logger, 'Local universe can only be used in playground mode.', AttributeError)
-
+        self.access_token = access_token
+        self.environment = environment
         self._access_token = access_token
         self.universe_id = universe_id
         self.workspace_id = None
@@ -75,7 +85,7 @@ class Client(object):
 
         self.server_host = '127.0.0.1'
         self.local_port = local_port
-        if playground and not check_server(self.server_host, local_port):
+        if self.playground and not check_server(self.server_host, local_port):
             create_server(environment, self.server_host, local_port, open_browser_for_local_server)
 
         self.configure_logging = configure_logging
@@ -86,7 +96,7 @@ class Client(object):
             config = {'access_token': access_token}
 
         self._api_client = ApiClient(
-            config=config, environment=environment, playground=playground,
+            config=config, environment=environment, playground=self.playground,
             server_host=self.server_host, server_port=local_port, retry_attempts=retry_attempts)
 
         self._universe_object = Universe(self._api_client, uuid=universe_id)
@@ -176,6 +186,20 @@ class Client(object):
         self.board_id = self._dashboard_object['id']
 
     @logging_before_and_after(logging_level=logger.info)
+    def pop_out_of_dashboard(self):
+        """ Pop out of the dashboard. """
+        if not self._business_object:
+            log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
+        if not self._dashboard_object:
+            log_error(logger, 'Board not set. Please use set_board() method first.', BoardError)
+        if self._app_object:
+            self.pop_out_of_menu_path()
+        self.run()
+        self._dashboard_object.currently_in_use = False
+        self._dashboard_object = None
+        self.board_id = None
+
+    @logging_before_and_after(logging_level=logger.info)
     def enable_caching(self):
         """ Enable caching. """
         self._api_client.cache_enabled = True
@@ -201,17 +225,24 @@ class Client(object):
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.debug)
-    async def _change_app(self, menu_path: str):
+    async def _change_app(self, menu_path: str, dont_add_to_dashboard: bool):
         """Change app in use for the following calls.
         :param menu_path: Menu path of the app
+        :param dont_add_to_dashboard: Whether to add the menu path to the dashboard
         """
         if self._app_object:
             self._app_object.currently_in_use = False
+
         app: App = await self._business_object.get_app(name=menu_path)
         self._app_object = app
         app.currently_in_use = True
 
         self._set_app_modules()
+
+        self.menu_path_id = self._app_object['id']
+
+        if dont_add_to_dashboard:
+            return
 
         if not self._dashboard_object:
             self._dashboard_object = await self._business_object.get_dashboard(name='Default Name')
@@ -219,13 +250,12 @@ class Client(object):
         if self._app_object['id'] not in await self._dashboard_object.list_app_ids():
             await self._dashboard_object.insert_app(self._app_object)
 
-        self.menu_path_id = self._app_object['id']
-
     @logging_before_and_after(logging_level=logger.info)
-    def set_menu_path(self, name: str, sub_path: Optional[str] = None):
+    def set_menu_path(self, name: str, sub_path: Optional[str] = None, dont_add_to_dashboard: bool = False):
         """Set menu path for the client.
         :param name: Menu path
         :param sub_path: Sub path
+        :param dont_add_to_dashboard: Whether to add the menu path to the dashboard
         """
         if not self._business_object:
             log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
@@ -238,10 +268,114 @@ class Client(object):
                 self.plt.change_path(path)
                 return
             data_names = self.plt.get_shared_data_names()
-        self._change_app(name)
+        self._change_app(name, dont_add_to_dashboard)
         self.plt.change_path(path)
         if data_names:
             logger.info(f'Shared data entries will no longer be available: {data_names}, set them again if needed.')
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def generate_code(
+            self, output_path: str = 'generated_code',
+            menu_paths: Optional[list[str]] = None, use_black_formatter: bool = False,
+            show_progress_bar: bool = False
+    ):
+        """ Generate code for a set workspace.
+        menu_paths: List of menu paths to generate code from, if None all menu paths are used.
+        """
+        if not self._business_object:
+            log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
+        pbar = None
+        if show_progress_bar:
+            pbar = tqdm.tqdm(total=sum([len(await app.get_reports())
+                                        for app in await self._business_object.get_apps()]) + 1)
+        await generate_code(
+            business_object=self._business_object,
+            business_id=self.workspace_id,
+            access_token=self._api_client.access_token,
+            universe_id=self.universe_id,
+            environment=self._api_client.environment,
+            output_path=output_path,
+            menu_paths=menu_paths,
+            epc=self.epc,
+            use_black_formatter=use_black_formatter,
+            pbar=pbar
+        )
+        if pbar:
+            pbar.close()
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def commit_contents_to(
+            self, access_token: str,
+            universe_id: str, workspace_id: str,
+            environment: str = 'production',
+            show_progress_bar: bool = True
+    ):
+        """ Commit contents to another workspace.
+        :param access_token: access token to use
+        :param universe_id: universe id to use
+        :param workspace_id: workspace id to use
+        :param environment: environment to use
+        :param show_progress_bar: whether to show progress bar
+        """
+        if not self._business_object:
+            log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
+        temp_dir = tempfile.mkdtemp()
+        pbar = None
+        if show_progress_bar:
+            pbar = tqdm.tqdm(total=sum([len(await app.get_reports())
+                                        for app in await self._business_object.get_apps()]) + 1)
+        await generate_code(
+            business_object=self._business_object,
+            business_id=workspace_id,
+            access_token=access_token,
+            universe_id=universe_id,
+            environment=environment,
+            output_path=temp_dir,
+            menu_paths=None,
+            epc=self.epc,
+            use_black_formatter=False,
+            pbar=pbar
+        )
+        if pbar:
+            pbar.close()
+        process = subprocess.run(
+            ['python', f'{temp_dir}/execute_workspace_{create_function_name(self._business_object["name"])}.py'],
+            check=True
+        )
+        if process.returncode != 0:
+            log_error(logger, 'Error while executing the generated code.', RuntimeError)
+        shutil.rmtree(temp_dir)
+
+    @logging_before_and_after(logging_level=logger.info)
+    def pull_contents_from(
+            self, access_token: str,
+            universe_id: str, workspace_id: str,
+            environment: str = 'production',
+            show_progress_bar: bool = True
+    ):
+        """ Pull contents from another workspace.
+        :param access_token: access token to use
+        :param universe_id: universe id to use
+        :param workspace_id: workspace id to use
+        :param environment: environment to use
+        :param show_progress_bar: whether to show progress bar
+        """
+        aux_shimoku_client = Client(
+            access_token=access_token,
+            universe_id=universe_id,
+            environment=environment,
+        )
+        aux_shimoku_client.set_workspace(workspace_id)
+
+        aux_shimoku_client.commit_contents_to(
+            access_token=self._api_client.access_token,
+            universe_id=self.universe_id,
+            workspace_id=self.workspace_id,
+            environment=self._api_client.environment,
+            show_progress_bar=show_progress_bar
+        )
 
     @logging_before_and_after(logging_level=logger.info)
     def set_config(self, config: Dict):
@@ -278,6 +412,6 @@ class Client(object):
         """ Get attribute of the client. """
         if item in ['boards', 'menu_paths'] and not self._business_object:
             log_error(logger, 'Workspace not set. Please use set_workspace() method first.', AttributeError)
-        if item in ['activities', 'plt', 'reports', 'data', 'io'] and not self._app_object:
+        if item in ['activities', 'plt', 'components', 'data', 'io'] and not self._app_object:
             log_error(logger, 'Menu path not set. Please use set_menu_path() method first.', AttributeError)
         return object.__getattribute__(self, item)

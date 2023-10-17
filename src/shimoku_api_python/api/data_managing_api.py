@@ -38,18 +38,19 @@ class DataSetManagingApi:
         df = validate_data_is_pandarable(data)
         data = df.to_dict(orient='records')
 
-        db_items = convert_input_data_to_db_items(data)
-
         data_set = await self._app.get_data_set(uuid=uuid, name=name)
         data_point = await data_set.get_one_data_point()
 
+        column_types = None
         if data_point:
+            first_db_item = convert_input_data_to_db_items(data)[0]
             data_point_keys = [col for col in data_point if data_point[col] is not None]
-            db_items_keys = set(db_items[0].keys())
+            db_items_keys = set(convert_input_data_to_db_items(data)[0].keys())
             if [key for key in db_items_keys if key not in data_point_keys]:
                 log_error(logger, f"The input data has different fields than the existing data set.", DataError)
+            column_types = {k: v for k, v in zip(data[0].keys(), first_db_item.keys())}
 
-        await self._app.append_data_to_data_set(db_items, uuid=uuid, name=name)
+        await self._app.append_data_to_data_set(data, uuid=uuid, name=name, column_types=column_types)
 
         return data_set['id']
 
@@ -99,4 +100,5 @@ class DataSetManagingApi:
         if not data_set:
             logger.warning(f'Data set {name if name else uuid} does not exist.')
             return []
-        return [dp.cascade_to_dict() for dp in await data_set.get_data_points(limit)]
+        return [{k: v for k, v in dp.cascade_to_dict().items() if v is not None}
+                for dp in await data_set.get_data_points(limit)]

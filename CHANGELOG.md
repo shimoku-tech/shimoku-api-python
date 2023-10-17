@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.2.1 (2023-10-17)
+
+### Improvements
+
+- Check all data points before uploading the data to the platform. All columns must only contain values of one type and null values are not allowed.
+
 ## 1.2 (2023-09-26)
 
 ### Improvements

@@ -145,9 +145,12 @@ class PlotApi:
     async def clear_menu_path(self):
         """ Clear the current path or a subpath """
         reports = await self._app.get_reports()
+        touched_data_set_ids = []
         if self._current_path is not None:
             path = create_normalized_name(self._current_path)
             reports = [report for report in reports if create_normalized_name(report['path']) == path]
+        else:
+            touched_data_set_ids = [ds['id'] for ds in await self._app.get_data_sets()]
 
         containers: List = [report for report in reports if report.report_type in ['TABS', 'MODAL']]
 
@@ -155,7 +158,7 @@ class PlotApi:
             container.clear_content()
 
         rds = await asyncio.gather(*[report.get_report_data_sets() for report in reports])
-        touched_data_set_ids = [rd['dataSetId'] for rds in rds for rd in rds]
+        touched_data_set_ids.extend([rd['dataSetId'] for rds in rds for rd in rds])
 
         await asyncio.gather(*[self._app.delete_report(report['id']) for report in reports])
         logger.info(f'Deleted {len(reports)} components')

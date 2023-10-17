@@ -198,22 +198,26 @@ class App(Resource):
         return await self._base_resource.delete_child(DataSet, uuid, name)
 
     @logging_before_and_after(logger.debug)
-    async def append_data_to_data_set(self, data: Union[pd.DataFrame, List[Dict]],
-                                      uuid: Optional[str] = None, name: Optional[str] = None,
-                                      sort: Optional[Dict] = None, dump_whole: bool = False
-                                      ) -> Tuple[Mapping, DataSet, Dict]:
+    async def append_data_to_data_set(
+        self, data: Union[pd.DataFrame, List[Dict]],
+        uuid: Optional[str] = None, name: Optional[str] = None,
+        sort: Optional[Dict] = None, dump_whole: bool = False,
+        column_types: Optional[dict] = None
+    ) -> Tuple[Mapping, DataSet, Dict]:
         """ Appends data to a dataset. If the dataset doesn't exist, it is created.
         :param uuid: The UUID of the dataset to update.
         :param name: The alias of the dataset to update.
         :param data: The data to update the dataset with.
         :param sort: The sort to apply to the data.
         :param dump_whole: Whether to dump the whole data.
+        :param column_types: The types of the columns.
         :return: The dataset.
         """
+        data = data.to_dict(orient='records') if isinstance(data, pd.DataFrame) else data
         data_set: DataSet = await self.get_data_set(uuid, name)
         mapping, res_sort = await data_set.create_data_points(
-            data_points=data.to_dict(orient='records') if isinstance(data, pd.DataFrame) else data,
-            sort=sort, dump_whole=dump_whole)
+            data_points=data, sort=sort, dump_whole=dump_whole, column_types=column_types
+        )
         return mapping, data_set, res_sort
 
     @logging_before_and_after(logger.debug)

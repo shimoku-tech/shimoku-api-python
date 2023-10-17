@@ -3,22 +3,121 @@ import pandas as pd
 import asyncio
 from copy import deepcopy
 from typing import List, Dict, Optional, Union, Tuple, TYPE_CHECKING, TypeVar
+from numbers import Number
+
 
 from ..base_resource import Resource
+from ..exceptions import DataError
 
 if TYPE_CHECKING:
     from .app import App
 
 import logging
-from ..execution_logger import logging_before_and_after
+from ..execution_logger import logging_before_and_after, log_error
 logger = logging.getLogger(__name__)
 
 Mapping = TypeVar('Mapping', bound=Union[Dict, List[str], str])
 
 
 @logging_before_and_after(logging_level=logger.debug)
+def check_for_null_values(value, row, column):
+    if value is None or pd.isna(value) or pd.isnull(value):
+        log_error(
+            logger,
+            f'Value ({value}) in row ({row}) and column ({column}) is a null value please check for missing values',
+            DataError
+        )
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
+    """ Given a data point, return a dictionary with the column names as keys and their types as values
+    :param data_point: a data point
+    :param sort: a dictionary with the sort field and order
+    """
+    data_mapping = {}
+    str_counter = 0
+    float_counter = 0
+    date_counter = 0
+    for k, v in data_point.items():
+        check_for_null_values(v, 0, k)
+        if str_counter > 50:
+            raise ValueError('Too many string fields')
+        if float_counter > 50:
+            raise ValueError('Too many int fields')
+        if date_counter > 50:
+            raise ValueError('Too many date fields')
+        if isinstance(v, str) or isinstance(v, bool):
+            str_counter += 1
+            data_mapping.update({k: f'stringField{str_counter}'})
+        elif isinstance(v, Number):
+            if sort and k == sort['field']:
+                data_mapping.update({k: 'orderField1'})
+                sort['field'] = 'orderField1'
+            else:
+                float_counter += 1
+                data_mapping.update({k: f'intField{float_counter}'})
+        elif isinstance(v, (dt.date, dt.datetime, pd.Timestamp)):
+            date_counter += 1
+            data_mapping.update({k: f'dateField{date_counter}'})
+            if sort and k == sort['field']:
+                sort['field'] = f'dateField{date_counter}'
+        elif isinstance(v, dict):
+            data_mapping.update({k: f'customField1'})
+        else:
+            log_error(logger, f'Unknown value type {v} | Type {type(v)} | Key {k}', DataError)
+    return data_mapping
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def check_correct_type(value, types: Union[type, Tuple[type, ...]], row_number: int, column_name: str):
+    """ Check if the value is of the correct type
+    :param value: value to check
+    :param types: type or tuple of types to check
+    :param row_number: row number of the value
+    :param column_name: column name of the value
+    """
+    if not isinstance(value, types):
+        log_error(
+            logger,
+            f'Value ({value}) in row ({row_number}) and column ({column_name}) '
+            + (f'is not of the correct type {types}' if not isinstance(types, tuple) else
+               f'is not one of the correct types {types}'),
+            DataError
+        )
+
+
+@logging_before_and_after(logging_level=logger.debug)
+def change_keys(data: Union[List[Dict], Dict], mapping: Dict) -> List[Dict]:
+    """ Given a data and a mapping, change the keys of the data to the values of the mapping
+    :param data: data to change the keys
+    :param mapping: mapping of the keys to change
+    """
+    changed_keys_data = []
+    for i, datum in enumerate(data):
+        changed_keys_datum = {}
+        for k, v in datum.items():
+            check_for_null_values(v, i, k)
+            k_mapping = mapping[k]
+            if k_mapping.startswith('stringField'):
+                check_correct_type(v, (str, bool), i, k)
+                v = str(v)
+            elif k_mapping.startswith('intField') or k_mapping.startswith('orderField'):
+                check_correct_type(v, Number, i, k)
+                v = float(v)
+            elif k_mapping.startswith('dateField'):
+                check_correct_type(v, (dt.date, dt.datetime, pd.Timestamp), i, k)
+                v = pd.to_datetime(v).isoformat() + 'Z'
+            changed_keys_datum[k_mapping] = v
+        changed_keys_data.append(changed_keys_datum)
+    return changed_keys_data
+
+
+@logging_before_and_after(logging_level=logger.debug)
 def convert_input_data_to_db_items(
-    data: Union[List[Dict], Dict], sort: Optional[Dict] = None, dump_whole: bool = False
+    data: Union[List[Dict], Dict],
+    sort: Optional[Dict] = None, dump_whole: bool = False,
+    column_types: Optional[Dict] = None
 ) -> Union[List[Dict], Dict]:
     """Given an input data, for all the keys of the data convert it to
      a Shimoku body parameter for data table
@@ -78,43 +177,11 @@ def convert_input_data_to_db_items(
     """
     if dump_whole:
         return {'customField1': data}
-    elif type(data) == list:
-        d = {}
-        str_counter = 0
-        float_counter = 0
-        date_counter = 0
-        # TODO: Check all data not just the first one
-        for k, v in data[0].items():
-            if str_counter > 50:
-                raise ValueError('Too many string fields')
-            if float_counter > 50:
-                raise ValueError('Too many int fields')
-            if date_counter > 50:
-                raise ValueError('Too many date fields')
-            type_v = type(v)
-            if type_v == str or type_v == bool:
-                str_counter += 1
-                d.update({k: f'stringField{str_counter}'})
-            elif type_v == float or type_v == int:
-                if sort and k == sort['field']:
-                    d.update({k: 'orderField1'})
-                    sort['field'] = 'orderField1'
-                else:
-                    float_counter += 1
-                    d.update({k: f'intField{float_counter}'})
-            elif type_v == dt.date or type_v == dt.datetime or type_v == pd.Timestamp:
-                date_counter += 1
-                d.update({k: f'dateField{date_counter}'})
-                if sort and k == sort['field']:
-                    sort['field'] = f'dateField{date_counter}'
-            elif type_v == dict:
-                d.update({k: f'customField1'})
-            else:
-                raise ValueError(f'Unknown value type {v} | Type {type_v}')
-        return [{d[k]: v if 'dateField' not in d[k] else pd.to_datetime(v).isoformat()+'Z'
-                 for k, v in datum.items()} for datum in data]
+    elif isinstance(data, list):
+        column_mapping = get_column_types(data[0], sort) if column_types is None else column_types
+        return change_keys(data, column_mapping)
     else:
-        assert type(data) == list or type(data) == dict
+        log_error(logger, f'Unknown data type {type(data)}', DataError)
 
 
 class DataSet(Resource):
@@ -176,16 +243,21 @@ class DataSet(Resource):
 
     # DataPoint methods
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_data_points(self, data_points: Union[List[Dict], Dict], sort: Optional[Dict] = None,
-                                 dump_whole: bool = False) -> Tuple[Mapping, Dict]:
+    async def create_data_points(
+        self, data_points: Union[List[Dict], Dict], sort: Optional[Dict] = None,
+        dump_whole: bool = False, column_types: Optional[dict] = None
+    ) -> Tuple[Mapping, Dict]:
         """ Create data points for a report
         :param data_points: data points to be created
         :param sort: sort parameter
         :param dump_whole: whether to dump the whole data into a single field
+        :param column_types: precomputed column types
         :return: mapping
         """
         copy_sort = deepcopy(sort) if sort else None
-        converted_data_points = convert_input_data_to_db_items(data_points, copy_sort, dump_whole=dump_whole)
+        converted_data_points = convert_input_data_to_db_items(
+            data_points, copy_sort, dump_whole=dump_whole, column_types=column_types
+        )
         if isinstance(converted_data_points, Dict):
             converted_data_points = [converted_data_points]
         await self._base_resource.create_children_batch(self.DataPoint, converted_data_points, unit=' data points')

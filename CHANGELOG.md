@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## 1.3 (2023-11-03)
+
+### Improvements
+
+New charts and options have been added:
+- Indicators with:
+    - Color by value
+    - Marked line
+    - Segmented line
+    - Summary line
+    - Segmented area
+    - Inputs forms with Drag & Drop
+- Variants have been introduced to trend charts
+    - clean and minimal for all trend charts
+    - shadow and thin available for bar charts, this variants can be combined with the previous ones
+- The shimoku palette has been accessible through an Enum for ease of use
+
 ## 1.2.1 (2023-10-17)
 
 ### Improvements

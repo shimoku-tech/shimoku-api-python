@@ -2,6 +2,8 @@ from ...report import Report
 from copy import deepcopy
 from typing import Dict, Any
 
+from shimoku_api_python.utils import ShimokuPalette
+
 
 class EChart(Report):
     """ ECharts report class """
@@ -29,10 +31,10 @@ default_toolbox_options = {
             'icon': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a555461a3684b16d544e_database.svg',
             'emphasis': {
                 'iconStyle': {
-                    'textBackgroundColor': 'var(--chart-C1)',
+                    'textBackgroundColor': ShimokuPalette.CHART_C1.value,
                     'textBorderRadius': [50, 50, 50, 50],
                     'textPadding': [8, 8, 8, 8],
-                    'textFill': 'var(--color-white)'
+                    'textFill': ShimokuPalette.WHITE.value
                 }
             },
         },
@@ -48,10 +50,10 @@ default_toolbox_options = {
             },
             'emphasis': {
                 'iconStyle': {
-                    'textBackgroundColor': 'var(--chart-C1)',
+                    'textBackgroundColor': ShimokuPalette.CHART_C1.value,
                     'textBorderRadius': [50, 50, 50, 50],
                     'textPadding': [8, 8, 8, 8],
-                    'textFill': 'var(--color-white)'
+                    'textFill': ShimokuPalette.WHITE.value
                 }
             },
         },
@@ -61,10 +63,10 @@ default_toolbox_options = {
             'icon': 'image://https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/6398a555662e1af339154c64_download.svg',
             'emphasis': {
                 'iconStyle': {
-                    'textBackgroundColor': 'var(--chart-C1)',
+                    'textBackgroundColor': ShimokuPalette.CHART_C1.value,
                     'textBorderRadius': [50, 50, 50, 50],
                     'textPadding': [8, 8, 8, 8],
-                    'textFill': 'var(--color-white)'
+                    'textFill': ShimokuPalette.WHITE.value
                 }
             }
         }

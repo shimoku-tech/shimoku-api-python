@@ -22,6 +22,31 @@ s.set_workspace(uuid=workspace_id)
 
 delete_paths: bool = False
 
+noise_data = pd.DataFrame({
+    'x': range(100),
+    'y': [
+        0.62, 0.66, 0.66, 0.63, 0.61, 0.62, 0.61, 0.49, 0.4, 0.46, 0.62, 0.76, 0.72, 0.58, 0.52, 0.62, 0.78, 0.89,
+        0.84, 0.71, 0.62, 0.58, 0.54, 0.56, 0.6, 0.62, 0.63, 0.63, 0.61, 0.61, 0.62, 0.65, 0.67, 0.66, 0.64, 0.62,
+        0.63, 0.69, 0.73, 0.7, 0.62, 0.54, 0.5, 0.54, 0.6, 0.62, 0.66, 0.77, 0.84, 0.77, 0.62, 0.49, 0.48, 0.57,
+        0.66, 0.62, 0.56, 0.55, 0.6, 0.64, 0.62, 0.56, 0.43, 0.37, 0.47, 0.62, 0.78, 0.86, 0.8, 0.68, 0.62, 0.63,
+        0.68, 0.73, 0.7, 0.62, 0.57, 0.61, 0.7, 0.71, 0.62, 0.54, 0.57, 0.67, 0.71, 0.62, 0.49, 0.37, 0.38, 0.5,
+        0.62, 0.75, 0.89, 0.91, 0.78, 0.62, 0.46, 0.3, 0.29, 0.45
+    ]
+})
+
+horizontal_bar_data = [
+    {'name': 'Financiado', 'value': 1321},
+    {'name': 'Product name 2', 'value': 1400},
+    {'name': 'Product name 3', 'value': 1499},
+    {'name': 'Policy tenure', 'value': 1550},
+    {'name': 'Family size', 'value': 1663},
+    {'name': 'Acquisitive power', 'value': 1995},
+    {'name': 'Geo', 'value': 2712},
+    {'name': 'Modelo', 'value': 3521},
+    {'name': 'Año', 'value': 4643},
+    {'name': 'Offer', 'value': 5426}
+]
+
 data = [
     {'date': dt.date(2021, 1, 1), 'x': 5, 'y': 5},
     {'date': dt.date(2021, 1, 2), 'x': 6, 'y': 5},
@@ -740,20 +765,20 @@ def horizontal_bar_chart():
 
 def line():
     s.set_menu_path('test', 'line-test')
-    s.plt.line(data='main data', x='date', order=0)
+    s.plt.line(data='main data', x='date', order=0, variant='minimal')
     s.plt.line(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
 def area():
     s.set_menu_path('test', 'area-test')
-    s.plt.area(data='main data', x='date', order=0)
+    s.plt.area(data='main data', x='date', order=0, variant='clean')
     s.plt.area(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
 def scatter():
     s.set_menu_path('test', 'scatter-test')
 
-    s.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6)
+    s.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6, variant='clean')
 
     # https://figshare.com/articles/dataset/Age_height_and_weight_raw_data/16920130
     df_ = pd.read_csv('../../data/scatter_test.csv')[
@@ -795,7 +820,7 @@ def scatter_with_effect():
 
     s.plt.scatter_with_effect(
         data=scatter_source,
-        order=0,
+        x='x', y='y', order=0,
         x_axis_name='X axis',
         y_axis_name='Y axis',
         title='Scatter with effect',
@@ -832,14 +857,15 @@ def waterfall():
     ]
 
     s.plt.waterfall(
-        data=data,
+        data=data, x='x',
         positive='income',
         negative='expenses',
         order=0,
+        variant='minimal'
     )
 
     s.plt.waterfall(
-        data=data,
+        data=data, x='x',
         title='Waterfall with balance',
         positive='income',
         negative='expenses',
@@ -852,6 +878,7 @@ def waterfall():
     s.update_data_sets()
     s.plt.waterfall(
         data=random_waterfall_data,
+        x='x',
         title='Big random waterfall',
         positive='Income',
         negative='Expenses',
@@ -859,6 +886,7 @@ def waterfall():
         y_axis_name='Money in €',
         show_balance=True,
         order=2,
+        variant='clean'
     )
     s.reuse_data_sets()
 
@@ -885,6 +913,7 @@ def line_with_confidence_area():
         x_axis_name='Date',
         y_axis_name='Value',
         percentages=True,
+        variant='clean'
     )
 
 
@@ -905,7 +934,8 @@ def funnel():
 def heatmap():
     s.set_menu_path('test', 'heatmap')
 
-    s.plt.heatmap(data=heatmap_data, x='xAxis', y='yAxis', values='value', order=0, calculate_color_range=True)
+    s.plt.heatmap(data=heatmap_data, x='xAxis', y='yAxis', values='value', order=0, calculate_color_range=True,
+                  variant='minimal')
 
     s.plt.heatmap(data='heatmap data', x='xAxis', y='yAxis', values='value', order=1, continuous=True,
                   title='Heatmap Chart', rows_size=2, cols_size=12, x_axis_name='xAxis', y_axis_name='yAxis')
@@ -1407,6 +1437,29 @@ def indicator():
         data=data_[0],
         order=order, rows_size=8, cols_size=12,
         vertical=True,
+    )
+
+
+def color_by_value_indicators():
+    s.set_menu_path('test', 'indicators-by-value')
+    s.plt.indicator(
+        data=[{
+            'align': 'center',
+            'title': 'Positive case',
+            'value': 10,
+        }, {
+            'align': 'center',
+            'title': 'Negative case',
+            'value': -10,
+        }, {
+            'align': 'center',
+            'title': 'Neutral case',
+            'value': 0,
+        }],
+        cols_size=12,
+        rows_size=1,
+        order=4,
+        color_by_value=True
     )
 
 
@@ -2744,137 +2797,133 @@ def tabs():
     s.plt.set_shared_data(dfs={'main data': data})
 
     def _test_bentobox():
-        s.plt.set_bentobox(cols_size=8, rows_size=3)
+        with s.plt.set_bentobox(cols_size=8, rows_size=3):
 
-        data_indic = [
-            {
-                "description": "",
-                "title": "Estado",
-                "value": "Abierto",
-            },
-        ]
-        s.plt.indicator(
-            data=data_indic,
-            order=0, rows_size=10, cols_size=12,
+            data_indic = [
+                {
+                    "description": "",
+                    "title": "Estado",
+                    "value": "Abierto",
+                },
+            ]
+            s.plt.indicator(
+                data=data_indic,
+                order=0, rows_size=10, cols_size=12,
+            )
+
+            s.plt.indicator(
+                data=data_indic,
+                order=1, rows_size=10, cols_size=12,
+            )
+
+            s.plt.bar(
+                data='main data', x='date',
+                order=2, rows_size=26, cols_size=24,
+            )
+
+    with s.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0):
+        _test_bentobox()
+
+        s.plt.change_current_tab("Table")
+        s.plt.table(
+            title="Test-table",
+            data=table_data,
+            order=0,
+            categorical_columns=['filtA', 'filtB'],
+            initial_sort_column='date',
+            search=True,
         )
 
-        s.plt.indicator(
-            data=data_indic,
-            order=1, rows_size=10, cols_size=12,
-        )
+        s.plt.change_current_tab("line test")
+        s.plt.line(data='main data', x='date', order=0)
 
+        s.plt.change_current_tab("Bar 1")
         s.plt.bar(
             data='main data', x='date',
-            order=2, rows_size=26, cols_size=24,
+            x_axis_name='Date',
+            y_axis_name='Revenue',
+            order=0, rows_size=2,
+            cols_size=12,
         )
 
-        s.plt.pop_out_of_bentobox()
+        s.plt.change_current_tab("Input Form")
+        s.plt.input_form(order=0, options=input_form_data)
 
-    s.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0)
-    _test_bentobox()
-
-    s.plt.change_current_tab("Table")
-    s.plt.table(
-        title="Test-table",
-        data=table_data,
-        order=0,
-        categorical_columns=['filtA', 'filtB'],
-        initial_sort_column='date',
-        search=True,
-    )
-
-    s.plt.change_current_tab("line test")
-    s.plt.line(data='main data', x='date', order=0)
-
-    s.plt.change_current_tab("Bar 1")
-    s.plt.bar(
-        data='main data', x='date',
-        x_axis_name='Date',
-        y_axis_name='Revenue',
-        order=0, rows_size=2,
-        cols_size=12,
-    )
-
-    s.plt.change_current_tab("Input Form")
-    s.plt.input_form(order=0, options=input_form_data)
-
-    indicators_data = {
-        "description": "",
-        "title": "",
-        "value": "INDICATOR CHANGED!",
-        "color": "warning"
-    }
-    indicators_data_2 = {
-        "description": "",
-        "title": "",
-        "value": "INDICATOR CHANGED!",
-        "color": "main"
-    }
-    s.plt.change_current_tab("Indicators 2")
-    s.plt.indicator(data=indicators_data_2, order=0)
-    s.plt.change_current_tab("Indicators 1")
-    s.plt.indicator(data=indicators_data, order=0)
-
-    s.plt.set_tabs_index(
-        ("Deepness 1", "Bento box"), order=1,
-        parent_tabs_index=("Deepness 0", "Indicators 1"),
-        sticky=False, just_labels=True
-    )
-    _test_bentobox()
-
-    s.plt.change_current_tab("Indicators 1")
-    for i in range(2, 5):
-        s.plt.set_tabs_index(
-            (f"Deepness {i}", "Indicators 2"), order=1,
-            parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
-            sticky=False, just_labels=True
-        )
+        indicators_data = {
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "warning"
+        }
+        indicators_data_2 = {
+            "description": "",
+            "title": "",
+            "value": "INDICATOR CHANGED!",
+            "color": "main"
+        }
+        s.plt.change_current_tab("Indicators 2")
         s.plt.indicator(data=indicators_data_2, order=0)
         s.plt.change_current_tab("Indicators 1")
         s.plt.indicator(data=indicators_data, order=0)
 
-    s.plt.set_tabs_index(
+    with s.plt.set_tabs_index(
+        tabs_index=("Deepness 1", "Bento box"), order=1,
+        parent_tabs_index=("Deepness 0", "Indicators 1"),
+        sticky=False, just_labels=True):
+        _test_bentobox()
+        s.plt.change_current_tab("Indicators 1")
+
+    for i in range(2, 5):
+        with s.plt.set_tabs_index(
+            (f"Deepness {i}", "Indicators 2"), order=1,
+            parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
+            sticky=False, just_labels=True
+        ):
+            s.plt.indicator(data=indicators_data_2, order=0)
+            s.plt.change_current_tab("Indicators 1")
+            s.plt.indicator(data=indicators_data, order=0)
+
+    with s.plt.set_tabs_index(
         ("Bar deep 1", "Bar 1"), order=1,
         parent_tabs_index=("Deepness 0", "Bar 1"),
         sticky=False, just_labels=True
-    )
-    s.plt.bar(
-        data='main data', x='date',
-        x_axis_name='Date',
-        y_axis_name='Revenue',
-        order=0, rows_size=2,
-        cols_size=12,
-    )
-    s.plt.set_tabs_index(
+    ):
+        s.plt.bar(
+            data='main data', x='date',
+            x_axis_name='Date',
+            y_axis_name='Revenue',
+            order=0, rows_size=2,
+            cols_size=12,
+        )
+    with s.plt.set_tabs_index(
         ("Bar deep 2", "Bar 2"), order=1,
         parent_tabs_index=("Bar deep 1", "Bar 1"),
         sticky=False, just_labels=True
-    )
-    s.plt.bar(
-        data='main data',
-        x='date', y='y',
-        x_axis_name='Date',
-        y_axis_name='Revenue',
-        order=2, rows_size=2,
-        cols_size=12,
-    )
-    s.plt.change_current_tab("Line 1")
-    s.plt.line(
-        data='main data', x='date',
-        x_axis_name='Date',
-        y_axis_name='Revenue',
-        order=0, rows_size=2,
-        cols_size=12,
-    )
-    s.plt.change_current_tab("Line 2")
-    s.plt.line(
-        data='main data', x='date',
-        x_axis_name='Date',
-        y_axis_name='Revenue',
-        order=0, rows_size=2,
-        cols_size=12,
-    )
-    s.plt.pop_out_of_tabs_group()
+    ):
+        s.plt.bar(
+            data='main data',
+            x='date', y='y',
+            x_axis_name='Date',
+            y_axis_name='Revenue',
+            order=2, rows_size=2,
+            cols_size=12,
+        )
+        s.plt.change_current_tab("Line 1")
+        s.plt.line(
+            data='main data', x='date',
+            x_axis_name='Date',
+            y_axis_name='Revenue',
+            order=0, rows_size=2,
+            cols_size=12,
+        )
+        s.plt.change_current_tab("Line 2")
+        s.plt.line(
+            data='main data', x='date',
+            x_axis_name='Date',
+            y_axis_name='Revenue',
+            order=0, rows_size=2,
+            cols_size=12,
+        )
 
     # s.set_menu_path('test_delete_tabs')
     # s.plt.set_tabs_index(tabs_index=(f"Deepness 0", "Indicators 1"), order=0)
@@ -2971,6 +3020,7 @@ def rainfall_area():
         data=data, order=0,
         x='Date', top_names=['flow', 'flow+1', 'flow+2'], bottom_names=['rainfall', 'rainfall+1', 'rainfall+2'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
+        variant='minimal'
     )
 
     data = []
@@ -2981,6 +3031,7 @@ def rainfall_area():
         data=data, order=1,
         x='Date', top_names=['flow'], bottom_names=['rainfall'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
+        variant='clean'
     )
 
 
@@ -3004,6 +3055,7 @@ def rainfall_line():
     data = []
     for i in range(0, len(flow), max(1, len(flow) // how_many)):
         data.append({'Date': time[i], 'flow': flow[i], 'rainfall': rainfall[i]})
+    print(data)
 
     s.plt.top_bottom_line(
         data=data, order=1,
@@ -3033,20 +3085,17 @@ def modal():
     )
     s.set_menu_path('Modal Test')
 
-    s.plt.set_modal('Test modal', open_by_default=True, width=70, height=60)
-    s.plt.html(html=prediction_header, order=0)
+    with s.plt.set_modal('Test modal', open_by_default=True, width=70, height=60):
+        s.plt.html(html=prediction_header, order=0)
 
-    s.plt.set_tabs_index(('Test', 'Tab 1'), order=1)
-    s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
-    s.plt.html(html=prediction_header, order=1)
-
-    s.plt.pop_out_of_tabs_group()
-    s.plt.pop_out_of_modal()
+        with s.plt.set_tabs_index(('Test', 'Tab 1'), order=1):
+            s.plt.table(data=table_data, order=0, rows_size=3,
+                        title='Table test', categorical_columns=['filtA', 'filtB'])
+            s.plt.html(html=prediction_header, order=1)
 
     s.plt.html(html=prediction_header, order=0)
-    s.plt.set_tabs_index(('TestNoModal', 'Table'), order=0)
-    s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
-    s.plt.pop_out_of_tabs_group()
+    with s.plt.set_tabs_index(('TestNoModal', 'Table'), order=0):
+        s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
 
     s.plt.modal_button(order=1, modal='Test modal', label='Open modal')
 
@@ -3069,6 +3118,7 @@ def bar_and_line_chart():
         x='day', bar_names=['Evaporation', 'Precipitation'], line_names=['Temperature'],
         title='rainfall and temperature', x_axis_name='Day', line_axis_name='Temperature',
         line_suffix=' °C', bar_axis_name='Evaporation and precipitacion', bar_suffix=' ml',
+        variant='minimal'
     )
 
     aux_data = pd.DataFrame(_data)
@@ -3082,6 +3132,7 @@ def bar_and_line_chart():
         x='day', bar_names=['Evaporation', 'Precipitation'], line_names=['Temperature'],
         title='rainfall and temperature', x_axis_name='Day', line_axis_name='Temperature',
         line_suffix=' °C', bar_axis_name='Evaporation and precipitacion', bar_suffix=' ml',
+        variant='clean'
     )
 
     aux_data = pd.DataFrame(_data)
@@ -3127,7 +3178,74 @@ def segmented_line_chart():
         data=df, order=1, x='date', y='y', title="Beijing's Air Quality Index",
         marking_lines=marking_lines, range_colors=range_colors,
         x_axis_name=x_axis_name, y_axis_name=y_axis_name,
+        variant='clean'
     )
+
+
+def segmented_area_chart():
+    s.set_menu_path('test-free-echarts', 'Segmented Area Chart')
+    labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+              'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+    s.plt.segmented_area(
+        data='noise', order=1, x='x', y='y', threshold=0.7,
+        top_area=True, default_color=(0, 0, 255), labels=labels
+    )
+    s.plt.segmented_area(
+        data='noise', order=2, x='x', y='y', threshold=0.7, labels=labels
+    )
+    s.plt.segmented_area(
+        data='noise', order=3, x='x', y='y',
+        segments=[(30, 45), (60, 70, 'var(--chart-C1)'), (75, 95, (1, 220, 1))]
+    )
+
+
+def marked_line_chart():
+    s.set_menu_path('test-free-echarts', 'Marked Line Chart')
+    s.plt.marked_line(
+        data='table', x='date',
+        marks=[('first segment', 0, 1), ('second segment', 2, 3)],
+        order=0, rows_size=2, cols_size=12, y=['x', 'y']
+    )
+
+
+def variants():
+    s.set_menu_path('test-free-echarts', 'Variants')
+
+    s.plt.stacked_bar(
+        data='stacked data', order=0, cols_size=6,
+        x='Segment', variant='clean shadow', show_values='all'
+    )
+    s.plt.stacked_horizontal_bar(
+        data='stacked data', order=1, cols_size=6,
+        x='Segment', variant='minimal shadow', show_values='all',
+    )
+    s.plt.bar(
+        data='table', order=2, cols_size=6, x='date',
+        variant='shadow', show_values=['x']
+    )
+    s.plt.horizontal_bar(
+        data='horizontal bar', x='name', order=3, cols_size=6,
+        show_values=['value'], variant='clean shadow',
+    )
+    s.plt.bar(
+        data='table', order=4, cols_size=6, x='date',
+        variant='clean thin', show_values=['x']
+    )
+    s.plt.horizontal_bar(
+        data='horizontal bar',
+        x='name', order=5, cols_size=6,
+        show_values=['value'], variant='clean thin',
+    )
+    s.plt.stacked_bar(
+        data='stacked data', order=6, cols_size=6, x='Segment',
+        variant='thin', show_values='all'
+    )
+    s.plt.stacked_horizontal_bar(
+        data='stacked data', order=7, cols_size=6,
+        x='Segment', variant='clean thin', show_values='all',
+    )
+    s.plt.area(data='table', order=8, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
+    s.plt.line(data='table', order=9, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
 
 
 def x_axis_tandem_chart():
@@ -3450,6 +3568,21 @@ def chart_and_indicators():
     )
 
 
+def summary_line():
+    s.set_menu_path('test-bentobox', 'summary-line')
+    summary_data = [
+        {'date': '28 days', 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
+        {'date': '21 days', 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
+        {'date': '14 days', 'x': 4, 'y': 5, 'filtA': 'A', 'filtB': 'W', 'name': 'Audrey'},
+        {'date': '7 days', 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
+        {'date': 'today', 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
+    ]
+    s.plt.line_with_summary(
+        data=summary_data, order=4, x='date', y='x',
+        title='Total', description='Today', value=7.94
+    )
+
+
 class TestPlotApi(unittest.TestCase):
     def test_delete_path(self):
         init_time = perf_counter()
@@ -3529,6 +3662,7 @@ class TestPlotApi(unittest.TestCase):
             }
         )
         indicator()
+        color_by_value_indicators()
         speed_gauge()
         line()
         predictive_line()
@@ -3564,7 +3698,12 @@ class TestPlotApi(unittest.TestCase):
         ini_calls = s.get_api_calls_counter()
         s.set_menu_path('test-free-echarts')
         stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
-        s.plt.set_shared_data({'stacked data': stacked_data})
+        s.plt.set_shared_data({
+            'stacked data': stacked_data,
+            'noise': noise_data,
+            'table': table_data,
+            'horizontal bar': horizontal_bar_data,
+        })
         stacked_bar_chart()
         stacked_horizontal_bar_chart()
         stacked_area_chart()
@@ -3578,6 +3717,9 @@ class TestPlotApi(unittest.TestCase):
         waterfall()
         bar_and_line_chart()
         segmented_line_chart()
+        segmented_area_chart()
+        marked_line_chart()
+        variants()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
@@ -3587,10 +3729,11 @@ class TestPlotApi(unittest.TestCase):
         ini_calls = s.get_api_calls_counter()
         infographics()
         chart_and_indicators()
+        summary_line()
         s.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
         print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
-        
+
     def test_filters(self):
         init_time = perf_counter()
         ini_calls = s.get_api_calls_counter()

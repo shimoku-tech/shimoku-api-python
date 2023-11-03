@@ -1,6 +1,7 @@
 import pandas as pd
 import asyncio
 import numpy as np
+from abc import ABC, abstractmethod
 
 from copy import deepcopy
 
@@ -15,11 +16,13 @@ from ..resources.report import Report
 from ..resources.data_set import DataSet, Mapping, convert_input_data_to_db_items
 from ..resources.reports.charts.indicator import Indicator
 from ..resources.reports.charts.echart import EChart
-from ..resources.reports.charts.EChart_definitions.line import line_chart, area_chart, stacked_area_chart, \
-    predictive_line_chart
+from ..resources.reports.charts.EChart_definitions.line import (line_chart, area_chart, stacked_area_chart, \
+                                                                predictive_line_chart, marked_line_chart,
+                                                                segmented_area_chart,
+                                                                line_with_confidence_area_chart, segmented_line_chart)
 from ..resources.reports.charts.EChart_definitions.bar import bar_chart, stacked_bar_chart, \
     horizontal_bar_chart, stacked_horizontal_bar_chart, zero_centered_bar_chart
-from ..resources.reports.charts.EChart_definitions.scatter import scatter_chart
+from ..resources.reports.charts.EChart_definitions.scatter import scatter_chart, scatter_with_effect_chart
 from ..resources.reports.charts.EChart_definitions.funnel import funnel_chart
 from ..resources.reports.charts.EChart_definitions.tree import tree_chart
 from ..resources.reports.charts.EChart_definitions.radar import radar_chart
@@ -32,13 +35,10 @@ from ..resources.reports.charts.EChart_definitions.sankey import sankey_chart
 from ..resources.reports.charts.EChart_definitions.heatmap import heatmap_chart
 from ..resources.reports.charts.EChart_definitions.gauge_indicator import gauge_indicator
 from ..resources.reports.charts.EChart_definitions.top_bottom import top_bottom_area_charts, top_bottom_line_charts
-from ..resources.reports.charts.EChart_definitions.line_with_confidence_area import line_with_confidence_area_chart
-from ..resources.reports.charts.EChart_definitions.scatter_with_effect import scatter_with_effect_chart
 from ..resources.reports.charts.EChart_definitions.waterfall import waterfall_chart
 from ..resources.reports.charts.EChart_definitions.line_and_bar import line_and_bar_charts
-from ..resources.reports.charts.EChart_definitions.segmented_line import segmented_line_chart
 from ..resources.reports.charts.bentobox_charts import chart_and_modal_button, infographics_text_bubble, \
-    indicators_with_header, chart_and_indicators
+    indicators_with_header, chart_and_indicators, line_with_summary, table_with_header
 from ..resources.reports.charts.table import Table, interpret_label_info
 from ..resources.reports.charts.annotated_chart import AnnotatedEChart
 from ..resources.reports.filter_data_set import FilterDataSet
@@ -55,11 +55,25 @@ from ..utils import deep_update, get_uuids_from_dict, get_data_references_from_d
 
 import logging
 from shimoku_api_python.execution_logger import logging_before_and_after, log_error
+
 logger = logging.getLogger(__name__)
 
 
 class PlotApi:
     """ Plot API """
+
+    class ContainerContext(ABC):
+        """ Context manager for a container. """
+
+        def __init__(self, plt: 'PlotApi'):
+            self._plt = plt
+
+        def __enter__(self):
+            pass
+
+        @abstractmethod
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
 
     def __init__(self, app: Optional[App], execution_pool_context: ExecutionPoolContext, reuse_data_sets: bool = False):
         self.epc = execution_pool_context
@@ -193,6 +207,12 @@ class PlotApi:
             log_error(logger, f'No modal found with name {name}', ModalError)
         await self._app.delete_report(r_hash=r_hash)
 
+    class BentoBoxContext(ContainerContext):
+        """ Context manager for bentoboxes """
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self._plt.pop_out_of_bentobox()
+
     @logging_before_and_after(logging_level=logger.info)
     def set_bentobox(self, cols_size: int, rows_size: int):
         """ Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
@@ -204,6 +224,7 @@ class PlotApi:
             'bentoboxSizeColumns': cols_size,
             'bentoboxSizeRows': rows_size,
         }
+        return self.BentoBoxContext(self)
 
     @logging_before_and_after(logging_level=logger.info)
     def pop_out_of_bentobox(self):
@@ -218,7 +239,7 @@ class PlotApi:
         if not self._bentobox_data['bentoboxId']:
             if not self._bentobox_data['bentoboxId']:
                 self._bentobox_data.update({
-                    'bentoboxId': '_'+str(order),
+                    'bentoboxId': '_' + str(order),
                     'bentoboxOrder': order,
                 })
         return self._bentobox_data
@@ -231,14 +252,20 @@ class PlotApi:
         await asyncio.gather(*[container.update() for container in containers])
         logger.info('Updated tab groups and modals')
 
+    class TabsContext(ContainerContext):
+        """ A context manager for tabs groups. """
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self._plt.pop_out_of_tabs_group()
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_tabs_index(
-        self, tabs_index: Tuple[str, str], order: Optional[int] = None,
-        parent_tabs_index: Optional[Tuple[str, str]] = None, padding: Optional[str] = None,
-        cols_size: Optional[str] = None, rows_size: Optional[int] = None,
-        just_labels: Optional[bool] = None, sticky: Optional[bool] = None
-    ):
+            self, tabs_index: Tuple[str, str], order: Optional[int] = None,
+            parent_tabs_index: Optional[Tuple[str, str]] = None, padding: Optional[str] = None,
+            cols_size: Optional[str] = None, rows_size: Optional[int] = None,
+            just_labels: Optional[bool] = None, sticky: Optional[bool] = None
+    ) -> TabsContext:
         """ Set the current tabs index.
         :param tabs_index: the index of the tabs group
         :param order: the order of the tabs group in the dashboard
@@ -300,6 +327,8 @@ class PlotApi:
         if 'update_containers' not in self.epc.ending_tasks:
             self.epc.ending_tasks['update_containers'] = self._update_containers()
 
+        return self.TabsContext(self)
+
     @logging_before_and_after(logging_level=logger.info)
     def pop_out_of_tabs_group(self):
         """ Pop the current tabs index.
@@ -347,10 +376,16 @@ class PlotApi:
             logger.info(f'Updated modal {modal_name} with id {modal["id"]}')
         return modal
 
+    class ModalContext(ContainerContext):
+        """ A context manager for modals. """
+
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            self._plt.pop_out_of_modal()
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_modal(self, modal_name: str, width: Optional[int] = None, height: Optional[int] = None,
-                        open_by_default: Optional[bool] = None):
+                        open_by_default: Optional[bool] = None) -> ModalContext:
         """ Set the current modal.
         :param modal_name: the name of the modal
         :param width: the width of the modal
@@ -365,6 +400,8 @@ class PlotApi:
 
         if 'update_containers' not in self.epc.ending_tasks:
             self.epc.ending_tasks['update_containers'] = self._update_containers()
+
+        return self.ModalContext(self)
 
     @logging_before_and_after(logging_level=logger.info)
     def pop_out_of_modal(self):
@@ -393,8 +430,8 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_chart_report(
-        self, order: int, chart_class: Type[Report],
-        create_if_not_exists: bool = True
+            self, order: int, chart_class: Type[Report],
+            create_if_not_exists: bool = True
     ) -> Tuple[str, Optional[Report]]:
         """ Get the chart report.
         :param order: the order of the chart
@@ -466,7 +503,8 @@ class PlotApi:
         :param data: the data
         :return: the mapping tuple
         """
-        mapping, data_set, sort = await self._app.append_data_to_data_set(name=data_set_name, data=data, dump_whole=True)
+        mapping, data_set, sort = await self._app.append_data_to_data_set(name=data_set_name, data=data,
+                                                                          dump_whole=True)
         logger.info(f'Created data set with id {data_set["id"]} and name {data_set_name}')
         assert mapping[0] == 'customField1'
         return {'data': ('customField1', data_set, sort)}
@@ -520,8 +558,8 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _choose_data(
-        self, order: int, data: Union[List[Dict], pd.DataFrame, Dict, str],
-        chart_class: Type[Report] = EChart, dump_whole: bool = False
+            self, order: int, data: Union[List[Dict], pd.DataFrame, Dict, str],
+            chart_class: Type[Report] = EChart, dump_whole: bool = False
     ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
         """ Get the data mappings of the data. If the data is a string, it is assumed to be a shared data entry.
         :param order: the order of the chart
@@ -640,7 +678,7 @@ class PlotApi:
 
     @staticmethod
     def _get_filter_properties(
-        series_name: str, converted_data: pd.DataFrame, multi_select: bool
+            series_name: str, converted_data: pd.DataFrame, multi_select: bool
     ) -> Tuple[Optional[List[str]], Optional[List[str]], FilterDataSet.InputType]:
         if series_name.startswith('date'):
             return None, ['contains'], FilterDataSet.InputType.DATERANGE
@@ -655,8 +693,8 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.debug)
     async def filter(
-        self, order: int, data: str, field: str, multi_select: bool = False,
-        cols_size: int = 4,  rows_size: int = 1, padding: Optional[str] = None
+            self, order: int, data: str, field: str, multi_select: bool = False,
+            cols_size: int = 4, rows_size: int = 1, padding: Optional[str] = None
     ):
         """ Filter the data set.
         :param order: the order of the chart
@@ -709,8 +747,8 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def iframe(
-        self, url: str, order: int, height: int = 640, cols_size: Optional[int] = None,
-        padding: Optional[str] = None
+            self, url: str, order: int, height: int = 640, cols_size: Optional[int] = None,
+            padding: Optional[str] = None
     ):
         """ Create an iframe report in the dashboard.
         :param url: the url of the iframe
@@ -728,14 +766,14 @@ class PlotApi:
             ),
             sizePadding=padding,
             sizeColumns=cols_size,
-            sizeRows=ceil(height/240),
+            sizeRows=ceil(height / 240),
         )
 
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def html(
-        self, html: str, order: int, cols_size: Optional[int] = None,
-        rows_size: Optional[int] = None, padding: Optional[str] = None
+            self, html: str, order: int, cols_size: Optional[int] = None,
+            rows_size: Optional[int] = None, padding: Optional[str] = None
     ):
         """ Create an html report in the dashboard.
         :param html: the html code
@@ -755,14 +793,16 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.info)
     def indicator(
-        self, data: Union[str, pd.DataFrame, List[Dict], Dict], order: int,
-        vertical: Union[bool, str] = False, **report_params
+            self, data: Union[str, pd.DataFrame, List[Dict], Dict], order: int,
+            vertical: Union[bool, str] = False, color_by_value: bool = False,
+            **report_params
     ):
         """ Create an indicator report in the dashboard.
         :param data: the data of the indicator
         :param order: the order of the indicator
         :param vertical: whether the indicator is vertical
         :param report_params: additional report parameters as key-value pairs
+        :param color_by_value: whether to color the indicator by value
         """
         df = pd.DataFrame(data if isinstance(data, list) else [data])
         keep_columns = [k for k in df.columns if k in list(Indicator.default_properties.keys())]
@@ -777,17 +817,11 @@ class PlotApi:
             if self._bentobox_data:
                 log_error(logger, 'Cannot create vertical indicators in a bentobox', RuntimeError)
 
-            bentobox_data = {
-                'bentoboxId': f'{order}',
-                'bentoboxOrder': order,
-                'bentoboxSizeColumns': cols_size,
-                'bentoboxSizeRows': rows_size * len_df,
-            }
-            self._bentobox_data = bentobox_data
+            self.set_bentobox(cols_size=cols_size, rows_size=rows_size * len_df)
 
             # fixexd cols_size for bentobox and variable rows size
             cols_size = 22
-            rows_size = rows_size * 10 - 2 * int(bool(bentobox_data))
+            rows_size = rows_size * 10 - 2
 
             padding = '1,1,0,1'
             if isinstance(vertical, str):
@@ -832,6 +866,12 @@ class PlotApi:
             elif index == last_index and vertical and (len_df > 1 or isinstance(vertical, str)):
                 padding = '1,1,1,1'
 
+            if color_by_value and 'color' not in df_row and 'icon' not in df_row:
+                df_row['color'] = 'success' \
+                    if df_row['value'] > 0 else 'error' if df_row['value'] < 0 else 'neutral'
+                df_row['icon'] = 'Line/arrow-up' \
+                    if df_row['value'] > 0 else 'Line/arrow-down' if df_row['value'] < 0 else 'none'
+
             self._sync_create_chart(
                 chart_class=Indicator,
                 path=self._current_path,
@@ -845,16 +885,18 @@ class PlotApi:
 
             if isinstance(order, int):
                 order += 1
+
         if vertical:
-            self._bentobox_data = {}
+            self.pop_out_of_bentobox()
+
         return order
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _button(
-        self, label: str, order: int,
-        rows_size: Optional[int] = None, cols_size: Optional[int] = None,
-        align: Optional[str] = 'stretch', padding: Optional[str] = None,
-        on_click_events: Optional[Union[List[Dict], Dict]] = None,
+            self, label: str, order: int,
+            rows_size: Optional[int] = None, cols_size: Optional[int] = None,
+            align: Optional[str] = 'stretch', padding: Optional[str] = None,
+            on_click_events: Optional[Union[List[Dict], Dict]] = None,
     ):
         """ Create a button in the dashboard. """
         if not on_click_events:
@@ -880,10 +922,10 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def button(
-        self, label: str, order: int,
-        rows_size: Optional[int] = 1, cols_size: int = 2,
-        align: Optional[str] = 'stretch', padding: Optional[str] = None,
-        on_click_events: Optional[Union[List[Dict], Dict]] = None,
+            self, label: str, order: int,
+            rows_size: Optional[int] = 1, cols_size: int = 2,
+            align: Optional[str] = 'stretch', padding: Optional[str] = None,
+            on_click_events: Optional[Union[List[Dict], Dict]] = None,
     ):
         """ Create a button in the dashboard. """
         await self._button(
@@ -894,9 +936,9 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def modal_button(
-        self, label: str, order: int, modal: str,
-        rows_size: Optional[int] = 1, cols_size: int = 2,
-        align: Optional[str] = 'stretch', padding: Optional[str] = None,
+            self, label: str, order: int, modal: str,
+            rows_size: Optional[int] = 1, cols_size: int = 2,
+            align: Optional[str] = 'stretch', padding: Optional[str] = None,
     ):
         """ Create a button in the dashboard that opens a modal. """
         modal_id = (await self._get_modal(modal))['id']
@@ -915,10 +957,10 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def activity_button(
-        self, label: str, order: int,
-        rows_size: Optional[int] = 1, cols_size: int = 2,
-        align: Optional[str] = 'stretch', padding: Optional[str] = None,
-        activity_id: Optional[str] = None, activity_name: Optional[str] = None,
+            self, label: str, order: int,
+            rows_size: Optional[int] = 1, cols_size: int = 2,
+            align: Optional[str] = 'stretch', padding: Optional[str] = None,
+            activity_id: Optional[str] = None, activity_name: Optional[str] = None,
     ):
         """ Create a button in the dashboard that executes an activity. """
         activity_id = (await self._app.get_activity(activity_id, activity_name))['id']
@@ -937,15 +979,15 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def table(
-        self, order: int, data: Union[str, pd.DataFrame, List[Dict], Dict],
-        columns: Optional[List[str]] = None, columns_button: bool = True,
-        filters: bool = True, export_to_csv: bool = True, search: bool = True,
-        page_size: int = 10, page_size_options: Optional[List[int]] = None,
-        initial_sort_column: Optional[str] = None, sort_descending: bool = False,
-        columns_options: Optional[Dict] = None,
-        categorical_columns: Optional[List[str]] = None,
-        label_columns: Optional[Dict] = None,
-        **report_params
+            self, order: int, data: Union[str, pd.DataFrame, List[Dict], Dict],
+            columns: Optional[List[str]] = None, columns_button: bool = True,
+            filters: bool = True, export_to_csv: bool = True, search: bool = True,
+            page_size: int = 10, page_size_options: Optional[List[int]] = None,
+            initial_sort_column: Optional[str] = None, sort_descending: bool = False,
+            columns_options: Optional[Dict] = None,
+            categorical_columns: Optional[List[str]] = None,
+            label_columns: Optional[Dict] = None,
+            **report_params
     ):
         """ Create a table report in the dashboard.
         :param order: the order of the table
@@ -1066,10 +1108,10 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def input_form(
-        self, options: Dict, order: int, padding: Optional[str] = None,
-        rows_size: Optional[int] = None, cols_size: Optional[int] = None,
-        modal: Optional[str] = None, activity_id: Optional[str] = None,
-        activity_name: Optional[str] = None, on_submit_events: Optional[List[Dict]] = None
+            self, options: Dict, order: int, padding: Optional[str] = None,
+            rows_size: Optional[int] = None, cols_size: Optional[int] = None,
+            modal: Optional[str] = None, activity_id: Optional[str] = None,
+            activity_name: Optional[str] = None, on_submit_events: Optional[List[Dict]] = None
     ):
         """ Creates an input form.
         :param options: the options for the input form
@@ -1147,16 +1189,16 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.info)
     def generate_input_form_groups(
-        self, order: int, form_groups: Dict,
-        dynamic_sequential_show: Optional[bool] = False,
-        auto_send: Optional[bool] = False,
-        next_group_label: Optional[str] = 'Next',
-        rows_size: Optional[int] = 3, cols_size: int = 12,
-        padding: Optional[str] = None,
-        modal: Optional[str] = None,
-        activity_id: Optional[str] = None,
-        activity_name: Optional[str] = None,
-        on_submit_events: Optional[List[Dict]] = None,
+            self, order: int, form_groups: Dict,
+            dynamic_sequential_show: Optional[bool] = False,
+            auto_send: Optional[bool] = False,
+            next_group_label: Optional[str] = 'Next',
+            rows_size: Optional[int] = 3, cols_size: int = 12,
+            padding: Optional[str] = None,
+            modal: Optional[str] = None,
+            activity_id: Optional[str] = None,
+            activity_name: Optional[str] = None,
+            on_submit_events: Optional[List[Dict]] = None,
     ):
         """ Easier way to create an input form.
         :param menu_path: the menu path of the input form
@@ -1226,14 +1268,14 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.debug)
     async def annotated_chart(
-        self, data: Union[List[DataFrame], List[List[Dict]]], order: int,
-        x: str, y: List[str], annotations: str = 'annotation',
-        rows_size: Optional[int] = None, cols_size: Optional[int] = None,
-        padding: Optional[str] = None,
-        title: Optional[str] = None,
-        y_axis_name: Optional[str] = None,
-        slider_config: Optional[Dict] = None,
-        slider_marks: Optional[Dict] = None,
+            self, data: Union[List[DataFrame], List[List[Dict]]], order: int,
+            x: str, y: List[str], annotations: str = 'annotation',
+            rows_size: Optional[int] = None, cols_size: Optional[int] = None,
+            padding: Optional[str] = None,
+            title: Optional[str] = None,
+            y_axis_name: Optional[str] = None,
+            slider_config: Optional[Dict] = None,
+            slider_marks: Optional[Dict] = None,
     ):
         if isinstance(data, str):
             log_error(logger, f'Annotated chart does not support the use of shared data', DataError)
@@ -1298,7 +1340,7 @@ class PlotApi:
             },
             'series': [
                 {
-                    'data': '#{'+rd_id+'}',
+                    'data': '#{' + rd_id + '}',
                     'type': 'line',
                     'name': y_name,
                     'itemStyle': {
@@ -1323,7 +1365,7 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _get_report_data_sets_per_mapping(
-        self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[Tuple, Dict]],
+            self, report: Report, data_mapping_to_tuple: Dict, fields: List[Union[Tuple, Dict]],
     ) -> List[Report.ReportDataSet]:
         """ Create a data_set per field of a dataframe.
         :param report: the report
@@ -1384,7 +1426,7 @@ class PlotApi:
             if k == 'xAxis' or k == 'yAxis':
                 if isinstance(v, dict):
                     v = [v]
-                if len(v) != options[k]:
+                if len(v) != len(options[k]):
                     log_error(logger, f'The number of {k} must be {len(v)}', DataError)
                 for i, v_ in enumerate(v):
                     options[k][i].update(v_)
@@ -1393,10 +1435,10 @@ class PlotApi:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_echart(
-        self, options: Dict, order: int, data_mapping_to_tuples: Dict,
-        fields: List[Union[str, Tuple, Dict]],
-        option_modifications: Optional[Dict] = None,
-        **report_params
+            self, options: Dict, order: int, data_mapping_to_tuples: Dict,
+            fields: List[Union[str, Tuple, Dict]],
+            option_modifications: Optional[Dict] = None,
+            **report_params
     ):
         """ Create an echart in the dashboard, fill in the data referenced in the echart_options and create or
         update the chart and data set links.
@@ -1435,7 +1477,7 @@ class PlotApi:
             data = options
             for key in data_key_entry[:-1]:
                 data = data[key]
-            data[data_key_entry[-1]] = '#{'+rd_ids[i]+'}'
+            data[data_key_entry[-1]] = '#{' + rd_ids[i] + '}'
 
         await self._create_chart(
             chart_class=EChart,
@@ -1447,16 +1489,35 @@ class PlotApi:
             sizeColumns=report_params.get('cols_size'),
         )
 
+    @staticmethod
+    def apply_variant(echart_options: Dict, variant: Optional[str]):
+        if variant == 'clean':
+            echart_options.update({'toolbox': {'show': False}, 'legend': {'show': False}, 'grid': {}})
+            for axisList in [echart_options['xAxis'], echart_options['yAxis']]:
+                for axis in axisList:
+                    axis.update({'axisLine': {'show': False}, 'axisTick': {'show': False}})
+        elif variant == 'minimal':
+            echart_options.update({
+                'toolbox': {'show': False}, 'legend': {'show': False},
+                'grid': {'left': '1%', 'right': '1%', 'top': '1%', 'bottom': '1%'},
+                'tooltip': {'show': False},
+            })
+            for axisList in [echart_options['xAxis'], echart_options['yAxis']]:
+                for axis in axisList:
+                    axis.update({'axisLine': {'show': False}, 'axisTick': {'show': False},
+                                 'splitLine': {'show': False}, 'axisLabel': {'show': False}})
+
     @logging_before_and_after(logging_level=logger.debug)
     async def _create_trend_chart(
-        self, axes: Union[List[str], str], order: int,
-        data_mapping_to_tuples: Optional[Dict], echart_options: Dict,
-        series_options: Union[Dict, List[Dict]],
-        values: Optional[Union[List[Union[str, Tuple]], str, Tuple]] = None,
-        x_axis_names: Optional[Union[str, List[str]]] = None,
-        y_axis_names: Optional[Union[str, List[str]]] = None,
-        show_values: Optional[Union[List[str], str]] = None,
-        **report_params
+            self, axes: Union[List[str], str], order: int,
+            data_mapping_to_tuples: Optional[Dict], echart_options: Dict,
+            series_options: Union[Dict, List[Dict]],
+            values: Optional[Union[List[Union[str, Tuple]], str, Tuple]] = None,
+            x_axis_names: Optional[Union[str, List[str]]] = None,
+            y_axis_names: Optional[Union[str, List[str]]] = None,
+            show_values: Optional[Union[List[str], str]] = None,
+            variant: Optional[str] = None,
+            **report_params
     ):
         """ Create a line chart in the dashboard.
         :param data: the data of the chart
@@ -1470,10 +1531,13 @@ class PlotApi:
         :param order: the order of the chart in the dashboard
         :param report_params: additional report parameters as key-value pairs
         """
+        self.apply_variant(echart_options, variant)
         if isinstance(axes, str):
             axes = [axes]
         if isinstance(values, str) or isinstance(values, Tuple):
             values = [values]
+        if show_values is None:
+            show_values = []
 
         if 'x_axis_name' in report_params:
             x_axis_names = [report_params['x_axis_name']]
@@ -1500,7 +1564,7 @@ class PlotApi:
         echart_options['series'] = [
             deep_update({
                 'name': name if isinstance(name, str) else ' × '.join(name),
-                'label': {'show': show_values == 'all' or name in show_values} if show_values else None,
+                'label': {'show': show_values == 'all' or name in show_values},
             }, series_options[i])
             for i, name in enumerate(values)
         ]
@@ -1530,15 +1594,15 @@ class PlotApi:
     @async_auto_call_manager()
     @logging_before_and_after(logging_level=logger.info)
     async def free_echarts(
-        self, data: Optional[Union[str, DataFrame, List[Dict]]] = None,
-        options: Optional[Dict] = None,
-        raw_options: Optional[str] = None,
-        order: Optional[int] = None,
-        title: Optional[str] = None,
-        rows_size: Optional[int] = None,
-        cols_size: Optional[int] = None,
-        padding: Optional[str] = None,
-        fields: Optional[List] = None,
+            self, data: Optional[Union[str, DataFrame, List[Dict]]] = None,
+            options: Optional[Dict] = None,
+            raw_options: Optional[str] = None,
+            order: Optional[int] = None,
+            title: Optional[str] = None,
+            rows_size: Optional[int] = None,
+            cols_size: Optional[int] = None,
+            padding: Optional[str] = None,
+            fields: Optional[List] = None,
     ):
         if not options and not raw_options:
             log_error(logger, 'Either options or raw_options must be provided', ValueError)
@@ -1593,9 +1657,13 @@ class PlotApi:
     waterfall = waterfall_chart
     line_and_bar_charts = line_and_bar_charts
     segmented_line = segmented_line_chart
+    marked_line = marked_line_chart
+    segmented_area = segmented_area_chart
 
     # Bentobox charts defined in the bentobox_charts.py file
     infographics_text_bubble = infographics_text_bubble
     chart_and_modal_button = chart_and_modal_button
     chart_and_indicators = chart_and_indicators
     indicators_with_header = indicators_with_header
+    line_with_summary = line_with_summary
+    # table_with_header = table_with_header

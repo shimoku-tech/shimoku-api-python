@@ -5,6 +5,7 @@ https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_ma
 
 from typing import List, Dict, Optional
 
+import asyncio
 import datetime
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
@@ -22,9 +23,11 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, environment: str, config=None):
+    def __init__(self, environment: str, playground: bool, config=None, server_host=None, server_port=None):
 
         self.cache_enabled = True
+        self.environment = environment
+        self.playground = playground
 
         if config is None:
             config = {}
@@ -42,6 +45,8 @@ class ApiClient(object):
                 f'The namespace must be either "production", "staging" or "develop | '
                 f'namespace introduced: {environment}'
             )
+        if playground:
+            self.host = f'http://{server_host}:{server_port}/external/v1/'
 
         # semaphor for async api calls
         self.semaphore_limit = 10
@@ -239,7 +244,7 @@ class ApiClient(object):
             'dashboard': 'board',
         }
         for word, replacement in replace_words.items():
-            response = response.replace(word, replacement)
+            response = response.replace(word, replacement) if isinstance(response, str) else response
         logger.error(response)
         raise ApiClientError(response)
 

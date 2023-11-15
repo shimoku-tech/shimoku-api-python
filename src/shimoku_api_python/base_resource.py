@@ -20,7 +20,9 @@ IsResource = TypeVar('IsResource', bound='Resource')
 class ResourceCache:
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, resource_class: Type[IsResource], parent: IsResource):
+    def __init__(
+            self, resource_class: Type[IsResource], parent: IsResource
+    ):
         self._parent = parent
         self._resource_class = resource_class
         self._resource_plural = resource_class.plural
@@ -30,7 +32,9 @@ class ResourceCache:
         self._listing_lock = None
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def list(self, limit: Optional[int] = None) -> List[IsResource]:
+    async def list(
+            self, limit: Optional[int] = None
+    ) -> List[IsResource]:
         """ List all child resources
         :param limit: Limit the number of resources to be listed
         :return: List of resources
@@ -45,9 +49,11 @@ class ResourceCache:
                     logger.debug("Resource cache already listed")
                     return list(self._cache.values())
             else:
-                await asyncio.gather(*[resource.update()
-                                       for resource in self._cache.values()
-                                       if 'dirty' in dir(resource) and resource.dirty])
+                await asyncio.gather(
+                    *[resource.update()
+                      for resource in self._cache.values()
+                      if 'dirty' in dir(resource) and resource.dirty]
+                )
                 self._cache = {}
                 self._aliases = {}
 
@@ -88,9 +94,10 @@ class ResourceCache:
         return list(self._cache.values())
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def add(self, resource: Optional[IsResource] = None, alias: Optional[str] = None,
-                  params: Optional[Dict[str, Any]] = None) -> IsResource:
-
+    async def add(
+            self, resource: Optional[IsResource] = None, alias: Optional[str] = None,
+            params: Optional[Dict[str, Any]] = None
+    ) -> IsResource:
         if alias:
             await self.raise_if_alias_exists(alias)
 
@@ -127,8 +134,9 @@ class ResourceCache:
         return resource
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get(self, uuid: Optional[str] = None, alias: Optional[str] = None) -> Optional[IsResource]:
-
+    async def get(
+            self, uuid: Optional[str] = None, alias: Optional[str] = None
+    ) -> Optional[IsResource]:
         if uuid and alias:
             log_error(logger, "Only one of uuid or alias can be provided", CacheError)
 
@@ -162,9 +170,9 @@ class ResourceCache:
         return await self.add(resource=resource, alias=alias)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def update(self, uuid: Optional[str] = None, alias: Optional[str] = None, **params
-                     ) -> bool:
-
+    async def update(
+            self, uuid: Optional[str] = None, alias: Optional[str] = None, **params
+    ) -> bool:
         resource: IsResource = await self.get(uuid=uuid, alias=alias)
         if not resource:
             return False
@@ -182,7 +190,9 @@ class ResourceCache:
         return True
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def delete(self, uuid: Optional[str] = None, alias: Optional[str] = None) -> bool:
+    async def delete(
+            self, uuid: Optional[str] = None, alias: Optional[str] = None
+    ) -> bool:
         resource: IsResource = await self.get(uuid=uuid, alias=alias)
         if not resource:
             log_error(logger, f"Resource {uuid} not found in cache, unable to delete it", CacheError)
@@ -229,6 +239,7 @@ class ResourceCache:
 
 class BaseResource:
     """ Base class for all the resources in the API """
+
     def __init__(
             self, parent: Optional[IsResource] = None, uuid: Optional[str] = None,
             api_client: Optional[ApiClient] = None, params: Optional[Dict[str, Any]] = None,
@@ -257,7 +268,7 @@ class BaseResource:
 
             self.base_url = f'{self.parent["base_url"]}{self.parent.resource_type}/{self.parent["id"]}/'
 
-            self.api_client = self.parent.api_client
+            self.api_client: ApiClient = self.parent.api_client
 
         if not self.api_client:
             log_error(logger, f"Api client has not been defined", ValueError)
@@ -291,7 +302,7 @@ class BaseResource:
 
         for field, value in resource_dict.items():
             if field in self.params:
-                self.params[field] = value if field not in self.params_to_serialize\
+                self.params[field] = value if field not in self.params_to_serialize \
                     else json.loads(value if value else '{}')
 
         self.changed_params = set()
@@ -312,7 +323,7 @@ class BaseResource:
 
             assert isinstance(self.params[field], (dict, list))
 
-        obj = await(
+        obj = await (
             self.api_client.query_element(
                 method='POST', endpoint=endpoint,
                 **{'body_params': params}
@@ -361,12 +372,15 @@ class BaseResource:
         )
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_children_batch(self, resource_class: Type[IsResource], children_params: List[Dict],
-                                    unit: str, batch_size: int = 100):
+    async def create_children_batch(
+            self, resource_class: Type[IsResource], children_params: List[Dict],
+            unit: str, batch_size: int = 100
+    ):
         """ Creates a batch of children of a given resource class. It doesn't return the created resources,
         And it doesn't save them in the cache.
         :param resource_class: The class of the resource to create.
         :param children_params: The parameters of the resources to create.
+        :param unit: The unit of the progress bar.
         :param batch_size: The size of the batch to create.
         """
         if batch_size >= 1000:
@@ -376,6 +390,15 @@ class BaseResource:
 
         log_level = logger.getEffectiveLevel()
         disable = log_level > logging.INFO or len(children_params) < 1000
+
+        # TODO Seems to be converted in the api when returned? Solve in local server if that is the case
+        if self.api_client.playground:
+            # TODO maybe params_to_serialize should be a class attribute
+            mock_resource = resource_class(parent=self.wrapper_class_instance)
+            for child_params in children_params:
+                for field in mock_resource.params_to_serialize:
+                    if field in child_params:
+                        child_params[field] = json.dumps(child_params[field])
 
         if not disable:
             logger.info("Uploading data")
@@ -396,7 +419,9 @@ class BaseResource:
         logger.info("data uploaded") if not disable else None
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def create_child(self, resource_class: Type[IsResource], **kwargs) -> IsResource:
+    async def create_child(
+            self, resource_class: Type[IsResource], **kwargs
+    ) -> IsResource:
         """ Creates a child of a given resource class.
         :param resource_class: The class of the resource to create.
         :param kwargs: The parameters of the resource to create.
@@ -421,9 +446,11 @@ class BaseResource:
         return await res_cache.add(**kwargs)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def update_child(self, resource_class: Type[IsResource],
-                           uuid: Optional[str] = None, alias: Optional[str] = None,
-                           **params) -> bool:
+    async def update_child(
+            self, resource_class: Type[IsResource],
+            uuid: Optional[str] = None, alias: Optional[str] = None,
+            **params
+    ) -> bool:
         """ Updates a child of a given resource class.
         :param resource_class: The class of the resource to update.
         :param uuid: The uuid of the resource to update.
@@ -434,7 +461,9 @@ class BaseResource:
         return await self.children[resource_class].update(uuid=uuid, alias=alias, **params)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def get_children(self, resource_class: Type[IsResource], limit: Optional[int] = None) -> List[IsResource]:
+    async def get_children(
+            self, resource_class: Type[IsResource], limit: Optional[int] = None
+    ) -> List[IsResource]:
         """ Gets all children of a given resource class.
         :param resource_class: The class of the resources to get.
         :param limit: The maximum number of resources to get.
@@ -444,9 +473,9 @@ class BaseResource:
 
     @logging_before_and_after(logging_level=logger.debug)
     async def get_child(
-        self, resource_class: Type[IsResource],
-        uuid: Optional[str] = None, alias: Optional[str] = None,
-        create_if_not_exists: bool = False
+            self, resource_class: Type[IsResource],
+            uuid: Optional[str] = None, alias: Optional[str] = None,
+            create_if_not_exists: bool = False
     ) -> Optional[IsResource]:
         """ Gets a child resource.
         :param resource_class: The class of the resource to get.
@@ -467,8 +496,10 @@ class BaseResource:
         return child
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def delete_child(self, resource_class: Type[IsResource],
-                           uuid: Optional[str] = None, alias: Optional[str] = None) -> bool:
+    async def delete_child(
+            self, resource_class: Type[IsResource],
+            uuid: Optional[str] = None, alias: Optional[str] = None
+    ) -> bool:
         """ Deletes a child resource.
         :param resource_class: The class of the resource to delete.
         :param uuid: The uuid of the resource to delete.
@@ -513,22 +544,21 @@ class BaseResource:
 
 
 class Resource(ABC):
-
     alias_field: Optional[str] = None
     resource_type: Optional[str] = None
     plural: Optional[str] = None
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(
-        self, parent: Optional[IsResource] = None,
-        uuid: Optional[str] = None,
-        db_resource: Optional[dict[str, Any]] = None,
-        api_client: Optional[ApiClient] = None,
-        params: Optional[dict[str, Any]] = None,
-        children: Optional[List[Type[IsResource]]] = None,
-        check_params_before_creation: Optional[List[str]] = None,
-        params_to_serialize: Optional[List[str]] = None,
-        await_children: Optional[bool] = False
+            self, parent: Optional[IsResource] = None,
+            uuid: Optional[str] = None,
+            db_resource: Optional[dict[str, Any]] = None,
+            api_client: Optional[ApiClient] = None,
+            params: Optional[dict[str, Any]] = None,
+            children: Optional[List[Type[IsResource]]] = None,
+            check_params_before_creation: Optional[List[str]] = None,
+            params_to_serialize: Optional[List[str]] = None,
+            await_children: Optional[bool] = False
     ):
         """ Initializes a resource. """
 
@@ -547,13 +577,14 @@ class Resource(ABC):
         } if children else {}
 
         self._check_params_before_creation = check_params_before_creation if check_params_before_creation else []
-        self.api_client = self._base_resource.api_client
+        self.api_client: ApiClient = self._base_resource.api_client
         self.params_to_serialize = self._base_resource.params_to_serialize
 
         for field, value in db_resource.items():
             if field in self:
-                self[field] = value if field not in self.params_to_serialize \
-                    else json.loads(value if value else f'{self[field].__class__()}')
+                if field in self.params_to_serialize and value is not None:
+                    value = json.loads(value)
+                self[field] = value
 
     @logging_before_and_after(logging_level=logger.debug)
     def __await__(self):
@@ -604,6 +635,12 @@ class Resource(ABC):
             if isinstance(result, (dict, list)):
                 self._base_resource.changed_params.add(item)
             return result
+        elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], str) and isinstance(item[1], str) and \
+                item[0] in self._base_resource.params:
+            deeper_params = self._base_resource.params[item[0]]
+            if item[1] not in deeper_params:
+                log_error(logger, f"{self.__class__.__name__} {item[0]} does not contain {item[1]}", KeyError)
+            return deeper_params[item[1]]
         else:
             log_error(logger, f"{self.__class__.__name__} parameters do not contain {item}", KeyError)
 

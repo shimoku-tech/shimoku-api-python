@@ -7,7 +7,9 @@ from utils import initiate_shimoku
 s = initiate_shimoku()
 
 business_id: str = getenv('BUSINESS_ID')
+environment: str = getenv('ENVIRONMENT')
 mock: bool = getenv('MOCK') == 'TRUE'
+playground: bool = getenv('PLAYGROUND') == 'TRUE'
 
 s.set_workspace(uuid=business_id)
 
@@ -65,7 +67,7 @@ class TestDashboardMetadataApi(unittest.TestCase):
         app_ids = s.boards.get_board_menu_path_ids(name=name)
         assert app_id == app_ids[0]
 
-        if not mock:
+        if not mock and not playground:
             with self.assertRaises(RetryError):
                 s.boards.delete_board(name=name)
 

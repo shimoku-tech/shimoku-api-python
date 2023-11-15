@@ -15,11 +15,14 @@ from shimoku_api_python.api.plot_api import PlotApi
 from shimoku_api_python.api.ai_api import AiAPI
 from shimoku_api_python.api.ping_api import PingApi
 from shimoku_api_python.api.activity_metadata_api import ActivityMetadataApi
+from shimoku_api_python.websockets_server import EventType
 
 from shimoku_api_python.utils import create_normalized_name, ShimokuPalette
 
 from shimoku_api_python.client import ApiClient
 from shimoku_api_python.exceptions import BoardError, MenuPathError, WorkspaceError
+
+from shimoku_api_python.execute_local_server import create_server, kill_server, check_server
 
 import shimoku_components_catalog.html_components
 
@@ -32,16 +35,28 @@ class Client(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     def __init__(
-        self, universe_id: str, environment: str = 'production',
-        access_token: str = '', config: Optional[Dict] = None,
-        verbosity: str = None, async_execution: bool = False
+        self, universe_id: str = 'local', environment: str = 'production',
+        access_token: Optional[str] = None, config: Optional[Dict] = None,
+        verbosity: str = None, async_execution: bool = False,
+        local_port: int = 8000, open_browser_for_local_server: bool = False
     ):
+        playground: bool = universe_id == 'local' and not access_token
+        if playground:
+            access_token = 'local'
+        if universe_id == 'local' and not playground:
+            log_error(logger, 'Local universe can only be used in playground mode.', AttributeError)
+
         self.universe_id = universe_id
         self.workspace_id = None
         self.board_id = None
         self.menu_path_id = None
         if not config:
             config = {}
+
+        self.server_host = '127.0.0.1'
+        self.local_port = local_port
+        if playground and not check_server(self.server_host, local_port):
+            create_server(environment, self.server_host, local_port, open_browser_for_local_server)
 
         self.configure_logging = configure_logging
         if verbosity:
@@ -50,7 +65,8 @@ class Client(object):
         if access_token and access_token != "":
             config = {'access_token': access_token}
 
-        self._api_client = ApiClient(config=config, environment=environment)
+        self._api_client = ApiClient(config=config, environment=environment, playground=playground,
+                                     server_host=self.server_host, server_port=local_port)
 
         self._universe_object = Universe(self._api_client, uuid=universe_id)
         self._business_object: Optional[Business] = None
@@ -84,6 +100,10 @@ class Client(object):
         # self.ai = AiAPI(None)
         self.html_components = shimoku_components_catalog.html_components
 
+    @logging_before_and_after(logging_level=logger.info)
+    def terminate_local_server(self):
+        kill_server(self.server_host, self.local_port)
+
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def set_workspace(self, uuid: Optional[str] = None, name: Optional[str] = None):
@@ -91,6 +111,9 @@ class Client(object):
         :param uuid: Workspace uuid
         :param name: Workspace name
         """
+        if self._api_client.playground:
+            uuid, name = 'local', None
+
         if self._business_object:
             self._business_object.currently_in_use = False
         business: Optional[Business] = await self._universe_object.get_business(uuid=uuid, name=name)
@@ -221,9 +244,19 @@ class Client(object):
     def set_config(self, config: Dict):
         self._api_client.set_config(config)
 
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_business_contents_updated_event(self):
+        """ Create a business contents updated event. """
+        await self._business_object.create_event(
+            EventType.BUSINESS_CONTENTS_UPDATED, {}, self._business_object['id']
+        )
+        logger.info('Business contents updated event created')
+
     @async_auto_call_manager(execute=True)
     async def run(self):
         """ Execute all async calls in the execution pool. """
+        if self._api_client.playground:
+            self.epc.ending_tasks['Business_contents_updated'] = self._create_business_contents_updated_event()
         pass
 
     def activate_async_execution(self):

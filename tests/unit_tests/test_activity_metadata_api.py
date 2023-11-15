@@ -47,14 +47,14 @@ class TestActivity(unittest.TestCase):
         Makes various calls to the activity metadata API to create, delete and get activities in different ways.
         """
 
-        new_activity_name = 'new_'+activity_name
+        new_activity_name = '0_new_'+activity_name
         n_activities_before = len(s.activities.get_activities())
 
         activity = s.activities.create_activity(name=new_activity_name)
 
         new_activity_id = activity['id']
 
-        assert activity['name'] == 'new_'+activity_name
+        assert activity['name'] ==  new_activity_name
         assert activity['runs'] == []
 
         n_activities_mid = len(s.activities.get_activities())
@@ -77,7 +77,7 @@ class TestActivity(unittest.TestCase):
         """
         Makes various calls to the activity metadata API to update activities.
         """
-        new_activity_name = 'new_'+activity_name
+        new_activity_name = '1_new_'+activity_name
 
         n_activities_before = len(s.activities.get_activities())
 
@@ -105,7 +105,7 @@ class TestActivity(unittest.TestCase):
         """
         Makes various calls to the activity metadata API to create, and get runs.
         """
-        new_activity_name = 'new_'+activity_name
+        new_activity_name = '2_new_'+activity_name
         activity = s.activities.create_activity(name=new_activity_name)
         new_activity_id = activity['id']
 
@@ -140,7 +140,7 @@ class TestActivity(unittest.TestCase):
         """
         Makes various calls to the activity metadata API to create, and get logs.
         """
-        new_activity_name = 'new_'+activity_name
+        new_activity_name = '3_new_'+activity_name
         activity = s.activities.create_activity(name=new_activity_name)
         new_activity_id = activity['id']
 
@@ -175,7 +175,7 @@ class TestActivity(unittest.TestCase):
         """
         Tests that the default settings are being set and used correctly.
         """
-        new_activity_name = 'new_' + activity_name
+        new_activity_name = '4_new_' + activity_name
         # test that the default settings are being set
         settings = {'name': 'test1', 'value': 'test1'}
         activity = s.activities.create_activity(name=new_activity_name, settings=settings)
@@ -197,7 +197,7 @@ class TestActivity(unittest.TestCase):
         """
         Makes various calls to the activity metadata API to create, and get logs.
         """
-        new_activity_name = 'new_'+activity_name
+        new_activity_name = '5_new_'+activity_name
         activity = s.activities.create_activity(name=new_activity_name)
         new_activity_id = activity['id']
 

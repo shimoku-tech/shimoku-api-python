@@ -11,7 +11,10 @@ from shimoku_api_python.async_execution_pool import async_auto_call_manager, Exe
 
 from typing import Callable, Optional, Tuple, Dict, List, Union, Any, Type
 
+from ..websockets_server import EventType
+
 from ..resources.app import App
+from ..resources.business import Business
 from ..resources.report import Report
 from ..resources.data_set import DataSet, Mapping, convert_input_data_to_db_items
 from ..resources.reports.charts.indicator import Indicator
@@ -78,6 +81,7 @@ class PlotApi:
     def __init__(self, app: Optional[App], execution_pool_context: ExecutionPoolContext, reuse_data_sets: bool = False):
         self.epc = execution_pool_context
         self._app = app
+        self._business: Business = app._base_resource.parent if app else None
         self._current_path: Optional[str] = None
         self._current_tabs_group: Optional[TabsGroup] = None
         self._current_tab: Optional[str] = None
@@ -88,6 +92,15 @@ class PlotApi:
         self._shared_data_map: Dict[str, Dict[str, Tuple[Mapping, DataSet, Dict]]] = {}
         self._shared_data: Dict[str, Any] = {}
         self._execution_path_orders: List[str] = []
+
+    @logging_before_and_after(logging_level=logger.debug)
+    async def _create_event(self, event_type: EventType, content: dict, resource_id: Optional[str] = None):
+        """ Create an event.
+        :param event_type: the type of the event
+        :param content: the content of the event
+        """
+        if self.epc.api_client.playground:
+            await self._business.create_event(event_type, content, resource_id)
 
     @logging_before_and_after(logging_level=logger.debug)
     def clear_context(self):
@@ -451,27 +464,31 @@ class PlotApi:
         return r_hash, report
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _try_to_reuse_data(self, data_set: DataSet, data: Union[List, pd.DataFrame]
-                                 ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
+    async def _try_to_reuse_data(
+            self, data_set: DataSet, data: Union[List, pd.DataFrame]
+    ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
         """ Try to reuse the data set.
         :param data_set: the data set
         :param data: the data
         """
+        df = validate_data_is_pandarable(data)
         aux_data_point = await data_set.get_one_data_point()
         if not aux_data_point:
             log_error(logger, f'Cannot reuse data set {str(data_set)} because the data set is empty', DataError)
 
         mappings = [col for col in aux_data_point if aux_data_point[col] is not None]
-        df, sort = add_sorting_to_df(pd.DataFrame(data)) if 'orderField1' in mappings else (DataFrame(data), None)
-        data = df.to_dict(orient='records')
-        converted_data_points = convert_input_data_to_db_items(data, sort=sort)
+        df, sort = add_sorting_to_df(df) if 'orderField1' in mappings else (df, None)
+
+        converted_data_points = convert_input_data_to_db_items(df, sort=sort)
         for mapping, v in converted_data_points[0].items():
             if mapping not in mappings:
                 log_error(logger, f'Cannot reuse data set {str(data_set)} because the data provided '
                                   f'is not consistent with the data set', DataError)
 
+        first_df_item = df.iloc[0].to_dict()
         return {col: (mapping, data_set, sort) for col, mapping
-                in zip(data[0].keys(), converted_data_points[0].keys()) if col != 'sort_values'}
+                in zip(first_df_item.keys(), converted_data_points[0].keys())
+                if col != 'sort_values'}
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _delete_data_set_if_exists(self, data_set_name: str) -> None:
@@ -482,8 +499,9 @@ class PlotApi:
             logger.info(f'Deleted data set with name {data_set_name}')
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def _create_data_set_from_df(self, data_set_name: str, df: pd.DataFrame, sort: Optional[Dict] = None
-                                       ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
+    async def _create_data_set_from_df(
+            self, data_set_name: str, df: pd.DataFrame, sort: Optional[Dict] = None
+    ) -> Dict[str, Tuple[Mapping, DataSet, Dict]]:
         """ Get the data mapping to tuple.
         :param df: the data frame
         :return: the data mapping to tuple
@@ -503,8 +521,9 @@ class PlotApi:
         :param data: the data
         :return: the mapping tuple
         """
-        mapping, data_set, sort = await self._app.append_data_to_data_set(name=data_set_name, data=data,
-                                                                          dump_whole=True)
+        mapping, data_set, sort = await self._app.append_data_to_data_set(
+            name=data_set_name, data=data, dump_whole=True
+        )
         logger.info(f'Created data set with id {data_set["id"]} and name {data_set_name}')
         assert mapping[0] == 'customField1'
         return {'data': ('customField1', data_set, sort)}
@@ -610,8 +629,8 @@ class PlotApi:
         params['bentobox'] = self._get_bentobox_data(order=order)
         params['path'] = self._current_path
 
+        event_type: EventType = EventType.REPORT_UPDATED
         r_hash, chart = await self._get_chart_report(order, chart_class, create_if_not_exists=False)
-
         if chart:
             params['pathOrder'] = chart['pathOrder']
             if self._current_path and params['pathOrder'] is None:
@@ -624,6 +643,7 @@ class PlotApi:
                 logger.info(f'No changes needed for {chart_class.__name__} at {str(chart)}')
                 return chart
         else:
+            event_type: EventType = EventType.REPORT_CREATED
             await self._check_previous_paths()
             params['pathOrder'] = self._execution_path_orders.index(self._current_path) if self._current_path else None
             params['order'] = order
@@ -643,6 +663,8 @@ class PlotApi:
 
         if added_to_container and 'update_containers' not in self.epc.ending_tasks:
             self.epc.ending_tasks['update_containers'] = self._update_containers()
+
+        await self._create_event(event_type, {}, chart['id'])
 
         return chart
 

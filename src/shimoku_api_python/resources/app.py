@@ -13,6 +13,7 @@ from .role import Role, create_role, get_role, get_roles, delete_role
 from .report import Report
 from .file import File
 from .data_set import DataSet, Mapping
+from ..websockets_server import EventType
 
 if TYPE_CHECKING:
     from .business import Business
@@ -128,7 +129,9 @@ class App(Resource):
         :return: The created resource.
         """
         report_cache: ResourceCache = self._base_resource.children[Report]
-        return await report_cache.add(self.mock_create_report(report_class, r_hash, **params), alias=r_hash)
+        report = await report_cache.add(self.mock_create_report(report_class, r_hash, **params), alias=r_hash)
+
+        return report
 
     @logging_before_and_after(logger.debug)
     async def get_report(self, uuid: Optional[str] = None, r_hash: Optional[str] = None) -> Optional[Report]:
@@ -170,7 +173,11 @@ class App(Resource):
         :param uuid: The UUID of the report to delete.
         :param r_hash: The hash of the report to delete.
         """
-        return await self._base_resource.delete_child(Report, uuid, r_hash)
+        report: Optional[Report] = await self.get_report(uuid, r_hash)
+        if not report:
+            return
+        await self._base_resource.delete_child(Report, uuid, r_hash)
+        await self._base_resource.parent.create_event(EventType.REPORT_DELETED, {}, report['id'])
 
     # DataSet methods
     @logging_before_and_after(logger.debug)
@@ -213,7 +220,6 @@ class App(Resource):
         :param column_types: The types of the columns.
         :return: The dataset.
         """
-        data = data.to_dict(orient='records') if isinstance(data, pd.DataFrame) else data
         data_set: DataSet = await self.get_data_set(uuid, name)
         mapping, res_sort = await data_set.create_data_points(
             data_points=data, sort=sort, dump_whole=dump_whole, column_types=column_types

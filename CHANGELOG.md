@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 1.4 (2023-15-11)
+
+### Added
+
+- This version brings a new way to develop with the SDK, the Shimoku Playground!
+
 ## 1.3 (2023-11-03)
 
 ### Improvements

@@ -1006,9 +1006,9 @@ class PlotApi:
             filters: bool = True, export_to_csv: bool = True, search: bool = True,
             page_size: int = 10, page_size_options: Optional[List[int]] = None,
             initial_sort_column: Optional[str] = None, sort_descending: bool = False,
-            columns_options: Optional[Dict] = None,
-            categorical_columns: Optional[List[str]] = None,
-            label_columns: Optional[Dict] = None,
+            columns_options: Optional[Dict] = None, categorical_columns: Optional[List[str]] = None,
+            label_columns: Optional[Dict] = None, web_link_column: Optional[str] = None,
+            open_link_in_new_tab: bool = False,
             **report_params
     ):
         """ Create a table report in the dashboard.
@@ -1027,6 +1027,8 @@ class PlotApi:
         :param categorical_columns: the categorical columns
         :param label_columns: the label columns
         :param report_params: additional report parameters as key-value pairs
+        :param web_link_column: the column to use as web link
+        :param open_link_in_new_tab: whether to open the web link in a new tab
         """
 
         data_mappings_to_tuples = await self._choose_data(order, data, Table)
@@ -1080,8 +1082,15 @@ class PlotApi:
                 column_options['chips']['variant'] = variant
                 column_options['chips']['options'] = interpret_label_info(df, name, label_options, variant)
 
+            if name == web_link_column:
+                column_options['link'] = {'url': 'webLink', 'openNewTab': open_link_in_new_tab}
+
             columns_dicts.append(column_options)
             rows_dict['mapping'][name] = data_mappings_to_tuples[name][0]
+
+        if web_link_column:
+            rows_dict['mapping']['web'] = data_mappings_to_tuples[web_link_column][0]
+            rows_dict['mapping']['webLink'] = data_mappings_to_tuples[web_link_column][0]
 
         _, report = await self._get_chart_report(order, Table)
 

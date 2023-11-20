@@ -102,7 +102,7 @@ class DashboardMetadataApi:
         await self._business.update_dashboard(
             uuid=uuid, name=name, new_name=new_name, order=order,
             is_disabled=is_disabled,
-            publicPermision={
+            publicPermission={
                 'isPublic': is_public,
                 'permission': 'READ',
                 'token': str(uuid1())

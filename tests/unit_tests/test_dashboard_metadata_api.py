@@ -33,7 +33,7 @@ class TestDashboardMetadataApi(unittest.TestCase):
         dashboard = s.boards.get_board(uuid=dashboard['id'])
         assert dashboard['name'] == name
 
-        s.boards.update_board(uuid=dashboard['id'], new_name=name + ' updated')
+        s.boards.update_board(uuid=dashboard['id'], new_name=name + ' updated', is_public=True)
 
         dashboard = s.boards.get_board(uuid=dashboard['id'])
         assert dashboard['name'] == name+' updated'

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.4.1 (2023-20-11)
+
+### Fixed
+
+- Updating a board to make it public works now.
+- Added parameters to the table function to use a column of links.
+
 ## 1.4 (2023-15-11)
 
 ### Added

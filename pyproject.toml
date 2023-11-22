@@ -1,18 +1,9 @@
 [build-system]
-requires = ["setuptools>=42", "setuptools_scm>=6.2"]
+# AVOID CHANGING REQUIRES: IT WILL BE UPDATED BY PYSCAFFOLD!
+requires = ["setuptools>=46.1.0", "setuptools_scm[toml]>=5"]
+build-backend = "setuptools.build_meta"
 
-[project]
-name = "shimoku-api-python"
-dynamic = ["version"]
-description = "Shimoku enables you to build Data Products in just hours and allows you to create Predictive Analytics Products with Artificial Intelligence capabilities."
-authors = [{name = "Shimoku", email = "contact@shimoku.com"}]
-license.file = "LICENSE.txt"
-readme = "README.md"
-classifiers = [
-    "Development Status :: 4 - Beta",
-    "Programming Language :: Python",
-]
-
-[project.urls]
-Homepage = "https://github.com/shimoku-tech/shimoku-api-python"
-Documentation = "https://docs.shimoku.com/"
+[tool.setuptools_scm]
+# For smarter version schemes and other configuration options,
+# check out https://github.com/pypa/setuptools_scm
+version_scheme = "no-guess-dev"

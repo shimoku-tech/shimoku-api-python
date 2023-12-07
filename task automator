@@ -1,0 +1,37 @@
+#La aplicación ejecutará el flujo de trabajo y automatizará la tarea
+#tarea simple de enviar un correo electrónico
+
+
+import shimoku
+
+# Seleccione la tarea
+task = shimoku.tasks.TaskAutomationTask()
+
+# Proporcione los datos
+data = {
+    "correo electrónico": "shimoku@gmail.com",
+    "asunto": "Título del correo electrónico",
+    "mensaje": "Mensaje del correo electrónico"
+}
+
+# Cree el flujo de trabajo
+flow = task.create_flow(data)
+
+# Configure el flujo de trabajo
+flow.trigger = "manual"
+flow.steps = [
+    {
+        "action": "send_email",
+        "parameters": {
+            "to": data["correo electrónico"],
+            "subject": data["asunto"],
+            "message": data["mensaje"]
+        }
+    }
+]
+
+# Ejecute la aplicación
+results = task.run(flow)
+
+# Imprima el resultado
+print(results)

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 1.4.2 (2023-14-12)
+
+### Fixed
+
+- Remove vloop depencency.
+- Remove warnings for pydantic
+
 ## 1.4.1 (2023-20-11)
 
 ### Fixed

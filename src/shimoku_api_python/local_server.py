@@ -20,8 +20,6 @@ import schema_classes
 import schema_parameter_classses
 from inspect import getmembers, isclass
 import aiohttp
-import asyncio
-import uvloop
 
 print_paths = True
 

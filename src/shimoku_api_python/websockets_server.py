@@ -1,10 +1,12 @@
 import asyncio
 import graphene
 import queue
-import json
 import uuid
 from pydantic import BaseModel
+import warnings
+warnings.filterwarnings("ignore", module="pydantic")
 import strawberry
+warnings.filterwarnings("default", module="pydantic")
 from fastapi import FastAPI
 
 

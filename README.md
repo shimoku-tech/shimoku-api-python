@@ -12,83 +12,85 @@ Shimoku allows you to build Data Products in hours and create Predictive Analyti
 📚 [Documentation](https://docs.shimoku.com/) |
 📊 [Shimoku App Templates](https://github.com/shimoku-tech/shimoku-app-templates) |
 
-## About Shimoku
-
-Shimoku enables you to build Data Products in just hours and allows you to create Predictive Analytics Products with Artificial Intelligence capabilities. In the software and automation era, data sharing is essential for businesses to thrive. Shimoku provides responsive progressive web apps that enable seamless data sharing between clients and providers.
-
-Companies are more interested in predicting the future of their KPIs and trends rather than dwelling on past events. With Shimoku, you can build a Data App like Google Analytics in just hours without the need for a back-end, front-end, or DevOps. Additionally, you can integrate predictive suites into your Data App within minutes, transforming it into an AI App. Shimoku empowers you to deliver AI Apps that a single junior coder can build, iterate, and maintain.
-
-### Introduction
-
-Creating Data Apps usually requires a full-stack team of Data and IT specialists. Shimoku simplifies this process for Data professionals by allowing them to create Data Apps faster without the need for IT expertise. Shimoku reduces the workload of IT teams, which are often the bottleneck in digital businesses while creating new products and value for your clients.
-
-By using Shimoku, a typical flow such as:
-
-![Schema without Shimoku](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FVVRucS06NScH1ZrKBcZZ%2Fschema-old-team.png?alt=media&token=7105e7b4-ac2b-430d-8ad4-a653f29b3716)
-
-Is transformed into:
-
-![Hence, an entire IT full-stack team is replaced by Shimoku.](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2F0SertLANqgV3ZoOlq1VA%2Fschema-shimoku-breakout.png?alt=media&token=360d0c11-ebee-4e0d-9a7f-32c2a68f5928)
-
 ## Quickstart
 
-### Step 1 - Create an account
+## Setting Up Your Local Server
 
-| 1 | 2 |
-| --- | --- |
-| **Go** to [shimoku.io](https://shimoku.io/sign-up) to **create an account** | **Review** your inbox and **confirm** account |
-| ![Image 1](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2Fac4QIR03uC5NyMQImZ15%2Fimage.png?alt=media&token=b0c1ff9d-cbb4-4d1c-94f1-a59f18d9452c) | ![Image 2](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FEYAYtVOmKPMJWXaeIPrj%2Fimage.png?alt=media&token=80b1e962-97cb-48bd-bca4-5767d0dc9f23) |
+Begin your journey with Shimoku by setting up a local server. This process allows you to explore Shimoku's capabilities without needing to log in or create an account.
 
-| 3 | 4 |
-| --- | --- |
-| Click on "**Return to Sign In section"** and sign in with your credentials | Click your **Profile button** on the top right and go to **"Settings"**. Inside **"Information for developers"** click on "**Create"** to generate your API Token and save this information, the **"Universe ID"** and the **"Business ID".** |
-| ![Image 3](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FyI0DKtYpBCW98QiBdL2O%2Fimage.png?alt=media&token=4fe0bc0f-e73c-4c30-bb43-25dce3b7d380) | ![Image 4](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FlyWlkp41bohT78JKpRaZ%2Fimage.png?alt=media&token=1932af00-da7f-4828-ab83-49ee23dd55fb) |
-
-### Step 2 - Install the Library
+### Step 1 - Install the Library
 
 To use Shimoku’s API first install our SDK library.
 
-See it from Github at:
-
-[https://github.com/shimoku-tech/shimoku-api-python](https://github.com/shimoku-tech/shimoku-api-python)
-
-And in your `Python +3.9` install it
+In your `Python +3.9` install it
 
 ```python
 pip install shimoku-api-python
 ```
 
-**_NOTE:_**
+### Step 2 - Initialize the Shimoku SDK
 
-If you want to install versions prior to v.0.13.3 (this one included), you'll need to install the following requirements first:
-```
-pandas==1.5.2
-requests==2.28.1
-datetime==4.9
-json5==0.9.10
-shimoku-components-catalog==0.2
-```
-
-### Step 3 - Start Client, Plotting and Menu Handling
-
-Go ahead and copy-paste to see 🪄
+Start by importing Shimoku and initializing the client. This step sets up a local server environment for your development and automatically opens a browser.
 
 ```python
-from os import getenv
 import shimoku_api_python as Shimoku
 
-access_token = getenv('SHIMOKU_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
-workspace_id: str = getenv('WORKSPACE_ID')
+# Client initialization with playground mode
+s = Shimoku.Client()
+```
 
+![Playground preview](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2F3a2wED5DrnUeWO5ZEhrf%2FPlayground.png?alt=media&token=865c265d-c754-4a0a-a141-fca0d06197f4)
+
+We recommend the following parameters for a better development experience:
+
+```python
 s = Shimoku.Client(
-    access_token=access_token,
-    universe_id=universe_id,
+    async_execution=True,  # Grouped plotting
+    verbosity='INFO',      # Insight in the execution
 )
-s.set_workspace(uuid=workspace_id)
+```
 
+**_NOTE:_**
+> If a local server session in a specific port is already active, the SDK will connect to the existing session. There is no need to reinitialize a new server, allowing for continuous work without interruption.
+
+In case the default port (8000) is already in use, it is necessary to change it in the client initialization, for example, the port 8080 could be used:
+
+```python
+s = Shimoku.Client(
+    local_port=8080
+    async_execution=True,
+    verbosity='INFO', 
+)
+```
+
+**_NOTE:_**
+>  It is not recommended to have more than one local server running, as the front-end application can only access one at a time (even in different tabs).
+
+To terminate the server the following function has to be used, it will only close the server connected to the client-specified port:
+
+```python
+s = Shimoku.Client(
+    local_port=8080
+    async_execution=True,
+    verbosity='INFO', 
+)
+
+# Close the server in the port 8080
+s.terminate_local_server()
+```
+
+### Code Example
+
+When changes are made locally using the s.run() command, the SDK provides immediate feedback to the front end. This live update system ensures developers can see the impact of their changes in real time:
+
+```python
+# Necessary for compatibility with cloud execution
+s.set_workspace() 
+
+# Set the group of the menu
 s.set_board('Custom Board')
 
+# Set the menu path 'catalog' with the sub-path 'bar-example'
 s.set_menu_path('catalog', 'bar-example')
 
 language_expressiveness = [
@@ -107,123 +109,70 @@ s.plt.bar(
     y=['Statements ratio', 'Lines ratio'],
 )
 
+# Necessary for notifying the front-end even if not using async execution
+s.run()
+
 ```
 
-Once you execute this piece of code you can see the following plot in your shimoku.io page:
+![First Shimoku App](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FY8UtQtoFFIKSE61dJPZU%2FPlayground%20Real%20Time.png?alt=media&token=8a53150b-5e86-4f9f-807c-f55280edc69e)
 
-![First Shimoku App](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FmCPi73lrkbroOqpLDNLI%2Fimatge.png?alt=media&token=58bd4a30-a316-4237-9319-ab9fc5552ed1)
+## Deployment in Cloud
 
-### Step 4 - Board
-
-As can be seen in the previous image the first element in the menu is called 'Custom Board', this element is a board. The boards are necessary for the contents of an app to be seen, if an app is not included in a dashboard it will not appear in the page. For this reason the SDK always attaches the apps to a dashboard when creating content, ideally the user should define which name to use for the dashboard, but when it is not specified it will use the name 'Default Name'.
-
-The method to specify the board's name that the SDK should use is:
+The deployment with the Shimoku platform is very straightforward, just set your credentials in the client initialization and execute the same code you've been developing:
 
 ```python
-s.set_board(name: str)
-```
-
-This will ensure that all the apps used after that point are included in dashboard_name.
-
-**_NOTE:_**
-
-Multiple Dashboards Issue
-
-There is a possible issue that can arise from executing code multiple times with different dashboard names, as it can be seen in the result two dashboards have been created with the same app attached.
-
-In case this wasn't the expected result, it can be solved very easily using the method:
-
-```python
-s.boards.force_delete_board(name: str, uuid: str)
-```
-
-This will delete a specified dashboard, but first it will delete all of it's links to it's apps, so it will always be able to delete an existing dashboard without having to touch the app. In this case the method should be used like this:
-
-```python
-s.boards.force_delete_board(name='Default Name')
-```
-
-Then there will only exist the 'Custom Dashboard' linking to the 'catalog' app.
-
-![Multiple Dashboards](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FFsixEerSY9eLJr6zK4ni%2Fimatge.png?alt=media&token=b27eb7f7-565d-4e79-8df5-cae57ab456fd)
-
-### Step 5 - Productivity boost
-
-#### Verbosity
-
-There is now the option to monitor the SDK flow of execution, with three levels of verbosity. This will help to know where the error occurred, so it will make bugfixing a lot easier, It also outputs how much time the function call has taken to quickly profile code. To enable it you just have to set the parameter verbosity from the client to INFO or DEBUG.
-
-```python
-s = Shimoku.Client(
-    access_token=access_token,
-    universe_id=universe_id,
-    verbosity='INFO',
-)
-```
-
-The INFO keyword will be the most useful for visualizing the execution while DEBUG is made so it outputs as much information as possible.
-
-You can also set it to WARNING but this is the default behavior and will have no effect, it will output only warnings and errors.
-
-The logging level of the Shimoku SDK can be configured dynamically during execution by calling the configure_logging function with the desired verbosity level (either 'DEBUG', 'INFO', or 'WARNING') and an optional channel to write the log output to. This allows for fine-grained control over the logging behavior and output, making it easier to debug and profile the SDK's execution.
-
-#### Asynchronous execution
-
-Asynchronous execution means that code execution doesn't need to stop for requests, freeing up time to make more requests. To enable it, simply set the async_execution parameter to True when creating the client object:
-
-```python
-s = Shimoku.Client(
-    access_token=access_token,
-    universe_id=universe_id,
-    business_id=business_id,
-    verbosity='INFO',
-    async_execution=True,
-)
-```
-
-By default, execution is set to sequential. You can toggle between sequential and asynchronous execution using the following functions:
-
-```python
-s.activate_async_execution()
-s.activate_sequential_execution()
-```
-
-When asynchronous execution is enabled, tasks are added to a task pool and executed once a strictly sequential task is reached. A function has been added to allow users to trigger the execution of tasks, which is s.run().
-
-**_NOTE:_**
-Be sure to call s.run() at the end of your code to ensure all tasks are executed before the program terminates.
-
-```python
-from os import getenv
 import shimoku_api_python as Shimoku
 
-access_token = getenv('SHIMOKU_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
-workspace_id: str = getenv('WORKSPACE_ID')
+access_token: str = getenv('API_TOKEN')     # Environment variable
+universe_id: str = getenv('UNIVERSE_ID')    # Environment variable
+workspace_id: str = getenv('WORKSPACE_ID')  # Environment variable
 
 s = Shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
-    verbosity='INFO',
     async_execution=True,
+    verbosity='INFO'
 )
+
 s.set_workspace(workspace_id)
 
-s.set_board('Custom Dashboard')
-
-s.set_menu_path('catalog', 'bar-example')
-
-language_expressiveness = pd.read_html(
-    'https://en.wikipedia.org/wiki/Comparison_of_programming_languages')[2]
-
-s.plt.bar(
-    order=0, title='Language expressiveness',
-    data=language_expressiveness, x='Language',
-    y=['Statements ratio[48]', 'Lines ratio[49]'],
-)
-
-s.run()
+. . .
 ```
+
+**_NOTE:_**
+> If you don't have these credentials you will need to [create an account here](https://shimoku.io/sign-up), consult the [Shimoku Cloud](https://docs.shimoku.com/development/getting-started/shimoku-cloud) for further information.
+> It is advisable to make sure that the contents of the playground can be replicated by the code before deploying.
+
+## Sharing Your Insights: Embedding and Beyond
+
+Shimoku's sharing functionality transforms the way you incorporate analytics into web platforms, enabling you to deliver personalized insights to your audience and add significant value to your product offerings with minimal development efforts.
+
+## Creating a Shareable Board
+
+```python
+# Updates the specified board fields, if it exists
+s.boards.update_board(
+    name: your_board_name,
+    is_public: True
+)
+```
+
+And that's it!
+
+Now, to access the link through the Front End, you must click on the chain of your board:
+
+![Shareable Board](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2FCvd9lhKC7rgnRtJiZna2%2Fimage.png?alt=media&token=bb71cf34-9179-4e09-a339-8d4e77867511)
+
+**_NOTE:_**
+> You can read more about our Shared boards by reading this section: [Shared Links](https://docs.shimoku.com/development/building-ai-web-app/shared-links).
+
+## Key Features and Advantages
+
+The Shimoku Playground is an integral feature of the Shimoku platform, designed to facilitate local development.
+
+- **Local Server Utilization**: Instead of connecting to the cloud-based Shimoku API, the Playground operates via a local server. This setup is initialized through the SDK, offering a more immediate and responsive development environment.
+- **Consistent API Compatibility**: Code developed within the Playground is fully compatible with the Shimoku API. This ensures a smooth transition from local to cloud-based environments, allowing developers to switch between local and cloud deployments without needing to modify their code.
+- **No Token Consumption**: The Playground runs on the developer's local machine, bypassing the need for token usage associated with cloud-based operations on the Shimoku platform. This is particularly beneficial for extensive testing and development, as it reduces the overhead costs typically incurred during the development process.
 
 ## Contributing
 
@@ -240,8 +189,8 @@ Before submitting your pull request, please make sure your changes pass all test
 
 If you have any questions, suggestions, or issues, please feel free to reach out to us:
 
-- [Discord](https://discord.com/channels/1076588792024137879/1096371108665626676)
-- Email: contact@shimoku.com
+- [Discord](https://discord.gg/C87vWAug6q)
+- Email: <contact@shimoku.com>
 
 We're always happy to help and appreciate your feedback!
 

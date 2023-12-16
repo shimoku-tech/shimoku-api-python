@@ -152,8 +152,8 @@ Shimoku's sharing functionality transforms the way you incorporate analytics int
 ```python
 # Updates the specified board fields, if it exists
 s.boards.update_board(
-    name: your_board_name,
-    is_public: True
+    name=your_board_name,
+    is_public=True
 )
 ```
 

@@ -2,7 +2,7 @@
 from os import getenv
 from typing import Dict, List
 
-import shimoku_api_python as shimoku
+from shimoku import Client
 
 
 api_key: str = getenv('API_TOKEN')
@@ -12,7 +12,7 @@ config = {
     'access_token': api_key,
 }
 
-s = shimoku.Client(
+s = Client(
     config=config,
     universe_id=universe_id,
     verbosity='DEBUG',

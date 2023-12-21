@@ -1,6 +1,5 @@
 from os import getenv
-from tenacity import RetryError
-from shimoku_api_python.exceptions import CacheError
+from shimoku.exceptions import CacheError, APIError
 import unittest
 from utils import initiate_shimoku
 
@@ -68,7 +67,7 @@ class TestDashboardMetadataApi(unittest.TestCase):
         assert app_id == app_ids[0]
 
         if not mock and not playground:
-            with self.assertRaises(RetryError):
+            with self.assertRaises(APIError):
                 s.boards.delete_board(name=name)
 
         s.boards.remove_menu_path_from_board(name=name, menu_path_id=app_id)

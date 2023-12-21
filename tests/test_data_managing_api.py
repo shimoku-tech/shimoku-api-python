@@ -7,8 +7,8 @@ from unittest import TestCase
 
 import pandas as pd
 
-import shimoku_api_python as shimoku
-from shimoku_api_python.exceptions import DataError
+from shimoku import Client
+from shimoku.exceptions import (DataError)
 
 access_token: str = getenv('API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -16,14 +16,15 @@ business_id: str = getenv('BUSINESS_ID')
 verbosity: str = getenv('VERBOSITY')
 
 
-s = shimoku.Client(
-    # access_token=access_token,
-    # universe_id=universe_id,
+s = Client(
+    access_token=access_token,
+    universe_id=universe_id,
     verbosity=verbosity
 )
 s.set_workspace(uuid=business_id)
+s.menu_paths.delete_menu_path(name='data_set_test')
 s.set_menu_path('data_set_test')
-s.plt.clear_menu_path()
+# s.plt.clear_menu_path()
 
 # Fixtures
 data: Dict = {
@@ -35,10 +36,15 @@ df = pd.DataFrame(data)
 data_json: str = json.dumps(data_oriented)
 
 
+def sleep_cloud():
+    if not s.playground:
+        time.sleep(5)
+
+
 def test_data_sets():
     global data_oriented
     s.data.append_to_data_set(name='test-data-set', data=data_oriented)
-    # time.sleep(5)
+    sleep_cloud()
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
     for i in range(len(data_oriented)):
@@ -46,7 +52,7 @@ def test_data_sets():
         assert data_[i]['intField2'] == data_oriented[i]['b']
 
     s.data.append_to_data_set(name='test-data-set', data=data_oriented)
-    # time.sleep(5)
+    sleep_cloud()
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
     for i in range(len(data_oriented)):
@@ -54,7 +60,7 @@ def test_data_sets():
         assert data_[i*2]['intField2'] == data_oriented[i]['b']
 
     s.data.replace_data_from_data_set(name='test-data-set', data=data_oriented)
-    # time.sleep(5)
+    sleep_cloud()
     data_ = s.data.get_data_from_data_set(name='test-data-set')
     data_ = sorted(data_, key=lambda x: x['intField1'])
     assert len(data_) == len(data_oriented)
@@ -81,7 +87,7 @@ class TestBadDfs(TestCase):
 
     def test_bad_append_to_existing_df(self):
         s.data.replace_data_from_data_set(name='test-data-set', data=data_oriented)
-        # time.sleep(5)
+        sleep_cloud()
         print(s.data.get_data_from_data_set(name='test-data-set'))
         for i, bad_df in enumerate(self.bad_dfs):
             bad_df_aux = [bad_df[1]]

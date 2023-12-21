@@ -1,13 +1,9 @@
 from os import getenv
-import shimoku_api_python as shimoku
-from mock_classes import MockClient
+from shimoku import Client
+# from mock_classes import MockClient
 
 
 def initiate_shimoku():
-    # return shimoku.Client(
-    #     verbosity='INFO',
-    #     async_execution=True,
-    # )
     api_key: str = getenv('API_TOKEN')
     universe_id: str = getenv('UNIVERSE_ID')
     environment: str = getenv('ENVIRONMENT')
@@ -18,20 +14,20 @@ def initiate_shimoku():
     local_port: int = int(getenv('LOCAL_PORT'))
 
     if playground:
-        s = shimoku.Client(
+        s = Client(
             environment=environment,
             verbosity=verbose,
             async_execution=async_execution,
             local_port=local_port,
             retry_attempts=1
         )
-    elif mock:
-        s = MockClient(
-            verbosity=verbose,
-            async_execution=async_execution,
-        )
+    # elif mock:
+        # s = MockClient(
+        #     verbosity=verbose,
+        #     async_execution=async_execution,
+        # )
     else:
-        s = shimoku.Client(
+        s = Client(
             access_token=api_key,
             universe_id=universe_id,
             environment=environment,

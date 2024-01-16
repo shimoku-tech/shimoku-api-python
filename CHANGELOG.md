@@ -1,5 +1,12 @@
 # CHANGELOG
 
+
+## 1.5 (2023-16-01)
+
+### Added
+
+- Shimoku AI module.
+
 ## 1.4.2 (2023-14-12)
 
 ### Fixed

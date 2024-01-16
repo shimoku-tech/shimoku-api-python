@@ -5,6 +5,7 @@ from ..resources.role import user_delete_role, user_get_role, user_get_roles, us
 from ..utils import create_normalized_name
 from ..resources.business import Business
 from ..resources.app import App
+from ..resources.activity import Activity
 from ..async_execution_pool import async_auto_call_manager, ExecutionPoolContext
 
 import logging
@@ -33,7 +34,7 @@ class AppMetadataApi:
         """
         app: App = await self._business.get_app(name=name, uuid=uuid, create_if_not_exists=False)
         if not app:
-            logger.warning(f"Menu path {name} not found")
+            logger.warning(f"Menu path ({name}) not found")
         return app
 
     @async_auto_call_manager(execute=True)
@@ -103,16 +104,26 @@ class AppMetadataApi:
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def delete_all_menu_path_activities(
-        self, uuid: Optional[str] = None, name: Optional[str] = None
+        self, uuid: Optional[str] = None, name: Optional[str] = None, with_linked_to_templates: Optional[bool] = False
     ):
         """ Delete all activities of a menu path
         :param uuid: uuid of the menu path
         :param name: name of the menu path
+        :param with_linked_to_templates: if True, delete all activities, even those linked to templates
         """
         app = await self._get_app_with_warning(uuid=uuid, name=name)
         if not app:
             return
-        await asyncio.gather(*[app.delete_activity(uuid=activity['id']) for activity in await app.get_activities()])
+        activities: List[Activity] = await app.get_activities()
+        if not with_linked_to_templates:
+            previous_len_activities = len(activities)
+            activities = [activity for activity in activities if not activity['activityTemplateWithMode']]
+            if len(activities) != previous_len_activities:
+                logger.warning(
+                    "Some activities are linked to templates and will not be deleted. To delete them, "
+                    "use the (with_linked_to_templates) parameter set to True."
+                )
+        await asyncio.gather(*[app.delete_activity(uuid=activity['id']) for activity in activities])
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
@@ -159,30 +170,44 @@ class AppMetadataApi:
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def get_menu_path_files(
-        self, uuid: Optional[str] = None, name: Optional[str] = None
+        self, uuid: Optional[str] = None, name: Optional[str] = None, with_shimoku_generated: Optional[bool] = False
     ) -> List[Dict]:
         """ Get the files of an menu path
         :param uuid: uuid of the menu path
         :param name: name of the menu path
+        :param with_shimoku_generated: whether the file is generated internally by the SDK
         """
         app: Optional[App] = await self._get_app_with_warning(uuid=uuid, name=name)
         if not app:
             return []
-        return [file.cascade_to_dict() for file in await app.get_files()]
+        files = await app.get_files()
+        if not with_shimoku_generated:
+            files = [file for file in files if 'shimoku_generated' not in file['tags']]
+        return [file.cascade_to_dict() for file in files]
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
     async def delete_all_menu_path_files(
-        self, uuid: Optional[str] = None, name: Optional[str] = None
+        self, uuid: Optional[str] = None, name: Optional[str] = None, with_shimoku_generated: Optional[bool] = False
     ):
         """ Delete all files of an menu path
         :param uuid: uuid of the menu path
         :param name: name of the menu path
+        :param with_shimoku_generated: whether the file is generated internally by the SDK
         """
         app: Optional[App] = await self._get_app_with_warning(uuid=uuid, name=name)
         if not app:
             return
-        await asyncio.gather(*[app.delete_file(uuid=file['id']) for file in await app.get_files()])
+        files = await app.get_files()
+        if not with_shimoku_generated:
+            previous_len_files = len(files)
+            files = [file for file in files if 'shimoku_generated' not in file['tags']]
+            if len(files) != previous_len_files:
+                logger.warning(
+                    "Some files are generated internally by the SDK and will not be deleted. To delete them, "
+                    "use the (with_shimoku_generated) parameter set to True."
+                )
+        await asyncio.gather(*[app.delete_file(uuid=file['id']) for file in files])
 
     # Role management
     get_role = user_get_role

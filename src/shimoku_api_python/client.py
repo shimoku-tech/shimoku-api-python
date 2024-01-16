@@ -5,7 +5,6 @@ https://github.com/mailchimp/mailchimp-marketing-python/blob/master/mailchimp_ma
 
 from typing import List, Dict, Optional
 
-import asyncio
 import datetime
 import requests
 from tenacity import retry, wait_exponential, stop_after_attempt
@@ -23,26 +22,29 @@ class ApiClient(object):
     PRIMITIVE_TYPES = (float, int, bool, bytes, str)
 
     @logging_before_and_after(logging_level=logger.debug)
-    def __init__(self, environment: str, playground: bool, config=None, server_host=None, server_port=None):
+    def __init__(
+        self, environment: str, playground: bool,
+        config=None, server_host=None, server_port=None,
+        retry_attempts: int = 5
+    ):
 
         self.cache_enabled = True
         self.environment = environment
         self.playground = playground
+        self.retry_attempts = retry_attempts
 
         if config is None:
             config = {}
 
-        if environment == 'production':
+        if 'production'.startswith(environment.lower()):
             self.host = 'https://api.shimoku.io/external/v1/'
-        elif environment == 'staging':
-            self.host = 'https://api.staging.shimoku.io/external/v1/'
-        elif environment == 'develop':
+        elif 'develop'.startswith(environment.lower()):
             self.host = 'https://api.develop.shimoku.io/external/v1/'
         elif environment == 'guillermo':
             self.host = 'https://wxauh7u2te.execute-api.eu-west-1.amazonaws.com/guillermo/external/v1/'
         else:
             raise ValueError(
-                f'The namespace must be either "production", "staging" or "develop | '
+                f'The namespace must be either "production" or "develop | '
                 f'namespace introduced: {environment}'
             )
         if playground:
@@ -95,12 +97,10 @@ class ApiClient(object):
         self.timeout = config['timeout'] if 'timeout' in config.keys() else 120
 
     @logging_before_and_after(logging_level=logger.debug)
-    @retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=2, min=1, max=16),
-           before_sleep=my_before_sleep)
     async def call_api(
         self, resource_path, method, path_params=None, query_params=None,
         header_params=None, body=None, collection_formats=None, limit: Optional[int] = None,
-        **kwargs
+        elastic_supported: bool = False, **kwargs
     ):
         """Create and call the API request with headers, params and others"""
         # header parameters
@@ -137,7 +137,7 @@ class ApiClient(object):
             return await self.request(
                 method, url, query_params,
                 headers=header_params, body=body,
-                limit=limit
+                limit=limit, elastic_supported=elastic_supported
             )
 
     @logging_before_and_after(logging_level=logger.debug)
@@ -187,13 +187,17 @@ class ApiClient(object):
 
     @logging_before_and_after(logging_level=logger.debug)
     async def query_element(
-            self, method: str, endpoint: str, limit: Optional[int] = None, **kwargs
+            self, method: str, endpoint: str,
+            limit: Optional[int] = None,
+            elastic_supported: bool = False,
+            **kwargs
     ) -> Dict:
         """Retrieve an element if the endpoint exists
 
         :param method: examples are 'GET', 'POST', etc
         :param endpoint: example: 'business/{businessId}/app/{appId}
         :param limit: limit the number of results returned
+        :param elastic_supported: whether the endpoint supports elastic search
         """
         (
             query_params, header_params,
@@ -206,12 +210,15 @@ class ApiClient(object):
             path_params[endpoint] = params[endpoint]  # noqa: E501
 
         element_data: Dict = await (
-            self.call_api(
+            retry(stop=stop_after_attempt(self.retry_attempts),
+                  wait=wait_exponential(multiplier=2, min=1, max=16),
+                  before_sleep=my_before_sleep)(self.call_api)(
                 endpoint, method,
                 path_params,
                 query_params,
                 header_params,
                 limit=limit,
+                elastic_supported=elastic_supported,
                 body=body_params,
                 post_params=form_params,
                 files=local_var_files,
@@ -249,7 +256,11 @@ class ApiClient(object):
         raise ApiClientError(response)
 
     @logging_before_and_after(logging_level=logger.debug)
-    async def request(self, method, url, query_params=None, headers=None, body=None, limit: Optional[int] = None):
+    async def request(
+        self, method, url,
+        query_params=None, headers=None, body=None,
+        limit: Optional[int] = None, elastic_supported: bool = False
+    ):
         auth = None
         if self.is_basic_auth:
             auth = ('user', self.api_key)
@@ -266,21 +277,24 @@ class ApiClient(object):
                 "http method must be `GET`, `HEAD`, `OPTIONS`,"
                 " `POST`, `PATCH`, `PUT` or `DELETE`."
             )
-
+        body_from = 0
         next_token = None
-        data_res = {}
+        data_res = {} if not elastic_supported else []
+        req_limit = limit if limit else 100
+        method = method if not elastic_supported else 'POST'
         async with aiohttp.ClientSession(auth=auth, timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
 
             while True:  # loop until nextToken is None
-
                 aux_url = url
-                if method == 'GET':
-                    aux_url += (f'?nextToken={next_token}' if next_token else f'?limit={limit if limit else 100}')
+                if elastic_supported:
+                    body = {'from': body_from, 'limit': req_limit}
+                elif method == 'GET':
+                    aux_url += (f'?nextToken={next_token}' if next_token else f'?limit={req_limit}')
 
                 logger.debug(f'method:{method}, url: {aux_url}, headers: {headers},'
                              f'query params: {query_params}, body: {body}')
 
-                async with session.request(method, aux_url, params=query_params, json=body, headers=headers) as res:
+                async with session.request(method, aux_url, headers=headers, params=query_params, json=body) as res:
                     self.call_counter += 1
                     try:
                         if 'application/json' in res.headers.get('content-type'):
@@ -290,24 +304,30 @@ class ApiClient(object):
 
                         if not res.ok:
                             self.raise_api_exception(data)
+                        logger.debug(data)
 
-                        if 'items' in data:
-                            next_token = data.get('nextToken') if not limit else None
+                        if elastic_supported:
+                            data_res.extend(data)
+                            body_from += req_limit
+                            if limit:
+                                limit -= req_limit
+                            if len(data) < req_limit or (limit and limit <= 0):
+                                break
+                        elif 'items' in data:
                             if data_res.get('items'):
                                 data_res['items'].extend(data.get('items'))
                             else:
                                 data_res = data
+                            next_token = data.get('nextToken')
+                            if not next_token:
+                                break
                         else:
                             data_res = data
                             next_token = None
-
-                        logger.debug(data)
+                            break
 
                     except Exception as e:
                         self.raise_api_exception(str(e))
-
-                if not next_token:
-                    break
 
         return data_res
 

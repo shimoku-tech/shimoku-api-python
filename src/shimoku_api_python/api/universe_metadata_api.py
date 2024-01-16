@@ -18,7 +18,34 @@ class UniverseMetadataApi:
 
     @async_auto_call_manager(execute=True)
     @logging_before_and_after(logging_level=logger.info)
+    async def create_universe_api_key(self, uuid: str, description: str):
+        universe = Universe(api_client=self._api_client, uuid=uuid)
+        return await universe.create_universe_api_key(description)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_universe_api_keys(self, uuid: str) -> List[Dict]:
+        universe = Universe(api_client=self._api_client, uuid=uuid)
+        return await universe.get_universe_api_keys()
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
     async def get_universe_workspaces(self, uuid: str) -> List[Dict]:
         universe = Universe(api_client=self._api_client, uuid=uuid)
         return [b.cascade_to_dict() for b in await universe.get_businesses()]
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_universe_activity_templates(self, uuid: str) -> List[Dict]:
+        universe = Universe(api_client=self._api_client, uuid=uuid)
+        return [{
+            'name': at['name'], 'description': at['description'],
+            'min_run_interval': at['minRunInterval'],
+            'input_settings': [{
+                'name': name,
+                'description': param['description'],
+                'datatype': param['datatype']
+            } for name, param in at['inputSettings'].items() if isinstance(param, dict)]
+        } for at in await universe.get_activity_templates() if at['enabled']]
+
 

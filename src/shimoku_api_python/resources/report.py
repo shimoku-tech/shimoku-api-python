@@ -2,9 +2,6 @@ from typing import List, Dict, Optional, Tuple, TYPE_CHECKING, Type
 
 import asyncio
 from copy import deepcopy
-import pandas as pd
-import datetime as dt
-import json
 
 from ..base_resource import Resource
 from .data_set import DataSet, Mapping
@@ -17,117 +14,18 @@ from ..execution_logger import logging_before_and_after
 logger = logging.getLogger(__name__)
 
 
-@logging_before_and_after(logging_level=logger.debug)
-def convert_dataframe_to_report_entry(
-    df: pd.DataFrame,
-    sorting_columns_map: Optional[Dict[str, str]] = None,
-    report_entry_chunks: bool = True,
-) -> List[Dict]:
-    """
-    :param df:
-    :param sorting_columns_map:
-    :param report_entry_chunks:
-    """
-
-    if sorting_columns_map:
-        try:
-            assert len(sorting_columns_map) <= 4
-        except AssertionError:
-            raise ValueError(
-                f'At maximum a table may have 4 different sorting columns | '
-                f'You provided {len(sorting_columns_map)} | '
-                f'You provided {sorting_columns_map}'
-            )
-        df_ = df.rename(columns=sorting_columns_map)
-        metadata_entries: List[Dict] = df_[list(sorting_columns_map.values())].to_dict(orient='records')
-    else:
-        metadata_entries: List[Dict] = []
-
-    records: List[Dict] = df.to_dict(orient='records')
-
-    if report_entry_chunks:
-        for datum in records:
-            for k, v in datum.items():
-                if isinstance(v, dt.date) or isinstance(v, dt.datetime):
-                    datum[k] = v.isoformat()
-        data_entries = [{'data': d} for d in records]
-    else:
-        try:
-            data_entries: List[Dict] = [
-                {'data': json.dumps(d)}
-                for d in records
-            ]
-        except TypeError:
-            # If we have date or datetime values
-            # then we need to convert them to isoformat
-            for datum in records:
-                for k, v in datum.items():
-                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
-                        datum[k] = v.isoformat()
-
-            data_entries: List[Dict] = [
-                {'data': json.dumps(d)}
-                for d in records
-            ]
-
-    if metadata_entries:
-        try:
-            _ = json.dumps(metadata_entries)
-        except TypeError:
-            # If we have date or datetime values
-            # then we need to convert them to isoformat
-            for datum in metadata_entries:
-                for k, v in datum.items():
-                    if isinstance(v, dt.date) or isinstance(v, dt.datetime):
-                        datum[k] = v.isoformat()
-
-        # Generate the list of single entries with all
-        # necessary information to be posted
-        return [
-            {**data_entry, **metadata_entry}
-            for data_entry, metadata_entry in zip(data_entries, metadata_entries)
-        ]
-    else:
-        return data_entries
-
-
 class Report(Resource):
     """ Report resource class """
 
     resource_type = 'report'
     plural = 'reports'
-    alias_field = ('properties', 'hash')
+    alias_field = 'properties/hash'
 
     report_type = None
     possible_values = {}
     default_properties = {
         'hash': None,
     }
-
-    class ReportEntry(Resource):
-
-        resource_type = 'reportEntry'
-        plural = 'reportEntries'
-
-        @logging_before_and_after(logger.debug)
-        def __init__(self, parent: 'Report', uuid: Optional[str] = None, db_resource: Optional[Dict] = None):
-
-            params = dict(
-                reportId=parent['id'],
-            )
-
-            super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, params=params,
-                             check_params_before_creation=['reportId'], params_to_serialize=['properties'])
-
-        @logging_before_and_after(logger.debug)
-        async def delete(self):
-            """ Delete the report entry """
-            return await self._base_resource.delete()
-
-        @logging_before_and_after(logger.debug)
-        async def update(self):
-            """ Update the report entry """
-            return await self._base_resource.update()
 
     class ReportDataSet(Resource):
 
@@ -178,7 +76,7 @@ class Report(Resource):
         )
 
         super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, params=params,
-                         children=[Report.ReportDataSet, Report.ReportEntry],
+                         children=[Report.ReportDataSet],
                          check_params_before_creation=['order'],
                          params_to_serialize=['properties', 'dataFields', 'chartData', 'bentobox', 'smartFilters'])
 
@@ -326,10 +224,3 @@ class Report(Resource):
                                for rds in report_data_sets])
         if log:
             logger.info(f'Deleted {len(report_data_sets)} component data set links from component at {str(self)}')
-
-    # ReportEntry methods
-    @logging_before_and_after(logger.debug)
-    async def create_report_entries(self, report_entries: pd.DataFrame, sorting_columns_map: Optional[Dict] = None):
-        converted_report_entries = convert_dataframe_to_report_entry(report_entries, sorting_columns_map)
-        return await self._base_resource.create_children_batch(self.ReportEntry, converted_report_entries,
-                                                               batch_size=999, unit=' component entries')

@@ -1,12 +1,10 @@
 import logging
-import os
 from sys import stdout
 from typing import Callable, Optional
 from io import TextIOWrapper
 from functools import wraps
 from inspect import stack
 import asyncio
-import psutil
 from time import perf_counter
 
 logger = logging.getLogger(__name__)
@@ -60,19 +58,12 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
                 (f" with args: {args}, kwargs: {kwargs}" if enabled_for_debug else '')
             )
             initial_time = perf_counter()
-            process = None
-            initial_memory = None
-            if enabled_for_debug:
-                process = psutil.Process(os.getpid())
-                initial_memory = process.memory_info().rss / 1024 ** 2
-            return initial_time, initial_memory, process, underlined_text
+            return initial_time, underlined_text
 
-        def after_call(initial_time, initial_memory, process, underlined_text):
+        def after_call(initial_time, underlined_text):
             """ Logs after the execution of the function. """
             time_spent = 1000*(perf_counter()-initial_time)
             memory_spent = ''
-            if logging.root.isEnabledFor(logging.DEBUG):
-                memory_spent = f', memory usage: {(process.memory_info().rss / 1024 ** 2) - initial_memory: .2f} MB'
             logging_level(
                 f"Finished execution: {underlined_text}, "
                 f"elapsed time: {time_spent:.2f} ms"
@@ -81,21 +72,21 @@ def logging_before_and_after(logging_level: Callable) -> Callable:
         @wraps(func)
         async def awrapper(*args, **kwargs):
             """ Async version of the wrapper. """
-            initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
+            initial_time, underlined_text = before_call(*args, **kwargs)
             if 'logging_func_name' in kwargs:
                 kwargs.pop('logging_func_name')
             result = await func(*args, **kwargs)
-            after_call(initial_time, initial_memory, process, underlined_text)
+            after_call(initial_time, underlined_text)
             return result
 
         @wraps(func)
         def wrapper(*args, **kwargs):
             """ Normal version of the wrapper. """
-            initial_time, initial_memory, process, underlined_text = before_call(*args, **kwargs)
+            initial_time, underlined_text = before_call(*args, **kwargs)
             if 'logging_func_name' in kwargs:
                 kwargs.pop('logging_func_name')
             result = func(*args, **kwargs)
-            after_call(initial_time, initial_memory, process, underlined_text)
+            after_call(initial_time, underlined_text)
             return result
 
         return wrapper if not asyncio.iscoroutinefunction(func) else awrapper

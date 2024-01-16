@@ -16,6 +16,7 @@ class TestRoles(unittest.TestCase):
         if role:
             s.workspaces.delete_role(uuid=business_id, role_id=role['id'])
 
+        previous_roles_size = len(s.workspaces.get_roles(uuid=business_id))
         role = s.workspaces.create_role(uuid=business_id, role_name='test_role')
         assert role['role'] == 'test_role'
         assert role['permission'] == 'READ'
@@ -24,24 +25,22 @@ class TestRoles(unittest.TestCase):
 
         roles = s.workspaces.get_roles(uuid=business_id)
 
-        assert len(roles) == 1
-        assert roles[0]['role'] == 'test_role'
+        assert len(roles) == previous_roles_size + 1
 
         s.workspaces.delete_role(uuid=business_id, role_id=role['id'])
 
-        assert len(s.workspaces.get_roles(uuid=business_id)) == 0
+        assert len(s.workspaces.get_roles(uuid=business_id)) == previous_roles_size
 
         s.workspaces.create_role(uuid=business_id, role_name='test_role', permission='WRITE',
                                  resource='DATA', target='USER')
 
-        role = s.workspaces.get_roles(uuid=business_id)[0]
+        role = [role_ for role_ in s.workspaces.get_roles(uuid=business_id) if role_['role'] == 'test_role'][0]
 
-        assert role['role'] == 'test_role'
         assert role['permission'] == 'WRITE'
         assert role['resource'] == 'DATA'
         assert role['target'] == 'USER'
 
-        assert len(s.workspaces.get_roles(uuid=business_id)) == 1
+        assert len(s.workspaces.get_roles(uuid=business_id)) == previous_roles_size + 1
 
         s.workspaces.delete_role(uuid=business_id, role_id=role['id'])
 

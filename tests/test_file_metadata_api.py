@@ -23,7 +23,7 @@ s = shimoku.Client(
 )
 s.set_workspace(uuid=business_id)
 s.set_menu_path('File test')
-# s.menu_paths.delete_all_menu_path_files(name='File test')
+s.menu_paths.delete_all_menu_path_files(name='File test', with_shimoku_generated=True)
 
 
 def test_general_files():
@@ -53,10 +53,30 @@ def test_general_files():
     assert 'helloworld.csv' not in [file['name'] for file in files]
 
 
+def test_tags_and_metadata():
+    previous_len_files = len(s.menu_paths.get_menu_path_files(name='File test'))
+    s.io.post_object(
+        file_name='Shimoku generated file', obj=b'',
+        tags=['shimoku_generated', 'IO'], metadata={'business_id': business_id}
+    )
+    len_files = len(s.menu_paths.get_menu_path_files(name='File test'))
+    assert len_files == previous_len_files
+    len_files = len(s.menu_paths.get_menu_path_files(name='File test', with_shimoku_generated=True))
+    assert len_files == previous_len_files + 1
+    file = s.io.get_object(file_name='Shimoku generated file')
+    assert file == b''
+    file_metadata = s.io.get_file_metadata(file_name='Shimoku generated file')
+    assert file_metadata['metadata']['business_id'] == business_id
+    assert file_metadata['tags'] == ['shimoku_generated', 'IO']
+    s.io.delete_file(file_name='Shimoku generated file', with_shimoku_generated=True)
+    len_files = len(s.menu_paths.get_menu_path_files(name='File test', with_shimoku_generated=True))
+    assert len_files == previous_len_files
+
+
 def test_get_object():
     file_name = 'helloworld'
     object_data = b''
-    s.io.post_object(file_name, object_data)
+    s.io.post_object(file_name=file_name, obj=object_data)
     file = s.io.get_object(file_name=file_name)
     assert file == object_data
 
@@ -96,8 +116,27 @@ def test_big_data():
     s.io.post_object(file_name='test-big-df.csv', obj=df.to_csv(index=False))
 
 
+def test_more_than_100_files():
+    menu_path_mt100 = 'more than 100 files test'
+    s.set_menu_path(menu_path_mt100)
+    s.menu_paths.delete_all_menu_path_files(name=menu_path_mt100)
+    for i in range(201):
+        s.io.post_object(file_name=f'file_{i}.txt', obj=f'Content of file {i}')
+    s.pop_out_of_menu_path()
+    s.run()
+    s.disable_caching()
+    assert len(s.menu_paths.get_menu_path_files(name=menu_path_mt100)) == 201
+    s.menu_paths.delete_all_menu_path_files(name=menu_path_mt100)
+    assert len(s.menu_paths.get_menu_path_files(name=menu_path_mt100)) == 0
+    s.menu_paths.delete_menu_path(name=menu_path_mt100)
+
+
 test_general_files()
 test_get_object()
 test_post_dataframe()
+test_tags_and_metadata()
 test_post_get_model()
 test_big_data()
+test_more_than_100_files()
+
+s.run()

@@ -452,6 +452,10 @@ def define_list_method(
     async def list_elms(parent0Id: Optional[str] = None):
         return await list_elements(types, db, is_child_of, parent0Id, element_type)
 
+    @fast_api_app.post(get_plural(parents_url))
+    async def list_elms(parent0Id: Optional[str] = None):
+        return await list_elements(types, db, is_child_of, parent0Id, element_type)
+
 
 def define_create_method(
         fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, str],

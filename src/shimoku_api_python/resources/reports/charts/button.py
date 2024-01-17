@@ -8,7 +8,7 @@ class Button(Report):
     report_type = 'BUTTON'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         text='More Info',
         align='stretch',
         events={}

@@ -12,7 +12,7 @@ class Modal(Report):
     report_type = 'MODAL'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         open=False,
         reportIds=[],
         width=60,

@@ -8,6 +8,6 @@ class InputForm(Report):
     report_type = 'FORM'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         events={},
     )

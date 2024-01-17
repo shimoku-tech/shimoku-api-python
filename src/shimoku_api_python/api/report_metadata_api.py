@@ -1,5 +1,6 @@
 from typing import List, Dict, Optional
 from ..resources.app import App
+from ..resources.report import Report
 
 from ..async_execution_pool import ExecutionPoolContext, async_auto_call_manager
 
@@ -42,3 +43,13 @@ class ReportMetadataApi:
         :param uuid: uuid of the component
         """
         await self._app.delete_report(uuid=uuid)
+
+    @async_auto_call_manager(execute=True)
+    @logging_before_and_after(logging_level=logger.info)
+    async def get_component_data_set_links(self, uuid: str) -> List[Dict]:
+        """
+        :param uuid: uuid of the component
+        :return: list of data set links
+        """
+        report: Report = await self._app.get_report(uuid=uuid)
+        return [rds.cascade_to_dict() for rds in (await report.get_report_data_sets())]

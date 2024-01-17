@@ -6,7 +6,3 @@ logger = logging.getLogger(__name__)
 
 class HTML(Report):
     report_type = 'HTML'
-
-    default_properties = dict(
-        hash=None,
-    )

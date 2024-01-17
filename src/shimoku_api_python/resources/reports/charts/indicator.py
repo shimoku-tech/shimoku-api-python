@@ -14,7 +14,7 @@ class Indicator(Report):
     )
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         title=None,
         value=None,
         description=None,

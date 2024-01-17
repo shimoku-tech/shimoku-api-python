@@ -23,6 +23,7 @@ def initiate_shimoku():
             verbosity=verbose,
             async_execution=async_execution,
             local_port=local_port,
+            retry_attempts=1
         )
     elif mock:
         s = MockClient(
@@ -36,6 +37,7 @@ def initiate_shimoku():
             environment=environment,
             verbosity=verbose,
             async_execution=async_execution,
+            retry_attempts=1
         )
 
     return s

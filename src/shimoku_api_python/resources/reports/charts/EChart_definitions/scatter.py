@@ -88,6 +88,6 @@ async def scatter_with_effect_chart(
 
     await self._create_echart(
         options=common_options, fields=[(x, y)], data_mapping_to_tuples=data_mappings_to_tuples,
-        order=order, x_axis_names=x_axis_name, y_axis_names=y_axis_name, title=title,
-        rows_size=rows_size, cols_size=cols_size, padding=padding, option_modifications=option_modifications
+        order=order, title=title, rows_size=rows_size, cols_size=cols_size,
+        padding=padding, option_modifications=option_modifications
     )

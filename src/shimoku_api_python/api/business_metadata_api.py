@@ -216,7 +216,7 @@ class BusinessMetadataApi(ABC):
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
             return
-        await asyncio.gather(*[business.update_dashboard(name=d_name, order=i) for i, d_name in enumerate(boards)])
+        await asyncio.gather(*[business.update_dashboard(name=d_name, order=i+1) for i, d_name in enumerate(boards)])
 
     @logging_before_and_after(logging_level=logger.debug)
     async def _change_sub_paths_order(
@@ -232,22 +232,24 @@ class BusinessMetadataApi(ABC):
             return
         reports: List[Report] = await app.get_reports()
         sub_paths = [create_normalized_name(sub_path) for sub_path in sub_paths]
-        non_referenced_reports = [report for report in reports
-                                  if report['path'] is not None and
-                                  create_normalized_name(report['path']) not in sub_paths]
-        how_many_updates = len(non_referenced_reports)
+        non_referenced_reports = sorted(
+            [report for report in reports if report['path'] is not None and
+             create_normalized_name(report['path']) not in sub_paths],
+            key=lambda x: x['pathOrder']
+        )
+        for report in non_referenced_reports:
+            sub_path = report['path']
+            if sub_path not in sub_paths:
+                sub_paths.append(sub_path)
+
         tasks = []
         for i, sub_path in enumerate(sub_paths):
             _reports = [report for report in reports if (report['path'] is not None and
                         create_normalized_name(report['path']) == create_normalized_name(sub_path))]
-            how_many_updates += len(_reports)
             for report in _reports:
                 tasks.append(app.update_report(uuid=report['id'], pathOrder=i))
 
-        for report in non_referenced_reports:
-            tasks.append(app.update_report(uuid=report['id'], pathOrder=len(sub_paths)))
-
-        logger.info(f'Updating {how_many_updates} components from menu path {str(app)}')
+        logger.info(f'Updating {len(reports)} components from menu path {str(app)}')
 
         await asyncio.gather(*tasks)
 

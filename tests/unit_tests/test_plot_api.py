@@ -13,11 +13,12 @@ from copy import deepcopy
 
 from utils import initiate_shimoku
 
-s = initiate_shimoku()
-s.reuse_data_sets()
+shimoku_client = initiate_shimoku()
+# s.reuse_data_sets()
 workspace_id: str = getenv('BUSINESS_ID')
+mock: bool = getenv('MOCK') == 'TRUE'
 
-s.set_workspace(uuid=workspace_id)
+shimoku_client.set_workspace(uuid=workspace_id)
 # for menu_path in s.workspaces.get_workspace_menu_paths(uuid=workspace_id):
 #     s.menu_paths.delete_all_menu_path_activities(uuid=menu_path['id'])
 # s.workspaces.delete_all_workspace_menu_paths(uuid=workspace_id)
@@ -361,15 +362,15 @@ tree_data = [
 
 
 def table():
-    s.set_menu_path('test', 'table')
+    shimoku_client.set_menu_path('test', 'table')
 
-    s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', page_size_options=[3, 5, 10],
-                initial_sort_column='date', sort_descending=True, columns_options={'y': {'hideColumn': True}},
-                categorical_columns=['filtA', 'filtB'])
+    shimoku_client.plt.table(data=table_data, order=0, rows_size=3, title='Table test', page_size_options=[3, 5, 10],
+                             initial_sort_column='date', sort_descending=True, columns_options={'y': {'hideColumn': True}},
+                             categorical_columns=['filtA', 'filtB'])
 
 
 def table_with_labels():
-    s.set_menu_path('test', 'table-test-with-labels')
+    shimoku_client.set_menu_path('test', 'table-test-with-labels')
 
     data_ = [
         {'date': dt.date(2021, 1, 1), 'x': 5, 'y': round(100 * random.random(), 10),
@@ -465,7 +466,7 @@ def table_with_labels():
 
     ]
 
-    s.plt.table(
+    shimoku_client.plt.table(
         data=data_, order=0, rows_size=10,
         page_size=100,
         initial_sort_column="date",
@@ -529,14 +530,14 @@ def bar_with_filters():
 
     data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
 
-    s.activate_sequential_execution()
+    shimoku_client.activate_sequential_execution()
     filters: Dict = {
         'order': 0,
         'filter_cols': [
             'seccion', 'frecuencia', 'region',
         ],
     }
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data_1,
         x='fecha', y=y,
         menu_path=f'{menu_path}-bysize',
@@ -551,7 +552,7 @@ def bar_with_filters():
             'seccion', 'frecuencia', 'region',
         ],
     }
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data_1,
         x='fecha', y=y,
         menu_path=menu_path,
@@ -568,7 +569,7 @@ def bar_with_filters():
         ],
     }
 
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data_2,
         x='fecha', y=y,
         menu_path=menu_path,
@@ -585,18 +586,18 @@ def bar_with_filters():
     }
 
     data_3 = pd.concat([data_1, data_2])
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data_3,
         x='fecha', y=y,
         menu_path=menu_path,
         row=2, column=2,
         filters=filters,
     )
-    s.activate_async_execution()
+    shimoku_client.activate_async_execution()
 
     if delete_paths:
-        s.plt.delete_path(menu_path)
-        s.plt.delete_path(menu_path=f'{menu_path}-bysize')
+        shimoku_client.plt.delete_path(menu_path)
+        shimoku_client.plt.delete_path(menu_path=f'{menu_path}-bysize')
 
 
 def bar_with_filters_with_aggregation_methods():
@@ -629,7 +630,7 @@ def bar_with_filters_with_aggregation_methods():
                'filter_cols': ["Location", "Fav Food", 'Fav Drink']
                }
 
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data,
         x='date', y=['Restaurant rating', 'food rating'],
         menu_path=menu_path,
@@ -643,7 +644,7 @@ def bar_with_filters_with_aggregation_methods():
                'get_all': True
                }
 
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data,
         x='date', y=['Restaurant rating', 'food rating'],
         menu_path=menu_path,
@@ -659,7 +660,7 @@ def bar_with_filters_with_aggregation_methods():
                'get_all': ["Location", "Fav Drink"],
                }
 
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data,
         x='date', y=['Restaurant rating', 'food rating'],
         menu_path=menu_path,
@@ -669,29 +670,29 @@ def bar_with_filters_with_aggregation_methods():
         aggregation_func=np.mean,
     )
     if delete_paths:
-        s.plt.delete_path(menu_path=menu_path)
+        shimoku_client.plt.delete_path(menu_path=menu_path)
 
 
 def bar():
-    s.set_menu_path('test', 'bar-test')
+    shimoku_client.set_menu_path('test', 'bar-test')
     data_ = [{'date': dt.date(2021, 1, 1), 'x': 50000000, 'y': 5},
              {'date': dt.date(2021, 1, 2), 'x': 60000000, 'y': 5},
              {'date': dt.date(2021, 1, 3), 'x': 40000000, 'y': 5},
              {'date': dt.date(2021, 1, 4), 'x': 70000000, 'y': 5},
              {'date': dt.date(2021, 1, 5), 'x': 30000000, 'y': 5}]
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data=data_, x='date', y=['x', 'y'],
         x_axis_name='Date', y_axis_name='Revenue',
         order=0, rows_size=2,
         cols_size=12,
     )
-    s.plt.bar(data='main data', x='date', order=1)
+    shimoku_client.plt.bar(data='main data', x='date', order=1)
 
 
 def stacked_bar_chart():
-    s.set_menu_path('test-free-echarts', 'stacked-bar-chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'stacked-bar-chart')
 
-    s.plt.stacked_bar(
+    shimoku_client.plt.stacked_bar(
         data='stacked data', x="Segment",
         x_axis_name='Distribution and weight of the Drivers',
         order=0, show_values=['Price'],
@@ -699,9 +700,9 @@ def stacked_bar_chart():
 
 
 def stacked_horizontal_bar_chart():
-    s.set_menu_path('test-free-echarts', 'horizontal-stacked-bar-chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'horizontal-stacked-bar-chart')
 
-    s.plt.stacked_horizontal_bar(
+    shimoku_client.plt.stacked_horizontal_bar(
         data='stacked data', x="Segment", order=0,
         x_axis_name='Distribution and weight of the Drivers',
     )
@@ -709,7 +710,7 @@ def stacked_horizontal_bar_chart():
 
 def stacked_area_chart():
     print("test_area_chart")
-    s.set_menu_path('test-free-echarts', 'stacked-area-chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'stacked-area-chart')
     data_ = [
         {'Email': 120, 'Union Ads': 132, 'Video Ads': 101, 'Search Engine': 134, 'Weekday': 'Mon'},
         {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Tue'},
@@ -719,7 +720,7 @@ def stacked_area_chart():
         {'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234, 'Weekday': 'Sat'},
         {'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154, 'Weekday': 'Sun'},
     ]
-    s.plt.stacked_area(
+    shimoku_client.plt.stacked_area(
         data=data_,
         x="Weekday",
         x_axis_name='Visits per weekday',
@@ -728,15 +729,15 @@ def stacked_area_chart():
 
 
 def zero_centered_barchart():
-    s.set_menu_path('test', 'zero-centered-bar-test')
+    shimoku_client.set_menu_path('test', 'zero-centered-bar-test')
 
-    s.plt.zero_centered_bar(
+    shimoku_client.plt.zero_centered_bar(
         data='zero centered data',
         x='Name', y='y',
         order=0,
     )
 
-    s.plt.zero_centered_bar(
+    shimoku_client.plt.zero_centered_bar(
         data='zero centered data',
         x='Name', y=['y', 'z', 'a'],
         x_axis_name="Axis x",
@@ -748,7 +749,7 @@ def zero_centered_barchart():
 
 
 def horizontal_bar_chart():
-    s.set_menu_path('test', 'horizontal-bar-test')
+    shimoku_client.set_menu_path('test', 'horizontal-bar-test')
 
     data_ = [
         {'Name': 'a', 'y': 5, 'z': 3, 'a': 0.01},
@@ -757,9 +758,9 @@ def horizontal_bar_chart():
         {'Name': 'd', 'y': 5, 'z': 6, 'a': 0.01},
     ]
 
-    s.plt.horizontal_bar(data=data_, x='Name', y=['y', 'z'], order=0)
+    shimoku_client.plt.horizontal_bar(data=data_, x='Name', y=['y', 'z'], order=0)
 
-    s.plt.horizontal_bar(
+    shimoku_client.plt.horizontal_bar(
         data=data_,
         x='Name', y=['y', 'z', 'a'],
         x_axis_name="Axis x",
@@ -771,28 +772,28 @@ def horizontal_bar_chart():
 
 
 def line():
-    s.set_menu_path('test', 'line-test')
-    s.plt.line(data='main data', x='date', order=0, variant='minimal')
-    s.plt.line(data='main data', x='date', order=1, rows_size=2, cols_size=12)
+    shimoku_client.set_menu_path('test', 'line-test')
+    shimoku_client.plt.line(data='main data', x='date', order=0, variant='minimal')
+    shimoku_client.plt.line(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
 def area():
-    s.set_menu_path('test', 'area-test')
-    s.plt.area(data='main data', x='date', order=0, variant='clean')
-    s.plt.area(data='main data', x='date', order=1, rows_size=2, cols_size=12)
+    shimoku_client.set_menu_path('test', 'area-test')
+    shimoku_client.plt.area(data='main data', x='date', order=0, variant='clean')
+    shimoku_client.plt.area(data='main data', x='date', order=1, rows_size=2, cols_size=12)
 
 
 def scatter():
-    s.set_menu_path('test', 'scatter-test')
+    shimoku_client.set_menu_path('test', 'scatter-test')
 
-    s.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6, variant='clean')
+    shimoku_client.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6, variant='clean')
 
     # https://figshare.com/articles/dataset/Age_height_and_weight_raw_data/16920130
     df_ = pd.read_csv('../../data/scatter_test.csv')[
         ['AgeGroup1', 'AgeGroup2', 'AgeGroup3', 'AllGroupAge', 'WeightGroup1',
          'WeightGroup2', 'WeightGroup3', 'AllGroupWeight']]
 
-    s.plt.scatter(
+    shimoku_client.plt.scatter(
         data=df_, point_fields=[
             ('AgeGroup1', 'WeightGroup1'), ('AgeGroup2', 'WeightGroup2'),
             ('AgeGroup3', 'WeightGroup3'), ('AllGroupAge', 'AllGroupWeight')],
@@ -804,7 +805,7 @@ def scatter():
 
 
 def scatter_with_effect():
-    s.set_menu_path('test-free-echarts', 'scatter-with-effect-test')
+    shimoku_client.set_menu_path('test-free-echarts', 'scatter-with-effect-test')
 
     scatter_data_raw = [[161.2, 51.6], [167.5, 59.0], [159.5, 49.2], [157.0, 63.0], [155.8, 53.6],
                         [170.0, 59.0], [159.1, 47.6], [166.0, 69.8], [176.2, 66.8], [160.2, 75.2],
@@ -825,7 +826,7 @@ def scatter_with_effect():
         } for point in scatter_data_raw
     ]
 
-    s.plt.scatter_with_effect(
+    shimoku_client.plt.scatter_with_effect(
         data=scatter_source,
         x='x', y='y', order=0,
         x_axis_name='X axis',
@@ -836,7 +837,7 @@ def scatter_with_effect():
 
 
 def waterfall():
-    s.set_menu_path('test-free-echarts', 'waterfall-test')
+    shimoku_client.set_menu_path('test-free-echarts', 'waterfall-test')
 
     data = [
         {'x': 'Nov 1', 'income': 900, 'expenses': 0},
@@ -863,7 +864,7 @@ def waterfall():
         {'x': 'Nov 22', 'income': 5000, 'expenses': 30},
     ]
 
-    s.plt.waterfall(
+    shimoku_client.plt.waterfall(
         data=data, x='x',
         positive='income',
         negative='expenses',
@@ -871,7 +872,7 @@ def waterfall():
         variant='minimal'
     )
 
-    s.plt.waterfall(
+    shimoku_client.plt.waterfall(
         data=data, x='x',
         title='Waterfall with balance',
         positive='income',
@@ -882,8 +883,8 @@ def waterfall():
 
     random_waterfall_data = [{'x': f'day {i}', 'Income': random.randint(0, 100), 'Expenses': random.randint(0, 100)}
                              for i in range(500)]
-    s.update_data_sets()
-    s.plt.waterfall(
+    shimoku_client.update_data_sets()
+    shimoku_client.plt.waterfall(
         data=random_waterfall_data,
         x='x',
         title='Big random waterfall',
@@ -895,11 +896,11 @@ def waterfall():
         order=2,
         variant='clean'
     )
-    s.reuse_data_sets()
+    # s.reuse_data_sets()
 
 
 def line_with_confidence_area():
-    s.set_menu_path('test-free-echarts', 'Line with confidence area')
+    shimoku_client.set_menu_path('test-free-echarts', 'Line with confidence area')
 
     # Download the data
     res = requests.get(url='https://echarts.apache.org/examples/data/asset/data/confidence-band.json')
@@ -912,7 +913,7 @@ def line_with_confidence_area():
         dat['l'] = dat['l'] * 100
         dat['u'] = dat['u'] * 100
 
-    s.plt.line_with_confidence_area(
+    shimoku_client.plt.line_with_confidence_area(
         data=confidence_data,
         order=0,
         title='Confidence Band Chart',
@@ -925,27 +926,34 @@ def line_with_confidence_area():
 
 
 def funnel():
-    s.set_menu_path('test', 'funnel-test')
+    shimoku_client.set_menu_path('test', 'funnel-test')
 
-    s.plt.funnel(
+    shimoku_client.plt.funnel(
         data='funnel data', order=0, title='Funnel Chart',
         names='name', values='value',
     )
 
-    s.plt.funnel(
+    shimoku_client.plt.funnel(
         data='funnel data', names='name', values='value',
         order=1, rows_size=2, cols_size=12,
     )
 
 
 def heatmap():
-    s.set_menu_path('test', 'heatmap')
+    shimoku_client.set_menu_path('test', 'heatmap')
 
-    s.plt.heatmap(data=heatmap_data, x='xAxis', y='yAxis', values='value', order=0, calculate_color_range=True,
-                  variant='minimal')
+    shimoku_client.plt.heatmap(
+        data='heatmap data', x='xAxis', y='yAxis',
+        values='value', order=0, calculate_color_range=True,
+        variant='minimal'
+    )
 
-    s.plt.heatmap(data='heatmap data', x='xAxis', y='yAxis', values='value', order=1, continuous=True,
-                  title='Heatmap Chart', rows_size=2, cols_size=12, x_axis_name='xAxis', y_axis_name='yAxis')
+    shimoku_client.plt.heatmap(
+        data='heatmap data', x='xAxis', y='yAxis',
+        values='value', order=1, continuous=True,
+        title='Heatmap Chart', rows_size=2, cols_size=12,
+        x_axis_name='xAxis', y_axis_name='yAxis'
+    )
 
 
 def heatmap_with_filters():
@@ -1150,7 +1158,7 @@ def heatmap_with_filters():
         'order': 0,
         'filter_cols': ['Filter']
     }
-    s.plt.heatmap(
+    shimoku_client.plt.heatmap(
         data=data_, x='xAxis', y='yAxis', value='value',
         menu_path=menu_path,
         order=1,
@@ -1161,7 +1169,7 @@ def heatmap_with_filters():
         'filter_cols': ['Filter'],
         'get_all': True
     }
-    s.plt.heatmap(
+    shimoku_client.plt.heatmap(
         data=data_, x='xAxis', y='yAxis', value='value',
         menu_path=menu_path,
         order=3, rows_size=2, cols_size=12,
@@ -1170,21 +1178,21 @@ def heatmap_with_filters():
     )
 
     if delete_paths:
-        s.plt.delete(
+        shimoku_client.plt.delete(
             menu_path=menu_path,
             component_type='heatmap',
             row=1, column=1,
         )
-        s.plt.delete(
+        shimoku_client.plt.delete(
             menu_path=menu_path,
             component_type='heatmap',
             order=1
         )
-        s.plt.delete_path(menu_path)
+        shimoku_client.plt.delete_path(menu_path)
 
 
 def doughnut():
-    s.set_menu_path('test', 'doughnut')
+    shimoku_client.set_menu_path('test', 'doughnut')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
         {'value': 735, 'name': 'Direct'},
@@ -1192,8 +1200,8 @@ def doughnut():
         {'value': 484, 'name': 'Union Ads'},
         {'value': 300, 'name': 'Video Ads'}
     ]
-    s.plt.doughnut(data=data, names='date', values='x', order=0)
-    s.plt.doughnut(data=data_, names='name', values='value', order=1)
+    shimoku_client.plt.doughnut(data=data, names='date', values='x', order=0)
+    shimoku_client.plt.doughnut(data=data_, names='name', values='value', order=1)
 
     df = pd.read_csv('../../data/test_stack_distribution.csv')
 
@@ -1205,11 +1213,11 @@ def doughnut():
     value_columns = [col for col in df_transposed.columns if col != "index"]
     doughnut_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
     doughnut_data["name"] = df_transposed['index']
-    s.plt.doughnut(data=doughnut_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
+    shimoku_client.plt.doughnut(data=doughnut_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
 
 
 def rose():
-    s.set_menu_path('test', 'rose')
+    shimoku_client.set_menu_path('test', 'rose')
     data_ = [
         {'value': 1048, 'name': 'Search Engine'},
         {'value': 735, 'name': 'Direct'},
@@ -1217,8 +1225,8 @@ def rose():
         {'value': 484, 'name': 'Union Ads'},
         {'value': 300, 'name': 'Video Ads'}
     ]
-    s.plt.rose(data='main data', names='date', values='x', order=0)
-    s.plt.rose(data=data_, names='name', values='value', order=1)
+    shimoku_client.plt.rose(data='main data', names='date', values='x', order=0)
+    shimoku_client.plt.rose(data=data_, names='name', values='value', order=1)
 
     df = pd.read_csv('../../data/test_stack_distribution.csv')
 
@@ -1230,11 +1238,11 @@ def rose():
     value_columns = [col for col in df_transposed.columns if col != "index"]
     rose_data["value"] = df_transposed[value_columns].apply(lambda row: sum(row), axis=1)
     rose_data["name"] = df_transposed['index']
-    s.plt.rose(data=rose_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
+    shimoku_client.plt.rose(data=rose_data, values='value', names='name', order=2, rows_size=3, cols_size=6)
 
 
 def shimoku_gauges():
-    s.set_menu_path('test-free-echarts', 'shimoku-gauges')
+    shimoku_client.set_menu_path('test-free-echarts', 'shimoku-gauges')
     df = pd.read_csv('../../data/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
@@ -1247,34 +1255,34 @@ def shimoku_gauges():
     gauges_data["name"] = df_transposed['index']
     gauges_data["color"] = range(1, len(df_transposed) + 1)
 
-    order = s.plt.shimoku_gauges_group(
+    order = shimoku_client.plt.shimoku_gauges_group(
         gauges_data=gauges_data, order=0,
         cols_size=12, rows_size=3,
         calculate_percentages=True,
     )
 
-    s.plt.shimoku_gauge(
+    shimoku_client.plt.shimoku_gauge(
         value=-60, order=order, color=1
     )
 
     order += 1
-    s.plt.shimoku_gauge(
+    shimoku_client.plt.shimoku_gauge(
         value=60, order=order,
         name="test", color="status-error"
     )
 
     order += 1
-    s.plt.shimoku_gauge(
+    shimoku_client.plt.shimoku_gauge(
         value=-90, order=order,
         name="test", color='#FF0000'
     )
 
 
 def speed_gauge():
-    s.set_menu_path('test', 'speed-gauge-test')
+    shimoku_client.set_menu_path('test', 'speed-gauge-test')
 
     # s.plt.iframe('https://www.marca.com', order=0)
-    s.plt.speed_gauge(name='Third', value=60, min_value=0, max_value=70, order=0)
+    shimoku_client.plt.speed_gauge(name='Third', value=60, min_value=0, max_value=70, order=0)
 
 
 # TODO implement
@@ -1283,7 +1291,7 @@ def change_report_type():
 
 
 def ring_gauge():
-    s.set_menu_path('test', 'ring-gauge-test')
+    shimoku_client.set_menu_path('test', 'ring-gauge-test')
     data_ = [
         {
             "value": 60,
@@ -1306,38 +1314,38 @@ def ring_gauge():
             "name": "First"
         }
     ]
-    s.plt.ring_gauge(names='date', values='x', order=0)
-    s.plt.ring_gauge(
+    shimoku_client.plt.ring_gauge(names='date', values='x', order=0)
+    shimoku_client.plt.ring_gauge(
         data=data_, names='name', values='value',
         order=1, rows_size=2, cols_size=12,
     )
 
 
 def sunburst():
-    s.set_menu_path('test', 'sunburst')
+    shimoku_client.set_menu_path('test', 'sunburst')
     # Using the data set from the tree test
-    s.plt.sunburst(data='tree_data', order=0)
-    s.plt.sunburst(data=sunburst_data, order=1)
+    shimoku_client.plt.sunburst(data='tree_data', order=0)
+    shimoku_client.plt.sunburst(data=sunburst_data, order=1)
 
 
 def tree():
-    s.set_menu_path('test', 'tree-test')
+    shimoku_client.set_menu_path('test', 'tree-test')
 
-    s.plt.tree(data=sunburst_data, order=0)
-    s.plt.tree(data='tree_data', order=1, rows_size=4, cols_size=12, title='Tree', radial=True)
-    s.plt.tree(data='tree_data', order=2, rows_size=2, cols_size=12, title='Tree', vertical=True)
-    s.plt.tree(data='tree_data', order=3, rows_size=4, cols_size=12, title='Tree', radial=True, vertical=True)
+    shimoku_client.plt.tree(data=sunburst_data, order=0)
+    shimoku_client.plt.tree(data='tree_data', order=1, rows_size=4, cols_size=12, title='Tree', radial=True)
+    shimoku_client.plt.tree(data='tree_data', order=2, rows_size=2, cols_size=12, title='Tree', vertical=True)
+    shimoku_client.plt.tree(data='tree_data', order=3, rows_size=4, cols_size=12, title='Tree', radial=True, vertical=True)
 
 
 def treemap():
-    s.set_menu_path('test', 'treemap-test')
+    shimoku_client.set_menu_path('test', 'treemap-test')
     # Using the data set from the tree test
-    s.plt.treemap(data=tree_data, order=0)
-    s.plt.treemap(data=sunburst_data, order=1)
+    shimoku_client.plt.treemap(data=tree_data, order=0)
+    shimoku_client.plt.treemap(data=sunburst_data, order=1)
 
 
 def radar():
-    s.set_menu_path('test', 'radar-test')
+    shimoku_client.set_menu_path('test', 'radar-test')
     data_ = [
         {'name': 'Matcha Latte', 'value1': 78, 'value2': 6, 'value3': 85},
         {'name': 'Milk Tea', 'value1': 17, 'value2': 10, 'value3': 63},
@@ -1346,7 +1354,7 @@ def radar():
     ]
     # s.plt.radar(data=data, names='date', order=0, cols_size=6)
 
-    s.plt.radar(data=data_, names='name', order=1, rows_size=2, cols_size=6)
+    shimoku_client.plt.radar(data=data_, names='name', order=1, rows_size=2, cols_size=6)
 
     data_ = deepcopy(data_)
     data_[0]['max'] = 90
@@ -1358,7 +1366,7 @@ def radar():
 
 
 def indicator():
-    s.set_menu_path('test', 'indicators')
+    shimoku_client.set_menu_path('test', 'indicators')
     data_ = [
         {
             "description": "",
@@ -1384,8 +1392,8 @@ def indicator():
         },
     ]
 
-    order = s.plt.indicator(data=data_, order=0)
-    order = s.plt.indicator(data=data_ + data_[2:], order=order)
+    order = shimoku_client.plt.indicator(data=data_, order=0)
+    order = shimoku_client.plt.indicator(data=data_ + data_[2:], order=order)
 
     data_ = [{
         "color": "success",
@@ -1422,25 +1430,25 @@ def indicator():
         "bigIcon": "Line/calendar",
     }
     ]
-    s.plt.indicator(data=data_, order=order, rows_size=1, cols_size=12)
+    shimoku_client.plt.indicator(data=data_, order=order, rows_size=1, cols_size=12)
 
-    s.set_menu_path('test', 'indicators-vertical')
-    order = s.plt.indicator(
+    shimoku_client.set_menu_path('test', 'indicators-vertical')
+    order = shimoku_client.plt.indicator(
         data=data_ + data_,
         order=0, rows_size=1, cols_size=6,
         vertical="Title of the indicators",
     )
-    order = s.plt.indicator(
+    order = shimoku_client.plt.indicator(
         data=data_,
         order=order, rows_size=2, cols_size=4,
         vertical=True,
     )
-    order = s.plt.indicator(
+    order = shimoku_client.plt.indicator(
         data=data_[0],
         order=order, rows_size=8, cols_size=2,
         vertical="Title of the indicator",
     )
-    s.plt.indicator(
+    shimoku_client.plt.indicator(
         data=data_[0],
         order=order, rows_size=8, cols_size=12,
         vertical=True,
@@ -1448,8 +1456,8 @@ def indicator():
 
 
 def color_by_value_indicators():
-    s.set_menu_path('test', 'indicators-by-value')
-    s.plt.indicator(
+    shimoku_client.set_menu_path('test', 'indicators-by-value')
+    shimoku_client.plt.indicator(
         data=[{
             'align': 'center',
             'title': 'Positive case',
@@ -1471,15 +1479,15 @@ def color_by_value_indicators():
 
 
 def predictive_line():
-    s.set_menu_path('test', 'predictive-line-test')
-    s.plt.predictive_line(
+    shimoku_client.set_menu_path('test', 'predictive-line-test')
+    shimoku_client.plt.predictive_line(
         data='main data', x='date', min_value_mark=3, max_value_mark=4,
         order=1, rows_size=2, cols_size=12,
     )
 
 
 def sankey():
-    s.set_menu_path('test', 'sankey-test')
+    shimoku_client.set_menu_path('test', 'sankey-test')
     data_ = [
         {
             "source": "a",
@@ -1512,11 +1520,11 @@ def sankey():
             "value": 2
         }
     ]
-    s.plt.sankey(data=data_, sources='source', targets='target', values='value', order=0)
+    shimoku_client.plt.sankey(data=data_, sources='source', targets='target', values='value', order=0)
 
 
 def pie():
-    s.set_menu_path('test', 'pie-test')
+    shimoku_client.set_menu_path('test', 'pie-test')
     data_ = [
         {'name': 'Matcha Latte', 'value': 78},
         {'name': 'Milk Tea', 'value': 17},
@@ -1524,33 +1532,33 @@ def pie():
         {'name': 'Walnut Brownie', 'value': 9},
     ]
 
-    s.plt.pie(data='main data', names='date', values='x', order=0)
-    s.plt.pie(data=data_, names='name', values='value', order=1, rows_size=2, cols_size=12)
+    shimoku_client.plt.pie(data='main data', names='date', values='x', order=0)
+    shimoku_client.plt.pie(data=data_, names='name', values='value', order=1, rows_size=2, cols_size=12)
 
 
 def iframe():
-    s.set_menu_path('test', 'iframe-test')
+    shimoku_client.set_menu_path('test', 'iframe-test')
     url = 'https://www.marca.com/'
-    s.plt.iframe(url=url, order=0)
-    s.plt.iframe(url=url, order=1, height=160 * 8, cols_size=6, padding='0,3,0,3')
+    shimoku_client.plt.iframe(url=url, order=0)
+    shimoku_client.plt.iframe(url=url, order=1, height=160 * 8, cols_size=6, padding='0,3,0,3')
 
 
 def html():
-    s.set_menu_path('test', 'html-test')
+    shimoku_client.set_menu_path('test', 'html-test')
     html = (
         "<p style='background-color: #daf4f0';>"
         "Comparing the results of predictions that happened previous "
         "periods vs reality, so that you can measure the accuracy of our predictor"
         "</p>"
     )
-    s.plt.html(html=html, order=0)
-    s.plt.html(html=html, order=1, rows_size=2, cols_size=12)
+    shimoku_client.plt.html(html=html, order=0)
+    shimoku_client.plt.html(html=html, order=1, rows_size=2, cols_size=12)
 
 
 def bentobox():
-    s.set_menu_path('test', 'bentobox-test')
+    shimoku_client.set_menu_path('test', 'bentobox-test')
 
-    s.plt.set_bentobox(cols_size=8, rows_size=3)
+    shimoku_client.plt.set_bentobox(cols_size=8, rows_size=3)
 
     data_ = [
         {
@@ -1559,11 +1567,11 @@ def bentobox():
             "value": "Abierto",
         },
     ]
-    s.plt.indicator(data=data_, order=0, rows_size=10, cols_size=12)
-    s.plt.indicator(data=data_, order=1, rows_size=10, cols_size=12)
-    s.plt.bar(data='main data', x='date', y=['x', 'y'], order=2, rows_size=26, cols_size=24)
+    shimoku_client.plt.indicator(data=data_, order=0, rows_size=10, cols_size=12)
+    shimoku_client.plt.indicator(data=data_, order=1, rows_size=10, cols_size=12)
+    shimoku_client.plt.bar(data='main data', x='date', y=['x', 'y'], order=2, rows_size=26, cols_size=24)
 
-    s.plt.pop_out_of_bentobox()
+    shimoku_client.plt.pop_out_of_bentobox()
 
 
 def cohorts():
@@ -1574,7 +1582,7 @@ def cohorts():
 
 def free_echarts():
     # https://echarts.apache.org/examples/en/editor.html?c=area-time-axis
-    s.set_menu_path('test-free-echarts', 'raw')
+    shimoku_client.set_menu_path('test-free-echarts', 'raw')
     raw_options = """
         {title: {
             text: 'Stacked Area Chart'
@@ -1658,7 +1666,7 @@ def free_echarts():
           ]
         }
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=0, rows_size=2, cols_size=12,
     )
@@ -1743,7 +1751,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=1, rows_size=2, cols_size=12,
     )
@@ -1777,7 +1785,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=2, rows_size=2, cols_size=12,
     )
@@ -1856,7 +1864,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=3, rows_size=2, cols_size=12,
     )
@@ -1866,7 +1874,7 @@ def free_echarts():
     raw_options = """
         {      title: {        text: 'Accumulated Waterfall Chart'      },      tooltip: {        trigger: 'axis',        axisPointer: {          type: 'shadow'        },      },      legend: {        data: ['Expenses', 'Income']      },      grid: {        left: '3%',        right: '4%',        bottom: '3%',        containLabel: true      },      xAxis: {        type: 'category',        data:  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]      },      yAxis: {        type: 'value'      },      series: [        {          name: 'Placeholder',          type: 'bar',          stack: 'Total',          itemStyle: {            borderColor: 'transparent',            color: 'transparent'          },          emphasis: {            itemStyle: {              borderColor: 'transparent',              color: 'transparent'            }          },          data: [0, 900, 1245, 1530, 1376, 1376, 1511, 1689, 1856, 1495, 1292]        },        {          name: 'Income',          type: 'bar',          stack: 'Total',          label: {            show: true,            position: 'top'          },          data: [900, 345, 393, 0, 0, 135, 178, 286, 0, 0, 0]        },        {          name: 'Expenses',          type: 'bar',          stack: 'Total',          label: {            show: true,            position: 'bottom'          },          data: [0, 0, 0, 108, 154, 0, 0, 0, 119, 361, 203]        }      ]    };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=4, rows_size=2, cols_size=12,
     )
@@ -1909,7 +1917,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=5, rows_size=2, cols_size=12,
     )
@@ -1959,7 +1967,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=6, rows_size=4, cols_size=8,
     )
@@ -2000,7 +2008,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=7, rows_size=3, cols_size=8,
     )
@@ -2058,7 +2066,7 @@ def free_echarts():
       ]
     };
     """
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         raw_options=raw_options,
         order=8, rows_size=3, cols_size=8,
     )
@@ -2068,7 +2076,7 @@ def free_echarts():
     #  https://echarts.apache.org/examples/en/editor.html?c=custom-ohlc
     #  https://echarts.apache.org/examples/en/editor.html?c=scatter-clustering
 
-    s.set_menu_path('test-free-echarts')
+    shimoku_client.set_menu_path('test-free-echarts')
 
     data = [
         {'product': 'Matcha Latte', '2015': 43.3, '2016': 85.8, '2017': 93.7},
@@ -2085,7 +2093,7 @@ def free_echarts():
                    {'type': 'bar', 'data': '#set_data#'},
                    {'type': 'bar', 'data': '#set_data#'}]
     }
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=['product', '2015', '2016', '2017'],
         order=0, rows_size=2, cols_size=12,
@@ -2167,7 +2175,7 @@ def free_echarts():
         'dataset': {'source': '#set_data#'}
     }
 
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['Weekday', 'Email', 'Union Ads', 'Video Ads', 'Search Engine']],
         order=1, rows_size=2, cols_size=12,
@@ -2238,7 +2246,7 @@ def free_echarts():
         'dataset': {'source': '#set_data#'}
     }
 
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['Type', 'Placeholder', 'Life Cost']],
         order=2, rows_size=2, cols_size=6,
@@ -2299,7 +2307,7 @@ def free_echarts():
         'dataset': {'source': '#set_data#'}
     }
 
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['Weekday', 'A', 'B', 'C']],
         order=3, rows_size=2, cols_size=6,
@@ -2346,7 +2354,7 @@ def free_echarts():
         ],
         'dataset': {'source': '#set_data#'}
     }
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['name', 'value']],
         order=4, rows_size=2, cols_size=6,
@@ -2369,7 +2377,7 @@ def free_echarts():
         'series': [{'type': 'bar'}, {'type': 'line'}],
         'dataset': {'source': '#set_data#'}
     }
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['product', '2015', '2016']],
         order=5, rows_size=2, cols_size=6,
@@ -2449,7 +2457,7 @@ def free_echarts():
         ],
         'dataset': {'source': '#set_data#'}
     }
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['x', 'y', 'x2', 'y2']],
         order=6, rows_size=2, cols_size=7,
@@ -2469,7 +2477,7 @@ def free_echarts():
         'series': [{'type': 'bar'}, {'type': 'line'}, {'type': 'bar'}],
         'dataset': {'source': '#set_data#'}
     }
-    s.plt.free_echarts(
+    shimoku_client.plt.free_echarts(
         data=data,
         options=options, fields=[['product', '2015', '2016', '2017']],
         order=7, rows_size=2, cols_size=5,
@@ -2676,12 +2684,12 @@ def free_echarts():
 
 def input_form():
     """ Test input form """
-    s.set_menu_path('Input forms')
-    s.plt.input_form(order=0, options=input_form_data)
+    shimoku_client.set_menu_path('Input forms')
+    shimoku_client.plt.input_form(order=0, options=input_form_data)
 
 
 def dynamic_conditional_and_auto_send_input_form():
-    s.set_menu_path('Input forms', 'dynamic conditional and auto send')
+    shimoku_client.set_menu_path('Input forms', 'dynamic conditional and auto send')
 
     form_groups = {
         f'form group {i}': [{
@@ -2774,7 +2782,7 @@ def dynamic_conditional_and_auto_send_input_form():
             }
         ]
 
-    s.plt.generate_input_form_groups(
+    shimoku_client.plt.generate_input_form_groups(
         order=0, form_groups=form_groups,
         dynamic_sequential_show=True
     )
@@ -2783,7 +2791,7 @@ def dynamic_conditional_and_auto_send_input_form():
         'Personal information': form_groups['Personal information'],
         'Other data': form_groups['Other data'],
     }
-    s.plt.generate_input_form_groups(
+    shimoku_client.plt.generate_input_form_groups(
         order=1, form_groups=form_groups,
         auto_send=True,
         dynamic_sequential_show=True,
@@ -2791,20 +2799,20 @@ def dynamic_conditional_and_auto_send_input_form():
 
 
 def get_input_forms():
-    s.set_menu_path('Input forms', 'get input forms')
-    s.plt.input_form(order=0, options=input_form_data)
-    rs: List[Dict] = s.plt.get_input_forms()
+    shimoku_client.set_menu_path('Input forms', 'get input forms')
+    shimoku_client.plt.input_form(order=0, options=input_form_data)
+    rs: List[Dict] = shimoku_client.plt.get_input_forms()
     print(rs)
     assert rs
 
 
 def tabs():
-    s.set_menu_path("test-tabs")
+    shimoku_client.set_menu_path("test-tabs")
     # s.plt.clear_menu_path()
-    s.plt.set_shared_data(dfs={'main data': data})
+    shimoku_client.plt.set_shared_data(dfs={'main data': data})
 
     def _test_bentobox():
-        with s.plt.set_bentobox(cols_size=8, rows_size=3):
+        with shimoku_client.plt.set_bentobox(cols_size=8, rows_size=3):
 
             data_indic = [
                 {
@@ -2813,26 +2821,26 @@ def tabs():
                     "value": "Abierto",
                 },
             ]
-            s.plt.indicator(
+            shimoku_client.plt.indicator(
                 data=data_indic,
                 order=0, rows_size=10, cols_size=12,
             )
 
-            s.plt.indicator(
+            shimoku_client.plt.indicator(
                 data=data_indic,
                 order=1, rows_size=10, cols_size=12,
             )
 
-            s.plt.bar(
+            shimoku_client.plt.bar(
                 data='main data', x='date',
                 order=2, rows_size=26, cols_size=24,
             )
 
-    with s.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0):
+    with shimoku_client.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0):
         _test_bentobox()
 
-        s.plt.change_current_tab("Table")
-        s.plt.table(
+        shimoku_client.plt.change_current_tab("Table")
+        shimoku_client.plt.table(
             title="Test-table",
             data=table_data,
             order=0,
@@ -2841,11 +2849,11 @@ def tabs():
             search=True,
         )
 
-        s.plt.change_current_tab("line test")
-        s.plt.line(data='main data', x='date', order=0)
+        shimoku_client.plt.change_current_tab("line test")
+        shimoku_client.plt.line(data='main data', x='date', order=0)
 
-        s.plt.change_current_tab("Bar 1")
-        s.plt.bar(
+        shimoku_client.plt.change_current_tab("Bar 1")
+        shimoku_client.plt.bar(
             data='main data', x='date',
             x_axis_name='Date',
             y_axis_name='Revenue',
@@ -2853,8 +2861,8 @@ def tabs():
             cols_size=12,
         )
 
-        s.plt.change_current_tab("Input Form")
-        s.plt.input_form(order=0, options=input_form_data)
+        shimoku_client.plt.change_current_tab("Input Form")
+        shimoku_client.plt.input_form(order=0, options=input_form_data)
 
         indicators_data = {
             "description": "",
@@ -2868,46 +2876,46 @@ def tabs():
             "value": "INDICATOR CHANGED!",
             "color": "main"
         }
-        s.plt.change_current_tab("Indicators 2")
-        s.plt.indicator(data=indicators_data_2, order=0)
-        s.plt.change_current_tab("Indicators 1")
-        s.plt.indicator(data=indicators_data, order=0)
+        shimoku_client.plt.change_current_tab("Indicators 2")
+        shimoku_client.plt.indicator(data=indicators_data_2, order=0)
+        shimoku_client.plt.change_current_tab("Indicators 1")
+        shimoku_client.plt.indicator(data=indicators_data, order=0)
 
-    with s.plt.set_tabs_index(
+    with shimoku_client.plt.set_tabs_index(
         tabs_index=("Deepness 1", "Bento box"), order=1,
         parent_tabs_index=("Deepness 0", "Indicators 1"),
         sticky=False, just_labels=True):
         _test_bentobox()
-        s.plt.change_current_tab("Indicators 1")
+        shimoku_client.plt.change_current_tab("Indicators 1")
 
     for i in range(2, 5):
-        with s.plt.set_tabs_index(
+        with shimoku_client.plt.set_tabs_index(
             (f"Deepness {i}", "Indicators 2"), order=1,
             parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
             sticky=False, just_labels=True
         ):
-            s.plt.indicator(data=indicators_data_2, order=0)
-            s.plt.change_current_tab("Indicators 1")
-            s.plt.indicator(data=indicators_data, order=0)
+            shimoku_client.plt.indicator(data=indicators_data_2, order=0)
+            shimoku_client.plt.change_current_tab("Indicators 1")
+            shimoku_client.plt.indicator(data=indicators_data, order=0)
 
-    with s.plt.set_tabs_index(
+    with shimoku_client.plt.set_tabs_index(
         ("Bar deep 1", "Bar 1"), order=1,
         parent_tabs_index=("Deepness 0", "Bar 1"),
         sticky=False, just_labels=True
     ):
-        s.plt.bar(
+        shimoku_client.plt.bar(
             data='main data', x='date',
             x_axis_name='Date',
             y_axis_name='Revenue',
             order=0, rows_size=2,
             cols_size=12,
         )
-    with s.plt.set_tabs_index(
+    with shimoku_client.plt.set_tabs_index(
         ("Bar deep 2", "Bar 2"), order=1,
         parent_tabs_index=("Bar deep 1", "Bar 1"),
         sticky=False, just_labels=True
     ):
-        s.plt.bar(
+        shimoku_client.plt.bar(
             data='main data',
             x='date', y='y',
             x_axis_name='Date',
@@ -2915,16 +2923,16 @@ def tabs():
             order=2, rows_size=2,
             cols_size=12,
         )
-        s.plt.change_current_tab("Line 1")
-        s.plt.line(
+        shimoku_client.plt.change_current_tab("Line 1")
+        shimoku_client.plt.line(
             data='main data', x='date',
             x_axis_name='Date',
             y_axis_name='Revenue',
             order=0, rows_size=2,
             cols_size=12,
         )
-        s.plt.change_current_tab("Line 2")
-        s.plt.line(
+        shimoku_client.plt.change_current_tab("Line 2")
+        shimoku_client.plt.line(
             data='main data', x='date',
             x_axis_name='Date',
             y_axis_name='Revenue',
@@ -2951,16 +2959,16 @@ def tabs():
 
 
 def gauge_indicators():
-    s.set_menu_path('test-free-echarts', 'gauge-indicator')
+    shimoku_client.set_menu_path('test-free-echarts', 'gauge-indicator')
 
-    s.plt.gauge_indicator(
+    shimoku_client.plt.gauge_indicator(
         order=0,
         value=83,
         description='Síntomas coincidientes | Mareo, Dolor cervical',
         title='Sobrecarga muscular en cervicales y espalda',
     )
 
-    s.plt.gauge_indicator(
+    shimoku_client.plt.gauge_indicator(
         order=2,
         value=31, color=2,
         description='Síntomas coincidientes | Dolor cervical',
@@ -2969,7 +2977,7 @@ def gauge_indicators():
 
 
 def annotation_chart():
-    s.set_menu_path('test', 'Annotation Chart')
+    shimoku_client.set_menu_path('test', 'Annotation Chart')
     annotatted_data = [
         {'date': '2021-01-01', 'x': 1},
         {'date': '2021-01-02', 'x': 2},
@@ -2983,7 +2991,7 @@ def annotation_chart():
         {'date': '2021-01-10', 'x': 10},
     ]
 
-    s.plt.annotated_chart(data=[annotatted_data], x='date', y='x', order=0)
+    shimoku_client.plt.annotated_chart(data=[annotatted_data], x='date', y='x', order=0)
 
     data1 = [
         {'date': '2022-01-01', 'Síntoma [1]': 3},
@@ -3005,7 +3013,7 @@ def annotation_chart():
         {'date': '2022-08-01', 'Síntoma [2]': 8},
     ]
 
-    s.plt.annotated_chart(
+    shimoku_client.plt.annotated_chart(
         order=7, x='date', y=['Síntoma [1]', 'Síntoma [2]'], annotations='Annotation',
         data=[data1, data2], slider_config={'max': 100, 'defaultValue': 50},
         slider_marks=[('Low', 15), ('Medium', 50), ('High', 85)]
@@ -3013,7 +3021,7 @@ def annotation_chart():
 
 
 def rainfall_area():
-    s.set_menu_path('test-free-echarts', 'rainfall-area')
+    shimoku_client.set_menu_path('test-free-echarts', 'rainfall-area')
     how_many = 100
 
     data = []
@@ -3023,7 +3031,7 @@ def rainfall_area():
                      'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)],
                      'rainfall+2': rainfall[(i + 202) % len(flow)]})
 
-    s.plt.top_bottom_area(
+    shimoku_client.plt.top_bottom_area(
         data=data, order=0,
         x='Date', top_names=['flow', 'flow+1', 'flow+2'], bottom_names=['rainfall', 'rainfall+1', 'rainfall+2'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
@@ -3034,7 +3042,7 @@ def rainfall_area():
     for i in range(0, len(flow), max(1, len(flow) // how_many)):
         data.append({'Date': time[i], 'flow': flow[i], 'rainfall': rainfall[i]})
 
-    s.plt.top_bottom_area(
+    shimoku_client.plt.top_bottom_area(
         data=data, order=1,
         x='Date', top_names=['flow'], bottom_names=['rainfall'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
@@ -3043,7 +3051,7 @@ def rainfall_area():
 
 
 def rainfall_line():
-    s.set_menu_path('test-free-echarts', 'rainfall-line')
+    shimoku_client.set_menu_path('test-free-echarts', 'rainfall-line')
     how_many = 100
 
     data = []
@@ -3053,7 +3061,7 @@ def rainfall_line():
                      'rainfall': rainfall[i], 'rainfall+1': rainfall[(i + 101) % len(flow)],
                      'rainfall+2': rainfall[(i + 202) % len(flow)]})
 
-    s.plt.top_bottom_line(
+    shimoku_client.plt.top_bottom_line(
         data=data, order=0,
         x='Date', top_names=['flow', 'flow+1', 'flow+2'], bottom_names=['rainfall', 'rainfall+1', 'rainfall+2'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
@@ -3063,7 +3071,7 @@ def rainfall_line():
     for i in range(0, len(flow), max(1, len(flow) // how_many)):
         data.append({'Date': time[i], 'flow': flow[i], 'rainfall': rainfall[i]})
 
-    s.plt.top_bottom_line(
+    shimoku_client.plt.top_bottom_line(
         data=data, order=1,
         x='Date', top_names=['flow'], bottom_names=['rainfall'],
         title='rainfall and flow', x_axis_name='Date', top_axis_name='flow(m³/s)', bottom_axis_name='rainfall(mm)',
@@ -3089,25 +3097,25 @@ def modal():
         "</div>"
         "</div>"
     )
-    s.set_menu_path('Modal Test')
+    shimoku_client.set_menu_path('Modal Test')
 
-    with s.plt.set_modal('Test modal', open_by_default=True, width=70, height=60):
-        s.plt.html(html=prediction_header, order=0)
+    with shimoku_client.plt.set_modal('Test modal', open_by_default=True, width=70, height=60):
+        shimoku_client.plt.html(html=prediction_header, order=0)
 
-        with s.plt.set_tabs_index(('Test', 'Tab 1'), order=1):
-            s.plt.table(data=table_data, order=0, rows_size=3,
-                        title='Table test', categorical_columns=['filtA', 'filtB'])
-            s.plt.html(html=prediction_header, order=1)
+        with shimoku_client.plt.set_tabs_index(('Test', 'Tab 1'), order=1):
+            shimoku_client.plt.table(data=table_data, order=0, rows_size=3,
+                                     title='Table test', categorical_columns=['filtA', 'filtB'])
+            shimoku_client.plt.html(html=prediction_header, order=1)
 
-    s.plt.html(html=prediction_header, order=0)
-    with s.plt.set_tabs_index(('TestNoModal', 'Table'), order=0):
-        s.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
+    shimoku_client.plt.html(html=prediction_header, order=0)
+    with shimoku_client.plt.set_tabs_index(('TestNoModal', 'Table'), order=0):
+        shimoku_client.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
 
-    s.plt.modal_button(order=1, modal='Test modal', label='Open modal')
+    shimoku_client.plt.modal_button(order=1, modal='Test modal', label='Open modal')
 
 
 def bar_and_line_chart():
-    s.set_menu_path('test-free-echarts', 'Bar and line chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'Bar and line chart')
 
     _data = [
         {'day': 'Mon', 'Evaporation': 2.0, 'Precipitation': 2.6, 'Temperature': 2.0},
@@ -3119,7 +3127,7 @@ def bar_and_line_chart():
         {'day': 'Sun', 'Evaporation': 135.6, 'Precipitation': 175.6, 'Temperature': 20.3},
     ]
 
-    s.plt.line_and_bar_charts(
+    shimoku_client.plt.line_and_bar_charts(
         data=_data, order=0,
         x='day', bar_names=['Evaporation', 'Precipitation'], line_names=['Temperature'],
         title='rainfall and temperature', x_axis_name='Day', line_axis_name='Temperature',
@@ -3133,7 +3141,7 @@ def bar_and_line_chart():
     aux_data['Evaporation'] = aux_data['Evaporation'] * 42
     aux_data['Precipitation'] = aux_data['Precipitation'] * 42
 
-    s.plt.line_and_bar_charts(
+    shimoku_client.plt.line_and_bar_charts(
         data=aux_data, order=1,
         x='day', bar_names=['Evaporation', 'Precipitation'], line_names=['Temperature'],
         title='rainfall and temperature', x_axis_name='Day', line_axis_name='Temperature',
@@ -3147,7 +3155,7 @@ def bar_and_line_chart():
     aux_data['Evaporation'] = aux_data['Evaporation'] * 542
     aux_data['Precipitation'] = aux_data['Precipitation'] * 542
 
-    s.plt.line_and_bar_charts(
+    shimoku_client.plt.line_and_bar_charts(
         data=aux_data, order=2,
         x='day', bar_names=['Evaporation', 'Precipitation'], line_names=['Temperature'],
         title='rainfall and temperature', x_axis_name='Day', line_axis_name='Temperature',
@@ -3171,16 +3179,16 @@ def segmented_line_chart():
         } for i in range(len(data))
     ])
 
-    s.set_menu_path('test-free-echarts', 'Segmented Line Chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'Segmented Line Chart')
     marking_lines = [0, 50, 100, 150, 200, 300]
     range_colors = ['green', 'yellow', 'orange', 'red', 'purple', 'maroon']
     x_axis_name = 'Date'
     y_axis_name = 'AQI'
 
-    s.plt.segmented_line(data=df, order=0, x='date', y=['y', 'y_displaced', 'y_multiplied'],
-                         marking_lines=marking_lines)
+    shimoku_client.plt.segmented_line(data=df, order=0, x='date', y=['y', 'y_displaced', 'y_multiplied'],
+                                      marking_lines=marking_lines)
 
-    s.plt.segmented_line(
+    shimoku_client.plt.segmented_line(
         data=df, order=1, x='date', y='y', title="Beijing's Air Quality Index",
         marking_lines=marking_lines, range_colors=range_colors,
         x_axis_name=x_axis_name, y_axis_name=y_axis_name,
@@ -3189,25 +3197,25 @@ def segmented_line_chart():
 
 
 def segmented_area_chart():
-    s.set_menu_path('test-free-echarts', 'Segmented Area Chart')
+    shimoku_client.set_menu_path('test-free-echarts', 'Segmented Area Chart')
     labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
               'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
-    s.plt.segmented_area(
+    shimoku_client.plt.segmented_area(
         data='noise', order=1, x='x', y='y', threshold=0.7,
         top_area=True, default_color=(0, 0, 255), labels=labels
     )
-    s.plt.segmented_area(
+    shimoku_client.plt.segmented_area(
         data='noise', order=2, x='x', y='y', threshold=0.7, labels=labels
     )
-    s.plt.segmented_area(
+    shimoku_client.plt.segmented_area(
         data='noise', order=3, x='x', y='y',
         segments=[(30, 45), (60, 70, 'var(--chart-C1)'), (75, 95, (1, 220, 1))]
     )
 
 
 def marked_line_chart():
-    s.set_menu_path('test-free-echarts', 'Marked Line Chart')
-    s.plt.marked_line(
+    shimoku_client.set_menu_path('test-free-echarts', 'Marked Line Chart')
+    shimoku_client.plt.marked_line(
         data='table', x='date',
         marks=[('first segment', 0, 1), ('second segment', 2, 3)],
         order=0, rows_size=2, cols_size=12, y=['x', 'y']
@@ -3215,43 +3223,43 @@ def marked_line_chart():
 
 
 def variants():
-    s.set_menu_path('test-free-echarts', 'Variants')
+    shimoku_client.set_menu_path('test-free-echarts', 'Variants')
 
-    s.plt.stacked_bar(
+    shimoku_client.plt.stacked_bar(
         data='stacked data', order=0, cols_size=6,
         x='Segment', variant='clean shadow', show_values='all'
     )
-    s.plt.stacked_horizontal_bar(
+    shimoku_client.plt.stacked_horizontal_bar(
         data='stacked data', order=1, cols_size=6,
         x='Segment', variant='minimal shadow', show_values='all',
     )
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data='table', order=2, cols_size=6, x='date',
         variant='shadow', show_values=['x']
     )
-    s.plt.horizontal_bar(
+    shimoku_client.plt.horizontal_bar(
         data='horizontal bar', x='name', order=3, cols_size=6,
         show_values=['value'], variant='clean shadow',
     )
-    s.plt.bar(
+    shimoku_client.plt.bar(
         data='table', order=4, cols_size=6, x='date',
         variant='clean thin', show_values=['x']
     )
-    s.plt.horizontal_bar(
+    shimoku_client.plt.horizontal_bar(
         data='horizontal bar',
         x='name', order=5, cols_size=6,
         show_values=['value'], variant='clean thin',
     )
-    s.plt.stacked_bar(
+    shimoku_client.plt.stacked_bar(
         data='stacked data', order=6, cols_size=6, x='Segment',
         variant='thin', show_values='all'
     )
-    s.plt.stacked_horizontal_bar(
+    shimoku_client.plt.stacked_horizontal_bar(
         data='stacked data', order=7, cols_size=6,
         x='Segment', variant='clean thin', show_values='all',
     )
-    s.plt.area(data='table', order=8, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
-    s.plt.line(data='table', order=9, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
+    shimoku_client.plt.area(data='table', order=8, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
+    shimoku_client.plt.line(data='table', order=9, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
 
 
 def x_axis_tandem_chart():
@@ -3276,26 +3284,26 @@ def x_axis_tandem_chart():
         {'dates2015': '2015-12', 'dates2016': '2016-12', '2015': 2.3, '2016': 0.7}
     ]
 
-    s.plt.x_axes_tandem_chart(
+    shimoku_client.plt.x_axes_tandem_chart(
         data=data, menu_path=menu_path, order=0, top_x='dates2015', bottom_x='dates2016'
     )
 
-    s.plt.x_axes_tandem_chart(
+    shimoku_client.plt.x_axes_tandem_chart(
         data=data, menu_path=menu_path, order=1, top_x='2015', bottom_x='2016', top_axis_name=top_axis_name,
         bottom_axis_name=bottom_axis_name, y_axis_name=y_axis_name, title=title, begin_as_bar=True
     )
-    s.run()
+    shimoku_client.run()
 
 
 def infographics():
-    s.set_menu_path('test-bentobox', 'Infographics')
+    shimoku_client.set_menu_path('test-bentobox', 'Infographics')
     title = 'Lorem ipsum'
     text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et " \
            "dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex" \
            " ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu" \
            " fugiat nulla pariatur. "
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=0, cols_size=6,
         title=title, text=text, bubble_location='bottom',
         chart_parameters=dict(
@@ -3308,10 +3316,10 @@ def infographics():
         ),
     )
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=2, cols_size=6,
         title=title, text=text,
-        chart_function=s.plt.line,
+        chart_function=shimoku_client.plt.line,
         chart_parameters=dict(
             x='date', y='x', data=data,
             option_modifications=dict(
@@ -3321,10 +3329,10 @@ def infographics():
         ),
     )
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=4, cols_size=6,
         title=title, text=text,
-        chart_function=s.plt.shimoku_gauge,
+        chart_function=shimoku_client.plt.shimoku_gauge,
         chart_parameters=dict(
             value=70, name='Gauge', rows_size=18,
             padding='0,0,0,0'
@@ -3339,10 +3347,10 @@ def infographics():
         {'Weekday': 'Sat', 'Email': 220, 'Union Ads': 182, 'Video Ads': 191, 'Search Engine': 234},
         {'Weekday': 'Sun', 'Email': 150, 'Union Ads': 232, 'Video Ads': 201, 'Search Engine': 154},
     ]
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=6, cols_size=6, rows_size=4,
         title=title, text=text, bubble_location='bottom',
-        chart_function=s.plt.stacked_bar,
+        chart_function=shimoku_client.plt.stacked_bar,
         chart_parameters=dict(
             data=stacked_data,
             x="Weekday",
@@ -3356,7 +3364,7 @@ def infographics():
         background_color='var(--color-stripe-light)',
     )
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=8, title=title, text=text, bubble_location='right',
         chart_parameters=dict(
             data=data, x='date',
@@ -3389,10 +3397,10 @@ def infographics():
             ]
     }
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=10, cols_size=8,
         title=title, text=text, bubble_location='left',
-        chart_function=s.plt.generate_input_form_groups,
+        chart_function=shimoku_client.plt.generate_input_form_groups,
         chart_parameters=dict(
             form_groups=form_groups,
             dynamic_sequential_show=True,
@@ -3401,16 +3409,16 @@ def infographics():
         background_color='var(--color-primary-light)'
     )
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=12, cols_size=4,
         title=title, text=text, bubble_location='left',
-        chart_function=s.plt.shimoku_gauge,
+        chart_function=shimoku_client.plt.shimoku_gauge,
         chart_parameters=dict(
             value=49, name='Gauge', padding='5,1,0,0',
             cols_size=10, color=3,
         )
     )
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=14, cols_size=6,
         title=title, text=text, bubble_location='left',
         image_url='default', image_size=60,
@@ -3424,22 +3432,22 @@ def infographics():
             ),
         )
     )
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=16, cols_size=6, rows_size=4,
         title=title, text=text, bubble_location='right',
         image_url='default',
-        chart_function=s.plt.table,
+        chart_function=shimoku_client.plt.table,
         chart_parameters=dict(
             data=data, rows_size=3,
             cols_size=10,
         )
     )
 
-    s.plt.infographics_text_bubble(
+    shimoku_client.plt.infographics_text_bubble(
         order=18,
         title=title, text=text, bubble_location='right',
         image_url='default', image_size=50,
-        chart_function=s.plt.table,
+        chart_function=shimoku_client.plt.table,
         chart_parameters=dict(
             data=stacked_data,
             cols_size=16, rows_size=3,
@@ -3448,7 +3456,7 @@ def infographics():
 
 
 def chart_and_indicators():
-    s.set_menu_path('test-bentobox', 'chart-and-indicators')
+    shimoku_client.set_menu_path('test-bentobox', 'chart-and-indicators')
     indicator_groups = [
         [
             {
@@ -3559,10 +3567,10 @@ def chart_and_indicators():
         ]
     ]
 
-    s.plt.chart_and_indicators(
+    shimoku_client.plt.chart_and_indicators(
         order=0,
         chart_rows_size=3, cols_size=6,
-        chart_function=s.plt.line,
+        chart_function=shimoku_client.plt.line,
         chart_parameters=dict(
             data=data,
             x='date',
@@ -3575,7 +3583,7 @@ def chart_and_indicators():
 
 
 def summary_line():
-    s.set_menu_path('test-bentobox', 'summary-line')
+    shimoku_client.set_menu_path('test-bentobox', 'summary-line')
     summary_data = [
         {'date': '28 days', 'x': 5, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Ana'},
         {'date': '21 days', 'x': 6, 'y': 5, 'filtA': 'B', 'filtB': 'Z', 'name': 'Laura'},
@@ -3583,7 +3591,7 @@ def summary_line():
         {'date': '7 days', 'x': 7, 'y': 5, 'filtA': 'B', 'filtB': 'W', 'name': 'Jose'},
         {'date': 'today', 'x': 3, 'y': 5, 'filtA': 'A', 'filtB': 'Z', 'name': 'Jorge'},
     ]
-    s.plt.line_with_summary(
+    shimoku_client.plt.line_with_summary(
         data=summary_data, order=4, x='date', y='x',
         title='Total', description='Today', value=7.94
     )
@@ -3592,70 +3600,70 @@ def summary_line():
 class TestPlotApi(unittest.TestCase):
     def test_delete_path(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
+        ini_calls = shimoku_client.get_api_calls_counter()
         menu_path: str = 'test-path'
         sub_path: str = 'line-test'
         sub_path_2: str = 'line-test-2'
         sub_path_3: str = 'line-test-3'
 
-        s.set_menu_path(menu_path)
-        s.plt.clear_menu_path()
+        shimoku_client.set_menu_path(menu_path)
+        shimoku_client.plt.clear_menu_path()
 
-        s.set_menu_path(menu_path, sub_path)
+        shimoku_client.set_menu_path(menu_path, sub_path)
 
-        s.plt.line(data=data, x='date', order=0)
-        s.plt.line(data=data, x='date', order=1)
+        shimoku_client.plt.line(data=data, x='date', order=0)
+        shimoku_client.plt.line(data=data, x='date', order=1)
 
-        reports: List[Dict] = s.menu_paths.get_menu_path_components(name=menu_path)
+        reports: List[Dict] = shimoku_client.menu_paths.get_menu_path_components(name=menu_path)
         assert len(reports) == 2
 
-        s.plt.clear_menu_path()
+        shimoku_client.plt.clear_menu_path()
 
-        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
+        assert len(shimoku_client.menu_paths.get_menu_path_components(name=menu_path)) == 0
         for i in range(10):
-            s.plt.line(data=data, x='date', order=i)
+            shimoku_client.plt.line(data=data, x='date', order=i)
 
-        s.set_menu_path(menu_path, sub_path_2)
-        s.plt.line(data=data, x='date', order=0)
+        shimoku_client.set_menu_path(menu_path, sub_path_2)
+        shimoku_client.plt.line(data=data, x='date', order=0)
 
-        s.set_menu_path(menu_path, sub_path_3)
-        s.plt.line(data=data, x='date', order=0)
+        shimoku_client.set_menu_path(menu_path, sub_path_3)
+        shimoku_client.plt.line(data=data, x='date', order=0)
 
-        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 12
+        assert len(shimoku_client.menu_paths.get_menu_path_components(name=menu_path)) == 12
 
-        s.set_menu_path(menu_path, sub_path)
-        s.plt.clear_menu_path()
-        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 2
+        shimoku_client.set_menu_path(menu_path, sub_path)
+        shimoku_client.plt.clear_menu_path()
+        assert len(shimoku_client.menu_paths.get_menu_path_components(name=menu_path)) == 2
 
-        s.set_menu_path(menu_path)
-        s.plt.clear_menu_path()
-        assert len(s.menu_paths.get_menu_path_components(name=menu_path)) == 0
+        shimoku_client.set_menu_path(menu_path)
+        shimoku_client.plt.clear_menu_path()
+        assert len(shimoku_client.menu_paths.get_menu_path_components(name=menu_path)) == 0
 
-        s.set_menu_path('test')
-        s.menu_paths.delete_menu_path(name=menu_path)
+        shimoku_client.set_menu_path('test')
+        shimoku_client.menu_paths.delete_menu_path(name=menu_path)
 
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_delete(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_menu_path('test-delete', 'line-test')
-        s.plt.line(data=data, x='date', order=0)
-        assert s.menu_paths.get_menu_path_components(name='test-delete')
-        s.plt.delete_chart_by_order(order=0)
-        assert not s.menu_paths.get_menu_path_components(name='test-delete')
-        s.set_menu_path('test')
-        s.menu_paths.delete_menu_path(name='test-delete')
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_menu_path('test-delete', 'line-test')
+        shimoku_client.plt.line(data=data, x='date', order=0)
+        assert shimoku_client.menu_paths.get_menu_path_components(name='test-delete')
+        shimoku_client.plt.delete_chart_by_order(order=0)
+        assert not shimoku_client.menu_paths.get_menu_path_components(name='test-delete')
+        shimoku_client.set_menu_path('test')
+        shimoku_client.menu_paths.delete_menu_path(name='test-delete')
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_charts(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
+        ini_calls = shimoku_client.get_api_calls_counter()
 
-        s.set_menu_path('test')
-        s.plt.set_shared_data(
+        shimoku_client.set_menu_path('test')
+        shimoku_client.plt.set_shared_data(
             dfs={
                 'main data': data,
                 'zero centered data': zero_centered_data,
@@ -3664,7 +3672,6 @@ class TestPlotApi(unittest.TestCase):
             },
             custom_data={
                 'tree_data': tree_data,
-                'sunburst_data': sunburst_data,
             }
         )
         indicator()
@@ -3691,20 +3698,20 @@ class TestPlotApi(unittest.TestCase):
         sankey()
         heatmap()
         table()
-        s.update_data_sets()
+        shimoku_client.update_data_sets()
         table_with_labels()
-        s.reuse_data_sets()
+        # s.reuse_data_sets()
         annotation_chart()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_free_echarts(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_menu_path('test-free-echarts')
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_menu_path('test-free-echarts')
         stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
-        s.plt.set_shared_data({
+        shimoku_client.plt.set_shared_data({
             'stacked data': stacked_data,
             'noise': noise_data,
             'table': table_data,
@@ -3726,43 +3733,43 @@ class TestPlotApi(unittest.TestCase):
         segmented_area_chart()
         marked_line_chart()
         variants()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_bento_box(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
+        ini_calls = shimoku_client.get_api_calls_counter()
         infographics()
         chart_and_indicators()
         summary_line()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_filters(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_board('Test')
-        s.set_menu_path('test-filters')
-        s.plt.set_shared_data(
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_board('Test')
+        shimoku_client.set_menu_path('test-filters')
+        shimoku_client.plt.set_shared_data(
             dfs={
                 'table': pd.DataFrame(table_data),
             }
         )
-        s.plt.filter(order=0, data='table', field='date')
-        s.plt.filter(order=1, data='table', field='x')
-        s.plt.filter(order=2, data='table', field='filtA')
-        s.plt.filter(order=3, data='table', field='filtB', multi_select=True, padding='0,0,0,8')
+        shimoku_client.plt.filter(order=0, data='table', field='date')
+        shimoku_client.plt.filter(order=1, data='table', field='x')
+        shimoku_client.plt.filter(order=2, data='table', field='filtA')
+        shimoku_client.plt.filter(order=3, data='table', field='filtB', multi_select=True, padding='0,0,0,8')
 
-        s.plt.bar(data='table', order=4, cols_size=6, x='date', y=['x', 'y'])
-        s.plt.line(data='table', order=5, cols_size=6, x='date', y=['x', 'y'])
-        s.plt.stacked_bar(data='table', x='date', y=['x', 'y'], order=6)
-        s.plt.table(data=table_data * 10, order=7, rows_size=3, title='Table test',
-                    categorical_columns=['filtA', 'filtB'])
-        s.run()
+        shimoku_client.plt.bar(data='table', order=4, cols_size=6, x='date', y=['x', 'y'])
+        shimoku_client.plt.line(data='table', order=5, cols_size=6, x='date', y=['x', 'y'])
+        shimoku_client.plt.stacked_bar(data='table', x='date', y=['x', 'y'], order=6)
+        shimoku_client.plt.table(data=table_data * 10, order=7, rows_size=3, title='Table test',
+                                 categorical_columns=['filtA', 'filtB'])
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     # Filters and sequential needed TODO resolve with filter dataset
     # test_heatmap_with_filters()
@@ -3771,49 +3778,51 @@ class TestPlotApi(unittest.TestCase):
 
     def test_tabs(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_board("Tabs dashboard")
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_board("Tabs dashboard")
         tabs()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_modals(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_board("Modals dashboard")
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_board("Modals dashboard")
         modal()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_forms(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_board('Others')
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_board('Others')
         input_form()
         dynamic_conditional_and_auto_send_input_form()
         get_input_forms()
-        s.run()
+        shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_menu_order(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.workspaces.change_boards_order(
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.workspaces.change_boards_order(
             uuid=workspace_id,
             boards=[
-                'Dashboard',
-                'Others',
+                'Default Name',
+                'Test',
                 'Modals dashboard',
                 'Tabs dashboard',
+                'Others',
                 '---'
             ]
         )
-        s.workspaces.change_menu_order(
+        shimoku_client.workspaces.change_menu_order(
             uuid=workspace_id,
             menu_order=[
+                '---',
                 ('test', [
                     'line-test',
                     'bar-test',
@@ -3821,119 +3830,119 @@ class TestPlotApi(unittest.TestCase):
                     'area-test',
                     'scatter-test',
                     'radar-test',
-                    '---'
                 ]),
                 ('test-bentobox', [
                     'chart-and-indicators',
                     'Infographics',
                 ]),
                 'test-free-echarts',
-                '---'
             ]
         )
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_same_position_charts(self):
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
-        s.set_menu_path('test-same-position', 'no conflict path 1')
+        ini_calls = shimoku_client.get_api_calls_counter()
+        shimoku_client.set_menu_path('test-same-position', 'no conflict path 1')
 
-        s.activate_async_execution()
+        shimoku_client.activate_async_execution()
 
-        s.plt.clear_menu_path()
-        s.plt.gauge_indicator(
+        shimoku_client.plt.clear_menu_path()
+        shimoku_client.plt.gauge_indicator(
             order=0,
             value=83,
             description='Síntomas coincidientes | Mareo, Dolor cervical',
             title='Sobrecarga muscular en cervicales y espalda',
         )
 
-        s.set_menu_path('test-same-position', 'no conflict path 2')
-        s.plt.gauge_indicator(
+        shimoku_client.set_menu_path('test-same-position', 'no conflict path 2')
+        shimoku_client.plt.gauge_indicator(
             order=1,
             value=31, color=2,
             description='Síntomas coincidientes | Dolor cervical',
             title='Bruxismo',
         )
 
-        s.set_menu_path('test-same-position', 'no conflict tabs')
-        s.plt.set_tabs_index(tabs_index=('tabs', '1'), order=0)
-        s.plt.gauge_indicator(
+        shimoku_client.set_menu_path('test-same-position', 'no conflict tabs')
+        shimoku_client.plt.set_tabs_index(tabs_index=('tabs', '1'), order=0)
+        shimoku_client.plt.gauge_indicator(
             order=0,
             value=83,
             description='Síntomas coincidientes | Mareo, Dolor cervical',
             title='Sobrecarga muscular en cervicales y espalda',
         )
 
-        s.plt.change_current_tab("2")
-        s.plt.gauge_indicator(
+        shimoku_client.plt.change_current_tab("2")
+        shimoku_client.plt.gauge_indicator(
             order=1,
             value=31, color=2,
             description='Síntomas coincidientes | Dolor cervical',
             title='Bruxismo',
         )
 
-        s.plt.pop_out_of_tabs_group()
-        s.run()
+        shimoku_client.plt.pop_out_of_tabs_group()
+        shimoku_client.run()
 
         with self.assertRaises(RuntimeError):
-            s.set_menu_path('test-same-position', 'conflict')
-            s.plt.gauge_indicator(
+            shimoku_client.set_menu_path('test-same-position', 'conflict')
+            shimoku_client.plt.gauge_indicator(
                 order=0,
                 value=83,
                 description='Síntomas coincidientes | Mareo, Dolor cervical',
                 title='Sobrecarga muscular en cervicales y espalda',
             )
 
-            s.plt.gauge_indicator(
+            shimoku_client.plt.gauge_indicator(
                 order=1,
                 value=31, color=2,
                 description='Síntomas coincidientes | Dolor cervical',
                 title='Bruxismo',
             )
-            s.run()
+            shimoku_client.run()
 
         with self.assertRaises(RuntimeError):
-            s.set_menu_path('test-same-position', 'conflict')
-            s.plt.set_tabs_index(tabs_index=('conflict', 'conflict'), order=0)
-            s.plt.gauge_indicator(
+            shimoku_client.set_menu_path('test-same-position', 'conflict')
+            shimoku_client.plt.set_tabs_index(tabs_index=('conflict', 'conflict'), order=0)
+            shimoku_client.plt.gauge_indicator(
                 order=0,
                 value=83,
                 description='Síntomas coincidientes | Mareo, Dolor cervical',
                 title='Sobrecarga muscular en cervicales y espalda',
             )
 
-            s.plt.gauge_indicator(
+            shimoku_client.plt.gauge_indicator(
                 order=1,
                 value=31, color=2,
                 description='Síntomas coincidientes | Dolor cervical',
                 title='Bruxismo',
             )
-            s.run()
+            shimoku_client.run()
 
-        s.set_menu_path('test-same-position')
-        s.plt.clear_menu_path()
+        shimoku_client.set_menu_path('test-same-position')
+        shimoku_client.plt.clear_menu_path()
 
-        assert 0 == len(s.menu_paths.get_menu_path_components(name='test-same-position'))
+        assert 0 == len(shimoku_client.menu_paths.get_menu_path_components(name='test-same-position'))
 
-        s.set_menu_path('test')
-        s.menu_paths.delete_menu_path(name='test-same-position')
+        shimoku_client.set_menu_path('test')
+        shimoku_client.menu_paths.delete_menu_path(name='test-same-position')
 
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
     def test_no_reappend_app_to_dashboard(self):
+        if mock:
+            return
         init_time = perf_counter()
-        ini_calls = s.get_api_calls_counter()
+        ini_calls = shimoku_client.get_api_calls_counter()
 
-        s.set_board('Test')
-        s.set_menu_path('test-no-reappend')
-        s.pop_out_of_menu_path()
-        how_many_apps = len(s.boards.get_board_menu_path_ids(name='Test'))
-        s.set_menu_path('test-no-reappend')
-        s.pop_out_of_menu_path()
-        assert how_many_apps == len(s.boards.get_board_menu_path_ids(name='Test'))
+        shimoku_client.set_board('Test')
+        shimoku_client.set_menu_path('test-no-reappend')
+        shimoku_client.pop_out_of_menu_path()
+        how_many_apps = len(shimoku_client.boards.get_board_menu_path_ids(name='Test'))
+        shimoku_client.set_menu_path('test-no-reappend')
+        shimoku_client.pop_out_of_menu_path()
+        assert how_many_apps == len(shimoku_client.boards.get_board_menu_path_ids(name='Test'))
 
         s2 = initiate_shimoku()
         s2.set_workspace(workspace_id)
@@ -3942,16 +3951,22 @@ class TestPlotApi(unittest.TestCase):
         s2.pop_out_of_menu_path()
         assert how_many_apps == len(s2.boards.get_board_menu_path_ids(name='Test'))
 
-        s.menu_paths.delete_menu_path(name='test-no-reappend')
+        shimoku_client.menu_paths.delete_menu_path(name='test-no-reappend')
 
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
-        print(f'Number of api calls {s.get_api_calls_counter() - ini_calls}')
+        print(f'Number of api calls {shimoku_client.get_api_calls_counter() - ini_calls}')
 
 
-if __name__ == '__main__':
+def main():
     # profiler = cProfile.Profile()
     # profiler.enable()
-    unittest.main()
+    for test in TestPlotApi.__dict__:
+        if test.startswith('test_'):
+            getattr(TestPlotApi(), test)()
     # profiler.disable()
     # stats = pstats.Stats(profiler)
     # stats.dump_stats('profile_output.prof')
+
+
+if __name__ == '__main__':
+    main()

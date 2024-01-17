@@ -12,7 +12,7 @@ class Table(Report):
     report_type = 'TABLE'
 
     default_properties = dict(
-        hash=None,
+        **Report.default_properties,
         columns=[],
         rows={},
         sort={},
@@ -50,7 +50,9 @@ def interpret_label_info(df: pd.DataFrame, col: str, labels_map, variant: str):
             df_values = [value]
             if isinstance(value, tuple):
                 df_values = df[df[col].between(value[0], value[1])][col].unique()
-            options.extend(interpret_label_map(df_values, color_def, variant))
+            for label_value in interpret_label_map(df_values, color_def, variant):
+                if label_value['value'] not in [option['value'] for option in options]:
+                    options.append(label_value)
 
     elif isinstance(labels_map, (str, list, tuple)):
         options = interpret_label_map(df[col].unique(), labels_map, variant)

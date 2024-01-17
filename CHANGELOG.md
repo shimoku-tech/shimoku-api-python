@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.6 (2023-17-01)
+
+### Added
+
+- Added code generation, commit and pull functions to the SDK.
 
 ## 1.5 (2023-16-01)
 

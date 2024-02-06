@@ -58,7 +58,7 @@ class BusinessMetadataApi(ABC):
             for role_permission_resource in ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']:
                 create_roles_tasks.append(
                     business.create_role(
-                        role='business_read_'+role_permission_resource,
+                        role='business_read',
                         resource=role_permission_resource,
                     )
                 )

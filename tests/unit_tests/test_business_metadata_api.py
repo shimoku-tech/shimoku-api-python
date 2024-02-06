@@ -1,11 +1,11 @@
 """"""
+import unittest
 from os import getenv
 from typing import Dict, List
-from shimoku_api_python.exceptions import WorkspaceError, CacheError
-
-import unittest
 
 from tenacity import RetryError
+
+from shimoku_api_python.exceptions import WorkspaceError, CacheError
 from utils import initiate_shimoku
 
 s = initiate_shimoku()
@@ -13,6 +13,7 @@ s = initiate_shimoku()
 business_id: str = getenv('BUSINESS_ID')
 mock: bool = getenv('MOCK') == 'TRUE'
 playground: bool = getenv('PLAYGROUND') == 'TRUE'
+BUSINESS_TEST_NAME = 'auto-test'
 
 
 class TestBusinesses(unittest.TestCase):
@@ -32,10 +33,10 @@ class TestBusinesses(unittest.TestCase):
         if playground:
             return
 
-        if s.workspaces.get_workspace(name='auto-test'):
-            s.workspaces.delete_workspace(name='auto-test')
+        if s.workspaces.get_workspace(name=BUSINESS_TEST_NAME):
+            s.workspaces.delete_workspace(name=BUSINESS_TEST_NAME)
 
-        business: Dict = s.workspaces.create_workspace(name='auto-test')
+        business: Dict = s.workspaces.create_workspace(name=BUSINESS_TEST_NAME)
         business_id_: str = business['id']
 
         assert len(business_id_) > 0
@@ -46,12 +47,12 @@ class TestBusinesses(unittest.TestCase):
             )
         )
 
-        business_roles = s.workspaces.get_roles(name='auto-test')
+        business_roles = s.workspaces.get_roles(name=BUSINESS_TEST_NAME)
 
         assert len(business_roles) == 4
         resources = ['DATA', 'DATA_EXECUTION', 'USER_MANAGEMENT', 'BUSINESS_INFO']
         for role in business_roles:
-            assert role['role'].startswith('business_read_')
+            assert role['role'] == 'business_read'
             assert role['permission'] == 'READ'
             assert role['resource'] in resources
             assert role['target'] == 'GROUP'
@@ -94,7 +95,10 @@ class TestBusinesses(unittest.TestCase):
         theme = {
             "palette": {
                 "primary": {
-                    "main": "#0f530b",
+                    "main": "#2222FF",
+                },
+                "background": {
+                    "default": "#23232F",
                 },
             },
             "typography": {
@@ -110,7 +114,8 @@ class TestBusinesses(unittest.TestCase):
                     "l": "0px",
                     "xl": "0px"
                 },
-                "logo": "https://flaxandkale.com/img/logo-flaxandkale-black.png",
+                "logo": "https://assets-global.website-files.com/619f9fe98661d321dc3beec7"
+                        "/621f5f09cd144b3dc06dc0fd_Logo-shimoku-white.svg",
             }
         }
 
@@ -171,10 +176,10 @@ class TestBusinesses(unittest.TestCase):
         if playground:
             return
 
-        if s.workspaces.get_workspace(name='auto-test'):
-            s.workspaces.delete_workspace(name='auto-test')
+        if s.workspaces.get_workspace(name=BUSINESS_TEST_NAME):
+            s.workspaces.delete_workspace(name=BUSINESS_TEST_NAME)
 
-        s.workspaces.create_workspace(name='auto-test')
+        s.workspaces.create_workspace(name=BUSINESS_TEST_NAME)
 
         class SimilarBusinessCase(unittest.TestCase):
             def test_create_similar(self):
@@ -186,22 +191,22 @@ class TestBusinesses(unittest.TestCase):
             def test_update_similar(self):
                 with self.assertRaises(WorkspaceError):
                     s.workspaces.update_workspace(
-                        name='auto-test',
+                        name=BUSINESS_TEST_NAME,
                         new_name='auto-TEST',
                     )
         sbc = SimilarBusinessCase()
         sbc.test_create_similar()
         sbc.test_update_similar()
-        s.workspaces.delete_workspace(name='auto-test')
+        s.workspaces.delete_workspace(name=BUSINESS_TEST_NAME)
 
     def test_cant_get_with_id_and_name(self):
         if playground:
             return
 
-        if s.workspaces.get_workspace(name='auto-test'):
-            s.workspaces.delete_workspace(name='auto-test')
+        if s.workspaces.get_workspace(name=BUSINESS_TEST_NAME):
+            s.workspaces.delete_workspace(name=BUSINESS_TEST_NAME)
 
-        wid = s.workspaces.create_workspace(name='auto-test')['id']
+        wid = s.workspaces.create_workspace(name=BUSINESS_TEST_NAME)['id']
 
         with self.assertRaises(CacheError):
-            s.set_workspace(uuid=wid, name='auto-test')
+            s.set_workspace(uuid=wid, name=BUSINESS_TEST_NAME)

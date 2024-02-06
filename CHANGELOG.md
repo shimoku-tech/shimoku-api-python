@@ -1,12 +1,18 @@
 # CHANGELOG
 
-## 1.6 (2023-17-01)
+## 1.6.1 (2023-6-02)
+
+### Fixed
+
+- Roles are created correctly when creating a workspace
+
+## 1.6 (2024-17-01)
 
 ### Added
 
 - Added code generation, commit and pull functions to the SDK.
 
-## 1.5 (2023-16-01)
+## 1.5 (2024-16-01)
 
 ### Added
 

@@ -126,27 +126,28 @@ async def workspace_contents(
 ):
     """Delete all contents in the workspace
     :param workspace_id: UUID of the workspace to use
-    :param force: Flag to not ask for confirmation
+    :param force: Flag to force delete the protected contents
     """
-    if not force:
-        confirmation = input(
-            "Are you sure you want to delete all contents in the workspace?"
-            "\nthis action will delete all files, data sets and activities in the workspace"
-            "\nmake sure to not lose any sensitive data. (y/n): "
-        )
-        if confirmation.lower() != "y" and confirmation.lower() != "yes":
-            logger.info("Cancelling delete all workspace contents")
-            return
+    confirmation = input(
+        "Are you sure you want to delete all contents in the workspace?"
+        "\nthis action will delete all files, data sets and activities in the workspace"
+        "\nmake sure to not lose any sensitive data. (y/n): "
+    )
+    if confirmation.lower() != "y" and confirmation.lower() != "yes":
+        logger.info("Cancelling delete all workspace contents")
+        return
     resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
     businesses_layer = await resource_getter.get_businesses_layer()
-    app_layer = await resource_getter.get_apps_layer()
+    apps_layer = await resource_getter.get_apps_layer()
     business = await resource_getter.get_business()
-    await asyncio.gather(
-        *[
-            app_layer.delete_all_menu_path_activities(app["id"])
-            for app in await business.get_apps()
-        ]
-    )
+    await asyncio.gather(*[
+        apps_layer.delete_all_menu_path_activities(app["id"], with_linked_to_templates=force)
+        for app in await business.get_apps()
+    ])
+    await asyncio.gather(*[
+        apps_layer.delete_all_menu_path_files(app["id"], with_shimoku_generated=force)
+        for app in await business.get_apps()
+    ])
     await businesses_layer.delete_all_workspace_menu_paths(business["id"])
     await businesses_layer.delete_all_workspace_boards(business["id"])
 

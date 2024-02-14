@@ -30,6 +30,7 @@ class Activity(Resource):
         name: Optional[str]
         settings: dict
         activityTemplateWithMode: Optional[dict]
+        activityTemplateId: Optional[str]
         universeApiKeyId: Optional[str]
 
     class Run(Resource):
@@ -199,6 +200,7 @@ class Activity(Resource):
             settings={},
             activityTemplateWithMode=None,
             universeApiKeyId=None,
+            activityTemplateId=None,
         )
 
         super().__init__(

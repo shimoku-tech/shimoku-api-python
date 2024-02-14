@@ -62,9 +62,9 @@ class Dashboard(Resource):
     class PublicPermission:
         """PublicPermission class"""
 
-        isPublic: bool
-        permission: str
-        token: str
+        isPublic: bool = False
+        permission: str = 'READ'
+        token: str = 'default token'
 
     def __init__(
         self,
@@ -78,9 +78,7 @@ class Dashboard(Resource):
             order=0,
             isDisabled=False,
             theme={},
-            publicPermission=self.PublicPermission(
-                isPublic=False, permission="READ", token="default token"
-            ),
+            publicPermission=self.PublicPermission()
         )
 
         super().__init__(

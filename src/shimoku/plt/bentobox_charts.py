@@ -1,6 +1,7 @@
 from typing import Union, Optional, TYPE_CHECKING
 
 import pandas as pd
+import uuid
 
 from shimoku.exceptions import BentoboxError
 from shimoku.plt.utils import create_normalized_name, ShimokuPalette
@@ -82,6 +83,7 @@ def infographics_text_bubble(
     bubble_location: str = "top",
     image_url: Optional[str] = None,
     image_size: int = 100,
+    html_config: Optional[dict] = None,
 ):
     if bubble_location not in ["top", "bottom", "left", "right"]:
         log_error(logger, f"Invalid location value '{bubble_location}'.", ValueError)
@@ -141,12 +143,17 @@ def infographics_text_bubble(
         f"<p>{text}</p>"
         "</div>"
     )
-    self.html(
-        html=html,
+    if html_config is None:
+        html_config = {}
+    html_config.update(dict(
         order=order + int(chart_first),
         rows_size=html_rows_size,
         cols_size=html_cols_size,
         padding=f'{int(bubble_location != "bottom")},1,1,1',
+    ))
+    self.html(
+        html=html,
+        **html_config,
     )
     self.pop_out_of_bentobox()
 
@@ -369,9 +376,9 @@ def table_with_header(
     cols_size: int = 4,
     modal_title: Optional[str] = None,
     icon_url: str = "https://uploads-ssl.webflow.com/619f9fe98661d321dc3beec7/"
-    "63594ccf3f311a98d72faff7_suite-customer-b.svg",
+                    "63594ccf3f311a98d72faff7_suite-customer-b.svg",
     modal_text: str = "You can click the X in the corner or click the overlay to close this modal. "
-    "This is a nice way to show additional information.",
+                      "This is a nice way to show additional information.",
     text_color: str = ShimokuPalette.BACKGROUND_PAPER.value,
     background_color: str = ShimokuPalette.BLACK.value,
     modal_icon_color: str = ShimokuPalette.CHART_C1.value,
@@ -411,3 +418,49 @@ def table_with_header(
         chart_parameters=table_parameters,
     )
     self.pop_out_of_bentobox()
+
+
+# AI Bentobox Charts
+def chart_with_ai_insights(
+        self: 'PlotLayer',
+        openai_org_id: str, openai_api_key: str,
+        order: int, chart_function: callable, chart_parameters: dict,
+        rows_size: int = 4, cols_size: int = 12
+):
+    if rows_size < 4:
+        log_error(logger, 'Minimum rows_size is 4.', ValueError)
+
+    html_config = {}
+    if 'rows_size' in chart_parameters:
+        log_error(logger, 'Parameter rows_size cannot be used in the inner chart', ValueError)
+    chart_parameters['rows_size'] = rows_size*10-20
+    infographics_text_bubble(
+        self=self, title='', text='Waiting for insights...', order=order,
+        chart_parameters=chart_parameters, rows_size=rows_size, cols_size=cols_size,
+        chart_function=chart_function, html_config=html_config, bubble_location='bottom'
+    )
+    data_sets = self.get_data_set_names_by_order(order)
+    data = self._parent.data.get_data_from_data_set(name=data_sets[0])
+    if not data:
+        log_error(logger, 'No data found for the chart.', ValueError)
+        return
+
+    rev_mapping = self._data_set_columns_rev_mapping[data_sets[0]]
+    data = [{rev_mapping[key]: value for key, value in data_point.items() if key in rev_mapping}
+            for data_point in data]
+
+    file_aux_uuid = uuid.uuid4()
+
+    self._parent.ai.create_input_files(
+        input_files={f'gpt_insights_input_from_bento_charts_{file_aux_uuid}.csv':
+                     pd.DataFrame(data).to_csv(index=False).encode('utf-8')},
+    )
+    self._parent.ai.generic_execute(
+        ai_function='GptGenericInsightWorkflow',
+        openai_org_id=openai_org_id,
+        openai_api_key=openai_api_key,
+        data_file_name=f'gpt_insights_input_from_bento_charts_{file_aux_uuid}.csv',
+        bentobox_format_config={'cols_size': cols_size, 'rows_size': rows_size},
+        html_format_config=html_config,
+        sub_path=self._current_path if self._current_path else "",
+    )

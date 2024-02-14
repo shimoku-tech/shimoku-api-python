@@ -6,6 +6,7 @@ import asyncio
 
 from shimoku.api.base_resource import Resource, ResourceCache
 from shimoku.api.resources.activity import Activity
+from shimoku.api.resources.activity_template import ActivityTemplate
 from shimoku.api.resources.role import (
     Role,
     create_role,
@@ -92,11 +93,11 @@ class App(Resource):
         return await self._base_resource.update()
 
     # Activity methods
-    async def _get_activity_template_id(
+    async def _get_activity_template(
         self,
         template_id: Optional[str] = None,
         template_name_version: Optional[Tuple[str, str]] = None,
-    ) -> str:
+    ) -> ActivityTemplate:
         """
         Get the activity template id from the template id or name
         :param template_id: the template id
@@ -106,7 +107,7 @@ class App(Resource):
             uuid=template_id, name_version=template_name_version
         )
         if activity_template:
-            return activity_template["id"]
+            return activity_template
 
         log_error(
             logger,
@@ -135,10 +136,11 @@ class App(Resource):
         template_params_to_send = {}
 
         if template_id or template_name_version:
-            template_id = await self._get_activity_template_id(
+            template: ActivityTemplate = await self._get_activity_template(
                 template_id, template_name_version
             )
             universe_api_keys = await self.parent.parent.get_universe_api_keys()
+
             if universe_api_key not in [u["id"] for u in universe_api_keys]:
                 log_error(
                     logger,
@@ -146,13 +148,19 @@ class App(Resource):
                     UniverseApiKeyError,
                 )
 
-            template_params_to_send = dict(
-                activityTemplateWithMode=dict(
+            if template['provider'] == 'SHIMOKU':
+                template_params_to_send = dict(
+                    activityTemplateWithMode=dict(
+                        activityTemplateId=template_id,
+                        mode=template_mode,
+                    ),
+                    universeApiKeyId=universe_api_key,
+                )
+            elif template['provider'] == 'SHIMOKU_WORKFLOWS':
+                template_params_to_send = dict(
                     activityTemplateId=template_id,
-                    mode=template_mode,
-                ),
-                universeApiKeyId=universe_api_key,
-            )
+                    universeApiKeyId=universe_api_key,
+                )
 
         return await self._base_resource.create_child(
             Activity, alias=name, settings=settings, **template_params_to_send

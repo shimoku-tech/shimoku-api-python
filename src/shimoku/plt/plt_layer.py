@@ -12,7 +12,7 @@ from shimoku.async_execution_pool import (
     add_to_general_async_group,
 )
 
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 
 from shimoku.utils import EventType
 
@@ -83,6 +83,7 @@ from shimoku.plt.bentobox_charts import (
     indicators_with_header,
     chart_and_indicators,
     line_with_summary,
+    chart_with_ai_insights
 )
 
 from shimoku.exceptions import TabsError, ModalError, DataError, BentoboxError
@@ -102,6 +103,9 @@ import logging
 from shimoku.execution_logger import log_error, ClassWithLogging
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from shimoku import Client
 
 
 def get_component_hash(
@@ -130,10 +134,12 @@ class PlotLayer(ClassWithLogging):
 
     def __init__(
         self,
+        shimoku_client: 'Client',
         async_pool: AutoAsyncExecutionPool,
         app: Optional[App],
-        reuse_data_sets: bool = False,
+        reuse_data_sets: bool = False
     ):
+        self._parent = shimoku_client
         self._app = app
         self._business: Business = app.parent if app else None
         self._current_path: Optional[str] = None
@@ -145,6 +151,7 @@ class PlotLayer(ClassWithLogging):
         self._delete_data_set_lock = None
         self._shared_data_map: dict[str, dict[str, tuple[Mapping, DataSet, dict]]] = {}
         self._shared_data: dict[str, any] = {}
+        self._data_set_columns_rev_mapping: dict[str, dict[str, str]] = {}
         self._execution_path_orders: list[str] = []
         self._async_pool = async_pool
         self._last_event_type_per_report: dict[str, EventType] = {}
@@ -280,7 +287,7 @@ class PlotLayer(ClassWithLogging):
         Delete a report by order and context
         """
         r_hash, report = await self._get_chart_report(
-            order, Table, create_if_not_exists=False
+            order, create_if_not_exists=False
         )
         if not report:
             log_error(logger, f"No chart found with order {order}", RuntimeError)
@@ -598,7 +605,8 @@ class PlotLayer(ClassWithLogging):
         )
 
     async def _get_chart_report(
-        self, order: int, chart_class: type[Report], create_if_not_exists: bool = True
+        self, order: int,
+            chart_class: Optional[type[Report]] = None, create_if_not_exists: bool = True
     ) -> tuple[str, Optional[Report]]:
         """Get the chart report.
         :param order: the order of the chart
@@ -610,11 +618,13 @@ class PlotLayer(ClassWithLogging):
 
         if not report:
             if create_if_not_exists:
+                if not chart_class:
+                    log_error(logger, f'Cannot create chart with order {order} without chart class', DataError)
                 report = await self._app.create_report(
                     chart_class, r_hash=r_hash, order=order
                 )
                 logger.info(f'Created {chart_class.__name__} with id {report["id"]}')
-        elif report.report_type != chart_class.report_type:
+        elif chart_class and report.report_type != chart_class.report_type:
             await report.change_report_type(chart_class)
 
         return r_hash, report
@@ -730,6 +740,20 @@ class PlotLayer(ClassWithLogging):
         assert mapping[0] == "customField1"
         return {"data": ("customField1", data_set, sort)}
 
+    def _set_data_set_columns_mapping(
+            self, name: str, data: Union[list[dict], pd.DataFrame, dict, str], dump_whole: bool
+    ):
+        if dump_whole:
+            self._data_set_columns_rev_mapping[name] = {'customField1': 'data'}
+            return
+        if not isinstance(data, DataFrame):
+            data = DataFrame(data)
+        converted_data_point = convert_input_data_to_db_items(data.head(1))
+        self._data_set_columns_rev_mapping[name] = {}
+        for k, mapped_k in zip(data.iloc[0].to_dict().keys(), converted_data_point[0].keys()):
+            if k != 'sort_values':
+                self._data_set_columns_rev_mapping[name][mapped_k] = k
+
     async def _create_data_set(
         self,
         name: str,
@@ -741,6 +765,7 @@ class PlotLayer(ClassWithLogging):
         :param data: the value of the shared data entry
         :param dump_whole: whether to dump the whole data set
         """
+        self._set_data_set_columns_mapping(name, data, dump_whole)
         if self.reuse_data_sets:
             data_set = await self._app.get_data_set(
                 name=name, create_if_not_exists=False
@@ -802,6 +827,31 @@ class PlotLayer(ClassWithLogging):
             await asyncio.gather(*tasks)
         else:
             log_error(logger, "No data provided", DataError)
+
+    async def get_data_set_ids_by_order(self, order: int) -> list[str]:
+        """
+        Get the data set ids by order.
+        :param order: the order of the chart
+        :return: the data set ids
+        """
+        r_hash, report = await self._get_chart_report(order, create_if_not_exists=False)
+        if not report:
+            log_error(logger, f'No chart found with order {order}', DataError)
+        rds = await report.get_report_data_sets()
+        return list(set([rd['dataSetId'] for rd in rds]))
+
+    async def get_data_set_names_by_order(self, order: int) -> list[str]:
+        """
+        Get the data set names by order.
+        :param order: the order of the chart
+        :return: the data set names
+        """
+        r_hash, report = await self._get_chart_report(order, create_if_not_exists=False)
+        if not report:
+            log_error(logger, f'No chart found with order {order}', DataError)
+        rds = await report.get_report_data_sets()
+        data_set_ids = list(set([rd['dataSetId'] for rd in rds]))
+        return [ds['name'] for ds in await self._app.get_data_sets() if ds['id'] in data_set_ids]
 
     async def _choose_data(
         self,
@@ -2447,3 +2497,4 @@ class PlotLayer(ClassWithLogging):
     chart_and_indicators = add_to_general_async_group(chart_and_indicators)
     indicators_with_header = add_to_general_async_group(indicators_with_header)
     line_with_summary = add_to_general_async_group(line_with_summary)
+    chart_with_ai_insights = add_general_async_group(chart_with_ai_insights)

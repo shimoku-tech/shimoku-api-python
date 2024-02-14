@@ -223,7 +223,7 @@ class Client:
             self.menu_paths.__init__(self._business_object)
             self.components.__init__(self._app_object)
             self.activities.__init__(self._app_object)
-            self.plt.__init__(self._async_pool, self._app_object, self._reuse_data_sets)
+            self.plt.__init__(self, self._async_pool, self._app_object, self._reuse_data_sets)
             self.data.__init__(self._app_object)
             self.io.__init__(self._app_object)
             self.ai.__init__(self.access_token, self._universe_object, self._app_object)
@@ -348,7 +348,7 @@ class Client:
         app.currently_in_use = True
         self.activities.__init__(self._app_object)
         self.components.__init__(self._app_object)
-        self.plt.__init__(self._async_pool, self._app_object, self._reuse_data_sets)
+        self.plt.__init__(self, self._async_pool, self._app_object, self._reuse_data_sets)
         self.data.__init__(self._app_object)
         self.io.__init__(self._app_object)
         self.ai.__init__(self.access_token, self._universe_object, self._app_object)

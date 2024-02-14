@@ -200,6 +200,20 @@ class PlotLayerHeader:
         """None"""
         pass
 
+    def chart_with_ai_insights(
+        self,
+        openai_org_id: str,
+        openai_api_key: str,
+        order: int,
+        chart_function: callable,
+        chart_parameters: dict,
+        rows_size: int = 3,
+        cols_size: int = 12,
+        bubble_location: str = "bottom",
+    ):
+        """None"""
+        pass
+
     def clear_context(
         self,
     ):
@@ -367,6 +381,17 @@ class PlotLayerHeader:
         :param activity_name: the activity name to run after submitting the form
         :param action_id: the action id to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
+        """
+        pass
+
+    def get_data_set_ids_by_order(
+        self,
+        order: int,
+    ) -> list:
+        """
+        Get the data set ids by order.
+        :param order: the order of the chart
+        :return: the data set ids
         """
         pass
 
@@ -538,6 +563,7 @@ class PlotLayerHeader:
         bubble_location: str = "top",
         image_url: Optional[str] = None,
         image_size: int = 100,
+        html_config: Optional[dict] = None,
     ):
         """None"""
         pass

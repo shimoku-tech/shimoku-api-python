@@ -1,24 +1,19 @@
-from shimoku_api_python.async_execution_pool import ExecutionPoolContext
+from shimoku.async_execution_pool import AutoAsyncExecutionPool
 
-from shimoku_api_python.api.universe_metadata_api import UniverseMetadataApi, Universe
-from shimoku_api_python.api.business_metadata_api import BusinessMetadataApi, Business
-from shimoku_api_python.api.dashboard_metadata_api import DashboardMetadataApi, Dashboard
-from shimoku_api_python.api.app_metadata_api import AppMetadataApi, App
-from shimoku_api_python.api.report_metadata_api import ReportMetadataApi
-from shimoku_api_python.api.data_managing_api import DataSetManagingApi
-from shimoku_api_python.api.file_metadata_api import FileMetadataApi
-from shimoku_api_python.api.plot_api import PlotApi
-from shimoku_api_python.api.ping_api import PingApi
-from shimoku_api_python.api.activity_metadata_api import ActivityMetadataApi
+# TODO fix this file
+from shimoku.api.resources.universe import Universe
+from shimoku.api.resources.business import Business
+from shimoku.api.resources.app import App
+from shimoku.api.resources.dashboard import Dashboard
 
 import shimoku_components_catalog.html_components
 
 from typing import Optional, Dict, List, Union
 from uuid import uuid4
-from shimoku_api_python.__init__ import Client
+from shimoku import Client
 
 import logging
-from shimoku_api_python.execution_logger import configure_logging, logging_before_and_after
+from shimoku.execution_logger import configure_logging
 logger = logging.getLogger(__name__)
 
 
@@ -30,7 +25,6 @@ class MockApiClient:
     cache_enabled = True
     playground = False
 
-    @logging_before_and_after(logging_level=logger.debug)
     async def query_element(
             self, method: str, endpoint: str, limit: Optional[int] = None, **kwargs
     ) -> Union[Dict, List, bool]:
@@ -61,7 +55,6 @@ class MockApiClient:
 class MockClient(Client):
     """ Mock Client class """
 
-    @logging_before_and_after(logging_level=logger.debug)
     def __init__(
             self, verbosity: str = None, async_execution: bool = False
     ):
@@ -85,23 +78,22 @@ class MockClient(Client):
         self._app_object: Optional[App] = None
         self._dashboard_object: Optional[Dashboard] = None
 
-        self.epc = ExecutionPoolContext(api_client=self._api_client)
+        self.epc = AutoAsyncExecutionPool(api_client=self._api_client)
 
         if async_execution:
             self.activate_async_execution()
         else:
             self.activate_sequential_execution()
 
-        self.ping = PingApi(self._api_client)
-        self.universes = UniverseMetadataApi(self._api_client, self.epc)
-        self.workspaces = BusinessMetadataApi(self._universe_object, self.epc)
-        self.boards = DashboardMetadataApi(self._business_object, self.epc)
-        self.menu_paths = AppMetadataApi(self._business_object, self.epc)
+        self.universes = UniversesLayer(self._api_client, self.epc)
+        self.workspaces = WorkspacessLayer(self._universe_object, self.epc)
+        self.boards = BoardsLayer(self._business_object, self.epc)
+        self.menu_paths = AppsLayer(self._business_object, self.epc)
         self.components = ReportMetadataApi(self._app_object, self.epc)
         self.data = DataSetManagingApi(self._app_object, self.epc)
         self.io = FileMetadataApi(self._app_object, self.epc)
         self.activities = ActivityMetadataApi(self._app_object, self.epc)
-        self.plt = PlotApi(self._app_object, self.epc)
+        self.plt = PlotLayer(self._app_object, self.epc)
         self._reuse_data_sets = False
         self._shared_dfs = {}
         self._shared_custom_data = {}

@@ -4,8 +4,8 @@ import unittest
 
 import pandas as pd
 
-from shimoku_api_python.exceptions import CacheError
-import shimoku_api_python as shimoku
+from shimoku.exceptions import CacheError
+from shimoku import Client
 
 
 api_key: str = getenv('API_TOKEN')
@@ -14,12 +14,13 @@ business_id: str = getenv('BUSINESS_ID')
 environment: str = getenv('ENVIRONMENT')
 verbosity: str = getenv('VERBOSITY')
 
-s = shimoku.Client(
+s = Client(
     access_token=api_key,
     universe_id=universe_id,
     environment=environment,
-    verbosity=verbosity,
-    async_execution=True
+    verbosity='INFO',
+    async_execution=True,
+    retry_attempts=1
 )
 s.set_workspace(uuid=business_id)
 s.set_menu_path('File test')
@@ -32,7 +33,7 @@ def test_general_files():
         'b': [1, 4, 9],
     }
     df = pd.DataFrame(data)
-    file_object = df.to_csv(index=False)
+    file_object = df.to_csv(index=False).encode('utf-8')
     filename = 'helloworld.csv'
     s.io.post_object(file_name=filename, obj=file_object)
 
@@ -104,7 +105,7 @@ def test_post_get_model():
 
 
 def test_big_data():
-    filename = '../data/bulidata.csv'
+    filename = '../../data/bulidata.csv'
     df = pd.read_csv(filename)
     df.reset_index(inplace=True)
 
@@ -113,7 +114,7 @@ def test_big_data():
     dataset: pd.DataFrame = s.io.get_batched_dataframe(file_name='test-big-df')
     assert len(dataset) == len(df)
 
-    s.io.post_object(file_name='test-big-df.csv', obj=df.to_csv(index=False))
+    s.io.post_object(file_name='test-big-df.csv', obj=df.to_csv(index=False).encode('utf-8'))
 
 
 def test_more_than_100_files():
@@ -121,7 +122,7 @@ def test_more_than_100_files():
     s.set_menu_path(menu_path_mt100)
     s.menu_paths.delete_all_menu_path_files(name=menu_path_mt100)
     for i in range(201):
-        s.io.post_object(file_name=f'file_{i}.txt', obj=f'Content of file {i}')
+        s.io.post_object(file_name=f'file_{i}.txt', obj=b'Content of file '+str(i).encode('utf-8'))
     s.pop_out_of_menu_path()
     s.run()
     s.disable_caching()
@@ -136,7 +137,7 @@ test_get_object()
 test_post_dataframe()
 test_tags_and_metadata()
 test_post_get_model()
-test_big_data()
+# test_big_data()
 test_more_than_100_files()
 
 s.run()

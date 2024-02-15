@@ -14,6 +14,7 @@ ACTIONS_TEST = False
 
 
 class EventType(Enum):
+    TEST = "TEST"
     NO_EVENT = "NO_EVENT"
     EVENT = "EVENT"
     REPORT_UPDATED = "REPORT_UPDATED"

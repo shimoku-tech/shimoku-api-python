@@ -2,6 +2,9 @@ from typing import Optional
 from os import getenv
 from dataclasses import dataclass
 import asyncio
+
+from functools import wraps
+
 from shimoku.cli.utils import get_profile_config
 from shimoku.exceptions import (
     WorkspaceError,
@@ -40,7 +43,10 @@ from shimoku.api.user_access_classes.activities_layer import ActivitiesLayer
 from shimoku.api.user_access_classes.data_sets_layer import DataSetsLayer
 from shimoku.api.user_access_classes.reports_layer import ComponentsLayer
 
+from shimoku.utils import EventType
+
 from shimoku.ai.ai_layer import AILayer
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -390,3 +396,17 @@ class ResourceGetter:
         if not role_obj:
             log_error(logger, f"Role {role} not found", RoleError)
         return role_obj
+
+
+def add_end_event_decorator(func: callable):
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        await func(*args, **kwargs)
+        if 'workspace_id' in kwargs:
+            workspace_id = kwargs['workspace_id']
+            business: Business = await ResourceGetter(InitOptions(workspace_id=workspace_id)).get_business()
+            await business.create_event(EventType.BUSINESS_CONTENTS_UPDATED, {}, business['id'])
+
+    wrapper.__name__ = func.__name__
+    return wrapper

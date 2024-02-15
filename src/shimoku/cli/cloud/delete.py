@@ -1,6 +1,6 @@
 from typing import Optional
 from shimoku.cli import CLIParser, CLIFuncParam
-from shimoku.cli.cloud.cascade_get_resources import InitOptions, ResourceGetter
+from shimoku.cli.cloud.cascade_get_resources import InitOptions, ResourceGetter, add_end_event_decorator
 
 import asyncio
 
@@ -73,7 +73,7 @@ def add_delete_parser(parser: Optional[CLIParser] = None):
     ]
 
     for func in module_functions:
-        delete_parser.decor_add_command(common_args=common_args)(func)
+        delete_parser.decor_add_command(common_args=common_args)(add_end_event_decorator(func))
 
     return delete_parser
 

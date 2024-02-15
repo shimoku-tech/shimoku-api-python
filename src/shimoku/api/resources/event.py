@@ -1,6 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 
 from shimoku.api.base_resource import Resource
+from shimoku.utils import EventType
 
 if TYPE_CHECKING:
     from shimoku.api.resources.business import Business
@@ -19,7 +20,9 @@ class Event(Resource):
 
     def __init__(self, parent: "Business", uuid: Optional[str] = None):
         params = dict(
-            type="NO_EVENT",
+            authResourceType="business",
+            mainAuthResourceId=parent['id'],
+            type=EventType.TEST.value,
             resourceId=None,
             content={},
         )

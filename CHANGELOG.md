@@ -1,6 +1,25 @@
 # CHANGELOG
 
-## 1.6.1 (2023-6-02)
+## 2.0.0 (2024-15-02)
+
+### Improvements
+
+The name of the package has been changed from shimoku-api-python to shimoku.
+This will be reflected in the new scripts as the users will no longer be importing the former package name, the recommended new way to import it is:
+
+
+    from shimoku import Client
+
+· The inner workings of the SDK have been separated further in order to respect the responsibilities of each module.
+
+· The playground no longer gets initialized automatically, it needs the user to use the new CLI command.
+
+· The code generation functionalities are no longer accessible from the client object, the user needs to use the 
+commands provided in the persist module from the CLI.
+
+· A CLI has been added to ensure full access to the functionalities of the SDK.
+
+## 1.6.1 (2024-06-02)
 
 ### Fixed
 

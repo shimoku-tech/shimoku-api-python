@@ -63,11 +63,12 @@ class Business(Resource):
 
     # Dashboard methods
     async def create_dashboard(
-        self, name: str, order: int, is_public: bool = False, is_disabled: bool = False
+        self, name: str, order: int, is_public: bool = False, is_disabled: bool = False, theme: Optional[dict] = None
     ) -> Dashboard:
         dashboard_metadata = dict(
             order=order,
-            isDisabled=is_disabled
+            isDisabled=is_disabled,
+            theme=theme or self['theme'],
         )
         if is_public:
             dashboard_metadata['publicPermission'] = dict(
@@ -85,9 +86,9 @@ class Business(Resource):
             params['new_alias'] = True
         dashboard = await self.get_dashboard(uuid, name, create_if_not_exists=False)
         if not dashboard:
-            logger.warning(f'Dashboard {name} not found, cannot update it')
+            logger.warning(f'Board {name} not found, cannot update it')
             return
-        await self._base_resource.update_child(Dashboard, uuid=uuid, alias=name, **params)
+        await self._base_resource.update_child(Dashboard, uuid=dashboard['id'], **params)
         await self.create_event(EventType.DASHBOARD_UPDATED, params, dashboard['id'])
 
     async def get_dashboard(self, uuid: Optional[str] = None, name: Optional[str] = None,

@@ -44,7 +44,7 @@ class InitOptions:
     }
 
     access_token: Optional[str] = getenv('SHIMOKU_ACCESS_TOKEN')
-    environment: Optional[str] = getenv('SHIMOKU_ENVIRONMENT') or 'production'
+    environment: Optional[str] = getenv('SHIMOKU_ENVIRONMENT')
     universe_id: Optional[str] = getenv('SHIMOKU_UNIVERSE_ID')
     workspace_id: Optional[str] = getenv('SHIMOKU_WORKSPACE_ID')
     board: Optional[str] = None
@@ -174,10 +174,15 @@ class ResourceGetter:
         return dashboard
 
     @staticmethod
-    def get_dashboard_fields_to_show(show_public_permission: bool) -> list[str]:
+    def get_dashboard_fields_to_show(
+        show_public_permission: bool,
+        show_theme: bool
+    ) -> list[str]:
         fields = ['id', 'name', 'order']
         if show_public_permission:
             fields.append('publicPermission')
+        if show_theme:
+            fields.append('theme')
         return fields
 
     async def get_apps_layer(self) -> MenuPathsLayer:

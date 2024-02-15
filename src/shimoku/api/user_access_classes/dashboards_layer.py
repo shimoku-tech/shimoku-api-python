@@ -43,7 +43,8 @@ class BoardsLayer(ClassWithLogging):
     
     async def create_board(
         self, name: str, order: Optional[int] = None,
-        is_public: bool = False, is_disabled: bool = False
+        is_public: bool = False, is_disabled: bool = False,
+        theme: Optional[dict] = None
     ) -> dict:
         """
         Create a board
@@ -51,11 +52,12 @@ class BoardsLayer(ClassWithLogging):
         :param order: order of the board
         :param is_public: is the board public
         :param is_disabled: is the board disabled
+        :param theme: theme of the board
         :return: board metadata
         """
         return (await self._business.create_dashboard(
             name=name, order=order if order is not None else len(await self._business.get_dashboards()),
-            is_disabled=is_disabled, is_public=is_public
+            is_disabled=is_disabled, is_public=is_public, theme=theme
         )).cascade_to_dict()
 
     async def get_board(
@@ -85,7 +87,8 @@ class BoardsLayer(ClassWithLogging):
     async def update_board(
         self, uuid: Optional[str] = None, name: Optional[str] = None,
         new_name: Optional[str] = None, order: Optional[int] = None,
-        is_public: Optional[bool] = None, is_disabled: Optional[bool] = None
+        is_public: Optional[bool] = None, is_disabled: Optional[bool] = None,
+        theme: Optional[dict] = None
     ) -> bool:
         """
         Update a board
@@ -95,10 +98,12 @@ class BoardsLayer(ClassWithLogging):
         :param order: new order of the board
         :param is_public: new public permission of the board
         :param is_disabled: new is_disabled of the board
+        :param theme: new theme of the board
         """
         return await self._business.update_dashboard(
-            uuid=uuid, name=name, new_name=new_name, order=order,
-            isDisabled=is_disabled,
+            uuid=uuid, name=name,
+            new_name=new_name, order=order,
+            isDisabled=is_disabled, theme=theme,
             publicPermission={
                 'isPublic': is_public,
                 'permission': 'READ',

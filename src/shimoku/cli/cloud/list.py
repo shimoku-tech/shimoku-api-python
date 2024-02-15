@@ -134,17 +134,19 @@ async def activity_templates(
 async def boards(
     workspace_id: Optional[str],
     show_public_permission: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
+    show_theme: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
     **kwargs,
 ):
     """ List the boards in the workspace
     :param workspace_id: UUID of the workspace to use
     :param show_public_permission: Flag to show the public permission
+    :param show_theme: Flag to show the theme
     """
     resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
     businesses_layer = await resource_getter.get_businesses_layer()
     business = await resource_getter.get_business()
     board_items = await businesses_layer.get_workspace_boards(business['id'])
-    fields = resource_getter.get_dashboard_fields_to_show(show_public_permission)
+    fields = resource_getter.get_dashboard_fields_to_show(show_public_permission, show_theme)
     if kwargs['filter_field'] is None:
         kwargs['filter_field'] = 'name'
     if not kwargs['sort_field']:

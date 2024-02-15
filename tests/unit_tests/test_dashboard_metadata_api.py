@@ -164,5 +164,28 @@ class TestDashboardMetadataApi(unittest.TestCase):
         for app_id in app_ids:
             s.menu_paths.delete_menu_path(uuid=app_id)
 
+    def test_dashboard_theme(self):
+        name = 'Testing dashboard theme'
+
+        delete_dashboard_if_exists(name)
+
+        s.workspaces.update_workspace(uuid=business_id, theme={"palette": {"background": {"default": "#23232F"}}})
+
+        s.boards.create_board(name=name)
+
+        board = s.boards.get_board(name=name)
+
+        assert board['theme'] == {"palette": {"background": {"default": "#23232F"}}}
+
+        s.boards.update_board(uuid=board['id'], theme={})
+        board = s.boards.get_board(name=name)
+
+        assert board['theme'] == {}
+
+        s.boards.delete_board(name=name)
+
+        assert not s.boards.get_board(name=name)
+
+        s.workspaces.update_workspace(uuid=business_id, theme={})
 
 

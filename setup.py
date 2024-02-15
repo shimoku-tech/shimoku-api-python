@@ -1,5 +1,5 @@
 """
-    Setup file for shimoku-api-python.
+    Setup file for shimoku.
     Use setup.cfg to configure your project.
 
     This file was generated with PyScaffold 4.5.
@@ -10,7 +10,9 @@ from setuptools import setup
 
 if __name__ == "__main__":
     try:
-        setup(use_scm_version={"version_scheme": "no-guess-dev"})
+        setup(
+            use_scm_version={"version_scheme": "no-guess-dev"},
+        )
     except:  # noqa
         print(
             "\n\nAn error occurred while building the project, "

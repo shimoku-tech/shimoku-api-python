@@ -1,7 +1,7 @@
 import unittest
 from os import getenv
-from tenacity import RetryError
 from utils import initiate_shimoku
+from shimoku.exceptions import APIError
 
 s = initiate_shimoku()
 business_id: str = getenv('BUSINESS_ID')
@@ -23,6 +23,6 @@ class TestReport(unittest.TestCase):
         s.components.delete_component(uuid=report['id'])
 
         if not mock:
-            with self.assertRaises(RetryError):
+            with self.assertRaises(APIError):
                 s.components.get_component(uuid=report['id'])
 

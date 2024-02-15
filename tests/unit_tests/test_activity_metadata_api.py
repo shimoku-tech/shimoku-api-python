@@ -1,5 +1,5 @@
 from os import getenv
-from shimoku_api_python.exceptions import ActivityError, CacheError
+from shimoku.exceptions import ActivityError, CacheError
 import unittest
 from utils import initiate_shimoku
 
@@ -54,7 +54,7 @@ class TestActivity(unittest.TestCase):
 
         new_activity_id = activity['id']
 
-        assert activity['name'] ==  new_activity_name
+        assert activity['name'] == new_activity_name
         assert activity['runs'] == []
 
         n_activities_mid = len(s.activities.get_activities())

@@ -3,8 +3,7 @@ from os import getenv
 from typing import Dict, List
 import unittest
 
-from shimoku_api_python.exceptions import MenuPathError
-from tenacity import RetryError
+from shimoku.exceptions import MenuPathError, APIError
 from utils import initiate_shimoku
 
 s = initiate_shimoku()
@@ -22,7 +21,7 @@ class TestApp(unittest.TestCase):
     def check_app_not_exists(self, _app_id: str):
         if mock:
             return
-        with self.assertRaises(RetryError):
+        with self.assertRaises(APIError):
             s.menu_paths.get_menu_path(uuid=_app_id)
 
     def test_get_app(self):
@@ -32,7 +31,7 @@ class TestApp(unittest.TestCase):
 
     def test_get_fake_app(self):
         if not mock:
-            with self.assertRaises(RetryError):
+            with self.assertRaises(APIError):
                 app_id: str = 'this is a test'
                 s.menu_paths.get_menu_path(uuid=app_id)
 

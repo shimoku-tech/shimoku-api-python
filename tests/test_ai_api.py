@@ -3,10 +3,10 @@ from os import getenv
 from typing import Optional
 import unittest
 import time
-import shimoku_api_python as shimoku
 import json
 import datetime as dt
-from shimoku_api_python.exceptions import ShimokuFileError
+from shimoku.exceptions import ShimokuFileError
+from shimoku import Client
 
 access_token: str = getenv('UNIVERSE_API_TOKEN')
 universe_id: str = getenv('UNIVERSE_ID')
@@ -48,7 +48,7 @@ def execute_ai_function(wf: str, model_name: Optional[str] = None) -> str:
     return s.ai.generic_execute(**params)
 
 
-s = shimoku.Client(
+s = Client(
     access_token=access_token,
     universe_id=universe_id,
     verbosity=verbosity,

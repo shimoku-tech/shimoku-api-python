@@ -1,6 +1,8 @@
 import unittest
 from test_plot_api import main, shimoku_client as tpa_shimoku_client
-import shimoku_api_python as shimoku
+import test_plot_api
+from utils import initiate_shimoku
+from shimoku import Client
 import tempfile
 import subprocess
 import shutil
@@ -146,7 +148,7 @@ def get_workspace_contents(shimoku_client):
     data_by_data_set = {}
     for menu_path in menu_paths:
         handle_menu_path(shimoku_client, menu_path, components, data_sets_mapping, data_by_data_set)
-    shimoku_client.pop_out_of_menu_path()
+        shimoku_client.pop_out_of_menu_path()
     _all = [*boards, *menu_paths, *components, *[datum for data in data_by_data_set.values() for datum in data]]
     for element in _all:
         element.pop('id')
@@ -176,11 +178,16 @@ class TestCodeGen(unittest.TestCase):
         tpa_shimoku_client.set_workspace()
         clear_workspace(tpa_shimoku_client)
         main()
-        tpa_shimoku_client.pop_out_of_dashboard()
+        tpa_shimoku_client.pop_out_of_board()
         tpa_shimoku_client.disable_caching()
         boards, menu_paths, components, data = get_workspace_contents(tpa_shimoku_client)
         temp_dir = tempfile.mkdtemp()
-        tpa_shimoku_client.generate_code(temp_dir)
+        subprocess.run([
+            'shimoku', 'persist', 'generate-code',
+            '--output-path', temp_dir,
+            '--universe-id', 'local',
+            '--workspace', 'local',
+        ])
         clear_workspace(tpa_shimoku_client)
         subprocess.run(['python', f'{temp_dir}/execute_workspace_local.py'], check=True)
         (first_generation_boards,
@@ -189,7 +196,12 @@ class TestCodeGen(unittest.TestCase):
          first_generation_data) = get_workspace_contents(tpa_shimoku_client)
         shutil.rmtree(temp_dir)
         temp_dir = tempfile.mkdtemp()
-        tpa_shimoku_client.generate_code(temp_dir)
+        subprocess.run([
+            'shimoku', 'persist', 'generate-code',
+            '--output-path', temp_dir,
+            '--universe-id', 'local',
+            '--workspace', 'local',
+        ])
         subprocess.run(['python', f'{temp_dir}/execute_workspace_local.py'], check=True)
         (second_generation_boards,
          second_generation_menu_paths,
@@ -213,13 +225,14 @@ class TestCodeGen(unittest.TestCase):
                              get_diff_percentage(first_generation_data, second_generation_data)),
         }
         print(json.dumps(results, indent=4))
+        test_plot_api.set_shimoku_client()
         assert all(all([value == 0 for value in results_list]) for results_list in results.values())
 
     def test_commit(self):
         if tpa_shimoku_client.playground or mock:
             # Test commit only in cloud
             return
-        local_shimoku_client = shimoku.Client(verbosity='INFO')
+        local_shimoku_client = Client(verbosity='INFO')
         local_shimoku_client.disable_caching()
         local_shimoku_client.set_workspace()
         clear_workspace(local_shimoku_client)
@@ -228,13 +241,15 @@ class TestCodeGen(unittest.TestCase):
         create_bar_chart(local_shimoku_client)
         local_boards, local_menu_paths, local_components, local_data = get_workspace_contents(local_shimoku_client)
         clear_workspace(tpa_shimoku_client)
-        local_shimoku_client.commit_contents_to(
-            access_token=tpa_shimoku_client.access_token,
-            environment=tpa_shimoku_client.environment,
-            universe_id=tpa_shimoku_client.universe_id,
-            workspace_id=tpa_shimoku_client.workspace_id,
-            show_progress_bar=True,
-        )
+        subprocess.run([
+            'shimoku', 'persist', 'commit',
+            '--universe-id', 'local',
+            '--workspace', 'local',
+            '--target-access-token', tpa_shimoku_client.access_token,
+            '--target-universe-id', tpa_shimoku_client.universe_id,
+            '--target-workspace', tpa_shimoku_client.workspace_id,
+            '--target-environment', tpa_shimoku_client.environment,
+        ])
         tpa_shimoku_client.disable_caching()
         tpa_shimoku_client.set_workspace(tpa_shimoku_client.workspace_id)
         boards, menu_paths, components, data = get_workspace_contents(tpa_shimoku_client)
@@ -245,7 +260,11 @@ class TestCodeGen(unittest.TestCase):
             'data': (get_diff_percentage(local_data, data)),
         }
         print(json.dumps(results, indent=4))
+        print(local_menu_paths)
+        print(menu_paths)
         assert all([value == 0 for value in results.values()])
+
+        test_plot_api.set_shimoku_client()
 
     def test_pull(self):
         if tpa_shimoku_client.playground or mock:
@@ -258,17 +277,19 @@ class TestCodeGen(unittest.TestCase):
         create_bar_chart(tpa_shimoku_client)
         tpa_boards, tpa_menu_paths, tpa_components, tpa_data = get_workspace_contents(tpa_shimoku_client)
 
-        local_shimoku_client = shimoku.Client(verbosity='INFO')
+        local_shimoku_client = Client(verbosity='INFO')
         local_shimoku_client.disable_caching()
         local_shimoku_client.set_workspace()
         clear_workspace(local_shimoku_client)
-        local_shimoku_client.pull_contents_from(
-            access_token=tpa_shimoku_client.access_token,
-            environment=tpa_shimoku_client.environment,
-            universe_id=tpa_shimoku_client.universe_id,
-            workspace_id=tpa_shimoku_client.workspace_id,
-            show_progress_bar=True,
-        )
+        subprocess.run([
+            'shimoku', 'persist', 'pull',
+            '--universe-id', 'local',
+            '--workspace', 'local',
+            '--origin-access-token', tpa_shimoku_client.access_token,
+            '--origin-universe-id', tpa_shimoku_client.universe_id,
+            '--origin-workspace', tpa_shimoku_client.workspace_id,
+            '--origin-environment', tpa_shimoku_client.environment,
+        ])
         local_boards, local_menu_paths, local_components, local_data = get_workspace_contents(local_shimoku_client)
 
         clear_workspace(tpa_shimoku_client)
@@ -281,4 +302,8 @@ class TestCodeGen(unittest.TestCase):
             'data': (get_diff_percentage(tpa_data, local_data)),
         }
         print(json.dumps(results, indent=4))
+        print(local_menu_paths)
+        print(tpa_menu_paths)
         assert all([value == 0 for value in results.values()])
+
+        test_plot_api.set_shimoku_client()

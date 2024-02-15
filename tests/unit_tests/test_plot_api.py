@@ -1,6 +1,6 @@
 """"""
-from os import getenv
-from typing import Dict, List
+from os import getenv, path
+from typing import Dict, List, Optional
 from time import perf_counter
 import unittest
 import requests
@@ -11,14 +11,28 @@ import numpy as np
 import random
 from copy import deepcopy
 
+from shimoku import Client
 from utils import initiate_shimoku
 
-shimoku_client = initiate_shimoku()
-# s.reuse_data_sets()
+file_path = path.dirname(path.abspath(__file__))
+print(file_path)
+data_path = file_path.replace('tests/unit_tests', 'data')
 workspace_id: str = getenv('BUSINESS_ID')
 mock: bool = getenv('MOCK') == 'TRUE'
+shimoku_client: Optional[Client] = None
 
-shimoku_client.set_workspace(uuid=workspace_id)
+
+def set_shimoku_client():
+    global shimoku_client
+    shimoku_client = initiate_shimoku()
+    shimoku_client.reuse_data_sets()
+
+    shimoku_client.set_workspace(uuid=workspace_id)
+    print(shimoku_client._api_client.cache_enabled)
+
+
+set_shimoku_client()
+
 # for menu_path in s.workspaces.get_workspace_menu_paths(uuid=workspace_id):
 #     s.menu_paths.delete_all_menu_path_activities(uuid=menu_path['id'])
 # s.workspaces.delete_all_workspace_menu_paths(uuid=workspace_id)
@@ -473,11 +487,11 @@ def table_with_labels():
         categorical_columns=["filtA", "filtB"],
         label_columns={
             ("x", 'outlined'): {
+                3: [0, 255, 0],
+                4: "#42F548",
                 5: "#666666",
                 6: "#4287f5",
-                4: "#42F548",
                 7: [255, 0, 0],
-                3: [0, 255, 0],
             },
             ("y", 'outlined'): {
                 (0, 25): "red",
@@ -510,167 +524,6 @@ def table_with_labels():
             ("name3", 'outlined'): "neutral"
         },
     )
-
-
-def bar_with_filters():
-    print('test_bar_with_filters')
-    menu_path: str = 'test', 'multifilter-bar-test'
-    # First reset
-    data_ = pd.read_csv('../../data/test_multifilter.csv')
-    y: List[str] = [
-        'Acné', 'Adeslas', 'Asisa',
-        'Aspy', 'Caser', 'Clínica Navarra', 'Cualtis', 'Cáncer', 'DKV',
-        'Depresión', 'Dermatólogo', 'Dermatólogo Adeslas', 'Diabetes',
-        'Fundación Jiménez Díaz', 'Ginecólogo', 'Ginecólogo Adeslas',
-        'HM Hospitales', 'Hemorroides', 'IMQ', 'Preving', 'Psicólogo',
-        'Psiquiatra', 'Quirón', 'Quirón Prevención + quirónprevención',
-        'Quirón+Quirónsalud', 'Quirónsalud', 'Ruber', 'Ruber Internacional',
-        'Ruber Juan Bravo', 'Sanitas', 'Teknon', 'Traumatólogo', 'Vithas'
-    ]
-
-    data_1 = data_[data_['seccion'].isin(['Empresas hospitalarias', 'Empresas PRL'])]
-
-    shimoku_client.activate_sequential_execution()
-    filters: Dict = {
-        'order': 0,
-        'filter_cols': [
-            'seccion', 'frecuencia', 'region',
-        ],
-    }
-    shimoku_client.plt.bar(
-        data=data_1,
-        x='fecha', y=y,
-        menu_path=f'{menu_path}-bysize',
-        order=1, rows_size=2,
-        cols_size=12,
-        filters=filters,
-    )
-
-    filters: Dict = {
-        'row': 1, 'column': 1,
-        'filter_cols': [
-            'seccion', 'frecuencia', 'region',
-        ],
-    }
-    shimoku_client.plt.bar(
-        data=data_1,
-        x='fecha', y=y,
-        menu_path=menu_path,
-        row=2, column=1,
-        filters=filters,
-    )
-
-    data_2 = data_[data_['seccion'].isin(['Enfermedades'])]
-    filters: Dict = {
-        'update_filter_type': 'concat',
-        'row': 1, 'column': 1,
-        'filter_cols': [
-            'seccion', 'frecuencia', 'region',
-        ],
-    }
-
-    shimoku_client.plt.bar(
-        data=data_2,
-        x='fecha', y=y,
-        menu_path=menu_path,
-        row=2, column=1,
-        filters=filters,
-    )
-
-    filters: Dict = {
-        'update_filter_type': 'append',
-        'row': 1, 'column': 1,
-        'filter_cols': [
-            'seccion', 'frecuencia', 'region',
-        ],
-    }
-
-    data_3 = pd.concat([data_1, data_2])
-    shimoku_client.plt.bar(
-        data=data_3,
-        x='fecha', y=y,
-        menu_path=menu_path,
-        row=2, column=2,
-        filters=filters,
-    )
-    shimoku_client.activate_async_execution()
-
-    if delete_paths:
-        shimoku_client.plt.delete_path(menu_path)
-        shimoku_client.plt.delete_path(menu_path=f'{menu_path}-bysize')
-
-
-def bar_with_filters_with_aggregation_methods():
-    print("test_bar_with_filters_with_aggregation_methods")
-    menu_path = "test2/bar-with-filters-with-aggregation-methods"
-    data = [
-        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 1, 'food rating': 10, 'Location': "Barcelona",
-         'Fav Food': "pizza", 'Fav Drink': "water"},
-        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 2, 'food rating': 8, 'Location': "Barcelona",
-         'Fav Food': "sushi", 'Fav Drink': "fanta"},
-        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 10, 'Location': "Madrid",
-         'Fav Food': "pasta", 'Fav Drink': "wine"},
-        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 4, 'food rating': 5, 'Location': "Madrid",
-         'Fav Food': "pizza", 'Fav Drink': "wine"},
-        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 5, 'food rating': 7, 'Location': "Madrid",
-         'Fav Food': "sushi", 'Fav Drink': "water"},
-
-        {'date': dt.date(2021, 1, 1), 'Restaurant rating': 5, 'food rating': 6, 'Location': "Andorra",
-         'Fav Food': "pizza", 'Fav Drink': "water"},
-        {'date': dt.date(2021, 1, 2), 'Restaurant rating': 4, 'food rating': 0, 'Location': "Paris",
-         'Fav Food': "sushi", 'Fav Drink': "fanta"},
-        {'date': dt.date(2021, 1, 3), 'Restaurant rating': 3, 'food rating': 5, 'Location': "Paris",
-         'Fav Food': "pasta", 'Fav Drink': "wine"},
-        {'date': dt.date(2021, 1, 4), 'Restaurant rating': 2, 'food rating': 9, 'Location': "Andorra",
-         'Fav Food': "pizza", 'Fav Drink': "wine"},
-        {'date': dt.date(2021, 1, 5), 'Restaurant rating': 1, 'food rating': 8, 'Location': "Andorra",
-         'Fav Food': "sushi", 'Fav Drink': "water"},
-    ]
-    filters = {'order': 0,
-               'filter_cols': ["Location", "Fav Food", 'Fav Drink']
-               }
-
-    shimoku_client.plt.bar(
-        data=data,
-        x='date', y=['Restaurant rating', 'food rating'],
-        menu_path=menu_path,
-        order=1,
-        rows_size=2, cols_size=9,
-        filters=filters
-    )
-
-    filters = {'order': 2,
-               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
-               'get_all': True
-               }
-
-    shimoku_client.plt.bar(
-        data=data,
-        x='date', y=['Restaurant rating', 'food rating'],
-        menu_path=menu_path,
-        order=3,
-        rows_size=2, cols_size=9,
-        filters=filters,
-        aggregation_func={"food rating": [np.sum, np.mean],
-                          "Restaurant rating": [np.mean, np.amax, np.amin]}
-    )
-
-    filters = {'order': 4,
-               'filter_cols': ["Location", "Fav Food", 'Fav Drink'],
-               'get_all': ["Location", "Fav Drink"],
-               }
-
-    shimoku_client.plt.bar(
-        data=data,
-        x='date', y=['Restaurant rating', 'food rating'],
-        menu_path=menu_path,
-        order=5,
-        rows_size=2, cols_size=9,
-        filters=filters,
-        aggregation_func=np.mean,
-    )
-    if delete_paths:
-        shimoku_client.plt.delete_path(menu_path=menu_path)
 
 
 def bar():
@@ -789,7 +642,7 @@ def scatter():
     shimoku_client.plt.scatter(data='main data', point_fields=[('x', 'y')], order=0, cols_size=6, variant='clean')
 
     # https://figshare.com/articles/dataset/Age_height_and_weight_raw_data/16920130
-    df_ = pd.read_csv('../../data/scatter_test.csv')[
+    df_ = pd.read_csv(data_path+'/scatter_test.csv')[
         ['AgeGroup1', 'AgeGroup2', 'AgeGroup3', 'AllGroupAge', 'WeightGroup1',
          'WeightGroup2', 'WeightGroup3', 'AllGroupWeight']]
 
@@ -896,7 +749,7 @@ def waterfall():
         order=2,
         variant='clean'
     )
-    # s.reuse_data_sets()
+    shimoku_client.reuse_data_sets()
 
 
 def line_with_confidence_area():
@@ -956,241 +809,6 @@ def heatmap():
     )
 
 
-def heatmap_with_filters():
-    print('test_heatmap_with_filters')
-    menu_path: str = 'test', 'heatmap-with-filters-test'
-    data_ = [
-        {
-            "Filter": "Option 1",
-            "xAxis": "Lunes",
-            "yAxis": "12 a.m",
-            "value": 9
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Lunes",
-            "yAxis": "6 p.m",
-            "value": 10
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Lunes",
-            "yAxis": "12 p.m",
-            "value": 9
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Lunes",
-            "yAxis": "6 a.m",
-            "value": 10
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Martes",
-            "yAxis": "12 a.m",
-            "value": 9
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Martes",
-            "yAxis": "6 p.m",
-            "value": 9
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Martes",
-            "yAxis": "12 p.m",
-            "value": 8
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Martes",
-            "yAxis": "6 a.m",
-            "value": 0
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Miercoles",
-            "yAxis": "12 a.m",
-            "value": 2
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Miercoles",
-            "yAxis": "6 p.m",
-            "value": 7
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Miercoles",
-            "yAxis": "12 p.m",
-            "value": 0
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Miercoles",
-            "yAxis": "6 a.m",
-            "value": 2
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Jueves",
-            "yAxis": "12 a.m",
-            "value": 4
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Jueves",
-            "yAxis": "6 p.m",
-            "value": 0
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Jueves",
-            "yAxis": "12 p.m",
-            "value": 1
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Jueves",
-            "yAxis": "6 a.m",
-            "value": 6
-        },
-
-        {
-            "Filter": "Option 2",
-            "xAxis": "Lunes",
-            "yAxis": "12 a.m",
-            "value": 6
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Lunes",
-            "yAxis": "6 p.m",
-            "value": 4
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Lunes",
-            "yAxis": "12 p.m",
-            "value": 8
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Lunes",
-            "yAxis": "6 a.m",
-            "value": 15
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Martes",
-            "yAxis": "12 a.m",
-            "value": 2
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Martes",
-            "yAxis": "6 p.m",
-            "value": 6
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Martes",
-            "yAxis": "12 p.m",
-            "value": 7
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Martes",
-            "yAxis": "6 a.m",
-            "value": 4
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Miercoles",
-            "yAxis": "12 a.m",
-            "value": 2
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Miercoles",
-            "yAxis": "6 p.m",
-            "value": 7
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Miercoles",
-            "yAxis": "12 p.m",
-            "value": 4
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Miercoles",
-            "yAxis": "6 a.m",
-            "value": 2
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Jueves",
-            "yAxis": "12 a.m",
-            "value": 8
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Jueves",
-            "yAxis": "6 p.m",
-            "value": 0
-        },
-        {
-            "Filter": "Option 1",
-            "xAxis": "Jueves",
-            "yAxis": "12 p.m",
-            "value": 4
-        },
-        {
-            "Filter": "Option 2",
-            "xAxis": "Jueves",
-            "yAxis": "6 a.m",
-            "value": 10
-        }
-    ]
-    filters: Dict = {
-        'order': 0,
-        'filter_cols': ['Filter']
-    }
-    shimoku_client.plt.heatmap(
-        data=data_, x='xAxis', y='yAxis', value='value',
-        menu_path=menu_path,
-        order=1,
-        filters=filters
-    )
-    filters: Dict = {
-        'order': 2,
-        'filter_cols': ['Filter'],
-        'get_all': True
-    }
-    shimoku_client.plt.heatmap(
-        data=data_, x='xAxis', y='yAxis', value='value',
-        menu_path=menu_path,
-        order=3, rows_size=2, cols_size=12,
-        filters=filters,
-        aggregation_func=np.mean
-    )
-
-    if delete_paths:
-        shimoku_client.plt.delete(
-            menu_path=menu_path,
-            component_type='heatmap',
-            row=1, column=1,
-        )
-        shimoku_client.plt.delete(
-            menu_path=menu_path,
-            component_type='heatmap',
-            order=1
-        )
-        shimoku_client.plt.delete_path(menu_path)
-
-
 def doughnut():
     shimoku_client.set_menu_path('test', 'doughnut')
     data_ = [
@@ -1203,7 +821,7 @@ def doughnut():
     shimoku_client.plt.doughnut(data=data, names='date', values='x', order=0)
     shimoku_client.plt.doughnut(data=data_, names='name', values='value', order=1)
 
-    df = pd.read_csv('../../data/test_stack_distribution.csv')
+    df = pd.read_csv(data_path+'/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
     df = df[['Segment'] + value_columns]
@@ -1228,7 +846,7 @@ def rose():
     shimoku_client.plt.rose(data='main data', names='date', values='x', order=0)
     shimoku_client.plt.rose(data=data_, names='name', values='value', order=1)
 
-    df = pd.read_csv('../../data/test_stack_distribution.csv')
+    df = pd.read_csv(data_path+'/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
     df = df[['Segment'] + value_columns]
@@ -1243,7 +861,7 @@ def rose():
 
 def shimoku_gauges():
     shimoku_client.set_menu_path('test-free-echarts', 'shimoku-gauges')
-    df = pd.read_csv('../../data/test_stack_distribution.csv')
+    df = pd.read_csv(data_path+'/test_stack_distribution.csv')
 
     value_columns = [col for col in df.columns if col != "Segment"]
     df = df[['Segment'] + value_columns]
@@ -1288,37 +906,6 @@ def speed_gauge():
 # TODO implement
 def change_report_type():
     pass
-
-
-def ring_gauge():
-    shimoku_client.set_menu_path('test', 'ring-gauge-test')
-    data_ = [
-        {
-            "value": 60,
-            "name": "Third"
-        },
-        {
-            "value": 40,
-            "name": "Fourth"
-        },
-        {
-            "value": 20,
-            "name": "Fifth"
-        },
-        {
-            "value": 80,
-            "name": "Second"
-        },
-        {
-            "value": 100,
-            "name": "First"
-        }
-    ]
-    shimoku_client.plt.ring_gauge(names='date', values='x', order=0)
-    shimoku_client.plt.ring_gauge(
-        data=data_, names='name', values='value',
-        order=1, rows_size=2, cols_size=12,
-    )
 
 
 def sunburst():
@@ -1405,7 +992,8 @@ def indicator():
         "value": "500€",
     }, {
         "color": "warning",
-        "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
+        "backgroundImage": "https://images.unsplash.com/photo-1535957998253-26ae1ef29506?ixlib=rb-1.2.1&ixid=MnwxMjA3fD"
+        "B8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=736&q=80",
         "variant": "outlined",
         "description": "This has a background",
         "title": "Super cool indicator",
@@ -2710,8 +2298,7 @@ def dynamic_conditional_and_auto_send_input_form():
             }
         ] for i in range(4)}
 
-    form_groups['Personal information'] = \
-        [
+    form_groups['Personal information'] = [
             {
                 'mapping': 'name',
                 'fieldName': 'name',
@@ -2745,8 +2332,7 @@ def dynamic_conditional_and_auto_send_input_form():
             },
         ]
 
-    form_groups['Other data'] = \
-        [
+    form_groups['Other data'] = [
             {
                 'mapping': 'skills',
                 'fieldName': 'Skills',
@@ -2812,133 +2398,135 @@ def tabs():
     shimoku_client.plt.set_shared_data(dfs={'main data': data})
 
     def _test_bentobox():
-        with shimoku_client.plt.set_bentobox(cols_size=8, rows_size=3):
-
-            data_indic = [
-                {
-                    "description": "",
-                    "title": "Estado",
-                    "value": "Abierto",
-                },
-            ]
-            shimoku_client.plt.indicator(
-                data=data_indic,
-                order=0, rows_size=10, cols_size=12,
-            )
-
-            shimoku_client.plt.indicator(
-                data=data_indic,
-                order=1, rows_size=10, cols_size=12,
-            )
-
-            shimoku_client.plt.bar(
-                data='main data', x='date',
-                order=2, rows_size=26, cols_size=24,
-            )
-
-    with shimoku_client.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0):
-        _test_bentobox()
-
-        shimoku_client.plt.change_current_tab("Table")
-        shimoku_client.plt.table(
-            title="Test-table",
-            data=table_data,
-            order=0,
-            categorical_columns=['filtA', 'filtB'],
-            initial_sort_column='date',
-            search=True,
+        shimoku_client.plt.set_bentobox(cols_size=8, rows_size=3)
+        data_indic = [
+            {
+                "description": "",
+                "title": "Estado",
+                "value": "Abierto",
+            },
+        ]
+        shimoku_client.plt.indicator(
+            data=data_indic,
+            order=0, rows_size=10, cols_size=12,
         )
 
-        shimoku_client.plt.change_current_tab("line test")
-        shimoku_client.plt.line(data='main data', x='date', order=0)
+        shimoku_client.plt.indicator(
+            data=data_indic,
+            order=1, rows_size=10, cols_size=12,
+        )
 
-        shimoku_client.plt.change_current_tab("Bar 1")
         shimoku_client.plt.bar(
             data='main data', x='date',
-            x_axis_name='Date',
-            y_axis_name='Revenue',
-            order=0, rows_size=2,
-            cols_size=12,
+            order=2, rows_size=26, cols_size=24,
         )
+        shimoku_client.plt.pop_out_of_bentobox()
 
-        shimoku_client.plt.change_current_tab("Input Form")
-        shimoku_client.plt.input_form(order=0, options=input_form_data)
+    shimoku_client.plt.set_tabs_index(tabs_index=("Deepness 0", "Bento box"), order=0)
+    _test_bentobox()
 
-        indicators_data = {
-            "description": "",
-            "title": "",
-            "value": "INDICATOR CHANGED!",
-            "color": "warning"
-        }
-        indicators_data_2 = {
-            "description": "",
-            "title": "",
-            "value": "INDICATOR CHANGED!",
-            "color": "main"
-        }
-        shimoku_client.plt.change_current_tab("Indicators 2")
+    shimoku_client.plt.change_current_tab("Table")
+    shimoku_client.plt.table(
+        title="Test-table",
+        data=table_data,
+        order=0,
+        categorical_columns=['filtA', 'filtB'],
+        initial_sort_column='date',
+        search=True,
+    )
+
+    shimoku_client.plt.change_current_tab("line test")
+    shimoku_client.plt.line(data='main data', x='date', order=0)
+
+    shimoku_client.plt.change_current_tab("Bar 1")
+    shimoku_client.plt.bar(
+        data='main data', x='date',
+        x_axis_name='Date',
+        y_axis_name='Revenue',
+        order=0, rows_size=2,
+        cols_size=12,
+    )
+
+    shimoku_client.plt.change_current_tab("Input Form")
+    shimoku_client.plt.input_form(order=0, options=input_form_data)
+
+    indicators_data = {
+        "description": "",
+        "title": "",
+        "value": "INDICATOR CHANGED!",
+        "color": "warning"
+    }
+    indicators_data_2 = {
+        "description": "",
+        "title": "",
+        "value": "INDICATOR CHANGED!",
+        "color": "main"
+    }
+    shimoku_client.plt.change_current_tab("Indicators 2")
+    shimoku_client.plt.indicator(data=indicators_data_2, order=0)
+    shimoku_client.plt.change_current_tab("Indicators 1")
+    shimoku_client.plt.indicator(data=indicators_data, order=0)
+
+    shimoku_client.plt.set_tabs_index(
+        tabs_index=("Deepness 1", "Bento box"), order=1,
+        parent_tabs_index=("Deepness 0", "Indicators 1"),
+        sticky=False, just_labels=True
+    )
+    _test_bentobox()
+    shimoku_client.plt.change_current_tab("Indicators 1")
+
+    for i in range(2, 5):
+        shimoku_client.plt.set_tabs_index(
+            (f"Deepness {i}", "Indicators 2"), order=1,
+            parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
+            sticky=False, just_labels=True
+        )
         shimoku_client.plt.indicator(data=indicators_data_2, order=0)
         shimoku_client.plt.change_current_tab("Indicators 1")
         shimoku_client.plt.indicator(data=indicators_data, order=0)
 
-    with shimoku_client.plt.set_tabs_index(
-        tabs_index=("Deepness 1", "Bento box"), order=1,
-        parent_tabs_index=("Deepness 0", "Indicators 1"),
-        sticky=False, just_labels=True):
-        _test_bentobox()
-        shimoku_client.plt.change_current_tab("Indicators 1")
-
-    for i in range(2, 5):
-        with shimoku_client.plt.set_tabs_index(
-            (f"Deepness {i}", "Indicators 2"), order=1,
-            parent_tabs_index=(f"Deepness {i - 1}", "Indicators 1"),
-            sticky=False, just_labels=True
-        ):
-            shimoku_client.plt.indicator(data=indicators_data_2, order=0)
-            shimoku_client.plt.change_current_tab("Indicators 1")
-            shimoku_client.plt.indicator(data=indicators_data, order=0)
-
-    with shimoku_client.plt.set_tabs_index(
+    shimoku_client.plt.set_tabs_index(
         ("Bar deep 1", "Bar 1"), order=1,
         parent_tabs_index=("Deepness 0", "Bar 1"),
         sticky=False, just_labels=True
-    ):
-        shimoku_client.plt.bar(
-            data='main data', x='date',
-            x_axis_name='Date',
-            y_axis_name='Revenue',
-            order=0, rows_size=2,
-            cols_size=12,
-        )
-    with shimoku_client.plt.set_tabs_index(
+    )
+    shimoku_client.plt.bar(
+        data='main data', x='date',
+        x_axis_name='Date',
+        y_axis_name='Revenue',
+        order=0, rows_size=2,
+        cols_size=12,
+    )
+    shimoku_client.plt.set_tabs_index(
         ("Bar deep 2", "Bar 2"), order=1,
         parent_tabs_index=("Bar deep 1", "Bar 1"),
         sticky=False, just_labels=True
-    ):
-        shimoku_client.plt.bar(
-            data='main data',
-            x='date', y='y',
-            x_axis_name='Date',
-            y_axis_name='Revenue',
-            order=2, rows_size=2,
-            cols_size=12,
-        )
-        shimoku_client.plt.change_current_tab("Line 1")
-        shimoku_client.plt.line(
-            data='main data', x='date',
-            x_axis_name='Date',
-            y_axis_name='Revenue',
-            order=0, rows_size=2,
-            cols_size=12,
-        )
-        shimoku_client.plt.change_current_tab("Line 2")
-        shimoku_client.plt.line(
-            data='main data', x='date',
-            x_axis_name='Date',
-            y_axis_name='Revenue',
-            order=0, rows_size=2,
-            cols_size=12,
-        )
+    )
+    shimoku_client.plt.bar(
+        data='main data',
+        x='date', y='y',
+        x_axis_name='Date',
+        y_axis_name='Revenue',
+        order=2, rows_size=2,
+        cols_size=12,
+    )
+    shimoku_client.plt.change_current_tab("Line 1")
+    shimoku_client.plt.line(
+        data='main data', x='date',
+        x_axis_name='Date',
+        y_axis_name='Revenue',
+        order=0, rows_size=2,
+        cols_size=12,
+    )
+    shimoku_client.plt.change_current_tab("Line 2")
+    shimoku_client.plt.line(
+        data='main data', x='date',
+        x_axis_name='Date',
+        y_axis_name='Revenue',
+        order=0, rows_size=2,
+        cols_size=12,
+    )
+    shimoku_client.plt.pop_out_of_tabs_group()
 
     # s.set_menu_path('test_delete_tabs')
     # s.plt.set_tabs_index(tabs_index=(f"Deepness 0", "Indicators 1"), order=0)
@@ -3099,19 +2687,23 @@ def modal():
     )
     shimoku_client.set_menu_path('Modal Test')
 
-    with shimoku_client.plt.set_modal('Test modal', open_by_default=True, width=70, height=60):
-        shimoku_client.plt.html(html=prediction_header, order=0)
+    shimoku_client.plt.set_modal('Test modal', open_by_default=True, width=70, height=60)
+    shimoku_client.plt.html(html=prediction_header, order=0)
 
-        with shimoku_client.plt.set_tabs_index(('Test', 'Tab 1'), order=1):
-            shimoku_client.plt.table(data=table_data, order=0, rows_size=3,
-                                     title='Table test', categorical_columns=['filtA', 'filtB'])
-            shimoku_client.plt.html(html=prediction_header, order=1)
+    shimoku_client.plt.set_tabs_index(('Test', 'Tab 1'), order=1)
+    shimoku_client.plt.table(data=table_data, order=0, rows_size=3,
+                title='Table test', categorical_columns=['filtA', 'filtB'])
+    shimoku_client.plt.pop_out_of_tabs_group()
+
+    shimoku_client.plt.html(html=prediction_header, order=2)
+    shimoku_client.plt.pop_out_of_modal()
 
     shimoku_client.plt.html(html=prediction_header, order=0)
-    with shimoku_client.plt.set_tabs_index(('TestNoModal', 'Table'), order=0):
-        shimoku_client.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
+    shimoku_client.plt.set_tabs_index(('TestNoModal', 'Table'), order=1)
+    shimoku_client.plt.table(data=table_data, order=0, rows_size=3, title='Table test', categorical_columns=['filtA', 'filtB'])
+    shimoku_client.plt.pop_out_of_tabs_group()
 
-    shimoku_client.plt.modal_button(order=1, modal='Test modal', label='Open modal')
+    shimoku_client.plt.modal_button(order=2, modal='Test modal', label='Open modal')
 
 
 def bar_and_line_chart():
@@ -3262,45 +2854,12 @@ def variants():
     shimoku_client.plt.line(data='table', order=9, cols_size=3, rows_size=2, x='date', y='x', variant='minimal')
 
 
-def x_axis_tandem_chart():
-    menu_path = 'test-free-echarts', 'X Axis Tandem Chart'
-    top_axis_name = 'months of 2015'
-    bottom_axis_name = 'months of 2016'
-    y_axis_name = 'values'
-    title = 'Comparison of values between 2015 and 2016'
-
-    data = [
-        {'dates2015': '2015-1', 'dates2016': '2016-1', '2015': 2.6, '2016': 3.9},
-        {'dates2015': '2015-2', 'dates2016': '2016-2', '2015': 5.9, '2016': 5.9},
-        {'dates2015': '2015-3', 'dates2016': '2016-3', '2015': 9.0, '2016': 11.1},
-        {'dates2015': '2015-4', 'dates2016': '2016-4', '2015': 26.4, '2016': 18.7},
-        {'dates2015': '2015-5', 'dates2016': '2016-5', '2015': 28.7, '2016': 48.3},
-        {'dates2015': '2015-6', 'dates2016': '2016-6', '2015': 70.7, '2016': 69.2},
-        {'dates2015': '2015-7', 'dates2016': '2016-7', '2015': 175.6, '2016': 231.6},
-        {'dates2015': '2015-8', 'dates2016': '2016-8', '2015': 182.2, '2016': 46.6},
-        {'dates2015': '2015-9', 'dates2016': '2016-9', '2015': 48.7, '2016': 55.4},
-        {'dates2015': '2015-10', 'dates2016': '2016-10', '2015': 18.8, '2016': 18.4},
-        {'dates2015': '2015-11', 'dates2016': '2016-11', '2015': 6.0, '2016': 10.3},
-        {'dates2015': '2015-12', 'dates2016': '2016-12', '2015': 2.3, '2016': 0.7}
-    ]
-
-    shimoku_client.plt.x_axes_tandem_chart(
-        data=data, menu_path=menu_path, order=0, top_x='dates2015', bottom_x='dates2016'
-    )
-
-    shimoku_client.plt.x_axes_tandem_chart(
-        data=data, menu_path=menu_path, order=1, top_x='2015', bottom_x='2016', top_axis_name=top_axis_name,
-        bottom_axis_name=bottom_axis_name, y_axis_name=y_axis_name, title=title, begin_as_bar=True
-    )
-    shimoku_client.run()
-
-
 def infographics():
     shimoku_client.set_menu_path('test-bentobox', 'Infographics')
     title = 'Lorem ipsum'
     text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et " \
-           "dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex" \
-           " ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu" \
+           "dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip" \
+           "ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu" \
            " fugiat nulla pariatur. "
 
     shimoku_client.plt.infographics_text_bubble(
@@ -3700,7 +3259,7 @@ class TestPlotApi(unittest.TestCase):
         table()
         shimoku_client.update_data_sets()
         table_with_labels()
-        # s.reuse_data_sets()
+        shimoku_client.reuse_data_sets()
         annotation_chart()
         shimoku_client.run()
         print(f'Total elapsed time: {perf_counter() - init_time:.2f} s')
@@ -3710,7 +3269,7 @@ class TestPlotApi(unittest.TestCase):
         init_time = perf_counter()
         ini_calls = shimoku_client.get_api_calls_counter()
         shimoku_client.set_menu_path('test-free-echarts')
-        stacked_data = pd.read_csv('../../data/test_stack_distribution.csv')
+        stacked_data = pd.read_csv(data_path + '/test_stack_distribution.csv')
         shimoku_client.plt.set_shared_data({
             'stacked data': stacked_data,
             'noise': noise_data,
@@ -3901,6 +3460,8 @@ class TestPlotApi(unittest.TestCase):
             )
             shimoku_client.run()
 
+        shimoku_client._async_pool.in_async = False
+
         with self.assertRaises(RuntimeError):
             shimoku_client.set_menu_path('test-same-position', 'conflict')
             shimoku_client.plt.set_tabs_index(tabs_index=('conflict', 'conflict'), order=0)
@@ -3918,6 +3479,8 @@ class TestPlotApi(unittest.TestCase):
                 title='Bruxismo',
             )
             shimoku_client.run()
+
+        shimoku_client._async_pool.in_async = False
 
         shimoku_client.set_menu_path('test-same-position')
         shimoku_client.plt.clear_menu_path()
@@ -3960,6 +3523,7 @@ class TestPlotApi(unittest.TestCase):
 def main():
     # profiler = cProfile.Profile()
     # profiler.enable()
+
     for test in TestPlotApi.__dict__:
         if test.startswith('test_'):
             getattr(TestPlotApi(), test)()

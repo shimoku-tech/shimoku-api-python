@@ -1,4 +1,4 @@
-# Shimoku Api Python
+# Shimoku
 
 ![License](https://img.shields.io/github/license/shimoku-tech/shimoku-api-python)
 [![PyPI version](https://badge.fury.io/py/shimoku-api-python.svg)](https://badge.fury.io/py/shimoku-api-python)
@@ -25,7 +25,7 @@ To use Shimoku’s API first install our SDK library.
 In your `Python +3.9` install it
 
 ```python
-pip install shimoku-api-python
+pip install shimoku
 ```
 
 ### Step 2 - Initialize the Shimoku SDK
@@ -33,10 +33,10 @@ pip install shimoku-api-python
 Start by importing Shimoku and initializing the client. This step sets up a local server environment for your development and automatically opens a browser.
 
 ```python
-import shimoku_api_python as Shimoku
+import shimoku
 
 # Client initialization with playground mode
-s = Shimoku.Client()
+s = shimoku.Client()
 ```
 
 ![Playground preview](https://1111601832-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FUlHTfmIZY46Z1EDfyGMz%2Fuploads%2F3a2wED5DrnUeWO5ZEhrf%2FPlayground.png?alt=media&token=865c265d-c754-4a0a-a141-fca0d06197f4)
@@ -44,9 +44,9 @@ s = Shimoku.Client()
 We recommend the following parameters for a better development experience:
 
 ```python
-s = Shimoku.Client(
+s = shimoku.Client(
     async_execution=True,  # Grouped plotting
-    verbosity='INFO',      # Insight in the execution
+    verbosity='INFO',  # Insight in the execution
 )
 ```
 
@@ -56,10 +56,10 @@ s = Shimoku.Client(
 In case the default port (8000) is already in use, it is necessary to change it in the client initialization, for example, the port 8080 could be used:
 
 ```python
-s = Shimoku.Client(
+s = shimoku.Client(
     local_port=8080
-    async_execution=True,
-    verbosity='INFO', 
+async_execution = True,
+verbosity = 'INFO',
 )
 ```
 
@@ -69,10 +69,10 @@ s = Shimoku.Client(
 To terminate the server the following function has to be used, it will only close the server connected to the client-specified port:
 
 ```python
-s = Shimoku.Client(
-    local_port=8080
+s = shimoku.Client(
+    local_port=8080,
     async_execution=True,
-    verbosity='INFO', 
+    verbosity='INFO',
 )
 
 # Close the server in the port 8080
@@ -121,13 +121,13 @@ s.run()
 The deployment with the Shimoku platform is very straightforward, just set your credentials in the client initialization and execute the same code you've been developing:
 
 ```python
-import shimoku_api_python as Shimoku
+import shimoku
 
-access_token: str = getenv('API_TOKEN')     # Environment variable
-universe_id: str = getenv('UNIVERSE_ID')    # Environment variable
+access_token: str = getenv('API_TOKEN')  # Environment variable
+universe_id: str = getenv('UNIVERSE_ID')  # Environment variable
 workspace_id: str = getenv('WORKSPACE_ID')  # Environment variable
 
-s = Shimoku.Client(
+s = shimoku.Client(
     access_token=access_token,
     universe_id=universe_id,
     async_execution=True,
@@ -136,7 +136,7 @@ s = Shimoku.Client(
 
 s.set_workspace(workspace_id)
 
-. . .
+...
 ```
 
 **_NOTE:_**

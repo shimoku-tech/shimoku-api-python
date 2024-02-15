@@ -8,6 +8,7 @@ from shimoku.cli.cloud.cascade_get_resources import (
     InitOptions,
     ResourceGetter,
     Universe,
+    add_end_event_decorator
 )
 from shimoku.cli.utils import choose_from_menu, input_list, input_dict
 
@@ -65,7 +66,7 @@ def add_create_parser(parser: Optional[CLIParser] = None):
     ]
 
     for func in module_functions:
-        create_parser.decor_add_command(common_args=common_args)(func)
+        create_parser.decor_add_command(common_args=common_args)(add_end_event_decorator(func))
 
     return create_parser
 

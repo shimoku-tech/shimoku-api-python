@@ -1,6 +1,6 @@
 from typing import Optional
 from shimoku.cli import CLIParser, CLIFuncParam
-from shimoku.cli.cloud.cascade_get_resources import ResourceGetter, InitOptions
+from shimoku.cli.cloud.cascade_get_resources import ResourceGetter, InitOptions, add_end_event_decorator
 from shimoku.cli.utils import choose_from_menu
 
 from shimoku.exceptions import ActionError
@@ -59,7 +59,7 @@ def add_update_parser(parser: Optional[CLIParser] = None):
     module_functions = [action, workspace, menu_path, menu_order, board, boards_order]
 
     for func in module_functions:
-        update_parser.decor_add_command(common_args=common_args)(func)
+        update_parser.decor_add_command(common_args=common_args)(add_end_event_decorator(func))
 
     return update_parser
 

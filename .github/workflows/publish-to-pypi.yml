@@ -1,6 +1,7 @@
 name: Publish to PyPI
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'
@@ -40,9 +41,8 @@ jobs:
         run: python -m build
 
       - name: Publish package to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets[matrix.pypi-token] }}
-          packages_dir: dist
-          skip_existing: true
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets[matrix.pypi-token] }}
+        run: |
+          twine upload dist/*

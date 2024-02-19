@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.1 (2024-19-02)
+
+Updated the github actions for the new package names.
+
 ## 2.0.0 (2024-15-02)
 
 ### Improvements

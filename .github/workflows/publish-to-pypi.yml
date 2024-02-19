@@ -12,22 +12,37 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - config-file: "setup.cfg"
+            pypi-token: "PYPI_API_TOKEN_DEFAULT"
+          - config-file: "setup_browser.cfg"
+            pypi-token: "PYPI_API_TOKEN_BROWSER"
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
+
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: 3.x
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install setuptools setuptools_scm wheel twine
-      - name: Build package
-        run: |
-          python3 setup.py sdist bdist_wheel
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-        run: twine upload dist/*
+          pip install setuptools setuptools_scm wheel twine build
+
+      - name: Replace setup.cfg with the desired configuration
+        run: cp ${{ matrix.config-file }} setup.cfg
+
+      - name: Build the package
+        run: python -m build
+
+      - name: Publish package to PyPI
+        uses: pypa/gh-action-pypi-publish@v1.4.2
+        with:
+          user: __token__
+          password: ${{ secrets[matrix.pypi-token] }}
+          packages_dir: dist
+          skip_existing: true

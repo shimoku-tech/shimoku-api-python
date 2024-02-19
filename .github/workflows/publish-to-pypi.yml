@@ -35,7 +35,10 @@ jobs:
           pip install setuptools setuptools_scm wheel twine build
 
       - name: Replace setup.cfg with the desired configuration
-        run: cp ${{ matrix.config-file }} setup.cfg
+        run: |
+          if [ "${{ matrix.config-file }}" != "setup.cfg" ]; then
+            cp ${{ matrix.config-file }} setup.cfg
+          fi
 
       - name: Build the package
         run: python -m build

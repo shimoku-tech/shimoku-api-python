@@ -1,9 +1,9 @@
 import logging
 from sys import stdout
-from typing import Callable, Optional, Coroutine
+from typing import Callable, Optional
 from io import TextIOWrapper
 from functools import wraps
-from inspect import stack
+from inspect import stack, isclass
 import asyncio
 from time import perf_counter
 from abc import ABC
@@ -135,7 +135,7 @@ class ClassWithLogging(ABC):
 
     def __getattribute__(self, item):
         attr = object.__getattribute__(self, item)
-        if callable(attr) and logger.isEnabledFor(logging.INFO):
+        if callable(attr) and not isclass(attr) and logger.isEnabledFor(logging.INFO):
             if not item.startswith('_') and self._use_info_logging:
                 return logging_before_and_after(logging_level=self._module_logger.info, name=item)(attr)
             if logger.isEnabledFor(logging.DEBUG):

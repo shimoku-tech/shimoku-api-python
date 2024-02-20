@@ -66,18 +66,23 @@ async def board(
     workspace_id: Optional[str],
     board: str = CLIFuncParam(prompt=True),
     show_public_permission: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
+    show_theme: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
     **kwargs
 ):
     """ Get a board
     :param workspace_id: UUID of the workspace to use
     :param board: Board name or id to get
     :param show_public_permission: Flag to show the public permission
+    :param show_theme: Flag to show the theme
     """
     resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, board=board, **kwargs))
     dashboard = await resource_getter.get_dashboard()
     display_dict(
         dashboard.cascade_to_dict(),
-        fields=resource_getter.get_dashboard_fields_to_show(show_public_permission=show_public_permission)
+        fields=resource_getter.get_dashboard_fields_to_show(
+            show_public_permission=show_public_permission,
+            show_theme=show_theme
+        )
     )
 
 

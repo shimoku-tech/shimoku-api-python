@@ -6,6 +6,8 @@ from shimoku.api.base_resource import Resource, ResourceCache
 from shimoku.api.resources.role import Role, create_role, get_role, get_roles, delete_role
 from shimoku.api.resources.app import App
 
+from dataclasses import dataclass
+
 if TYPE_CHECKING:
     from shimoku.api.resources.business import Business
 from shimoku.exceptions import BoardError
@@ -40,6 +42,13 @@ class Dashboard(Resource):
             """ Deletes the appDashboard """
             return await self._base_resource.delete()
 
+    @dataclass
+    class PublicPermission:
+        """ PublicPermission class """
+        isPublic: bool
+        permission: str
+        token: str
+
     def __init__(self, parent: 'Business', uuid: Optional[str] = None, alias: Optional[str] = None,
                  db_resource: Optional[dict] = None):
 
@@ -47,7 +56,8 @@ class Dashboard(Resource):
             name=alias,
             order=0,
             isDisabled=False,
-            publicPermission=dict(
+            theme={},
+            publicPermission=self.PublicPermission(
                 isPublic=False,
                 permission='READ',
                 token='default token'
@@ -56,7 +66,8 @@ class Dashboard(Resource):
 
         super().__init__(parent=parent, uuid=uuid, db_resource=db_resource,
                          children=[Dashboard.AppDashboard, Role],
-                         check_params_before_creation=['name'], params=params)
+                         check_params_before_creation=['name'],
+                         params=params, params_to_serialize=['theme'])
 
         self.currently_in_use = False
 

@@ -10,6 +10,7 @@ from shimoku.utils import IN_BROWSER_PYODIDE
 from shimoku.api.client import ApiClient
 from shimoku.exceptions import ResourceIdMissing, CacheError
 from shimoku.execution_logger import log_error, ClassWithLogging
+from dataclasses import is_dataclass, asdict
 
 if not IN_BROWSER_PYODIDE:
     from tqdm import tqdm
@@ -344,6 +345,10 @@ class BaseResource(ClassWithLogging):
                 except TypeError:
                     log_error(logger, f"Field {field} is not serializable", TypeError)
 
+        for field, value in params.items():
+            if is_dataclass(value):
+                params[field] = asdict(value)
+
         params = {k: v for k, v in params.items() if v is not None}
 
         obj = await (
@@ -376,6 +381,10 @@ class BaseResource(ClassWithLogging):
                 params[field] = json.dumps(params[field])
 
             assert isinstance(self.params[field], (dict, list))
+
+        for field, value in params.items():
+            if is_dataclass(value):
+                params[field] = asdict(value)
 
         if params:
             await(
@@ -654,7 +663,7 @@ class Resource(ClassWithLogging, ABC):
             return self._base_resource.get_alias()
         elif item in self._base_resource.params:
             result = self._base_resource.params[item]
-            if isinstance(result, (dict, list)):
+            if isinstance(result, (dict, list)) or is_dataclass(result):
                 self._base_resource.changed_params.add(item)
             return result
         elif isinstance(item, tuple) and len(item) == 2 and isinstance(item[0], str) and isinstance(item[1], str) and \
@@ -671,10 +680,12 @@ class Resource(ClassWithLogging, ABC):
         if key not in self._base_resource.params:
             log_error(logger, f"{self.__class__.__name__} parameters do not contain {key}", KeyError)
         class_type = self._base_resource.params[key].__class__
-        if not isinstance(value, class_type) \
-                and not isinstance(self._base_resource.params[key], type(None)) and not isinstance(value, type(None)):
-            log_error(logger, f"Value {value} with type {value.__class__} for parameter {key} "
-                              f"is not of type {self._base_resource.params[key].__class__}", ValueError)
+        if not isinstance(value, class_type) and not isinstance(value, type(None)):
+            if is_dataclass(class_type):
+                value = class_type(**{k: v for k, v in value.items() if k in class_type.__dataclass_fields__})
+            elif not isinstance(self._base_resource.params[key], type(None)):
+                log_error(logger, f"Value {value} with type {value.__class__} for parameter {key} "
+                                  f"is not of type {self._base_resource.params[key].__class__}", ValueError)
         self._base_resource.params[key] = value if value is not None else class_type()
         self._base_resource.changed_params.add(key)
 

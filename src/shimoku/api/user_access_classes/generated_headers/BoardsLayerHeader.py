@@ -31,6 +31,7 @@ class BoardsLayerHeader:
         order: Optional[int] = None,
         is_public: bool = False,
         is_disabled: bool = False,
+        theme: Optional[dict] = None,
     ) -> dict:
         """
         Create a board
@@ -38,6 +39,7 @@ class BoardsLayerHeader:
         :param order: order of the board
         :param is_public: is the board public
         :param is_disabled: is the board disabled
+        :param theme: theme of the board
         :return: board metadata
         """
         pass
@@ -224,6 +226,7 @@ class BoardsLayerHeader:
         order: Optional[int] = None,
         is_public: Optional[bool] = None,
         is_disabled: Optional[bool] = None,
+        theme: Optional[dict] = None,
     ) -> bool:
         """
         Update a board
@@ -233,5 +236,6 @@ class BoardsLayerHeader:
         :param order: new order of the board
         :param is_public: new public permission of the board
         :param is_disabled: new is_disabled of the board
+        :param theme: new theme of the board
         """
         pass

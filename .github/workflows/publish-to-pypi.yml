@@ -23,15 +23,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 10
 
-      - name: Set version environment variable
+      - name: Get the most recent tag
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-          else
-            VERSION=0.0.0
-          fi
-          echo "PACKAGE_VERSION=$VERSION" >> $GITHUB_ENV
+          git fetch --depth=10 --tags
+          TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+          echo "Most recent tag is $TAG"
+          echo "SHIMOKU_VERSION=$TAG" >> $GITHUB_ENV
 
       - name: Set up Python
         uses: actions/setup-python@v3

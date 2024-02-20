@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.1.0 (2024-20-02)
+
+### Improvements
+
+- Boards can have themes now, the user can set the theme of the board when creating it, or update it later.
+- When creating a board, if no theme is provided the workspace theme will be used.
+
 ## 2.0.4 (2024-20-02)
 
 ### Fixed

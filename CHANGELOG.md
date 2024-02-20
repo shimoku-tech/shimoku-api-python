@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.0.4 (2024-20-02)
+
+### Fixed
+
+- Fixed the github action for shimoku-browser package, that didnt set the correct version.
+
 ## 2.0.3 (2024-20-02)
 
 ### Fixed

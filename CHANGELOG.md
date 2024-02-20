@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.1.1 (2024-20-02)
+
+### Fixed
+
+- Added the list accounts method to the local server
+- Added the theme to the boards schema
+
 ## 2.1.0 (2024-20-02)
 
 ### Improvements

@@ -40,6 +40,10 @@ jobs:
             cp ${{ matrix.config-file }} setup.cfg
           fi
 
+      - name: Extract the latest tag name
+        id: get_version
+        run: echo "SHIMOKU_VERSION=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+
       - name: Build the package
         run: python -m build
 

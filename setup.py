@@ -7,10 +7,13 @@
     Learn more under: https://pyscaffold.org/
 """
 from setuptools import setup
+from os import getenv
+
+version = getenv("SHIMOKU_VERSION", "0.0.0")
 
 if __name__ == "__main__":
     try:
-        setup()
+        setup(version=version)
     except:  # noqa
         print(
             "\n\nAn error occurred while building the project, "

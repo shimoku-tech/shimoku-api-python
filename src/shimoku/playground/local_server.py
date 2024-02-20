@@ -679,6 +679,9 @@ def create_api() -> FastAPI:
         id='local', planType=types['PlanType'](id='local', limits=None, price=None, type=None)
     )
     db = {
+        'UserExposed': {
+            'userPlaygroundId': types['UserExposed'](id='userPlaygroundId')
+        },
         'UniverseFilteredExposed': {
             'local': types['UniverseFilteredExposed'](id='local', name='local', activeUniversePlanId='local',
                                                       activeUniversePlan=active_universe_plan)
@@ -704,6 +707,7 @@ def create_api() -> FastAPI:
     db['AccountExposed'] = {
         'local': types['AccountExposed'](id='local', business=db['BusinessExposed']['local'])
     }
+    db['UserExposed']['userPlaygroundId'].accounts = types['AccountExposedList'](items=[db['AccountExposed']['local']])
 
     fast_api_app = FastAPI()
 

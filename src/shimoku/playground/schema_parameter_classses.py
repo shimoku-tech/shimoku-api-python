@@ -76,6 +76,7 @@ class CreateDashboardInput(BaseModel):
     publicPermission: Union[PublicPermissionInput, None] = None
     order: Union[int, None] = None
     isDisabled: Union[bool, None] = None
+    theme: Union[str, None] = None
 
 
 @strawberry.type
@@ -88,6 +89,7 @@ class UpdateDashboardInput(BaseModel):
     order: Union[int, None] = None
     isDisabled: Union[bool, None] = None
     universeId: Union[str, None] = None
+    theme: Union[str, None] = None
 
 
 @strawberry.type

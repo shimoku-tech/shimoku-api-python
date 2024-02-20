@@ -115,6 +115,11 @@ class ModuleExposedList(graphene.ObjectType):
     items = graphene.List(lambda: ModuleExposed)
 
 
+class UserExposed(graphene.ObjectType):
+    id = graphene.String()
+    accounts = graphene.Field(lambda: AccountExposedList)
+
+
 class AccountExposed(graphene.ObjectType):
     id = graphene.String()
     createdAt = graphene.String()
@@ -875,6 +880,7 @@ class DashboardExposed(graphene.ObjectType):
     name = graphene.String()
     order = graphene.Int()
     isDisabled = graphene.Boolean()
+    theme = graphene.String()
 
 
 class AppDashboardExposed(graphene.ObjectType):

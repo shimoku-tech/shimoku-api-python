@@ -12,17 +12,17 @@ from shimoku.utils import create_function_name
 
 
 async def generate_code(
-        business_object: Business,
-        business_id: str = 'local',
-        access_token: Optional[str] = None,
-        universe_id: str = 'local',
-        environment: str = 'production',
-        output_path: str = 'generated_code',
-        menu_paths: Optional[list[str]] = None,
-        use_black_formatter: bool = False,
-        pbar: Optional[tqdm.tqdm] = None
+    business_object: Business,
+    business_id: str = "local",
+    access_token: Optional[str] = None,
+    universe_id: str = "local",
+    environment: str = "production",
+    output_path: str = "generated_code",
+    menu_paths: Optional[list[str]] = None,
+    use_black_formatter: bool = False,
+    pbar: Optional[tqdm.tqdm] = None,
 ):
-    """ Main code generation function.
+    """Main code generation function.
     :param business_object: business object to generate code for
     :param business_id: business id to use
     :param access_token: access token to use
@@ -33,42 +33,45 @@ async def generate_code(
     :param use_black_formatter: whether to use black formatter
     :param pbar: progress bar to use
     """
-    await BusinessCodeGen(business_object, output_path).generate_code(business_id, menu_paths, pbar=pbar)
-    business_name = create_function_name(business_object['name'])
+    await BusinessCodeGen(business_object, output_path).generate_code(
+        business_id, menu_paths, pbar=pbar
+    )
+    business_name = create_function_name(business_object["name"])
 
     main_code_lines: List[str] = [
-        'shimoku_client = Client(',
+        "shimoku_client = Client(",
     ]
-    if universe_id != 'local':
-        main_code_lines.extend([
-            f'    access_token="{access_token}",',
-            f'    universe_id="{universe_id}",'
-        ])
-    main_code_lines.extend([
-        f'    environment="{environment}",',
-        f'    async_execution=True,',
-        '    verbosity="INFO"',
-        ')',
-        '',
-        f'workspace_{business_name}(shimoku_client)',
-        '',
-        'shimoku_client.run()'
-    ])
-    CodeGenFileHandler(output_path).generate_script_file(
-        f'execute_workspace_{business_name}',
+    if universe_id != "local":
+        main_code_lines.extend(
+            [f'    access_token="{access_token}",', f'    universe_id="{universe_id}",']
+        )
+    main_code_lines.extend(
         [
-            'from shimoku import Client',
-            f'from {business_name}.workspace_{business_name} import workspace_{business_name}',
-            '',
-            '',
-            'def main():',
-            *[f'    {line}' for line in main_code_lines],
-            '',
-            '',
-            'if __name__ == "__main__":',
-            '    main()',
-            ''
+            f'    environment="{environment}",',
+            "    async_execution=True,",
+            '    verbosity="INFO"',
+            ")",
+            "",
+            f"workspace_{business_name}(shimoku_client)",
+            "",
+            "shimoku_client.run()",
         ]
+    )
+    CodeGenFileHandler(output_path).generate_script_file(
+        f"execute_workspace_{business_name}",
+        [
+            "from shimoku import Client",
+            f"from {business_name}.workspace_{business_name} import workspace_{business_name}",
+            "",
+            "",
+            "def main():",
+            *[f"    {line}" for line in main_code_lines],
+            "",
+            "",
+            'if __name__ == "__main__":',
+            "    main()",
+            "",
+        ],
     )
 
     if use_black_formatter:

@@ -5,7 +5,6 @@ import logging
 from typing import Tuple, Dict, List, Optional, Union
 from enum import Enum
 
-import inspect
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -16,11 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 def change_data_set_name_with_report(data_set, report):
-    """ Change the name of a data set to include the report name.
+    """Change the name of a data set to include the report name.
     :param data_set: data set to change name for
     :param report: report to change name for
     """
-    return data_set["name"].replace(report['id'], report['properties']['hash'])
+    return data_set["name"].replace(report["id"], report["properties"]["hash"])
 
 
 def calculate_percentages_from_list(numbers, round_digits_min):
@@ -34,8 +33,8 @@ def calculate_percentages_from_list(numbers, round_digits_min):
         max_p = 0
         for n in numbers:
             str_n = str(n)
-            if '.' in str_n:
-                n_precision = len(str_n.split('.')[1])
+            if "." in str_n:
+                n_precision = len(str_n.split(".")[1])
                 max_p = n_precision if n_precision > max_p else max_p
         return max(max_p, round_digits_min)
 
@@ -65,8 +64,10 @@ def deep_update(source, overrides) -> Dict:
     return source
 
 
-def convert_data_and_get_series_name(data: pd.DataFrame, field: str) -> Tuple[pd.DataFrame, str]:
-    """ Convert data to a format that can be used by the API and get the series name of a field.
+def convert_data_and_get_series_name(
+    data: pd.DataFrame, field: str
+) -> Tuple[pd.DataFrame, str]:
+    """Convert data to a format that can be used by the API and get the series name of a field.
     :param data: data to convert
     :param field: field to get the series name
     :return: converted data and the converted series name
@@ -81,7 +82,7 @@ def convert_data_and_get_series_name(data: pd.DataFrame, field: str) -> Tuple[pd
 
 
 def revert_uuids_from_dict(_dict: dict) -> List[str]:
-    """ Revert all uuids from a dictionary to the form '#set_data#'. They follow the pattern '#{id}'.
+    """Revert all uuids from a dictionary to the form '#set_data#'. They follow the pattern '#{id}'.
     :param _dict: dictionary to revert uuids
     :return: list of uuids in order
     """
@@ -91,14 +92,14 @@ def revert_uuids_from_dict(_dict: dict) -> List[str]:
             uuids.extend(revert_uuids_from_dict(v))
         elif isinstance(v, list):
             uuids.extend(revert_uuids_from_list(v))
-        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+        elif isinstance(v, str) and v.startswith("#{") and v.endswith("}"):
             uuids.append(v[2:-1])
-            _dict[k] = '#set_data#'
+            _dict[k] = "#set_data#"
     return uuids
 
 
 def revert_uuids_from_list(_list: list) -> List[str]:
-    """ Revert all uuids from a list to the form '#set_data#'. They follow the pattern '#{id}'.
+    """Revert all uuids from a list to the form '#set_data#'. They follow the pattern '#{id}'.
     :param _list: list to revert uuids
     :return: list of uuids in order
     """
@@ -108,14 +109,14 @@ def revert_uuids_from_list(_list: list) -> List[str]:
             uuids.extend(revert_uuids_from_dict(v))
         elif isinstance(v, list):
             uuids.extend(revert_uuids_from_list(v))
-        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+        elif isinstance(v, str) and v.startswith("#{") and v.endswith("}"):
             uuids.append(v[2:-1])
-            _list[i] = '#set_data#'
+            _list[i] = "#set_data#"
     return uuids
 
 
 def get_uuids_from_dict(_dict: dict) -> List[str]:
-    """ Get all uuids from a dictionary. They follow the pattern '#{id}'.
+    """Get all uuids from a dictionary. They follow the pattern '#{id}'.
     :param _dict: dictionary to get uuids
     """
     uuids = []
@@ -124,13 +125,13 @@ def get_uuids_from_dict(_dict: dict) -> List[str]:
             uuids.extend(get_uuids_from_dict(v))
         elif isinstance(v, list):
             uuids.extend(get_uuids_from_list(v))
-        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+        elif isinstance(v, str) and v.startswith("#{") and v.endswith("}"):
             uuids.append(v[2:-1])
     return uuids
 
 
 def get_uuids_from_list(_list: list) -> List[str]:
-    """ Get all uuids from a list. They follow the pattern '#{id}'.
+    """Get all uuids from a list. They follow the pattern '#{id}'.
     :param _list: list to get uuids
     :return: list of uuids
     """
@@ -140,14 +141,15 @@ def get_uuids_from_list(_list: list) -> List[str]:
             uuids.extend(get_uuids_from_dict(v))
         elif isinstance(v, list):
             uuids.extend(get_uuids_from_list(v))
-        elif isinstance(v, str) and v.startswith('#{') and v.endswith('}'):
+        elif isinstance(v, str) and v.startswith("#{") and v.endswith("}"):
             uuids.append(v[2:-1])
     return uuids
 
 
-def get_data_references_from_dict(_dict: dict, previous_keys: Optional[List[Union[str, int]]] = None) -> \
-        List[List[str]]:
-    """ Get all data references from a dictionary. They follow the pattern '#set_data#'.
+def get_data_references_from_dict(
+    _dict: dict, previous_keys: Optional[List[Union[str, int]]] = None
+) -> List[List[str]]:
+    """Get all data references from a dictionary. They follow the pattern '#set_data#'.
     :param _dict: dictionary to get data references
     :param previous_keys: previous keys
     :return: list of data references
@@ -157,18 +159,22 @@ def get_data_references_from_dict(_dict: dict, previous_keys: Optional[List[Unio
     entries = []
     for k, v in _dict.items():
         if isinstance(v, dict):
-            entries.extend(get_data_references_from_dict(v, previous_keys=previous_keys + [k]))
+            entries.extend(
+                get_data_references_from_dict(v, previous_keys=previous_keys + [k])
+            )
         elif isinstance(v, list):
-            entries.extend(get_data_references_from_list(v, previous_keys=previous_keys + [k]))
-        elif v == '#set_data#':
+            entries.extend(
+                get_data_references_from_list(v, previous_keys=previous_keys + [k])
+            )
+        elif v == "#set_data#":
             entries.append(previous_keys + [k])
     return entries
 
 
 def get_data_references_from_list(
-        _list: list, previous_keys: Optional[List[Union[int, str]]] = None
+    _list: list, previous_keys: Optional[List[Union[int, str]]] = None
 ) -> List[List[str]]:
-    """ Get all data references from a list. They follow the pattern '#set_data#'.
+    """Get all data references from a list. They follow the pattern '#set_data#'.
     :param _list: list to get data references
     :param previous_keys: previous keys
     :return: list of data references
@@ -178,15 +184,21 @@ def get_data_references_from_list(
     entries = []
     for i, v in enumerate(_list):
         if isinstance(v, dict):
-            entries.extend(get_data_references_from_dict(v, previous_keys=previous_keys + [i]))
+            entries.extend(
+                get_data_references_from_dict(v, previous_keys=previous_keys + [i])
+            )
         elif isinstance(v, list):
-            entries.extend(get_data_references_from_list(v, previous_keys=previous_keys + [i]))
-        elif v == '#set_data#':
+            entries.extend(
+                get_data_references_from_list(v, previous_keys=previous_keys + [i])
+            )
+        elif v == "#set_data#":
             entries.append(previous_keys + [i])
     return entries
 
 
-def validate_data_is_pandarable(data: Union[str, DataFrame, List[Dict], Dict]) -> DataFrame:
+def validate_data_is_pandarable(
+    data: Union[str, DataFrame, List[Dict], Dict]
+) -> DataFrame:
     """"""
     if isinstance(data, DataFrame):
         df_ = data.copy()
@@ -195,8 +207,8 @@ def validate_data_is_pandarable(data: Union[str, DataFrame, List[Dict], Dict]) -
             df_ = DataFrame(data)
         except Exception:
             raise ValueError(
-                'The data you passed is a list that must be '
-                'able to be converted into a pandas dataframe'
+                "The data you passed is a list that must be "
+                "able to be converted into a pandas dataframe"
             )
     elif isinstance(data, dict):
         try:
@@ -206,8 +218,8 @@ def validate_data_is_pandarable(data: Union[str, DataFrame, List[Dict], Dict]) -
                 df_ = DataFrame(data, index=[0])
             except Exception:
                 raise ValueError(
-                    'The data you passed is a dict that must be '
-                    'able to be converted into a pandas dataframe'
+                    "The data you passed is a dict that must be "
+                    "able to be converted into a pandas dataframe"
                 )
     elif isinstance(data, str):
         try:
@@ -215,19 +227,20 @@ def validate_data_is_pandarable(data: Union[str, DataFrame, List[Dict], Dict]) -
             df_ = DataFrame(d)
         except Exception:
             raise ValueError(
-                'The data you passed is a json that must be '
-                'able to be converted into a pandas dataframe'
+                "The data you passed is a json that must be "
+                "able to be converted into a pandas dataframe"
             )
     else:
         raise ValueError(
-            'Input data must be a pandas dataframe, '
-            'a json or a list of dictionaries'
+            "Input data must be a pandas dataframe, " "a json or a list of dictionaries"
         )
     return df_
 
 
 def validate_table_data(
-        self, data: Union[str, DataFrame, List[Dict], Dict], elements: List[str],
+    self,
+    data: Union[str, DataFrame, List[Dict], Dict],
+    elements: List[str],
 ):
     """"""
     df_: DataFrame = self._validate_data_is_pandarable(data)
@@ -237,24 +250,20 @@ def validate_table_data(
         assert all([element in cols for element in elements])
     except AssertionError:
         raise ValueError(
-            'Some column names you are specifying '
-            'are not in the input dataframe'
+            "Some column names you are specifying " "are not in the input dataframe"
         )
 
     try:
         len_df_: int = len(df_)
-        assert all([
-            len_df_ == len(df_[~df_[element].isna()])
-            for element in elements
-        ])
+        assert all([len_df_ == len(df_[~df_[element].isna()]) for element in elements])
     except AssertionError:
-        raise ValueError(
-            f'Some of the variables {elements} have none values'
-        )
+        raise ValueError(f"Some of the variables {elements} have none values")
 
 
 def validate_tree_data(
-        self, data: Union[str, List[Dict]], vals: List[str],
+    self,
+    data: Union[str, List[Dict]],
+    vals: List[str],
 ):
     """To validate Tree and Treemap data"""
     if isinstance(data, list):
@@ -264,7 +273,7 @@ def validate_tree_data(
     elif isinstance(data, str):
         data = json.loads(data)
     else:
-        raise ValueError('data must be either a list, dict or a json')
+        raise ValueError("data must be either a list, dict or a json")
 
     try:
         assert sorted(data.keys()) == sorted(vals)
@@ -276,34 +285,38 @@ def validate_input_form_data(self, data: Dict):
     try:
         assert type(data) == dict
     except AssertionError:
-        raise ValueError('data must be a dict')
+        raise ValueError("data must be a dict")
 
     try:
-        assert 'fields' in data
+        assert "fields" in data
     except AssertionError:
         raise ValueError('"fields" is not a key in the input data')
 
     try:
-        assert type(data['fields']) == list
+        assert type(data["fields"]) == list
     except AssertionError:
-        raise ValueError('fields must be a list')
+        raise ValueError("fields must be a list")
 
     try:
-        assert all(['fields' in field_ for field_ in data['fields']])
+        assert all(["fields" in field_ for field_ in data["fields"]])
     except AssertionError:
         raise ValueError('"fields" are not keys in the input data')
 
     try:
-        assert all([
-            'fieldName' in field__ and 'mapping' in field__
-            for field_ in data['fields']
-            for field__ in field_['fields']
-        ])
+        assert all(
+            [
+                "fieldName" in field__ and "mapping" in field__
+                for field_ in data["fields"]
+                for field__ in field_["fields"]
+            ]
+        )
     except AssertionError:
         raise ValueError('"fieldName" and "mapping" are not keys in the input data')
 
 
-def is_report_data_empty(report_data: Union[List[Dict], str, DataFrame, Dict, List]) -> bool:
+def is_report_data_empty(
+    report_data: Union[List[Dict], str, DataFrame, Dict, List]
+) -> bool:
     if isinstance(report_data, DataFrame):
         if report_data.empty:
             return True
@@ -322,64 +335,69 @@ def is_report_data_empty(report_data: Union[List[Dict], str, DataFrame, Dict, Li
             return True
     else:
         raise ValueError(
-            f'Data must be a Dictionary, JSON or pandas DataFrame '
-            f'Provided: {type(report_data)}'
+            f"Data must be a Dictionary, JSON or pandas DataFrame "
+            f"Provided: {type(report_data)}"
         )
 
 
-def add_sorting_to_df(df: DataFrame, sort: Optional[Dict] = None) -> Tuple[DataFrame, Dict]:
-    """ Add sorting to the data frame. If no sorting is provided the a column named 'sort_values' is added.
+def add_sorting_to_df(
+    df: DataFrame, sort: Optional[Dict] = None
+) -> Tuple[DataFrame, Dict]:
+    """Add sorting to the data frame. If no sorting is provided the a column named 'sort_values' is added.
     :param df: the data frame
     :param sort: the sorting
     :return: the data frame with sorting and the sorting
     """
-    if 'sort_values' not in df.columns:
-        df['sort_values'] = range(len(df))
-    sort = {'field': 'sort_values', 'direction': 'asc'} if not sort else sort
-    df = df[[col for col in df.columns.tolist() if col != 'sort_values'] + ['sort_values']]
+    if "sort_values" not in df.columns:
+        df["sort_values"] = range(len(df))
+    sort = {"field": "sort_values", "direction": "asc"} if not sort else sort
+    df = df[
+        [col for col in df.columns.tolist() if col != "sort_values"] + ["sort_values"]
+    ]
     return df, sort
 
 
 class ShimokuPalette(Enum):
     """Enum for color variables"""
-    SUCCESS = 'var(--color-success)'
-    SUCCESS_LIGHT = 'var(--color-success-light)'
-    WARNING = 'var(--color-warning)'
-    WARNING_LIGHT = 'var(--color-warning-light)'
-    ERROR = 'var(--color-error)'
-    ERROR_LIGHT = 'var(--color-error-light)'
-    STATUS_ERROR = 'var(--color-status-error)'
-    WHITE = 'var(--color-white)'
-    BLACK = 'var(--color-black)'
-    GRAY = 'var(--color-gray)'
-    BASE_ICON = 'var(--color-base-icon)'
-    BACKGROUND = 'var(--background-default)'
-    BACKGROUND_PAPER = 'var(--background-paper)'
-    PRIMARY = 'var(--color-primary)'
-    PRIMARY_LIGHT = 'var(--color-primary-light)'
-    PRIMARY_DARK = 'var(--color-primary-dark)'
-    SECONDARY = 'var(--color-secondary)'
-    SECONDARY_LIGHT = 'var(--color-secondary-light)'
-    SECONDARY_DARK = 'var(--color-secondary-dark)'
-    STRIPE = 'var(--color-stripe)'
-    STRIPE_LIGHT = 'var(--color-stripe-light)'
-    COM_RED = 'var(--complementary-red)'
-    COM_RED_LIGHT = 'var(--complementary-red-light)'
-    COM_GREEN = 'var(--complementary-green)'
-    COM_YELLOW = 'var(--complementary-yellow)'
-    COM_ORANGE = 'var(--complementary-orange)'
-    COM_AQUA = 'var(--complementary-aqua)'
-    COM_VIOLET = 'var(--complementary-violet)'
-    CHART_C1 = 'var(--chart-C1)'
-    CHART_C2 = 'var(--chart-C2)'
-    CHART_C3 = 'var(--chart-C3)'
-    CHART_C4 = 'var(--chart-C4)'
-    CHART_C5 = 'var(--chart-C5)'
-    CHART_C6 = 'var(--chart-C6)'
-    CHART_C7 = 'var(--chart-C7)'
-    CHART_C8 = 'var(--chart-C8)'
-    CHART_C9 = 'var(--chart-C9)'
-    CHART_C10 = 'var(--chart-C10)'
+
+    SUCCESS = "var(--color-success)"
+    SUCCESS_LIGHT = "var(--color-success-light)"
+    WARNING = "var(--color-warning)"
+    WARNING_LIGHT = "var(--color-warning-light)"
+    ERROR = "var(--color-error)"
+    ERROR_LIGHT = "var(--color-error-light)"
+    STATUS_ERROR = "var(--color-status-error)"
+    WHITE = "var(--color-white)"
+    BLACK = "var(--color-black)"
+    GRAY = "var(--color-gray)"
+    BASE_ICON = "var(--color-base-icon)"
+    BACKGROUND = "var(--background-default)"
+    BACKGROUND_PAPER = "var(--background-paper)"
+    PRIMARY = "var(--color-primary)"
+    PRIMARY_LIGHT = "var(--color-primary-light)"
+    PRIMARY_DARK = "var(--color-primary-dark)"
+    SECONDARY = "var(--color-secondary)"
+    SECONDARY_LIGHT = "var(--color-secondary-light)"
+    SECONDARY_DARK = "var(--color-secondary-dark)"
+    STRIPE = "var(--color-stripe)"
+    STRIPE_LIGHT = "var(--color-stripe-light)"
+    COM_RED = "var(--complementary-red)"
+    COM_RED_LIGHT = "var(--complementary-red-light)"
+    COM_GREEN = "var(--complementary-green)"
+    COM_YELLOW = "var(--complementary-yellow)"
+    COM_ORANGE = "var(--complementary-orange)"
+    COM_AQUA = "var(--complementary-aqua)"
+    COM_VIOLET = "var(--complementary-violet)"
+    CHART_C1 = "var(--chart-C1)"
+    CHART_C2 = "var(--chart-C2)"
+    CHART_C3 = "var(--chart-C3)"
+    CHART_C4 = "var(--chart-C4)"
+    CHART_C5 = "var(--chart-C5)"
+    CHART_C6 = "var(--chart-C6)"
+    CHART_C7 = "var(--chart-C7)"
+    CHART_C8 = "var(--chart-C8)"
+    CHART_C9 = "var(--chart-C9)"
+    CHART_C10 = "var(--chart-C10)"
 
 
 def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
@@ -424,11 +442,10 @@ def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
         "secondary-dark": ShimokuPalette.SECONDARY_DARK.value,
         "active": ShimokuPalette.CHART_C2.value,
         "caution": ShimokuPalette.CHART_C3.value,
-
     }
 
     if isinstance(color_def, int):
-        return f'var(--chart-C{abs(color_def)})'
+        return f"var(--chart-C{abs(color_def)})"
     elif isinstance(color_def, (list, tuple)):
         color_def = rbg_to_hex(color_def[0], color_def[1], color_def[2])
     elif color_def in color_defs:
@@ -439,8 +456,8 @@ def interpret_color(color_def: Union[List, str, int]) -> Union[str, Dict]:
 
 def transform_dict_js_to_py(options_str: str):
     """https://discuss.dizzycoding.com/how-to-convert-raw-javascript-object-to-python-dictionary/"""
-    options_str = options_str.replace('\n', '')
-    options_str = options_str.replace(';', '')
+    options_str = options_str.replace("\n", "")
+    options_str = options_str.replace(";", "")
     return json5.loads(options_str)
 
 
@@ -538,90 +555,92 @@ def retrieve_data_from_options(options: Dict) -> Union[Dict, List]:
     rows = []
     data = []
     cols = []
-    if 'xAxis' in options:
-        if type(options['xAxis']) == list:
-            if len(options['xAxis']) == 1:
-                if 'data' in options['xAxis'][0]:
-                    rows = options['xAxis'][0]['data']
-        elif type(options['xAxis']) == dict:
-            if 'data' in options['xAxis']:
-                rows = options['xAxis']['data']
-            elif type(options['xAxis']) == dict:
-                if 'data' in options['yAxis']:
-                    rows = options['yAxis']['data']
+    if "xAxis" in options:
+        if type(options["xAxis"]) == list:
+            if len(options["xAxis"]) == 1:
+                if "data" in options["xAxis"][0]:
+                    rows = options["xAxis"][0]["data"]
+        elif type(options["xAxis"]) == dict:
+            if "data" in options["xAxis"]:
+                rows = options["xAxis"]["data"]
+            elif type(options["xAxis"]) == dict:
+                if "data" in options["yAxis"]:
+                    rows = options["yAxis"]["data"]
         else:
-            raise ValueError('xAxis has multiple values only 1 allowed')
-    elif 'radar' in options:
-        if 'indicator' in options['radar']:
-            rows = [element['name'] for element in options['radar']['indicator']]
-        elif type(options['radar']) == dict:
-            raise NotImplementedError('Multi-radar not implemented')
+            raise ValueError("xAxis has multiple values only 1 allowed")
+    elif "radar" in options:
+        if "indicator" in options["radar"]:
+            rows = [element["name"] for element in options["radar"]["indicator"]]
+        elif type(options["radar"]) == dict:
+            raise NotImplementedError("Multi-radar not implemented")
 
-    if 'data' in options:
-        data = options['data']
-    if 'series' in options:
-        if 'data' in options['series']:
+    if "data" in options:
+        data = options["data"]
+    if "series" in options:
+        if "data" in options["series"]:
             pass
         else:
-            for serie in options['series']:
-                if 'data' in serie:
-                    if serie.get('type') in ['pie', 'gauge']:
-                        for datum in serie['data']:
+            for serie in options["series"]:
+                if "data" in serie:
+                    if serie.get("type") in ["pie", "gauge"]:
+                        for datum in serie["data"]:
                             data.append(datum)
-                    elif serie.get('type') == 'radar':
-                        for datum in serie['data']:
-                            data.append(datum['value'])
-                            cols.append(datum['name'])
+                    elif serie.get("type") == "radar":
+                        for datum in serie["data"]:
+                            data.append(datum["value"])
+                            cols.append(datum["name"])
                         break
                     else:
-                        data.append(serie['data'])
+                        data.append(serie["data"])
 
-                if 'name' in serie:
-                    cols.append(serie['name'])
-                elif 'type' in serie:
-                    cols.append(serie['type'])
+                if "name" in serie:
+                    cols.append(serie["name"])
+                elif "type" in serie:
+                    cols.append(serie["type"])
     else:
         return {}
 
     df = DataFrame(data)
     if not rows and not cols:
-        return df.reset_index().to_dict(orient='records')
+        return df.reset_index().to_dict(orient="records")
     if not rows:
-        return df.to_dict(orient='records')
+        return df.to_dict(orient="records")
 
     if rows:
         df.columns = rows
     df_ = df.T
     df_.columns = cols
-    return df_.reset_index().to_dict(orient='records')
+    return df_.reset_index().to_dict(orient="records")
 
 
 def validate_input_form_data(data: Dict):
     try:
         assert type(data) == dict
     except AssertionError:
-        raise ValueError('data must be a dict')
+        raise ValueError("data must be a dict")
 
     try:
-        assert 'fields' in data
+        assert "fields" in data
     except AssertionError:
         raise ValueError('"fields" is not a key in the input data')
 
     try:
-        assert type(data['fields']) == list
+        assert type(data["fields"]) == list
     except AssertionError:
-        raise ValueError('fields must be a list')
+        raise ValueError("fields must be a list")
 
     try:
-        assert all(['fields' in field_ for field_ in data['fields']])
+        assert all(["fields" in field_ for field_ in data["fields"]])
     except AssertionError:
         raise ValueError('"fields" are not keys in the input data')
 
     try:
-        assert all([
-            'fieldName' in field__ and 'mapping' in field__
-            for field_ in data['fields']
-            for field__ in field_['fields']
-        ])
+        assert all(
+            [
+                "fieldName" in field__ and "mapping" in field__
+                for field_ in data["fields"]
+                for field__ in field_["fields"]
+            ]
+        )
     except AssertionError:
         raise ValueError('"fieldName" and "mapping" are not keys in the input data')

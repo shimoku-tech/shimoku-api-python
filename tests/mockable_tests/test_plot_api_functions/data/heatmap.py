@@ -1,0 +1,18 @@
+heatmap_data = [
+    {"xAxis": "Lunes", "yAxis": "12 a.m", "value": 9},
+    {"xAxis": "Lunes", "yAxis": "6 p.m", "value": 10},
+    {"xAxis": "Lunes", "yAxis": "12 p.m", "value": 9},
+    {"xAxis": "Lunes", "yAxis": "6 a.m", "value": 10},
+    {"xAxis": "Martes", "yAxis": "12 a.m", "value": 9},
+    {"xAxis": "Martes", "yAxis": "6 p.m", "value": 9},
+    {"xAxis": "Martes", "yAxis": "12 p.m", "value": 8},
+    {"xAxis": "Martes", "yAxis": "6 a.m", "value": 0},
+    {"xAxis": "Miercoles", "yAxis": "12 a.m", "value": 2},
+    {"xAxis": "Miercoles", "yAxis": "6 p.m", "value": 7},
+    {"xAxis": "Miercoles", "yAxis": "12 p.m", "value": 0},
+    {"xAxis": "Miercoles", "yAxis": "6 a.m", "value": 2},
+    {"xAxis": "Jueves", "yAxis": "12 a.m", "value": 4},
+    {"xAxis": "Jueves", "yAxis": "6 p.m", "value": 0},
+    {"xAxis": "Jueves", "yAxis": "12 p.m", "value": 1},
+    {"xAxis": "Jueves", "yAxis": "6 a.m", "value": 6},
+]

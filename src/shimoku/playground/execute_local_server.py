@@ -7,6 +7,7 @@ import os
 
 import logging
 from shimoku.execution_logger import log_error
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,15 +27,21 @@ def kill_server(server_host: str, server_port: int):
     """
     Kill the server process.
     """
-    cmd_line = ['local_server:app', '--host', server_host, '--port', str(server_port)]
+    cmd_line = ["local_server:app", "--host", server_host, "--port", str(server_port)]
 
-    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
-        if process.info['cmdline'] is not None and (len(process.info['cmdline'])-2 == len(cmd_line) and
-                                                    all([elm1 == elm2 for elm1, elm2 in
-                                                         zip(cmd_line, process.info['cmdline'][2:])])):
+    for process in psutil.process_iter(["pid", "name", "cmdline"]):
+        if process.info["cmdline"] is not None and (
+            len(process.info["cmdline"]) - 2 == len(cmd_line)
+            and all(
+                [
+                    elm1 == elm2
+                    for elm1, elm2 in zip(cmd_line, process.info["cmdline"][2:])
+                ]
+            )
+        ):
             server_pid = None
             try:
-                server_pid = process.info['pid']
+                server_pid = process.info["pid"]
                 proc = psutil.Process(server_pid)
                 proc.terminate()
                 print(f"Server (PID: {server_pid}) terminated gracefully.")
@@ -42,7 +49,9 @@ def kill_server(server_host: str, server_port: int):
                 print(f"Process with PID {server_pid} not found.")
 
 
-def create_server(environment: str, server_host: str, server_port: int, open_server_browser: bool):
+def create_server(
+    environment: str, server_host: str, server_port: int, open_server_browser: bool
+):
     """
     Create a new server process and open the server URL in the default web browser.
     :param server_host: The server host.
@@ -55,8 +64,16 @@ def create_server(environment: str, server_host: str, server_port: int, open_ser
     env["PYTHONPATH"] = base_path + os.pathsep + env.get("PYTHONPATH", "")
 
     server_process = subprocess.Popen(
-        ["uvicorn", "local_server:app", "--host", server_host, "--port", str(server_port)],
-        env=env, stdout=subprocess.DEVNULL
+        [
+            "uvicorn",
+            "local_server:app",
+            "--host",
+            server_host,
+            "--port",
+            str(server_port),
+        ],
+        env=env,
+        stdout=subprocess.DEVNULL,
     )
 
     print(f"Server started (PID: {server_process.pid})")
@@ -73,13 +90,15 @@ def create_server(environment: str, server_host: str, server_port: int, open_ser
         # Open the server URL in the default web browser
         webbrowser.open(f"http://{server_host}:{server_port}/graphql")
 
-    environment_prefix = ''
-    if environment != 'production':
-        if environment.lower() in 'development':
-            environment = 'develop'
-        environment_prefix = f'{environment}.'
+    environment_prefix = ""
+    if environment != "production":
+        if environment.lower() in "development":
+            environment = "develop"
+        environment_prefix = f"{environment}."
 
-    webbrowser.open(f"http://{environment_prefix}shimoku.io/playground?port={server_port}")
+    webbrowser.open(
+        f"http://{environment_prefix}shimoku.io/playground?port={server_port}"
+    )
 
 
 def main():

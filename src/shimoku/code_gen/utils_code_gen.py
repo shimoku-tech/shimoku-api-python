@@ -1,15 +1,46 @@
-
 def code_gen_from_value(v):
     if isinstance(v, str):
         special_chars = [
-            '"', "'", '\\', '\n', '\t', '\r', '\b', '\f', '\v',
-            '\a', '\0', '\1', '\2', '\3', '\4', '\5', '\6', '\7'
+            '"',
+            "'",
+            "\\",
+            "\n",
+            "\t",
+            "\r",
+            "\b",
+            "\f",
+            "\v",
+            "\a",
+            "\0",
+            "\1",
+            "\2",
+            "\3",
+            "\4",
+            "\5",
+            "\6",
+            "\7",
         ]
         replacement_chars = [
-            '\"', "\'", '\\\\', '\\n', '\\t', '\\r', '\\b', '\\f', '\\v',
-            '\\a', '\\0', '\\1', '\\2', '\\3', '\\4', '\\5', '\\6', '\\7'
+            '"',
+            "'",
+            "\\\\",
+            "\\n",
+            "\\t",
+            "\\r",
+            "\\b",
+            "\\f",
+            "\\v",
+            "\\a",
+            "\\0",
+            "\\1",
+            "\\2",
+            "\\3",
+            "\\4",
+            "\\5",
+            "\\6",
+            "\\7",
         ]
-        result = ''
+        result = ""
         for char in v:
             if char in special_chars:
                 result += replacement_chars[special_chars.index(char)]
@@ -21,7 +52,7 @@ def code_gen_from_value(v):
 
 
 def code_gen_from_list(l, deep=0):
-    return [' ' * deep + str(l) + ',']
+    return [" " * deep + str(l) + ","]
     # code_lines = [' ' * deep + '[']
     # deep += 4
     # for element in l:
@@ -37,7 +68,7 @@ def code_gen_from_list(l, deep=0):
 
 
 def code_gen_from_dict(d, deep=0):
-    return [' ' * deep + str(d) + ',']
+    return [" " * deep + str(d) + ","]
     # code_lines = [' ' * deep + '{']
     # deep += 4
     # for k, v in d.items():

@@ -4,6 +4,7 @@ import logging
 from shimoku.execution_logger import ClassWithLogging
 from shimoku.api.resources.app import App
 from shimoku.api.resources.report import Report
+
 logger = logging.getLogger(__name__)
 
 
@@ -14,16 +15,20 @@ class ComponentsLayer(ClassWithLogging):
 
     _module_logger = logger
     _use_info_logging = True
-    
+
     def __init__(self, app: Optional[App]):
         self._app = app
-    
+
     async def get_components_in_sub_path(self, path: str) -> list[dict]:
         """
         :param path: path to the components
         :return: list of components
         """
-        return [report.cascade_to_dict() for report in (await self._app.get_reports()) if report['path'] == path]
+        return [
+            report.cascade_to_dict()
+            for report in (await self._app.get_reports())
+            if report["path"] == path
+        ]
 
     async def get_component(self, uuid: str) -> dict:
         """

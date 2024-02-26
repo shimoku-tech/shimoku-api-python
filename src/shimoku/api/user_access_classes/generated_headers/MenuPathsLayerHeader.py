@@ -19,14 +19,14 @@ class MenuPathsLayerHeader:
         target: Optional[str] = None,
     ) -> dict:
         """
-    Create a new role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param resource: resource of the role
-    :param role_name: name of the role
-    :param permission: permission of the role
-    :param target: target of the role
-    """
+        Create a new role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param resource: resource of the role
+        :param role_name: name of the role
+        :param permission: permission of the role
+        :param target: target of the role
+        """
         pass
 
     def delete_all_menu_path_activities(
@@ -103,12 +103,12 @@ class MenuPathsLayerHeader:
         role_name: Optional[str] = None,
     ):
         """
-    Delete the role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param role_id: id of the role
-    :param role_name: name of the role
-    """
+        Delete the role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param role_id: id of the role
+        :param role_name: name of the role
+        """
         pass
 
     def get_menu_path(
@@ -193,11 +193,11 @@ class MenuPathsLayerHeader:
         role_name: Optional[str] = None,
     ) -> list:
         """
-    Get the role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param role_name: name of the role
-    """
+        Get the role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param role_name: name of the role
+        """
         pass
 
     def get_roles(
@@ -206,10 +206,10 @@ class MenuPathsLayerHeader:
         name: Optional[str] = None,
     ) -> list:
         """
-    Get the roles at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    """
+        Get the roles at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        """
         pass
 
     def update_menu_path(

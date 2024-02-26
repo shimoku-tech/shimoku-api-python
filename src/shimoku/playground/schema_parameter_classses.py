@@ -244,6 +244,7 @@ class CreateReportInput(BaseModel):
     showHistoryNavigation: Union[bool, None] = None
     universeId: Union[str, None] = None
 
+
 @strawberry.type
 class UpdateReportInput(BaseModel):
     id: Union[str, None] = None
@@ -285,6 +286,7 @@ class CreateReportDataSetInput(BaseModel):
     dataSetId: Union[str, None] = None
     reportId: Union[str, None] = None
     properties: Union[str, None] = None
+
 
 @strawberry.type
 class UpdateReportDataSetInput(BaseModel):
@@ -460,4 +462,3 @@ class UpdateFileInput(BaseModel):
 @strawberry.type
 class DeleteFileInput(BaseModel):
     id: Union[str, None] = None
-    

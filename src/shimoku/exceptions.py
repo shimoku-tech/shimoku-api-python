@@ -38,14 +38,12 @@ class ModalError(Exception):
 
 
 class DataError(Exception):
-
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code
 
 
 class FileError(Exception):
-
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code
@@ -94,14 +92,12 @@ class AIFunctionError(Exception):
 
 
 class ShimokuFileError(Exception):
-
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code
 
 
 class UniverseApiKeyError(Exception):
-
     def __init__(self, text, status_code=None):
         self.text = text
         self.status_code = status_code

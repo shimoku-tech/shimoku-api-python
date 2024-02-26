@@ -4,7 +4,11 @@ from typing import Optional
 from shimoku.api.resources.role import VALID_PERMISSIONS, VALID_RESOURCES, VALID_TARGETS
 
 from shimoku.cli import CLIParser, CLIFuncParam
-from shimoku.cli.cloud.cascade_get_resources import InitOptions, ResourceGetter, Universe
+from shimoku.cli.cloud.cascade_get_resources import (
+    InitOptions,
+    ResourceGetter,
+    Universe,
+)
 from shimoku.cli.utils import choose_from_menu, input_list, input_dict
 
 
@@ -14,20 +18,37 @@ def add_create_parser(parser: Optional[CLIParser] = None):
     :param parser: Parser to add the create parser to
     :return: Create parser
     """
-    params = {
-        'name': 'create',
-        'description': 'Commands to create resources'
-    }
+    params = {"name": "create", "description": "Commands to create resources"}
     if parser:
         create_parser = parser.add_command(**params)
     else:
         create_parser = CLIParser(**params)
 
     common_args = [
-        CLIFuncParam(name='local-port', arg_type=int, arg_help='Local port to use', mandatory=False),
-        CLIFuncParam(name='environment', arg_type=str, arg_help='Environment to use', mandatory=False),
-        CLIFuncParam(name='access-token', arg_type=str, arg_help='Access token to use', mandatory=False),
-        CLIFuncParam(name='universe-id', arg_type=str, arg_help='Universe ID to use', mandatory=False),
+        CLIFuncParam(
+            name="local-port",
+            arg_type=int,
+            arg_help="Local port to use",
+            mandatory=False,
+        ),
+        CLIFuncParam(
+            name="environment",
+            arg_type=str,
+            arg_help="Environment to use",
+            mandatory=False,
+        ),
+        CLIFuncParam(
+            name="access-token",
+            arg_type=str,
+            arg_help="Access token to use",
+            mandatory=False,
+        ),
+        CLIFuncParam(
+            name="universe-id",
+            arg_type=str,
+            arg_help="Universe ID to use",
+            mandatory=False,
+        ),
     ]
 
     module_functions = [
@@ -47,11 +68,8 @@ def add_create_parser(parser: Optional[CLIParser] = None):
     return create_parser
 
 
-async def universe_api_key(
-    description: str = CLIFuncParam(prompt=True),
-    **kwargs
-):
-    """ Create a universe api key
+async def universe_api_key(description: str = CLIFuncParam(prompt=True), **kwargs):
+    """Create a universe api key
     :param description: Description of the universe api key
     """
     universe: Universe = await ResourceGetter(InitOptions(**kwargs)).get_universe()
@@ -60,29 +78,29 @@ async def universe_api_key(
 
 async def workspace(
     name: str = CLIFuncParam(prompt=True),
-    dont_create_default_roles: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
+    dont_create_default_roles: bool = CLIFuncParam(
+        default=False, action="store_true", mandatory=False
+    ),
     theme: dict = CLIFuncParam(default=None, mandatory=False),
-    **kwargs
+    **kwargs,
 ):
-    """ Create a workspace
+    """Create a workspace
     :param name: Workspace name to create
     :param dont_create_default_roles: Flag to not create default roles
     :param theme: Theme to use
     """
-    businesses_layer = await ResourceGetter(InitOptions(**kwargs)).get_businesses_layer()
+    businesses_layer = await ResourceGetter(
+        InitOptions(**kwargs)
+    ).get_businesses_layer()
     await businesses_layer.create_workspace(
-        name=name,
-        create_default_roles=not dont_create_default_roles,
-        theme=theme
+        name=name, create_default_roles=not dont_create_default_roles, theme=theme
     )
 
 
 async def menu_path(
-    workspace_id: Optional[str],
-    name: str = CLIFuncParam(prompt=True),
-    **kwargs
+    workspace_id: Optional[str], name: str = CLIFuncParam(prompt=True), **kwargs
 ):
-    """ Create a menu path in the workspace
+    """Create a menu path in the workspace
     :param workspace_id: UUID of the workspace to use
     :param name: Menu path name to create
     :param order: Order of the menu path
@@ -96,12 +114,16 @@ async def board(
     workspace_id: Optional[str],
     order: Optional[int],
     name: str = CLIFuncParam(prompt=True),
-    public: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
-    not_enabled: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
-    group_menu_paths: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
-    **kwargs
+    public: bool = CLIFuncParam(default=False, action="store_true", mandatory=False),
+    not_enabled: bool = CLIFuncParam(
+        default=False, action="store_true", mandatory=False
+    ),
+    group_menu_paths: bool = CLIFuncParam(
+        default=False, action="store_true", mandatory=False
+    ),
+    **kwargs,
 ):
-    """ Create a board in the workspace
+    """Create a board in the workspace
     :param workspace_id: UUID of the workspace to use
     :param name: Board name to create
     :param order: Order of the board
@@ -112,16 +134,13 @@ async def board(
     resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
     dashboards_layer = await resource_getter.get_dashboards_layer()
     dashboard = await dashboards_layer.create_board(
-        name=name,
-        order=order,
-        is_public=public,
-        is_disabled=not_enabled
+        name=name, order=order, is_public=public, is_disabled=not_enabled
     )
     if group_menu_paths:
         app_names = []
         business = await resource_getter.get_business()
         app_objs = await business.get_apps()
-        options = [app['name'] for app in app_objs]+['']
+        options = [app["name"] for app in app_objs] + [""]
         print("Select the menu paths to group in the board (empty to stop):")
         while True:
             chosen_app = choose_from_menu(options)
@@ -130,35 +149,42 @@ async def board(
             options.remove(chosen_app)
             app_names.append(chosen_app)
 
-        await dashboards_layer.group_menu_paths(uuid=dashboard['id'], menu_path_names=app_names)
+        await dashboards_layer.group_menu_paths(
+            uuid=dashboard["id"], menu_path_names=app_names
+        )
 
 
 async def board_menu_path_link(
     workspace_id: Optional[str],
     board: str = CLIFuncParam(prompt=True),
     menu_path: str = CLIFuncParam(prompt=True),
-    **kwargs
+    **kwargs,
 ):
-    """ Create a board menu path link
+    """Create a board menu path link
     :param workspace_id: UUID of the workspace to use
     :param board: Board id or name to link
     :param menu_path: Menu path to link
     """
-    resource_getter = ResourceGetter(InitOptions(board=board, menu_path=menu_path, workspace_id=workspace_id, **kwargs))
+    resource_getter = ResourceGetter(
+        InitOptions(
+            board=board, menu_path=menu_path, workspace_id=workspace_id, **kwargs
+        )
+    )
     dashboards_layer = await resource_getter.get_dashboards_layer()
     dashboard, app = await asyncio.gather(
-        resource_getter.get_dashboard(),
-        resource_getter.get_app()
+        resource_getter.get_dashboard(), resource_getter.get_app()
     )
-    await dashboards_layer.add_menu_path_in_board(menu_path_id=app['id'], uuid=dashboard['id'])
+    await dashboards_layer.add_menu_path_in_board(
+        menu_path_id=app["id"], uuid=dashboard["id"]
+    )
 
 
 def get_file_data(path_to_file: str) -> Optional[bytes]:
-    """ Get the data of the file
+    """Get the data of the file
     :param path_to_file: Path to the file
     """
     try:
-        with open(path_to_file, 'rb') as file_:
+        with open(path_to_file, "rb") as file_:
             return file_.read()
     except FileNotFoundError:
         print(f"File {path_to_file} not found")
@@ -169,11 +195,15 @@ async def file(
     menu_path: str = CLIFuncParam(prompt=True),
     name: str = CLIFuncParam(prompt=True),
     path_to_file: str = CLIFuncParam(prompt=True),
-    ask_for_tags: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
-    ask_for_metadata: bool = CLIFuncParam(default=False, action='store_true', mandatory=False),
-    **kwargs
+    ask_for_tags: bool = CLIFuncParam(
+        default=False, action="store_true", mandatory=False
+    ),
+    ask_for_metadata: bool = CLIFuncParam(
+        default=False, action="store_true", mandatory=False
+    ),
+    **kwargs,
 ):
-    """ Create a file in the menu path
+    """Create a file in the menu path
     :param workspace_id: UUID of the workspace to use
     :param menu_path: Menu path id or name to use
     :param name: File name to create
@@ -185,13 +215,17 @@ async def file(
     file_content = get_file_data(path_to_file)
     if file_content is None:
         return
-    resource_getter = ResourceGetter(InitOptions(menu_path=menu_path, workspace_id=workspace_id, **kwargs))
+    resource_getter = ResourceGetter(
+        InitOptions(menu_path=menu_path, workspace_id=workspace_id, **kwargs)
+    )
     files_layer = await resource_getter.get_files_layer()
     if ask_for_tags:
         tags = input_list()
     if ask_for_metadata:
         metadata = input_dict()
-    await files_layer.post_object(file_name=name, obj=file_content, tags=tags, metadata=metadata)
+    await files_layer.post_object(
+        file_name=name, obj=file_content, tags=tags, metadata=metadata
+    )
 
 
 async def ai_input_file(
@@ -199,9 +233,9 @@ async def ai_input_file(
     menu_path: str = CLIFuncParam(prompt=True),
     name: str = CLIFuncParam(prompt=True),
     path_to_file: str = CLIFuncParam(prompt=True),
-    **kwargs
+    **kwargs,
 ):
-    """ Create an ai input file in the menu path
+    """Create an ai input file in the menu path
     :param workspace_id: UUID of the workspace to use
     :param menu_path: Menu path id or name to use
     :param name: File name to create
@@ -210,44 +244,45 @@ async def ai_input_file(
     file_content = get_file_data(path_to_file)
     if file_content is None:
         return
-    resource_getter = ResourceGetter(InitOptions(menu_path=menu_path, workspace_id=workspace_id, **kwargs))
+    resource_getter = ResourceGetter(
+        InitOptions(menu_path=menu_path, workspace_id=workspace_id, **kwargs)
+    )
     ai_layer = await resource_getter.get_ai_layer()
     await ai_layer.create_input_files(input_files={name: file_content})
 
 
 async def role(
     workspace_id: Optional[str],
-    menu_path: str = CLIFuncParam(group='menu_path_or_board', mandatory=False),
-    board: str = CLIFuncParam(group='menu_path_or_board', mandatory=False),
+    menu_path: str = CLIFuncParam(group="menu_path_or_board", mandatory=False),
+    board: str = CLIFuncParam(group="menu_path_or_board", mandatory=False),
     name: str = CLIFuncParam(prompt=True),
-    **kwargs
+    **kwargs,
 ):
-    """ Create a role in a specific level, leave menu path and board empty to create a workspace role
+    """Create a role in a specific level, leave menu path and board empty to create a workspace role
     and specify only one to create a menu path or board role respectively. Don't specify both.
     :param workspace_id: UUID of the workspace to use
     :param menu_path: Menu path id or name to use
     :param board: Board id or name to use
     :param name: Role name to create
     """
-    role_resource = choose_from_menu(VALID_RESOURCES, 'Choose a resource: ')
-    permission = choose_from_menu(VALID_PERMISSIONS, 'Choose a permission: ')
-    target = choose_from_menu(VALID_TARGETS, 'Choose a target: ')
-    resource_getter = ResourceGetter(InitOptions(
-        workspace_id=workspace_id,
-        menu_path=menu_path,
-        board=board,
-        **kwargs
-    ))
+    role_resource = choose_from_menu(VALID_RESOURCES, "Choose a resource: ")
+    permission = choose_from_menu(VALID_PERMISSIONS, "Choose a permission: ")
+    target = choose_from_menu(VALID_TARGETS, "Choose a target: ")
+    resource_getter = ResourceGetter(
+        InitOptions(
+            workspace_id=workspace_id, menu_path=menu_path, board=board, **kwargs
+        )
+    )
 
     if menu_path:
         layer = await resource_getter.get_apps_layer()
-        resource_id = (await resource_getter.get_app())['id']
+        resource_id = (await resource_getter.get_app())["id"]
     elif board:
         layer = await resource_getter.get_dashboards_layer()
-        resource_id = (await resource_getter.get_dashboard())['id']
+        resource_id = (await resource_getter.get_dashboard())["id"]
     else:
         layer = await resource_getter.get_businesses_layer()
-        resource_id = (await resource_getter.get_business())['id']
+        resource_id = (await resource_getter.get_business())["id"]
 
     await layer.create_role(
         uuid=resource_id,

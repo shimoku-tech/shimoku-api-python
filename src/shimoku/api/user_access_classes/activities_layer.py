@@ -7,6 +7,7 @@ import json
 
 import logging
 from shimoku.execution_logger import log_error, ClassWithLogging
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -17,11 +18,11 @@ class ActivitiesLayer(ClassWithLogging):
     """
     This class is used to interact with the activities that are available in a menu path, through the API.
     """
-    
+
     _module_logger = logger
     _use_info_logging = True
-    
-    def __init__(self, app: Optional['App']):
+
+    def __init__(self, app: Optional["App"]):
         self._app = app
 
     async def _get_activity_with_error(self, uuid: Optional[str], name: Optional[str]):
@@ -32,13 +33,17 @@ class ActivitiesLayer(ClassWithLogging):
         """
         activity: Activity = await self._app.get_activity(uuid=uuid, name=name)
         if not activity:
-            log_error(logger, f'Activity ({name}) not found', ActivityError)
+            log_error(logger, f"Activity ({name}) not found", ActivityError)
         return activity
 
     async def create_activity(
-        self, name: str, settings: Optional[dict] = None,
-        template_id: Optional[str] = None, template_name_version: Optional[tuple[str, str]] = None,
-        template_mode: str = 'LIGHT', universe_api_key: str = ''
+        self,
+        name: str,
+        settings: Optional[dict] = None,
+        template_id: Optional[str] = None,
+        template_name_version: Optional[tuple[str, str]] = None,
+        template_mode: str = "LIGHT",
+        universe_api_key: str = "",
     ) -> dict:
         """
         Create an activity by its name and app id
@@ -52,14 +57,20 @@ class ActivitiesLayer(ClassWithLogging):
         """
         return (
             await self._app.create_activity(
-                name=name, settings=settings, template_id=template_id,
-                template_name_version=template_name_version, template_mode=template_mode,
-                universe_api_key=universe_api_key
+                name=name,
+                settings=settings,
+                template_id=template_id,
+                template_name_version=template_name_version,
+                template_mode=template_mode,
+                universe_api_key=universe_api_key,
             )
         ).cascade_to_dict()
 
     async def delete_activity(
-        self, uuid: Optional[str] = None, name: Optional[str] = None, with_linked_to_templates: Optional[bool] = False
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        with_linked_to_templates: Optional[bool] = False,
     ):
         """
         Delete an activity by its name and app id
@@ -68,18 +79,21 @@ class ActivitiesLayer(ClassWithLogging):
         :param with_linked_to_templates: if the activity is linked to a template, delete it anyway
         """
         activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
-        if not with_linked_to_templates and activity['activityTemplateWithMode']:
+        if not with_linked_to_templates and activity["activityTemplateWithMode"]:
             log_error(
                 logger,
-                f'Activity ({str(activity)}) is linked to a template please use the '
-                f'(with_linked_to_templates) parameter set to True to delete it',
-                ActivityError
+                f"Activity ({str(activity)}) is linked to a template please use the "
+                f"(with_linked_to_templates) parameter set to True to delete it",
+                ActivityError,
             )
         await self._app.delete_activity(uuid=uuid, name=name)
 
     async def update_activity(
-        self, uuid: Optional[str] = None, name: Optional[str] = None,
-        new_name: Optional[str] = None, settings: Optional[dict] = None
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        new_name: Optional[str] = None,
+        settings: Optional[dict] = None,
     ):
         """
         Update an activity by its name or id
@@ -89,11 +103,17 @@ class ActivitiesLayer(ClassWithLogging):
         :param settings: the default settings of the activity
         :return: the updated activity as a dictionary
         """
-        await self._app.update_activity(uuid=uuid, name=name, new_name=new_name, settings=settings)
+        await self._app.update_activity(
+            uuid=uuid, name=name, new_name=new_name, settings=settings
+        )
 
     async def create_webhook(
-        self, url: str,  uuid: Optional[str] = None, name: Optional[str] = None,
-        method: str = 'GET', headers: Optional[dict] = None
+        self,
+        url: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        method: str = "GET",
+        headers: Optional[dict] = None,
     ):
         """
         Create a webhook by its name and app id
@@ -107,8 +127,10 @@ class ActivitiesLayer(ClassWithLogging):
         await activity.create_webhook(url=url, method=method, headers=headers or {})
 
     async def execute_activity(
-        self, uuid: Optional[str] = None, name: Optional[str] = None,
-        run_settings: Union[dict, str] = None
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        run_settings: Union[dict, str] = None,
     ) -> dict:
         """
         Execute an activity by its name or id
@@ -121,12 +143,15 @@ class ActivitiesLayer(ClassWithLogging):
         run = await activity.create_run(settings=run_settings)
         result = await run.trigger_webhook()
         await run
-        logger.info(f'Activity {name if name else uuid} executed with result {result}')
+        logger.info(f"Activity {name if name else uuid} executed with result {result}")
         return run.cascade_to_dict()
 
     async def get_activity(
-        self, uuid: Optional[str] = None, name: Optional[str] = None,
-        pretty_print: bool = False, how_many_runs: Optional[int] = None
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        pretty_print: bool = False,
+        how_many_runs: Optional[int] = None,
     ) -> Optional[dict]:
         """
         Get an activity by its name
@@ -144,8 +169,10 @@ class ActivitiesLayer(ClassWithLogging):
         activity_as_dict = activity.cascade_to_dict()
 
         if how_many_runs:
-            activity_as_dict['runs'] = [run.cascade_to_dict() for run in
-                                        (await activity.get_runs(how_many_runs=how_many_runs))]
+            activity_as_dict["runs"] = [
+                run.cascade_to_dict()
+                for run in (await activity.get_runs(how_many_runs=how_many_runs))
+            ]
         if pretty_print:
             print(json.dumps(activity_as_dict, indent=2))
 
@@ -167,14 +194,18 @@ class ActivitiesLayer(ClassWithLogging):
         if pretty_print:
             print(json.dumps(activities_as_dicts, indent=2))
         elif print_names:
-            logger.info(f'Activities available in the app: '
-                        f'{", ".join([activity["name"] for activity in activities])}')
+            logger.info(
+                f"Activities available in the app: "
+                f'{", ".join([activity["name"] for activity in activities])}'
+            )
 
         return activities_as_dicts
 
     async def create_run(
-        self, uuid: Optional[str] = None, name: Optional[str] = None,
-        settings: Union[dict, str] = None
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+        settings: Union[dict, str] = None,
     ) -> dict[str, any]:
         """
         Create a run for an activity by its name
@@ -187,7 +218,9 @@ class ActivitiesLayer(ClassWithLogging):
         activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run = await activity.create_run(settings=settings)
 
-        logger.info(f'New run with id {run["id"]} created for activity {name if name else uuid}.')
+        logger.info(
+            f'New run with id {run["id"]} created for activity {name if name else uuid}.'
+        )
 
         return run.cascade_to_dict()
 
@@ -205,12 +238,17 @@ class ActivitiesLayer(ClassWithLogging):
         run = await activity.get_run(uuid=run_id)
         result = await run.trigger_webhook()
         await run
-        logger.info(f'Run with id {run_id} executed with result {result}')
+        logger.info(f"Run with id {run_id} executed with result {result}")
 
     async def create_run_log(
-        self, run_id: str, message: str, severity: Optional[str] = 'INFO',
-        tags: Optional[dict[str, str]] = None, pretty_print: bool = False,
-        uuid: Optional[str] = None, name: Optional[str] = None
+        self,
+        run_id: str,
+        message: str,
+        severity: Optional[str] = "INFO",
+        tags: Optional[dict[str, str]] = None,
+        pretty_print: bool = False,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
     ) -> dict[str, str]:
         """
         Create a log for a run by its id
@@ -226,7 +264,9 @@ class ActivitiesLayer(ClassWithLogging):
         activity: Activity = await self._get_activity_with_error(uuid=uuid, name=name)
         run: Activity.Run = await activity.get_run(uuid=run_id)
         log: dict = (
-            await run.create_log(message=message, severity=severity, tags=tags if tags else {})
+            await run.create_log(
+                message=message, severity=severity, tags=tags if tags else {}
+            )
         ).cascade_to_dict()
 
         if pretty_print:

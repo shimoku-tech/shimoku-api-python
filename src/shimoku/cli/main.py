@@ -11,20 +11,20 @@ import asyncio
 main_parser = CLIParser(
     arguments=[
         CLIFuncParam(
-            name='interactive',
-            arg_help='Run in interactive mode',
+            name="interactive",
+            arg_help="Run in interactive mode",
             mandatory=False,
             default=False,
-            action='store_true',
-            alt_name='i'
+            action="store_true",
+            alt_name="i",
         ),
         CLIFuncParam(
-            name='shell-commands-enabled',
-            arg_help='Enable the possibility to run shell commands from the interactive mode',
+            name="shell-commands-enabled",
+            arg_help="Enable the possibility to run shell commands from the interactive mode",
             mandatory=False,
             default=False,
-            action='store_true',
-            alt_name='s'
+            action="store_true",
+            alt_name="s",
         ),
     ]
 )
@@ -36,8 +36,13 @@ add_persistence_parser(main_parser)
 
 
 def main():
-    configure_logging('INFO')
-    asyncio.run(main_parser.parse_args())
+    configure_logging("INFO")
+    try:
+        asyncio.run(main_parser.parse_args())
+    except KeyboardInterrupt:
+        print("Interrupted by user")
+    except asyncio.CancelledError:
+        print("Interrupted by user")
 
 
 if __name__ == "__main__":

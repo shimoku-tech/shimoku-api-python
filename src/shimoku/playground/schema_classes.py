@@ -5,7 +5,6 @@ import re
 import dateutil.parser
 from typing import List, Union, Type, Callable
 import graphene
-from dataclasses import field
 from functools import partial
 
 
@@ -168,10 +167,9 @@ class ReportExposed(graphene.ObjectType):
 
     @staticmethod
     def list_resolver_extra(
-            publicPermissions: DashboardPublicPermissionInputExposed = None,
-            **kwargs
+        publicPermissions: DashboardPublicPermissionInputExposed = None, **kwargs
     ):
-        items = kwargs.get('items')
+        items = kwargs.get("items")
         return items
 
 
@@ -372,7 +370,11 @@ class StringOrStringList(graphene.Scalar):
         if isinstance(ast, graphene.StringValue):
             return [ast.value]
         elif isinstance(ast, graphene.ListValue):
-            return [elem.value for elem in ast.values if isinstance(elem, graphene.StringValue)]
+            return [
+                elem.value
+                for elem in ast.values
+                if isinstance(elem, graphene.StringValue)
+            ]
 
 
 class SearchableStringFilterInput(graphene.InputObjectType):
@@ -553,13 +555,13 @@ class SearchableDataFilterInput(graphene.InputObjectType):
 
     @classmethod
     def add_fields(cls) -> Type[SearchableDataFilterInput]:
-        """ This is necessary because of the way the filter is defined in the API, these keywords are reserved
+        """This is necessary because of the way the filter is defined in the API, these keywords are reserved
         in python so we have to add them programmatically.
         """
         add_fields = [
-            ('and', graphene.List(SearchableDataFilterInput)),
-            ('or', graphene.List(SearchableDataFilterInput)),
-            ('not', graphene.Field(SearchableDataFilterInput))
+            ("and", graphene.List(SearchableDataFilterInput)),
+            ("or", graphene.List(SearchableDataFilterInput)),
+            ("not", graphene.Field(SearchableDataFilterInput)),
         ]
         for field_name, field_type in add_fields:
             setattr(cls, field_name, field_type)
@@ -692,66 +694,154 @@ class DataExposed(graphene.ObjectType):
     @staticmethod
     def filter_func_template(field_value, filter_value, type_converter, comparator):
         if isinstance(filter_value, list):
-            return any([comparator(type_converter(field_value), type_converter(value)) for value in filter_value])
+            return any(
+                [
+                    comparator(type_converter(field_value), type_converter(value))
+                    for value in filter_value
+                ]
+            )
         else:
             return comparator(type_converter(field_value), type_converter(filter_value))
 
     @staticmethod
     def filter_field(
-            items: list, field: str,
-            filterFieldInput: Union[SearchableIDFilterInput, SearchableStringFilterInput, SearchableFloatFilterInput]
+        items: list,
+        field: str,
+        filterFieldInput: Union[
+            SearchableIDFilterInput,
+            SearchableStringFilterInput,
+            SearchableFloatFilterInput,
+        ],
     ) -> list:
         type_converter: Callable = lambda x: x
-        if 'dateField' in field:
+        if "dateField" in field:
             # Set the values lower than an hour to 0
             type_converter: Callable = lambda x: dateutil.parser.parse(x).replace(
                 minute=0, second=0, microsecond=0, tzinfo=dateutil.tz.tzutc()
             )
-        elif 'intField' in field or 'orderField' in field:
+        elif "intField" in field or "orderField" in field:
             type_converter: Callable = lambda x: float(x)
 
         filters: List[Callable] = []
         func = DataExposed.filter_func_template
         if filterFieldInput.ne is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.ne,
-                                   type_converter=type_converter, comparator=lambda x, y: x != y))
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.ne,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x != y,
+                )
+            )
         if filterFieldInput.gt is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.gt,
-                                   type_converter=type_converter, comparator=lambda x, y: x > y))
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.gt,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x > y,
+                )
+            )
         if filterFieldInput.lt is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.lt,
-                                   type_converter=type_converter, comparator=lambda x, y: x < y))
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.lt,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x < y,
+                )
+            )
         if filterFieldInput.gte is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.gte,
-                                   type_converter=type_converter, comparator=lambda x, y: x >= y))
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.gte,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x >= y,
+                )
+            )
         if filterFieldInput.lte is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.lte,
-                                   type_converter=type_converter, comparator=lambda x, y: x <= y))
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.lte,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x <= y,
+                )
+            )
         if filterFieldInput.eq is not None:
-            filters.append(partial(func, filter_value=filterFieldInput.eq,
-                                   type_converter=type_converter, comparator=lambda x, y: x == y))
-        if isinstance(filterFieldInput, (SearchableIDFilterInput, SearchableStringFilterInput)):
+            filters.append(
+                partial(
+                    func,
+                    filter_value=filterFieldInput.eq,
+                    type_converter=type_converter,
+                    comparator=lambda x, y: x == y,
+                )
+            )
+        if isinstance(
+            filterFieldInput, (SearchableIDFilterInput, SearchableStringFilterInput)
+        ):
             if filterFieldInput.match is not None:
-                filters.append(partial(func, filter_value=filterFieldInput.match,
-                                       type_converter=type_converter, comparator=lambda x, y: x == y))
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.match,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: x == y,
+                    )
+                )
             if filterFieldInput.matchPhrase is not None:
-                filters.append(partial(func, filter_value=filterFieldInput.matchPhrase,
-                                       type_converter=type_converter, comparator=lambda x, y: x in y))
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.matchPhrase,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: x in y,
+                    )
+                )
             if filterFieldInput.matchPhrasePrefix is not None:
-                filters.append(partial(func, filter_value=filterFieldInput.matchPhrasePrefix,
-                                       type_converter=type_converter, comparator=lambda x, y: x.startswith(y)))
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.matchPhrasePrefix,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: x.startswith(y),
+                    )
+                )
             if filterFieldInput.multiMatch is not None:
-                filters.append(partial(func, filter_value=filterFieldInput.multiMatch,
-                                       type_converter=type_converter, comparator=lambda x, y: x in y))
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.multiMatch,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: x in y,
+                    )
+                )
             if filterFieldInput.exists:
                 filters.append(lambda x: x is not None)
             if filterFieldInput.wildcard:
-                filters.append(partial(func, filter_value=filterFieldInput.wildcard,
-                                       type_converter=type_converter, comparator=lambda x, y: fnmatch.fnmatch(x, y)))
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.wildcard,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: fnmatch.fnmatch(x, y),
+                    )
+                )
             if filterFieldInput.regexp:
-                filters.append(partial(func, filter_value=filterFieldInput.regexp,
-                                       type_converter=type_converter, comparator=lambda x, y: re.match(y, x)))
-        return [item for item in items if all([filter_func(getattr(item, field)) for filter_func in filters])]
+                filters.append(
+                    partial(
+                        func,
+                        filter_value=filterFieldInput.regexp,
+                        type_converter=type_converter,
+                        comparator=lambda x, y: re.match(y, x),
+                    )
+                )
+        return [
+            item
+            for item in items
+            if all([filter_func(getattr(item, field)) for filter_func in filters])
+        ]
 
     @staticmethod
     def filter(input_items, filterInput: SearchableDataFilterInput) -> list:
@@ -761,16 +851,16 @@ class DataExposed(graphene.ObjectType):
         filtered = False
         for key, value in filterInput.__dict__.items():
             if value is not None:
-                if key == 'and':
+                if key == "and":
                     if len(value) == 0:
                         results = []
                     for _filter in value:
                         results = DataExposed.filter(results, _filter)
                     filtered = True
-                elif key == 'or':
+                elif key == "or":
                     for _filter in value:
                         or_results.extend(DataExposed.filter(input_items, _filter))
-                elif key == 'not':
+                elif key == "not":
                     not_results.append(DataExposed.filter(results, value))
                     filtered = True
                 else:
@@ -790,16 +880,20 @@ class DataExposed(graphene.ObjectType):
 
     @staticmethod
     def list_resolver_extra(
-            publicPermissions: DashboardPublicPermissionInputExposed = None,
-            sort: SearchableDataSortInput = None,
-            filter: SearchableDataFilterInput = None,
-            **kwargs
+        publicPermissions: DashboardPublicPermissionInputExposed = None,
+        sort: SearchableDataSortInput = None,
+        filter: SearchableDataFilterInput = None,
+        **kwargs,
     ):
-        items = kwargs.get('items')
+        items = kwargs.get("items")
         if sort is not None and sort.field is not None and sort.direction is not None:
             sort_direction = sort.direction.value
             sort_field = sort.field.value
-            items = sorted(items, key=lambda x: getattr(x, sort_field), reverse=sort_direction == 'desc')
+            items = sorted(
+                items,
+                key=lambda x: getattr(x, sort_field),
+                reverse=sort_direction == "desc",
+            )
         if filter is not None:
             items = DataExposed.filter(items, filter)
         return items

@@ -1,0 +1,51 @@
+stacked_area_data = [
+    {
+        "Email": 120,
+        "Union Ads": 132,
+        "Video Ads": 101,
+        "Search Engine": 134,
+        "Weekday": "Mon",
+    },
+    {
+        "Email": 220,
+        "Union Ads": 182,
+        "Video Ads": 191,
+        "Search Engine": 234,
+        "Weekday": "Tue",
+    },
+    {
+        "Email": 150,
+        "Union Ads": 232,
+        "Video Ads": 201,
+        "Search Engine": 154,
+        "Weekday": "Wed",
+    },
+    {
+        "Email": 820,
+        "Union Ads": 932,
+        "Video Ads": 901,
+        "Search Engine": 934,
+        "Weekday": "Thu",
+    },
+    {
+        "Email": 120,
+        "Union Ads": 132,
+        "Video Ads": 101,
+        "Search Engine": 134,
+        "Weekday": "Fri",
+    },
+    {
+        "Email": 220,
+        "Union Ads": 182,
+        "Video Ads": 191,
+        "Search Engine": 234,
+        "Weekday": "Sat",
+    },
+    {
+        "Email": 150,
+        "Union Ads": 232,
+        "Video Ads": 201,
+        "Search Engine": 154,
+        "Weekday": "Sun",
+    },
+]

@@ -8,37 +8,37 @@ from shimoku.exceptions import CacheError
 from shimoku import Client
 
 
-api_key: str = getenv('API_TOKEN')
-universe_id: str = getenv('UNIVERSE_ID')
-business_id: str = getenv('BUSINESS_ID')
-environment: str = getenv('ENVIRONMENT')
-verbosity: str = getenv('VERBOSITY')
+api_key: str = getenv("API_TOKEN")
+universe_id: str = getenv("UNIVERSE_ID")
+business_id: str = getenv("BUSINESS_ID")
+environment: str = getenv("ENVIRONMENT")
+verbosity: str = getenv("VERBOSITY")
 
 s = Client(
     access_token=api_key,
     universe_id=universe_id,
     environment=environment,
-    verbosity='INFO',
+    verbosity="INFO",
     async_execution=True,
-    retry_attempts=1
+    retry_attempts=1,
 )
 s.set_workspace(uuid=business_id)
-s.set_menu_path('File test')
-s.menu_paths.delete_all_menu_path_files(name='File test', with_shimoku_generated=True)
+s.set_menu_path("File test")
+s.menu_paths.delete_all_menu_path_files(name="File test", with_shimoku_generated=True)
 
 
 def test_general_files():
     data = {
-        'a': [1, 2, 3],
-        'b': [1, 4, 9],
+        "a": [1, 2, 3],
+        "b": [1, 4, 9],
     }
     df = pd.DataFrame(data)
-    file_object = df.to_csv(index=False).encode('utf-8')
-    filename = 'helloworld.csv'
+    file_object = df.to_csv(index=False).encode("utf-8")
+    filename = "helloworld.csv"
     s.io.post_object(file_name=filename, obj=file_object)
 
-    files = s.menu_paths.get_menu_path_files(name='File test')
-    assert 'helloworld.csv' in [file['name'] for file in files]
+    files = s.menu_paths.get_menu_path_files(name="File test")
+    assert "helloworld.csv" in [file["name"] for file in files]
 
     class MyTestCase(unittest.TestCase):
         def test_cant_create_duplicate_files(self):
@@ -50,41 +50,47 @@ def test_general_files():
     t.test_cant_create_duplicate_files()
 
     s.io.delete_file(file_name=filename)
-    files = s.menu_paths.get_menu_path_files(name='File test')
-    assert 'helloworld.csv' not in [file['name'] for file in files]
+    files = s.menu_paths.get_menu_path_files(name="File test")
+    assert "helloworld.csv" not in [file["name"] for file in files]
 
 
 def test_tags_and_metadata():
-    previous_len_files = len(s.menu_paths.get_menu_path_files(name='File test'))
+    previous_len_files = len(s.menu_paths.get_menu_path_files(name="File test"))
     s.io.post_object(
-        file_name='Shimoku generated file', obj=b'',
-        tags=['shimoku_generated', 'IO'], metadata={'business_id': business_id}
+        file_name="Shimoku generated file",
+        obj=b"",
+        tags=["shimoku_generated", "IO"],
+        metadata={"business_id": business_id},
     )
-    len_files = len(s.menu_paths.get_menu_path_files(name='File test'))
+    len_files = len(s.menu_paths.get_menu_path_files(name="File test"))
     assert len_files == previous_len_files
-    len_files = len(s.menu_paths.get_menu_path_files(name='File test', with_shimoku_generated=True))
+    len_files = len(
+        s.menu_paths.get_menu_path_files(name="File test", with_shimoku_generated=True)
+    )
     assert len_files == previous_len_files + 1
-    file = s.io.get_object(file_name='Shimoku generated file')
-    assert file == b''
-    file_metadata = s.io.get_file_metadata(file_name='Shimoku generated file')
-    assert file_metadata['metadata']['business_id'] == business_id
-    assert file_metadata['tags'] == ['shimoku_generated', 'IO']
-    s.io.delete_file(file_name='Shimoku generated file', with_shimoku_generated=True)
-    len_files = len(s.menu_paths.get_menu_path_files(name='File test', with_shimoku_generated=True))
+    file = s.io.get_object(file_name="Shimoku generated file")
+    assert file == b""
+    file_metadata = s.io.get_file_metadata(file_name="Shimoku generated file")
+    assert file_metadata["metadata"]["business_id"] == business_id
+    assert file_metadata["tags"] == ["shimoku_generated", "IO"]
+    s.io.delete_file(file_name="Shimoku generated file", with_shimoku_generated=True)
+    len_files = len(
+        s.menu_paths.get_menu_path_files(name="File test", with_shimoku_generated=True)
+    )
     assert len_files == previous_len_files
 
 
 def test_get_object():
-    file_name = 'helloworld'
-    object_data = b''
+    file_name = "helloworld"
+    object_data = b""
     s.io.post_object(file_name=file_name, obj=object_data)
     file = s.io.get_object(file_name=file_name)
     assert file == object_data
 
 
 def test_post_dataframe():
-    file_name: str = 'df-test'
-    df = pd.DataFrame({'a': [1, 2, 3], 'b': [1, 4, 9]})
+    file_name: str = "df-test"
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [1, 4, 9]})
     s.io.post_dataframe(file_name, df=df)
     file = s.io.get_dataframe(file_name=file_name)
     assert file.to_dict() == df.to_dict()
@@ -98,31 +104,35 @@ def test_post_get_model():
     X, y = datasets.load_iris(return_X_y=True)
     clf.fit(X, y)
 
-    s.io.post_ai_model(model_name='model-test', model=clf)
-    clf2 = s.io.get_ai_model(model_name='model-test')
+    s.io.post_ai_model(model_name="model-test", model=clf)
+    clf2 = s.io.get_ai_model(model_name="model-test")
 
     assert type(clf2) == type(clf)
 
 
 def test_big_data():
-    filename = '../../data/bulidata.csv'
+    filename = "../../data/bulidata.csv"
     df = pd.read_csv(filename)
     df.reset_index(inplace=True)
 
-    s.io.post_batched_dataframe(file_name='test-big-df', df=df)
+    s.io.post_batched_dataframe(file_name="test-big-df", df=df)
 
-    dataset: pd.DataFrame = s.io.get_batched_dataframe(file_name='test-big-df')
+    dataset: pd.DataFrame = s.io.get_batched_dataframe(file_name="test-big-df")
     assert len(dataset) == len(df)
 
-    s.io.post_object(file_name='test-big-df.csv', obj=df.to_csv(index=False).encode('utf-8'))
+    s.io.post_object(
+        file_name="test-big-df.csv", obj=df.to_csv(index=False).encode("utf-8")
+    )
 
 
 def test_more_than_100_files():
-    menu_path_mt100 = 'more than 100 files test'
+    menu_path_mt100 = "more than 100 files test"
     s.set_menu_path(menu_path_mt100)
     s.menu_paths.delete_all_menu_path_files(name=menu_path_mt100)
     for i in range(201):
-        s.io.post_object(file_name=f'file_{i}.txt', obj=b'Content of file '+str(i).encode('utf-8'))
+        s.io.post_object(
+            file_name=f"file_{i}.txt", obj=b"Content of file " + str(i).encode("utf-8")
+        )
     s.pop_out_of_menu_path()
     s.run()
     s.disable_caching()

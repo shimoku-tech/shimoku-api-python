@@ -9,15 +9,18 @@ from aiohttp.client_exceptions import ClientConnectorError
 
 from prompt_toolkit import PromptSession
 from prompt_toolkit.completion import Completer, Completion
-from prompt_toolkit.buffer import CompletionState
-from prompt_toolkit.keys import Keys
-from prompt_toolkit.key_binding import KeyBindings
+
 from prompt_toolkit.history import FileHistory
 
 from shimoku.utils import get_args_with_defaults
 
 from shimoku.execution_logger import configure_logging
-from shimoku.cli.utils import INTERACTIVE_HISTORY_PATH, get_current_profile
+from shimoku.cli.utils import (
+    INTERACTIVE_HISTORY_PATH,
+    get_current_profile,
+    chose_from_available_paths,
+    tab_main_navigation_key_binding,
+)
 
 from typing import Iterable
 import shlex
@@ -112,43 +115,6 @@ class CLICustomCompleter(Completer):
                 yield Completion(arg, start_position=-len(last_word))
 
 
-def create_custom_key_bindings():
-    key_bindings = KeyBindings()
-
-    @key_bindings.add(Keys.Tab)
-    def _(event):
-        """
-        Custom Tab key handler: Insert the current completion, trigger completions,
-        or auto-complete if only one completion is available.
-        """
-        buffer = event.app.current_buffer
-        current_text = buffer.document.text_before_cursor.rstrip()
-        buffer.delete_before_cursor(
-            count=max(len(current_text) - len(current_text.rstrip()), 0)
-        )
-
-        completion_state: CompletionState = buffer.complete_state
-
-        if completion_state:
-            completions = completion_state.completions
-            if completion_state.current_completion:
-                # If there's an active completion, apply it and add a space
-                buffer.apply_completion(completion_state.current_completion)
-                buffer.insert_text(" ")
-            elif len(completions) == 1:
-                # If there's only one completion, apply it automatically
-                buffer.apply_completion(completions[0])
-                buffer.insert_text(" ")
-            else:
-                # Otherwise, move to the next completion
-                buffer.complete_next()
-        else:
-            # If the buffer is empty, start the completion process
-            buffer.start_completion()
-
-    return key_bindings
-
-
 class CLIFuncParam:
     def __init__(
         self,
@@ -163,6 +129,7 @@ class CLIFuncParam:
         action: Optional[str] = None,
         group: Optional[str] = None,
         alt_name: Optional[str] = None,
+        is_path: bool = False,
     ):
         self.name = name
         self.arg_type = arg_type
@@ -175,6 +142,7 @@ class CLIFuncParam:
         self.action = action
         self.group = group
         self.alt_name = alt_name
+        self.is_path = is_path
 
         if default is not None:
             self.mandatory = False
@@ -256,9 +224,12 @@ class CLIParser(ABC):
                 if "Optional" not in str(argument.arg_type)
                 else argument.arg_type.__args__[0]
             )
-            arg_inp = input(
-                f"{argument.real_name if argument.real_name else argument.name}: "
-            )
+            input_name = argument.real_name if argument.real_name else argument.name
+            if not argument.is_path:
+                arg_inp = input(f"{input_name}: ")
+            else:
+                print(f"Select the path for the argument {input_name}:")
+                arg_inp = chose_from_available_paths()
 
             kwargs[argument.name] = arg_type(arg_inp) if arg_inp else None
 
@@ -474,7 +445,7 @@ class CLIParser(ABC):
 
         session = PromptSession(
             completer=completer,
-            key_bindings=create_custom_key_bindings(),
+            key_bindings=tab_main_navigation_key_binding(add_space=True),
             history=FileHistory(INTERACTIVE_HISTORY_PATH),
         )
         configure_logging("INFO")
@@ -540,7 +511,6 @@ class CLIParser(ABC):
                 print(text)
                 print()
                 continue
-
             try:
                 args = self.parser.parse_args(text.rstrip().split(" "))
                 await self.execute_args(args, variables)

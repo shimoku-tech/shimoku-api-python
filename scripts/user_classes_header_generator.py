@@ -2,6 +2,7 @@ import inspect
 import importlib
 import os
 from shimoku.utils import get_args_with_defaults
+import subprocess
 
 base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 target_paths = {
@@ -130,3 +131,12 @@ for target_path, target_file in target_paths.items():
                 "w",
             ) as f:
                 f.write("\n".join(main_code_lines))
+
+            subprocess.run(
+                [
+                    "black",
+                    os.path.join(
+                        output_path, f"{classes_for_generation[-1][0]}Header.py"
+                    ),
+                ]
+            )

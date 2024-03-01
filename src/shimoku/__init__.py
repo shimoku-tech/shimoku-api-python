@@ -46,7 +46,10 @@ from shimoku.api.user_access_classes.activities_layer import ActivitiesLayer
 from shimoku.api.user_access_classes.generated_headers.ActivitiesLayerHeader import (
     ActivitiesLayerHeader,
 )
-
+from shimoku.api.user_access_classes.actions_layer import ActionsLayer
+from shimoku.api.user_access_classes.generated_headers.ActionsLayerHeader import (
+    ActionsLayerHeader,
+)
 from shimoku.plt.plt_layer import PlotLayer
 from shimoku.plt.generated_headers.PlotLayerHeader import PlotLayerHeader
 from shimoku.plt.utils import create_normalized_name
@@ -54,7 +57,7 @@ from shimoku.plt.utils import create_normalized_name
 from shimoku.ai.ai_layer import AILayer
 from shimoku.ai.generated_headers.AILayerHeader import AILayerHeader
 
-from shimoku.utils import IN_BROWSER_PYODIDE, EventType
+from shimoku.utils import IN_BROWSER, EventType
 
 from shimoku.exceptions import WorkspaceError, BoardError
 
@@ -143,6 +146,9 @@ class Client:
                 self._universe_object
             )
         )
+        self.actions: ActionsLayerHeader = decorate_class_to_auto_async(
+            ActionsLayer, self._async_pool
+        )(self._universe_object)
         self.boards: BoardsLayerHeader = decorate_class_to_auto_async(
             BoardsLayer, self._async_pool
         )(self._business_object)
@@ -407,6 +413,8 @@ class Client:
 
     async def _create_business_contents_updated_event(self):
         """Create a business contents updated event."""
+        if not self._business_object:
+            return
         await self._business_object.create_event(
             EventType.BUSINESS_CONTENTS_UPDATED, {}, self._business_object["id"]
         )
@@ -441,7 +449,7 @@ class Client:
 
     def __getattribute__(self, item):
         """Get attribute of the client."""
-        if False and not IN_BROWSER_PYODIDE:
+        if False and not IN_BROWSER:
             if item in ["boards", "menu_paths"] and not self._business_object:
                 log_error(
                     logger,

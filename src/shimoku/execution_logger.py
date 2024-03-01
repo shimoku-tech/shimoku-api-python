@@ -1,5 +1,5 @@
 import logging
-from sys import stdout
+from sys import stdout, modules
 from typing import Callable, Optional
 from io import TextIOWrapper
 from functools import wraps
@@ -7,6 +7,8 @@ from inspect import stack, isclass
 import asyncio
 from time import perf_counter
 from abc import ABC
+
+IN_BROWSER = "_pyodide_core" in modules
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +43,8 @@ class IndentFormatter(logging.Formatter):
 def log_error(logger, message, errorFunction):
     """Log an error and raise an exception."""
     logger.error(message)
+    if IN_BROWSER:
+        js_snackbar(message, "error")
     raise errorFunction(message)
 
 

@@ -52,6 +52,7 @@ def add_create_parser(parser: Optional[CLIParser] = None):
     ]
 
     module_functions = [
+        action,
         universe_api_key,
         workspace,
         menu_path,
@@ -66,6 +67,31 @@ def add_create_parser(parser: Optional[CLIParser] = None):
         create_parser.decor_add_command(common_args=common_args)(func)
 
     return create_parser
+
+
+async def action(
+    name: str = CLIFuncParam(prompt=True),
+    description: str = CLIFuncParam(prompt=True),
+    path_to_code: str = CLIFuncParam(prompt=True, is_path=True),
+    universe_api_key: Optional[str] = CLIFuncParam(mandatory=False),
+    overwrite: bool = CLIFuncParam(default=False, action="store_true", mandatory=False),
+    **kwargs,
+):
+    """Create an action
+    :param name: Name of the action
+    :param description: Description of the action
+    :param path_to_code: Path to the code
+    :param universe_api_key: UUID of the universe api key to use
+    :param overwrite: Flag to overwrite the action if it already exists
+    """
+    actions_layer = await ResourceGetter(InitOptions(**kwargs)).get_actions_layer()
+    await actions_layer.create_action(
+        name=name,
+        description=description,
+        path_to_code=path_to_code,
+        universe_api_key=universe_api_key,
+        overwrite=overwrite,
+    )
 
 
 async def universe_api_key(description: str = CLIFuncParam(prompt=True), **kwargs):
@@ -194,7 +220,7 @@ async def file(
     workspace_id: Optional[str],
     menu_path: str = CLIFuncParam(prompt=True),
     name: str = CLIFuncParam(prompt=True),
-    path_to_file: str = CLIFuncParam(prompt=True),
+    path_to_file: str = CLIFuncParam(prompt=True, is_path=True),
     ask_for_tags: bool = CLIFuncParam(
         default=False, action="store_true", mandatory=False
     ),
@@ -232,7 +258,7 @@ async def ai_input_file(
     workspace_id: Optional[str],
     menu_path: str = CLIFuncParam(prompt=True),
     name: str = CLIFuncParam(prompt=True),
-    path_to_file: str = CLIFuncParam(prompt=True),
+    path_to_file: str = CLIFuncParam(prompt=True, is_path=True),
     **kwargs,
 ):
     """Create an ai input file in the menu path

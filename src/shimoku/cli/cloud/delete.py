@@ -50,6 +50,7 @@ def add_delete_parser(parser: Optional[CLIParser] = None):
 
     module_functions = [
         universe_api_key,
+        action,
         workspace,
         workspace_contents,
         board,
@@ -73,6 +74,23 @@ def add_delete_parser(parser: Optional[CLIParser] = None):
         delete_parser.decor_add_command(common_args=common_args)(func)
 
     return delete_parser
+
+
+async def action(
+    action: str = CLIFuncParam(prompt=True),
+    **kwargs,
+):
+    """
+    Delete an action
+    :param action: Action id or name to delete
+    """
+    resource_getter = ResourceGetter(InitOptions(action=action, **kwargs))
+    actions_layer = await resource_getter.get_actions_layer()
+    action_obj = await resource_getter.get_action()
+    if not action_obj:
+        print(f"Action {action} not found")
+        return
+    await actions_layer.delete_action(uuid=action_obj["id"])
 
 
 async def universe_api_key(uuid: str = CLIFuncParam(prompt=True), **kwargs):

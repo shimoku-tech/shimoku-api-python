@@ -53,7 +53,7 @@ def get_plural(parents_url_singular):
         return parents_url_singular
     elif parents_url_singular.endswith("s"):
         return parents_url_singular + "es"
-    elif parents_url_singular.endswith("y"):
+    elif parents_url_singular.endswith("y") and parents_url_singular[-2] not in "aeiou":
         return parents_url_singular[:-1] + "ies"
     else:
         return parents_url_singular + "s"
@@ -231,8 +231,10 @@ async def list_elements(
         parent_type = is_child_of[element_type]
         if parent0Id not in db[parent_type]:
             raise HTTPException(
-                status_code=404, detail=f"{element_type} with id {parent0Id} not found"
+                status_code=404,
+                detail=f"{get_resource_name(parent_type, to_lower=False)} with id {parent0Id} not found",
             )
+        print(parent_type, element_type)
         parent0 = db[parent_type][parent0Id]
         if getattr(parent0, get_plural(get_resource_name(element_type))) is None:
             return []
@@ -324,6 +326,8 @@ def append_to_parent(
     """
     plural_name = get_plural(get_resource_name(element_type))
     list_field = getattr(db[parent_type][parent0Id], plural_name)
+    if list_field is None:
+        print("BAD")
     if list_field.items is None:
         print("BAD")
     list_field.items.append(db[element_type][element_id])
@@ -677,13 +681,13 @@ def define_delete_method(
             )
 
 
-def generate_crud_methods(
+def generate_rest_crud_methods(
     fast_api_app: FastAPI,
     types: Dict[str, Any],
     db: Dict[str, Any],
     is_child_of: Dict[str, str],
     is_parent_of: Dict[str, List[str]],
-    element_type: str,
+    element_type_name: str,
 ):
     """
     Generate the CRUD methods for the element
@@ -692,11 +696,11 @@ def generate_crud_methods(
     :param db: the database
     :param is_child_of: a dictionary of the parents of the exposed types
     :param is_parent_of: a dictionary of the children of the exposed types
-    :param element_type: The type of the element
+    :param element_type_name: The type of the element
     """
     base_url = "/external/v1/"
 
-    aux_type = element_type
+    aux_type = element_type_name
     parents_url = ""
     parent_index = 0
     while aux_type in is_child_of:
@@ -711,19 +715,32 @@ def generate_crud_methods(
         aux_type = parent_type
         parent_index += 1
 
-    parents_url = base_url + parents_url + get_resource_name(element_type)
+    element_type = types[element_type_name]
+    parents_url = (
+        base_url
+        + parents_url
+        + (
+            get_resource_name(element_type_name)
+            if not hasattr(element_type, "rest_name")
+            else element_type.rest_name()
+        )
+    )
 
-    uppercased_type_name = element_type[:-7]
+    uppercased_type_name = element_type_name[:-7]
 
-    define_get_method(fast_api_app, types, db, parents_url, element_type)
-    define_list_method(fast_api_app, types, db, is_child_of, parents_url, element_type)
+    print(element_type_name)
+
+    define_get_method(fast_api_app, types, db, parents_url, element_type_name)
+    define_list_method(
+        fast_api_app, types, db, is_child_of, parents_url, element_type_name
+    )
     define_create_method(
         fast_api_app,
         types,
         db,
         is_child_of,
         parents_url,
-        element_type,
+        element_type_name,
         uppercased_type_name,
     )
     define_batch_create_method(
@@ -732,11 +749,11 @@ def generate_crud_methods(
         db,
         is_child_of,
         parents_url,
-        element_type,
+        element_type_name,
         uppercased_type_name,
     )
     define_update_method(
-        fast_api_app, types, db, parents_url, element_type, uppercased_type_name
+        fast_api_app, types, db, parents_url, element_type_name, uppercased_type_name
     )
     define_delete_method(
         fast_api_app,
@@ -745,7 +762,7 @@ def generate_crud_methods(
         is_child_of,
         is_parent_of,
         parents_url,
-        element_type,
+        element_type_name,
         uppercased_type_name,
     )
 
@@ -861,6 +878,8 @@ def create_api() -> FastAPI:
                 name="local",
                 activeUniversePlanId="local",
                 activeUniversePlan=active_universe_plan,
+                actions=types["ActionExposedList"](items=[]),
+                universeApiKeys=types["UniverseApiKeyExposedList"](items=[]),
             )
         },
         "UniverseExposed": {
@@ -869,6 +888,8 @@ def create_api() -> FastAPI:
                 name="local",
                 activeUniversePlanId="local",
                 activeUniversePlan=active_universe_plan,
+                actions=types["ActionExposedList"](items=[]),
+                universeApiKeys=types["UniverseApiKeyExposedList"](items=[]),
             )
         },
         "BusinessExposed": {
@@ -914,7 +935,7 @@ def create_api() -> FastAPI:
     # Generate the CRUD methods for each type and define the webhook methods
     for _type in types:
         if _type in is_child_of:
-            generate_crud_methods(
+            generate_rest_crud_methods(
                 fast_api_app, types, db, is_child_of, is_parent_of, _type
             )
 

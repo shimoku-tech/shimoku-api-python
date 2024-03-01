@@ -9,7 +9,7 @@ import datetime
 import asyncio
 
 from shimoku.exceptions import APIError
-from shimoku.utils import IN_BROWSER_PYODIDE
+from shimoku.utils import IN_BROWSER
 import json
 from pkg_resources import get_distribution
 
@@ -24,7 +24,7 @@ SHIMOKU_VERSION_KEY = "python-shimoku-pkg-version"
 
 def get_request_function():
     """Auxiliary function to get the appropriate request function"""
-    if IN_BROWSER_PYODIDE:
+    if IN_BROWSER:
         from pyodide.http import pyfetch
 
         async def request(
@@ -47,7 +47,10 @@ def get_request_function():
             if method == "GET":
                 del params["body"]
             res = await pyfetch(url, **params)
-            if "application/json" in res.headers.get("content-type"):
+            if (
+                hasattr(res, "headers")
+                and "application/json" in res.headers.get("content-type")
+            ) or ((hasattr(res, "json")) and not hasattr(res, "read")):
                 data = await res.json()
             else:
                 data = await res.read()
@@ -408,7 +411,7 @@ class ApiClient(ClassWithLogging):
             headers.update(
                 {
                     SHIMOKU_VERSION_KEY: get_distribution("shimoku").version
-                    if not IN_BROWSER_PYODIDE
+                    if not IN_BROWSER
                     else "2.0.0"
                 }
             )
@@ -461,7 +464,7 @@ class ApiClient(ClassWithLogging):
                     limit -= req_limit
                 if len(data) < req_limit or (limit and limit <= 0):
                     break
-            elif "items" in data:
+            elif data and "items" in data:
                 if data_res.get("items"):
                     data_res["items"].extend(data.get("items"))
                 else:

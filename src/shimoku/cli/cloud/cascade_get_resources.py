@@ -23,8 +23,10 @@ from shimoku.api.resources.activity import Activity
 from shimoku.api.resources.file import File
 from shimoku.api.resources.data_set import DataSet
 from shimoku.api.resources.report import Report
+from shimoku.api.resources.action import Action
 
 from shimoku.api.user_access_classes.universes_layer import UniversesLayer
+from shimoku.api.user_access_classes.actions_layer import ActionsLayer
 from shimoku.api.user_access_classes.businesses_layer import WorkspacesLayer
 from shimoku.api.user_access_classes.dashboards_layer import BoardsLayer
 from shimoku.api.user_access_classes.apps_layer import MenuPathsLayer
@@ -55,6 +57,7 @@ class InitOptions:
     environment: Optional[str] = getenv("SHIMOKU_ENVIRONMENT")
     universe_id: Optional[str] = getenv("SHIMOKU_UNIVERSE_ID")
     workspace_id: Optional[str] = getenv("SHIMOKU_WORKSPACE_ID")
+    action: Optional[str] = None
     board: Optional[str] = None
     menu_path: Optional[str] = None
     role: Optional[str] = None
@@ -123,6 +126,22 @@ class ResourceGetter:
         api_client: ApiClient = await self.get_api_client()
         api_client.semaphore = asyncio.Semaphore(api_client.semaphore_limit)
         return Universe(api_client, self.init_opts.universe_id)
+
+    async def get_actions_layer(self) -> ActionsLayer:
+        universe: Universe = await self.get_universe()
+        return ActionsLayer(universe=universe)
+
+    async def get_action(self) -> Action:
+        universe: Universe = await self.get_universe()
+        action_ref: Optional[str] = self.init_opts.action
+        if not action_ref:
+            log_error(logger, "Action not specified", ActivityTemplateError)
+        action: Optional[Action] = self.get_resource_by_name_or_uuid(
+            await universe.get_actions(), action_ref
+        )
+        if not action:
+            log_error(logger, f"Action {action_ref} not found", ActivityTemplateError)
+        return action
 
     async def get_activity_templates_layer(self) -> ActivityTemplatesLayer:
         universe: Universe = await self.get_universe()

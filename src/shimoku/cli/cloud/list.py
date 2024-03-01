@@ -117,6 +117,7 @@ def add_list_parser(parser: Optional[CLIParser] = None):
     ]
 
     module_functions = [
+        actions,
         universe_api_keys,
         activity_templates,
         workspaces,
@@ -149,9 +150,20 @@ async def universe_api_keys(**kwargs):
     """List the universe api keys in the universe"""
     universe: Universe = await ResourceGetter(InitOptions(**kwargs)).get_universe()
     list_filtering_and_display(
-        await universe.get_universe_api_keys(),
+        [u.cascade_to_dict() for u in await universe.get_universe_api_keys()],
         table_title=f"Universe api keys from Universe {universe['id']}",
         fields=["id", "description", "enabled"],
+        **kwargs,
+    )
+
+
+async def actions(**kwargs):
+    """List the actions in the universe"""
+    universe: Universe = await ResourceGetter(InitOptions(**kwargs)).get_universe()
+    list_filtering_and_display(
+        [u.cascade_to_dict() for u in await universe.get_actions()],
+        table_title=f"Actions from Universe {universe['id']}",
+        fields=["id", "name", "description"],
         **kwargs,
     )
 

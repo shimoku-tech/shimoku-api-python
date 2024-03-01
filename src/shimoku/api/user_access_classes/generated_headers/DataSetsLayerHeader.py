@@ -11,7 +11,7 @@ class DataSetsLayerHeader:
 
     def append_to_data_set(
         self,
-        data: Union[list[dict],  DataFrame],
+        data: Union[list[dict], DataFrame],
         uuid: Optional[str] = None,
         name: Optional[str] = None,
     ) -> str:
@@ -42,7 +42,7 @@ class DataSetsLayerHeader:
         name: Optional[str] = None,
         limit: Optional[int] = None,
     ) -> list:
-        """ Get the data in a dataset in the app
+        """Get the data in a dataset in the app
         :param name: name of the dataset
         :param uuid: uuid of the dataset
         :param limit: limit of the data points to be returned
@@ -52,11 +52,11 @@ class DataSetsLayerHeader:
 
     def replace_data_from_data_set(
         self,
-        data: Union[list[dict],  DataFrame],
+        data: Union[list[dict], DataFrame],
         uuid: Optional[str] = None,
         name: Optional[str] = None,
     ):
-        """ Replace the data in a dataset in the app
+        """Replace the data in a dataset in the app
         :param name: name of the dataset
         :param uuid: uuid of the dataset
         :param data: data to be stored in the dataset

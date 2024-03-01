@@ -5,7 +5,7 @@ from pandas import DataFrame
 
 
 class PlotLayerHeader:
-    """ 
+    """
     This class is a high level abstraction of the API, it is used to create components and data sets easily.
     """
 
@@ -35,7 +35,7 @@ class PlotLayerHeader:
 
     def annotated_chart(
         self,
-        data: Union[list[ DataFrame], list[list[dict]]],
+        data: Union[list[DataFrame], list[list[dict]]],
         order: int,
         x: str,
         y: Union[str, list[str]],
@@ -67,7 +67,7 @@ class PlotLayerHeader:
 
     def area(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -81,12 +81,12 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create an area chart """
+        """Create an area chart"""
         pass
 
     def bar(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -100,7 +100,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a bar chart """
+        """Create a bar chart"""
         pass
 
     def button(
@@ -113,7 +113,7 @@ class PlotLayerHeader:
         padding: Optional[str] = None,
         on_click_events: Union[list[dict], dict, None] = None,
     ):
-        """ Create a button in the dashboard. """
+        """Create a button in the dashboard."""
         pass
 
     def change_current_tab(
@@ -130,7 +130,7 @@ class PlotLayerHeader:
         self,
         path: str,
     ):
-        """ Change the current path """
+        """Change the current path"""
         pass
 
     def chart_and_indicators(
@@ -187,14 +187,14 @@ class PlotLayerHeader:
         self,
         name: str,
     ):
-        """ Delete a modal """
+        """Delete a modal"""
         pass
 
     def delete_tabs_group(
         self,
         name: str,
     ):
-        """ Delete a tabs group """
+        """Delete a tabs group"""
         pass
 
     def doughnut(
@@ -202,14 +202,14 @@ class PlotLayerHeader:
         order: int,
         names: str,
         values: str,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         title: Optional[str] = None,
         rows_size: Optional[int] = 2,
         cols_size: Optional[int] = 3,
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a doughnut chart """
+        """Create a doughnut chart"""
         pass
 
     def filter(
@@ -236,7 +236,7 @@ class PlotLayerHeader:
 
     def free_echarts(
         self,
-        data: Union[str,  DataFrame, list[dict], None] = None,
+        data: Union[str, DataFrame, list[dict], None] = None,
         options: Optional[dict] = None,
         raw_options: Optional[str] = None,
         order: Optional[int] = None,
@@ -267,14 +267,14 @@ class PlotLayerHeader:
         order: int,
         names: str,
         values: str,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         title: Optional[str] = None,
         rows_size: Optional[int] = None,
         cols_size: Optional[int] = None,
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a scatter chart """
+        """Create a scatter chart"""
         pass
 
     def gauge_indicator(
@@ -287,7 +287,7 @@ class PlotLayerHeader:
         rows_size: Optional[int] = 1,
         color: Union[str, int] = 1,
     ):
-        """ Create a gauge indicator """
+        """Create a gauge indicator"""
         pass
 
     def generate_input_form_groups(
@@ -305,7 +305,7 @@ class PlotLayerHeader:
         activity_name: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
-        """ Easier way to create an input form.
+        """Easier way to create an input form.
         :param menu_path: the menu path of the input form
         :param order: the order of the input form
         :param form_groups: the form groups of the input form
@@ -322,16 +322,43 @@ class PlotLayerHeader:
         """
         pass
 
+    def get_component_by_order(
+        self,
+        order: int,
+    ) -> Optional[dict]:
+        """Get the component by order.
+        :param order: the order of the component
+        """
+        pass
+
     def get_input_forms(
         self,
     ) -> list:
-        """ Get all the input forms in the current menu_path. """
+        """Get all the input forms in the current menu_path."""
+        pass
+
+    def get_modal(
+        self,
+        modal_name: str,
+    ) -> Optional[dict]:
+        """Get the modal.
+        :param modal_name: the name of the modal
+        """
         pass
 
     def get_shared_data_names(
         self,
     ) -> list:
-        """ Get the names of the shared data """
+        """Get the names of the shared data"""
+        pass
+
+    def get_tabs_group(
+        self,
+        tabs_index: tuple,
+    ) -> Optional[dict]:
+        """Get the tabs group.
+        :param tabs_index: the index of the tabs group
+        """
         pass
 
     def heatmap(
@@ -340,7 +367,7 @@ class PlotLayerHeader:
         x: str,
         y: str,
         values: str,
-        data: Union[list[dict],  DataFrame, str],
+        data: Union[list[dict], DataFrame, str],
         color_range: Optional[tuple[int, int]] = None,
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
@@ -353,12 +380,12 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a heatmap chart """
+        """Create a heatmap chart"""
         pass
 
     def horizontal_bar(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -372,7 +399,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a horizontal bar chart """
+        """Create a horizontal bar chart"""
         pass
 
     def html(
@@ -401,7 +428,7 @@ class PlotLayerHeader:
         cols_size: Optional[int] = None,
         padding: Optional[str] = None,
     ):
-        """ Create an iframe report in the dashboard.
+        """Create an iframe report in the dashboard.
         :param url: the url of the iframe
         :param order: the order of the iframe
         :param height: the height of the iframe
@@ -412,7 +439,7 @@ class PlotLayerHeader:
 
     def indicator(
         self,
-        data: Union[str,  DataFrame, list[dict], dict],
+        data: Union[str, DataFrame, list[dict], dict],
         order: int,
         vertical: Union[bool, str] = False,
         color_by_value: bool = False,
@@ -479,7 +506,7 @@ class PlotLayerHeader:
         activity_name: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
-        """ Creates an input form.
+        """Creates an input form.
         :param options: the options for the input form
         :param order: the order of the input form
         :param padding: the padding of the input form
@@ -494,7 +521,7 @@ class PlotLayerHeader:
 
     def line(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -508,14 +535,14 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a line chart """
+        """Create a line chart"""
         pass
 
     def line_and_bar_charts(
         self,
         order: int,
         x: str,
-        data: Union[str,  DataFrame, list[dict], None],
+        data: Union[str, DataFrame, list[dict], None],
         bar_names: Optional[list[str]] = None,
         line_names: Optional[list[str]] = None,
         x_axis_name: Optional[str] = None,
@@ -530,12 +557,12 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a chart with bars and lines. """
+        """Create a chart with bars and lines."""
         pass
 
     def line_with_confidence_area(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         lower: str,
@@ -557,7 +584,7 @@ class PlotLayerHeader:
     def line_with_summary(
         self,
         order: int,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         title: str,
         x: str,
         y: Union[str, list[str], None] = None,
@@ -571,7 +598,7 @@ class PlotLayerHeader:
 
     def marked_line(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         marks: list,
@@ -587,7 +614,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a predictive line chart """
+        """Create a predictive line chart"""
         pass
 
     def modal_button(
@@ -617,26 +644,26 @@ class PlotLayerHeader:
         order: int,
         names: str,
         values: str,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         title: Optional[str] = None,
         rows_size: Optional[int] = 2,
         cols_size: Optional[int] = 3,
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a pie chart """
+        """Create a pie chart"""
         pass
 
     def pop_out_of_bentobox(
         self,
     ):
-        """ Stop using a bentobox """
+        """Stop using a bentobox"""
         pass
 
     def pop_out_of_modal(
         self,
     ):
-        """ Pop the current modal. """
+        """Pop the current modal."""
         pass
 
     def pop_out_of_tabs_group(
@@ -649,7 +676,7 @@ class PlotLayerHeader:
 
     def predictive_line(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -666,14 +693,14 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a predictive line chart """
+        """Create a predictive line chart"""
         pass
 
     def radar(
         self,
         order: int,
         names: str,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         values: Optional[list[str]] = None,
         max_field: Optional[str] = None,
         fill_area: bool = False,
@@ -683,13 +710,13 @@ class PlotLayerHeader:
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a radar chart """
+        """Create a radar chart"""
         pass
 
     def raise_if_cant_change_path(
         self,
     ):
-        """Raise an error if a tabs group or a modal is already open. """
+        """Raise an error if a tabs group or a modal is already open."""
         pass
 
     def rose(
@@ -697,14 +724,14 @@ class PlotLayerHeader:
         order: int,
         names: str,
         values: str,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         title: Optional[str] = None,
         rows_size: Optional[int] = 2,
         cols_size: Optional[int] = 3,
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a rose chart """
+        """Create a rose chart"""
         pass
 
     def sankey(
@@ -720,14 +747,14 @@ class PlotLayerHeader:
         rows_size: Optional[int] = None,
         cols_size: Optional[int] = None,
     ):
-        """ Create a sankey chart """
+        """Create a sankey chart"""
         pass
 
     def scatter(
         self,
         order: int,
         point_fields: Union[list[tuple[str, str]], tuple[str, str]],
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         title: Optional[str] = None,
@@ -738,7 +765,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a scatter chart """
+        """Create a scatter chart"""
         pass
 
     def scatter_with_effect(
@@ -746,7 +773,7 @@ class PlotLayerHeader:
         order: int,
         x: str,
         y: str,
-        data: Union[list[str],  DataFrame, list[dict], None],
+        data: Union[list[str], DataFrame, list[dict], None],
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         title: Optional[str] = None,
@@ -756,12 +783,12 @@ class PlotLayerHeader:
         effect_points: Optional[list] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a scatter chart """
+        """Create a scatter chart"""
         pass
 
     def segmented_area(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: str,
@@ -780,7 +807,7 @@ class PlotLayerHeader:
         threshold: Optional[float] = None,
         labels: Optional[list[str]] = None,
     ):
-        """ Create a segmented area chart """
+        """Create a segmented area chart"""
         pass
 
     def segmented_line(
@@ -788,7 +815,7 @@ class PlotLayerHeader:
         order: int,
         x: str,
         y: Union[str, list[str]],
-        data: Union[str,  DataFrame, list[dict], None],
+        data: Union[str, DataFrame, list[dict], None],
         x_axis_name: Optional[str] = None,
         y_axis_name: Optional[str] = None,
         rows_size: Optional[int] = None,
@@ -800,7 +827,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a chart with bars and lines. """
+        """Create a chart with bars and lines."""
         pass
 
     def set_bentobox(
@@ -808,7 +835,7 @@ class PlotLayerHeader:
         cols_size: int,
         rows_size: int,
     ):
-        """ Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
+        """Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
         :param rows_size: the number of rows in the bentobox"""
         pass
@@ -820,7 +847,7 @@ class PlotLayerHeader:
         height: Optional[int] = None,
         open_by_default: Optional[bool] = None,
     ) -> None:
-        """ Set the current modal.
+        """Set the current modal.
         :param modal_name: the name of the modal
         :param width: the width of the modal
         :param height: the height of the modal
@@ -851,7 +878,7 @@ class PlotLayerHeader:
         just_labels: Optional[bool] = None,
         sticky: Optional[bool] = None,
     ):
-        """ Set the current tabs index.
+        """Set the current tabs index.
         :param tabs_index: the index of the tabs group
         :param order: the order of the tabs group in the dashboard
         :param parent_tabs_index: the index of the parent tabs group
@@ -876,12 +903,12 @@ class PlotLayerHeader:
         is_percentage: bool = False,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a pie chart """
+        """Create a pie chart"""
         pass
 
     def shimoku_gauges_group(
         self,
-        gauges_data: Union[ DataFrame, list[dict]],
+        gauges_data: Union[DataFrame, list[dict]],
         order: int,
         rows_size: Optional[int] = None,
         cols_size: Optional[int] = 12,
@@ -924,12 +951,12 @@ class PlotLayerHeader:
         padding: Optional[str] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a speed gauge chart """
+        """Create a speed gauge chart"""
         pass
 
     def stacked_area(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -943,12 +970,12 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a stacked area chart """
+        """Create a stacked area chart"""
         pass
 
     def stacked_bar(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -962,12 +989,12 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a stacked bar chart """
+        """Create a stacked bar chart"""
         pass
 
     def stacked_horizontal_bar(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -981,7 +1008,7 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a stacked horizontal bar chart """
+        """Create a stacked horizontal bar chart"""
         pass
 
     def sunburst(
@@ -994,13 +1021,13 @@ class PlotLayerHeader:
         cols_size: Optional[int] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a sunburst chart """
+        """Create a sunburst chart"""
         pass
 
     def table(
         self,
         order: int,
-        data: Union[str,  DataFrame, list[dict], dict],
+        data: Union[str, DataFrame, list[dict], dict],
         columns: Optional[list[str]] = None,
         columns_button: bool = True,
         filters: bool = True,
@@ -1020,7 +1047,7 @@ class PlotLayerHeader:
         rows_size: Optional[int] = None,
         cols_size: Optional[int] = None,
     ):
-        """ Create a table report in the dashboard.
+        """Create a table report in the dashboard.
         :param order: the order of the table
         :param data: the data of the table
         :param columns: the columns of the table
@@ -1047,7 +1074,7 @@ class PlotLayerHeader:
 
     def top_bottom_area(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: Optional[int] = None,
         x: str = "x",
         top_names: Optional[list[str]] = None,
@@ -1067,7 +1094,7 @@ class PlotLayerHeader:
 
     def top_bottom_line(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         top_names: Optional[list[str]] = None,
@@ -1096,7 +1123,7 @@ class PlotLayerHeader:
         cols_size: Optional[int] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a tree chart """
+        """Create a tree chart"""
         pass
 
     def treemap(
@@ -1109,12 +1136,12 @@ class PlotLayerHeader:
         cols_size: Optional[int] = None,
         option_modifications: Optional[dict] = None,
     ):
-        """ Create a treemap chart """
+        """Create a treemap chart"""
         pass
 
     def waterfall(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         positive: str,
@@ -1134,7 +1161,7 @@ class PlotLayerHeader:
 
     def zero_centered_bar(
         self,
-        data: Union[str,  DataFrame, list[dict]],
+        data: Union[str, DataFrame, list[dict]],
         order: int,
         x: str,
         y: Union[list[str], str, None] = None,
@@ -1148,5 +1175,5 @@ class PlotLayerHeader:
         option_modifications: Optional[dict] = None,
         variant: Optional[str] = None,
     ):
-        """ Create a zero centered bar chart """
+        """Create a zero centered bar chart"""
         pass

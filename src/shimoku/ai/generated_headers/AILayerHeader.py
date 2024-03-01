@@ -13,7 +13,7 @@ class AIFunctionMethodsHeader:
         model: bytes,
         metadata: Optional[dict] = None,
     ):
-        """ Create a model
+        """Create a model
         :param model_name: Name of the model
         :param model: Model to be uploaded
         :param metadata: Metadata of the model
@@ -25,7 +25,7 @@ class AIFunctionMethodsHeader:
         files: dict,
         model_name: Optional[str] = None,
     ):
-        """ Create output files of a ai_function
+        """Create output files of a ai_function
         :param files: Files to be uploaded
         :param model_name: Name of the model used
         """
@@ -35,7 +35,7 @@ class AIFunctionMethodsHeader:
         self,
         model_name: str,
     ) -> tuple:
-        """ Get a model
+        """Get a model
         :param model_name: Name of the model
         :return: The model if it exists
         """
@@ -50,7 +50,7 @@ class AILayerHeader:
         ai_function_id: str,
         run_id: str,
     ):
-        """ Check if the credentials allow for private ai_function methods """
+        """Check if the credentials allow for private ai_function methods"""
         pass
 
     def create_input_files(
@@ -58,7 +58,7 @@ class AILayerHeader:
         input_files: dict,
         force_overwrite: bool = False,
     ):
-        """ Create input files for a ai_function
+        """Create input files for a ai_function
         :param input_files: dictionary of input files to create
         :param force_overwrite: Force the overwrite of the files
         """
@@ -68,7 +68,7 @@ class AILayerHeader:
         self,
         file_name: str,
     ):
-        """ Delete an input file
+        """Delete an input file
         :param file_name: Name of the file to delete
         """
         pass
@@ -77,7 +77,7 @@ class AILayerHeader:
         self,
         model_name: str,
     ):
-        """ Delete a model
+        """Delete a model
         :param model_name: Name of the model
         """
         pass
@@ -89,7 +89,7 @@ class AILayerHeader:
         universe_api_key: Optional[str] = None,
         **kwargs,
     ) -> str:
-        """ Execute a generic ai_function
+        """Execute a generic ai_function
         :param ai_function: Name of the ai_function to execute
         :param version: Version of the ai_function to execute
         :param universe_api_key: API key of the universe
@@ -100,7 +100,7 @@ class AILayerHeader:
     def get_available_input_files(
         self,
     ) -> list:
-        """ Get available input files for a ai_function """
+        """Get available input files for a ai_function"""
         pass
 
     def get_last_executions_with_logs(
@@ -109,7 +109,7 @@ class AILayerHeader:
         version: Optional[str] = None,
         how_many: int = 1,
     ):
-        """ Get the logs of the executions of a ai_function
+        """Get the logs of the executions of a ai_function
         :param ai_function: Name of the ai_function to execute
         :param version: Version of the ai_function to execute
         :param how_many: Number of executions to get
@@ -122,7 +122,7 @@ class AILayerHeader:
         run_id: str,
         file_name: Optional[str] = None,
     ) -> Union[tuple[bytes, dict], dict[str, tuple[bytes, dict]]]:
-        """ Get an output file object for a given ai_function and run id
+        """Get an output file object for a given ai_function and run id
         :param run_id: ID of the executed run
         :param file_name: Name of the file to get
         """
@@ -135,7 +135,7 @@ class AILayerHeader:
         file_name: Optional[str] = None,
         get_objects: bool = False,
     ):
-        """ Get output files for a generic ai_function
+        """Get output files for a generic ai_function
         :param ai_function: Name of the ai_function to execute
         :param version: Version of the ai_function to execute
         :return: The output files if they exist
@@ -150,7 +150,7 @@ class AILayerHeader:
         file_name: Optional[str] = None,
         get_objects: bool = False,
     ):
-        """ Get output files for the executions of ai_functions with a given model
+        """Get output files for the executions of ai_functions with a given model
         :param model_name: Name of the model to use
         :param file_name: Name of the file to get
         :param get_objects: Get the file objects instead of the file metadata
@@ -161,5 +161,5 @@ class AILayerHeader:
     def get_private_ai_function_methods(
         self,
     ) -> AIFunctionMethodsHeader:
-        """ Get the private ai_function methods if the credentials allow for it """
+        """Get the private ai_function methods if the credentials allow for it"""
         pass

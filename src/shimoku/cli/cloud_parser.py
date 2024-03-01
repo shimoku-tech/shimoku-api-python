@@ -9,13 +9,13 @@ from typing import Optional
 
 
 def add_cloud_parser(parser: Optional[CLIParser] = None):
-    """ Function to add the cloud parser to a parser
+    """Function to add the cloud parser to a parser
     :param parser: Parser to add the cloud parser to
     :return: Cloud parser
     """
     params = {
-        'name': 'cloud',
-        'description': 'Commands to interact with the cloud',
+        "name": "cloud",
+        "description": "Commands to interact with the cloud",
     }
 
     if parser:

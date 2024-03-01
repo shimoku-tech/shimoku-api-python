@@ -4,8 +4,10 @@ import queue
 import uuid
 from pydantic import BaseModel
 import warnings
+
 warnings.filterwarnings("ignore", module="pydantic")
 import strawberry
+
 warnings.filterwarnings("default", module="pydantic")
 from shimoku.utils import EventType
 from fastapi import FastAPI
@@ -54,9 +56,8 @@ def define_event_method(fast_api_app: FastAPI):
             type=params.type,
             resourceId=params.resourceId,
             content=params.content,
-            universeId=parent1Id
+            universeId=parent1Id,
         )
         events_queue.put(event)
         new_event_available.set()  # Signal that a new event is available
         return event
-

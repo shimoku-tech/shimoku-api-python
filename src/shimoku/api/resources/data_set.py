@@ -14,13 +14,14 @@ if TYPE_CHECKING:
 
 import logging
 from shimoku.execution_logger import log_error
+
 logger = logging.getLogger(__name__)
 
-Mapping = TypeVar('Mapping', bound=Union[dict, list[str], str])
+Mapping = TypeVar("Mapping", bound=Union[dict, list[str], str])
 
 
 def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
-    """ Given a data point, return a dictionary with the column names as keys and their types as values
+    """Given a data point, return a dictionary with the column names as keys and their types as values
     :param data_point: a data point
     :param sort: a dictionary with the sort field and order
     """
@@ -30,64 +31,79 @@ def get_column_types(data_point: dict, sort: Optional[dict]) -> dict:
     date_counter = 0
     for k, v in data_point.items():
         if str_counter > 50:
-            raise ValueError('Too many string fields')
+            raise ValueError("Too many string fields")
         if float_counter > 50:
-            raise ValueError('Too many int fields')
+            raise ValueError("Too many int fields")
         if date_counter > 50:
-            raise ValueError('Too many date fields')
+            raise ValueError("Too many date fields")
         if isinstance(v, str) or isinstance(v, bool):
             str_counter += 1
-            data_mapping.update({k: f'stringField{str_counter}'})
+            data_mapping.update({k: f"stringField{str_counter}"})
         elif isinstance(v, Number):
-            if sort and k == sort['field']:
-                data_mapping.update({k: 'orderField1'})
-                sort['field'] = 'orderField1'
+            if sort and k == sort["field"]:
+                data_mapping.update({k: "orderField1"})
+                sort["field"] = "orderField1"
             else:
                 float_counter += 1
-                data_mapping.update({k: f'intField{float_counter}'})
+                data_mapping.update({k: f"intField{float_counter}"})
         elif isinstance(v, (dt.date, dt.datetime, pd.Timestamp)):
             date_counter += 1
-            data_mapping.update({k: f'dateField{date_counter}'})
-            if sort and k == sort['field']:
-                sort['field'] = f'dateField{date_counter}'
+            data_mapping.update({k: f"dateField{date_counter}"})
+            if sort and k == sort["field"]:
+                sort["field"] = f"dateField{date_counter}"
         elif isinstance(v, dict):
-            data_mapping.update({k: f'customField1'})
+            data_mapping.update({k: "customField1"})
         else:
-            log_error(logger, f'Unknown value type {v} | Type {type(v)} | Key {k}', DataError)
+            log_error(
+                logger, f"Unknown value type {v} | Type {type(v)} | Key {k}", DataError
+            )
     return data_mapping
 
 
 def change_keys_df(df: pd.DataFrame, mapping: dict) -> list[dict]:
-    """ Given a data and a mapping, change the keys of the data to the values of the mapping
+    """Given a data and a mapping, change the keys of the data to the values of the mapping
     :param df: data to change the keys
     :param mapping: mapping of the keys to change
     """
     df = df.rename(columns=mapping)
     for k in mapping.values():
         # test if all the values are of the same type
-        if 'int' in k or 'order' in k:
+        if "int" in k or "order" in k:
             try:
                 df[k] = df[k].astype(float)
             except ValueError:
-                log_error(logger, f'Column {k} contains values that cannot be converted to float', DataError)
-        elif 'string' in k:
+                log_error(
+                    logger,
+                    f"Column {k} contains values that cannot be converted to float",
+                    DataError,
+                )
+        elif "string" in k:
             try:
                 df[k] = df[k].astype(str)
             except ValueError:
-                log_error(logger, f'Column {k} contains values that cannot be converted to string', DataError)
-        elif 'date' in k:
+                log_error(
+                    logger,
+                    f"Column {k} contains values that cannot be converted to string",
+                    DataError,
+                )
+        elif "date" in k:
             try:
-                df[k] = pd.to_datetime(df[k]).dt.strftime('%Y-%m-%dT%H:%M:%SZ')
+                df[k] = pd.to_datetime(df[k]).dt.strftime("%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
-                log_error(logger,f'Column {k} contains values that cannot be converted to date ', DataError)
+                log_error(
+                    logger,
+                    f"Column {k} contains values that cannot be converted to date ",
+                    DataError,
+                )
 
-    return df.to_dict('records')
+    return df.to_dict("records")
 
 
 def convert_input_data_to_db_items(
     data: Union[pd.DataFrame, dict],
-    sort: Optional[dict] = None, dump_whole: bool = False,
-    column_types: Optional[dict] = None
+    sort: Optional[dict] = None,
+    dump_whole: bool = False,
+    column_types: Optional[dict] = None,
 ) -> Union[list[dict], dict]:
     """Given an input data, for all the keys of the data convert it to
      a Shimoku body parameter for data table
@@ -146,15 +162,23 @@ def convert_input_data_to_db_items(
         ]
     """
     if dump_whole:
-        return {'customField1': data}
+        return {"customField1": data}
     elif isinstance(data, pd.DataFrame):
         first_element = data.iloc[0].to_dict()
-        column_mapping = get_column_types(first_element, sort) if column_types is None else column_types
+        column_mapping = (
+            get_column_types(first_element, sort)
+            if column_types is None
+            else column_types
+        )
         if data.isnull().values.any():
-            log_error(logger, 'Data contains null values please check for missing values', DataError)
+            log_error(
+                logger,
+                "Data contains null values please check for missing values",
+                DataError,
+            )
         return change_keys_df(data, column_mapping)
     else:
-        log_error(logger, f'Unknown data type {type(data)}', DataError)
+        log_error(logger, f"Unknown data type {type(data)}", DataError)
 
 
 class DataSet(Resource):
@@ -163,66 +187,87 @@ class DataSet(Resource):
     """
 
     _module_logger = logger
-    resource_type = 'dataSet'
-    alias_field = 'name'
-    plural = 'dataSets'
+    resource_type = "dataSet"
+    alias_field = "name"
+    plural = "dataSets"
 
     class DataPoint(Resource):
-
         _module_logger = logger
-        resource_type = 'data'
-        plural = 'datas'
+        resource_type = "data"
+        plural = "datas"
 
-        def __init__(self, parent: 'DataSet', uuid: Optional[str] = None, db_resource: Optional[dict] = None):
-
+        def __init__(
+            self,
+            parent: "DataSet",
+            uuid: Optional[str] = None,
+            db_resource: Optional[dict] = None,
+        ):
             params = dict(
-                dataSetId=parent['id'],
+                dataSetId=parent["id"],
                 orderField1=None,
                 description=None,
                 customField1=None,
             )
             for i in range(1, 6):
-                params.update({f'dateField{i}': None})
+                params.update({f"dateField{i}": None})
             for i in range(1, 51):
-                params.update({f'stringField{i}': None})
-                params.update({f'intField{i}': None})
+                params.update({f"stringField{i}": None})
+                params.update({f"intField{i}": None})
 
-            super().__init__(parent=parent, db_resource=db_resource, uuid=uuid, params=params,
-                             params_to_serialize=['customField1'])
+            super().__init__(
+                parent=parent,
+                db_resource=db_resource,
+                uuid=uuid,
+                params=params,
+                params_to_serialize=["customField1"],
+            )
 
         async def delete(self):
-            """ Delete the data point """
+            """Delete the data point"""
             return await self._base_resource.delete()
 
         async def update(self):
-            """ Update the data point """
+            """Update the data point"""
             return await self._base_resource.update()
 
-    def __init__(self, parent: 'App', uuid: Optional[str] = None, alias: Optional[str] = None,
-                 db_resource: Optional[dict] = None):
-
+    def __init__(
+        self,
+        parent: "App",
+        uuid: Optional[str] = None,
+        alias: Optional[str] = None,
+        db_resource: Optional[dict] = None,
+    ):
         params = dict(
             name=alias,
             columns=None,
         )
-        super().__init__(parent=parent, uuid=uuid, db_resource=db_resource, children=[self.DataPoint],
-                         check_params_before_creation=['name'], params=params,
-                         params_to_serialize=['columns'])
+        super().__init__(
+            parent=parent,
+            uuid=uuid,
+            db_resource=db_resource,
+            children=[self.DataPoint],
+            check_params_before_creation=["name"],
+            params=params,
+            params_to_serialize=["columns"],
+        )
 
     def delete(self):
-        """ Delete the data point """
+        """Delete the data point"""
         return self._base_resource.delete()
 
     async def update(self):
-        """ Update the data point """
+        """Update the data point"""
         return await self._base_resource.update()
 
     # DataPoint methods
     async def create_data_points(
-            self, data_points: Union[pd.DataFrame, dict], sort: Optional[dict] = None,
-            dump_whole: bool = False, column_types: Optional[dict] = None
+        self,
+        data_points: Union[pd.DataFrame, dict],
+        sort: Optional[dict] = None,
+        dump_whole: bool = False,
+        column_types: Optional[dict] = None,
     ) -> tuple[Mapping, dict]:
-        """ Create data points for a report
+        """Create data points for a report
         :param data_points: data points to be created
         :param sort: sort parameter
         :param dump_whole: whether to dump the whole data into a single field
@@ -235,30 +280,47 @@ class DataSet(Resource):
         )
         if isinstance(converted_data_points, dict):
             converted_data_points = [converted_data_points]
-        await self._base_resource.create_children_batch(self.DataPoint, converted_data_points, unit=' data points')
-        keys = [k for k in converted_data_points[0].keys() if not copy_sort or copy_sort['field'] != k]
-        if self.api_client.playground and isinstance(data_points, (pd.DataFrame, list)) and len(data_points) > 0:
+        await self._base_resource.create_children_batch(
+            self.DataPoint, converted_data_points, unit=" data points"
+        )
+        keys = [
+            k
+            for k in converted_data_points[0].keys()
+            if not copy_sort or copy_sort["field"] != k
+        ]
+        if (
+            self.api_client.playground
+            and isinstance(data_points, (pd.DataFrame, list))
+            and len(data_points) > 0
+        ):
             if isinstance(data_points, pd.DataFrame):
-                data_points = data_points.to_dict('records')
-            self['columns'] = {k: m for k, m in zip(data_points[0].keys(), converted_data_points[0].keys())}
+                data_points = data_points.to_dict("records")
+            self["columns"] = {
+                k: m
+                for k, m in zip(data_points[0].keys(), converted_data_points[0].keys())
+            }
             await self.update()
         return keys, copy_sort
 
     async def delete_data_points(self):
-        """ Delete data points """
+        """Delete data points"""
         self.clear()
         data_points = await self._base_resource.get_children(self.DataPoint)
         if data_points:
-            await asyncio.gather(*[self._base_resource.delete_child(self.DataPoint, uuid=dp['id'])
-                                   for dp in data_points])
+            await asyncio.gather(
+                *[
+                    self._base_resource.delete_child(self.DataPoint, uuid=dp["id"])
+                    for dp in data_points
+                ]
+            )
 
     async def get_data_points(self, limit: Optional[int] = None):
-        """ Get data points """
+        """Get data points"""
         self.clear()
         return await self._base_resource.get_children(self.DataPoint, limit=limit)
 
-    async def get_one_data_point(self) -> Optional['DataSet.DataPoint']:
-        """ Get one data point """
+    async def get_one_data_point(self) -> Optional["DataSet.DataPoint"]:
+        """Get one data point"""
         self.clear()
         data_points = await self._base_resource.get_children(self.DataPoint, limit=1)
         return data_points[0] if data_points else None

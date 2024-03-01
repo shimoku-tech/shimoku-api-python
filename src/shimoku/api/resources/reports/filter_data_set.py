@@ -3,9 +3,9 @@ from enum import Enum
 
 
 class FilterDataSet(Report):
-    """ Filter data set report class """
+    """Filter data set report class"""
 
-    report_type = 'FILTERDATASET'
+    report_type = "FILTERDATASET"
 
     default_properties = dict(
         **Report.default_properties,

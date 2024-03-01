@@ -1,31 +1,43 @@
 from copy import copy
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
-    from shimoku.code_gen.business_code_gen.apps_code_gen.code_gen_from_apps import AppCodeGen
+    from shimoku.code_gen.business_code_gen.apps_code_gen.code_gen_from_apps import (
+        AppCodeGen,
+    )
     from shimoku.api.resources.report import Report
 
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_indicators import code_gen_from_indicator
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_echarts import code_gen_from_echarts
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_annotated_echart import code_gen_from_annotated_echart
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_table import code_gen_from_table
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_form import code_gen_from_form
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_html import code_gen_from_html
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_button import code_gen_from_button
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_filter import code_gen_from_filter
-from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen. \
-        report_types_code_gen.code_gen_from_iframe import code_gen_from_iframe
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_indicators import (
+    code_gen_from_indicator,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_echarts import (
+    code_gen_from_echarts,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_annotated_echart import (
+    code_gen_from_annotated_echart,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_table import (
+    code_gen_from_table,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_form import (
+    code_gen_from_form,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_html import (
+    code_gen_from_html,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_button import (
+    code_gen_from_button,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_filter import (
+    code_gen_from_filter,
+)
+from shimoku.code_gen.business_code_gen.apps_code_gen.reports_code_gen.report_types_code_gen.code_gen_from_iframe import (
+    code_gen_from_iframe,
+)
 
 
 def delete_default_properties(properties: dict, default_properties: dict) -> dict:
-    """ Delete default properties from a report.
+    """Delete default properties from a report.
     :param properties: properties of a report
     :param default_properties: default properties of a report
     :return: properties without default properties
@@ -46,37 +58,44 @@ def delete_default_properties(properties: dict, default_properties: dict) -> dic
 
 
 async def code_gen_from_other_reports(
-        self: 'AppCodeGen', report: 'Report'
+    self: "AppCodeGen", report: "Report"
 ) -> list[str]:
-    """ Generate code for a report that is not a tabs group.
+    """Generate code for a report that is not a tabs group.
     :param report: report to generate code from
     :param is_last: whether the report is the last one
-    :return: list of code lines """
+    :return: list of code lines"""
     code_lines = []
 
-    properties = delete_default_properties(report['properties'], report.default_properties)
-    del properties['hash']
+    properties = delete_default_properties(
+        report["properties"], report.default_properties
+    )
+    del properties["hash"]
 
-    if report['reportType'] == 'INDICATOR':
+    if report["reportType"] == "INDICATOR":
         code_lines.extend(await code_gen_from_indicator(self, report, properties))
-    elif report['reportType'] == 'ECHARTS2':
+    elif report["reportType"] == "ECHARTS2":
         code_lines.extend(await code_gen_from_echarts(self, report, properties))
-    elif report['reportType'] == 'TABLE':
+    elif report["reportType"] == "TABLE":
         code_lines.extend(await code_gen_from_table(self, report, properties))
-    elif report['reportType'] == 'FORM':
+    elif report["reportType"] == "FORM":
         code_lines.extend(await code_gen_from_form(self, report, properties))
-    elif report['reportType'] == 'HTML':
+    elif report["reportType"] == "HTML":
         code_lines.extend(await code_gen_from_html(self, report))
-    elif report['reportType'] == 'IFRAME':
+    elif report["reportType"] == "IFRAME":
         code_lines.extend(await code_gen_from_iframe(self, report))
-    elif report['reportType'] == 'ANNOTATED_ECHART':
-        code_lines.extend(await code_gen_from_annotated_echart(self, report, properties))
-    elif report['reportType'] == 'BUTTON':
+    elif report["reportType"] == "ANNOTATED_ECHART":
+        code_lines.extend(
+            await code_gen_from_annotated_echart(self, report, properties)
+        )
+    elif report["reportType"] == "BUTTON":
         code_lines.extend(await code_gen_from_button(self, report))
-    elif report['reportType'] == 'FILTERDATASET':
+    elif report["reportType"] == "FILTERDATASET":
         code_lines.extend(await code_gen_from_filter(self, report))
     else:
         code_lines.extend(
-            [f"shimoku_client.add_report({report['reportType']}, order={report['order']}, data=dict())"])
+            [
+                f"shimoku_client.add_report({report['reportType']}, order={report['order']}, data=dict())"
+            ]
+        )
 
     return code_lines

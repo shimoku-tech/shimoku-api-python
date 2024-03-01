@@ -49,14 +49,14 @@ def get_plural(parents_url_singular):
     Get the plural of a parent url
     :param parents_url_singular: The singular of the parent url
     """
-    if parents_url_singular in ['Data', 'data', 'business']:
+    if parents_url_singular in ["Data", "data", "business"]:
         return parents_url_singular
-    elif parents_url_singular.endswith('s'):
-        return parents_url_singular + 'es'
-    elif parents_url_singular.endswith('y'):
-        return parents_url_singular[:-1] + 'ies'
+    elif parents_url_singular.endswith("s"):
+        return parents_url_singular + "es"
+    elif parents_url_singular.endswith("y"):
+        return parents_url_singular[:-1] + "ies"
     else:
-        return parents_url_singular + 's'
+        return parents_url_singular + "s"
 
 
 def get_query_field(types: Dict[str, Any], db: Dict[str, Any], element_type: str):
@@ -67,8 +67,11 @@ def get_query_field(types: Dict[str, Any], db: Dict[str, Any], element_type: str
     :param element_type: the type to generate the query field for
     """
 
-    element_id_param = get_resource_name(element_type) + 'Id' \
-        if element_type not in ['AccountExposed', 'UserExposed'] else 'id'
+    element_id_param = (
+        get_resource_name(element_type) + "Id"
+        if element_type not in ["AccountExposed", "UserExposed"]
+        else "id"
+    )
 
     def resolver(self, info, **kwargs):
         return db[element_type][kwargs[element_id_param]]
@@ -76,11 +79,13 @@ def get_query_field(types: Dict[str, Any], db: Dict[str, Any], element_type: str
     return graphene.Field(
         types[element_type],
         **{element_id_param: graphene.ID(required=True)},
-        resolver=resolver
+        resolver=resolver,
     )
 
 
-def list_query_field(types: Dict[str, Any], db: Dict[str, Any], parent_type: str, element_type: str):
+def list_query_field(
+    types: Dict[str, Any], db: Dict[str, Any], parent_type: str, element_type: str
+):
     """
     Generate a graphql list query field for a given type
     :param types: a dictionary of all the types
@@ -89,52 +94,58 @@ def list_query_field(types: Dict[str, Any], db: Dict[str, Any], parent_type: str
     :param element_type: the type to generate the query field for
     """
 
-    parent_id_param = get_resource_name(parent_type) + 'Id'
+    parent_id_param = get_resource_name(parent_type) + "Id"
     query_params = {
         parent_id_param: graphene.ID(required=True),
-        'limit': graphene.Int(),
-        'from': graphene.Int(name='from')
+        "limit": graphene.Int(),
+        "from": graphene.Int(name="from"),
     }
     list_resolver_extra = None
-    if hasattr(types[element_type], 'list_resolver_extra'):
+    if hasattr(types[element_type], "list_resolver_extra"):
         list_resolver_extra = types[element_type].list_resolver_extra
 
         annotations = inspect.getfullargspec(list_resolver_extra).annotations
 
         for arg_name, arg_type in annotations.items():
-            if arg_name not in ['args', 'kwargs', 'return']:
+            if arg_name not in ["args", "kwargs", "return"]:
                 query_params[arg_name] = graphene.Argument(types[arg_type])
 
     def resolver(self, info, **kwargs):
-        results = copy(getattr(db[parent_type][str(kwargs[parent_id_param])],
-                               get_plural(get_resource_name(element_type))))
+        results = copy(
+            getattr(
+                db[parent_type][str(kwargs[parent_id_param])],
+                get_plural(get_resource_name(element_type)),
+            )
+        )
         results.items = copy(results.items)
         if list_resolver_extra is not None:
             results.items = list_resolver_extra(items=results.items, **kwargs)
-        if 'from' in kwargs:
-            results.items = results.items[kwargs['from']:]
-        if 'limit' in kwargs:
-            results.items = results.items[:kwargs['limit']]
+        if "from" in kwargs:
+            results.items = results.items[kwargs["from"] :]
+        if "limit" in kwargs:
+            results.items = results.items[: kwargs["limit"]]
         return results
 
     return graphene.Field(
-        types[element_type + 'List'],
-        **query_params,
-        resolver=resolver
+        types[element_type + "List"], **query_params, resolver=resolver
     )
 
 
 def generate_schema(fast_api_app, types, db, is_child_of):
     query_fields = {}
     for type_name, type_class in types.items():
-        if not type_name.endswith('Exposed') or 'Filtered' in type_name or 'Input' in type_name:
+        if (
+            not type_name.endswith("Exposed")
+            or "Filtered" in type_name
+            or "Input" in type_name
+        ):
             continue
-        name = 'get' + get_resource_name(type_name, to_lower=False)
+        name = "get" + get_resource_name(type_name, to_lower=False)
         query_fields[name] = get_query_field(types, db, type_name)
 
         if type_name in is_child_of:
             parent_type = is_child_of[type_name]
-            name = 'list' + get_plural(get_resource_name(type_name, to_lower=False))
+            name = "list" + get_plural(get_resource_name(type_name, to_lower=False))
             query_fields[name] = list_query_field(types, db, parent_type, type_name)
 
     Query = type("Query", (graphene.ObjectType,), query_fields)
@@ -155,14 +166,14 @@ def get_children(types: Dict[str, Any]):
     is_parent_of = {}
     links = {}
     for type_name, type_class in types.items():
-        if 'Exposed' not in type_name or 'Filtered' in type_name:
+        if "Exposed" not in type_name or "Filtered" in type_name:
             continue
         for field_name, field_def in type_class.__dict__.items():
-            if not hasattr(field_def, '_type'):
+            if not hasattr(field_def, "_type"):
                 continue
             field_type = field_def.type
 
-            if not hasattr(field_type, 'items'):
+            if not hasattr(field_type, "items"):
                 element_type_name = field_type.__name__
                 links[(type_name, field_name)] = element_type_name
             else:
@@ -185,19 +196,28 @@ def clean_element(types: Dict[str, Any], element_type: str, element: Any):
     """
     dict_rep = {}
     for field_name, field_type in types[element_type].__dict__.items():
-        if isinstance(field_type, (graphene.List, graphene.Field)) or field_name.startswith('_'):
+        if isinstance(
+            field_type, (graphene.List, graphene.Field)
+        ) or field_name.startswith("_"):
             continue
-        first_upper = field_name[0].upper() + field_name[1:] + 'Exposed'
+        first_upper = field_name[0].upper() + field_name[1:] + "Exposed"
         if first_upper in types:
-            dict_rep[field_name + 'Id'] = getattr(element, field_name).id \
-                if hasattr(getattr(element, field_name), 'id') else None
+            dict_rep[field_name + "Id"] = (
+                getattr(element, field_name).id
+                if hasattr(getattr(element, field_name), "id")
+                else None
+            )
         dict_rep[field_name] = getattr(element, field_name)
 
     return dict_rep
 
 
 async def list_elements(
-        types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, str], parent0Id: str, element_type: str
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    parent0Id: str,
+    element_type: str,
 ) -> List[Dict[str, Any]]:
     """
     List all elements of a given type and parent id
@@ -210,17 +230,28 @@ async def list_elements(
     if parent0Id is not None:
         parent_type = is_child_of[element_type]
         if parent0Id not in db[parent_type]:
-            raise HTTPException(status_code=404, detail=f'{element_type} with id {parent0Id} not found')
+            raise HTTPException(
+                status_code=404, detail=f"{element_type} with id {parent0Id} not found"
+            )
         parent0 = db[parent_type][parent0Id]
         if getattr(parent0, get_plural(get_resource_name(element_type))) is None:
             return []
-        return [clean_element(types, element_type, copy(elm))
-                for elm in getattr(parent0, get_plural(get_resource_name(element_type))).items]
+        return [
+            clean_element(types, element_type, copy(elm))
+            for elm in getattr(
+                parent0, get_plural(get_resource_name(element_type))
+            ).items
+        ]
 
-    return [clean_element(types, element_type, copy(elm)) for elm in db[element_type].values()]
+    return [
+        clean_element(types, element_type, copy(elm))
+        for elm in db[element_type].values()
+    ]
 
 
-def set_parent(parent_type: str, parent0Id: str, input_class: type, element_type: str, params: dict):
+def set_parent(
+    parent_type: str, parent0Id: str, input_class: type, element_type: str, params: dict
+):
     """
     Set the parent of the element to be created
     :param parent_type: The type of the parent
@@ -229,15 +260,19 @@ def set_parent(parent_type: str, parent0Id: str, input_class: type, element_type
     :param element_type: The type of the element
     :param params: The parameters of the element
     """
-    parent_id_key = f'{get_resource_name(parent_type)}Id'
-    alternative_parent_id_key = f'{get_resource_name(element_type)}{get_resource_name(parent_type, False)}Id'
+    parent_id_key = f"{get_resource_name(parent_type)}Id"
+    alternative_parent_id_key = (
+        f"{get_resource_name(element_type)}{get_resource_name(parent_type, False)}Id"
+    )
     if hasattr(input_class, parent_id_key):
         params[parent_id_key] = parent0Id
     elif hasattr(input_class, alternative_parent_id_key):
         params[alternative_parent_id_key] = parent0Id
 
 
-def set_children_and_links(types: Dict[str, Any], db: Dict[str, Any], element_type: str, params: dict):
+def set_children_and_links(
+    types: Dict[str, Any], db: Dict[str, Any], element_type: str, params: dict
+):
     """
     Set the children and links of the element to be created
     :param types: a dictionary of all the types
@@ -246,29 +281,38 @@ def set_children_and_links(types: Dict[str, Any], db: Dict[str, Any], element_ty
     :param params: The parameters of the element
     """
     for field_name, field_def in types[element_type].__dict__.items():
-        if field_name.startswith('_'):
+        if field_name.startswith("_"):
             continue
-        if isinstance(field_def, graphene.Field) and hasattr(field_def.type, 'items'):
+        if isinstance(field_def, graphene.Field) and hasattr(field_def.type, "items"):
             params[field_name] = field_def.type(items=[])
-            if hasattr(params[field_name], 'total'):
+            if hasattr(params[field_name], "total"):
                 params[field_name].total = 0
-        elif field_name + 'Id' in params and params[field_name + 'Id'] is not None:
-            field_name_id = field_name + 'Id'
+        elif field_name + "Id" in params and params[field_name + "Id"] is not None:
+            field_name_id = field_name + "Id"
             link_type_name = field_name[0].upper() + field_name[1:]
-            link_type_name = link_type_name + 'Exposed'
+            link_type_name = link_type_name + "Exposed"
             link_id = params[field_name_id]
             if link_type_name in types:
                 if link_id not in db[link_type_name]:
-                    raise HTTPException(status_code=404, detail=f'{link_type_name} with id {link_id} not found')
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"{link_type_name} with id {link_id} not found",
+                    )
                 if not hasattr(types[element_type], field_name_id):
                     del params[field_name_id]
                 params[field_name] = db[link_type_name][link_id]
             else:
-                raise HTTPException(status_code=404, detail=f'{link_type_name} not found in types')
+                raise HTTPException(
+                    status_code=404, detail=f"{link_type_name} not found in types"
+                )
 
 
 def append_to_parent(
-        db: Dict[str, Any], element_id: str, parent_type: str, parent0Id: str, element_type: str
+    db: Dict[str, Any],
+    element_id: str,
+    parent_type: str,
+    parent0Id: str,
+    element_type: str,
 ):
     """
     Append the element to the parent
@@ -281,9 +325,9 @@ def append_to_parent(
     plural_name = get_plural(get_resource_name(element_type))
     list_field = getattr(db[parent_type][parent0Id], plural_name)
     if list_field.items is None:
-        print('BAD')
+        print("BAD")
     list_field.items.append(db[element_type][element_id])
-    if hasattr(list_field, 'total'):
+    if hasattr(list_field, "total"):
         list_field.total = (list_field.total if list_field.total else 0) + 1
 
 
@@ -292,7 +336,7 @@ def set_contained_classes(types: Dict[str, Any], element_type: str, params: dict
         if not hasattr(types[element_type], k):
             continue
         linked_type = getattr(types[element_type], k)
-        if not hasattr(linked_type, '__name__'):
+        if not hasattr(linked_type, "__name__"):
             continue
         type_of_contained_class_name = getattr(types[element_type], k).__name__
         if type_of_contained_class_name in types:
@@ -301,8 +345,13 @@ def set_contained_classes(types: Dict[str, Any], element_type: str, params: dict
 
 
 async def create_element(
-        types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, str],
-        parent0Id: str, element_type: str, params: Any, input_class: type
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    parent0Id: str,
+    element_type: str,
+    params: Any,
+    input_class: type,
 ) -> Dict[str, Any]:
     """
     Create an element of type element_type
@@ -316,17 +365,19 @@ async def create_element(
     """
     parent_type = is_child_of[element_type]
     if parent0Id not in db[parent_type]:
-        raise HTTPException(status_code=404, detail=f'{element_type} with id {parent0Id} not found')
+        raise HTTPException(
+            status_code=404, detail=f"{element_type} with id {parent0Id} not found"
+        )
 
     created_at = now_time_format()
     if not isinstance(params, dict):
         params = asdict(params)
 
     _id = str(uuid.uuid4())
-    params.update({'id': _id})
+    params.update({"id": _id})
 
-    if hasattr(types[element_type], 'createdAt'):
-        params['createdAt'] = created_at
+    if hasattr(types[element_type], "createdAt"):
+        params["createdAt"] = created_at
 
     set_contained_classes(types, element_type, params)
     set_parent(parent_type, parent0Id, input_class, element_type, params)
@@ -348,7 +399,9 @@ async def create_element(
     return clean_element(types, element_type, db[element_type][_id])
 
 
-async def update_element(types: Dict[str, Any], db: Dict[str, Any], element_type: str, Id: str, params: Any):
+async def update_element(
+    types: Dict[str, Any], db: Dict[str, Any], element_type: str, Id: str, params: Any
+):
     """
     Update an element of type element_type
     :param types: a dictionary of all the types
@@ -358,7 +411,9 @@ async def update_element(types: Dict[str, Any], db: Dict[str, Any], element_type
     :param params: The parameters to update
     """
     if Id not in db[element_type]:
-        raise HTTPException(status_code=404, detail=f'{element_type} with id {Id} not found')
+        raise HTTPException(
+            status_code=404, detail=f"{element_type} with id {Id} not found"
+        )
     params = asdict(params)
     for key, value in params.items():
         if value is not None:
@@ -367,7 +422,12 @@ async def update_element(types: Dict[str, Any], db: Dict[str, Any], element_type
     return clean_element(types, element_type, db[element_type][Id])
 
 
-async def delete_r(db: Dict[str, Any], is_parent_of: Dict[str, List[str]], delete_type: str, delete_id: str):
+async def delete_r(
+    db: Dict[str, Any],
+    is_parent_of: Dict[str, List[str]],
+    delete_type: str,
+    delete_id: str,
+):
     """
     Delete an element of type delete_type and all its children
     :param db: the database
@@ -385,14 +445,18 @@ async def delete_r(db: Dict[str, Any], is_parent_of: Dict[str, List[str]], delet
             if children_to_delete is None:
                 continue
             for child in children_to_delete.items:
-                if getattr(child, 'id'):
-                    await delete_r(db, is_parent_of, child_type, getattr(child, 'id'))
+                if getattr(child, "id"):
+                    await delete_r(db, is_parent_of, child_type, getattr(child, "id"))
     del db[delete_type][delete_id]
 
 
 async def delete_element(
-        db: Dict[str, Any], is_child_of: Dict[str, str], is_parent_of: Dict[str, List[str]],
-        parent0Id: str, element_type: str, Id: str
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    is_parent_of: Dict[str, List[str]],
+    parent0Id: str,
+    element_type: str,
+    Id: str,
 ):
     """
     Delete an element of type element_type
@@ -406,17 +470,27 @@ async def delete_element(
     parent_type = is_child_of[element_type]
     plural_name = get_plural(get_resource_name(element_type))
     parent_children = getattr(db[parent_type][parent0Id], plural_name)
-    parent_children.items = [elm for elm in getattr(db[parent_type][parent0Id], plural_name).items if elm.id != Id]
-    if hasattr(parent_children, 'total'):
+    parent_children.items = [
+        elm
+        for elm in getattr(db[parent_type][parent0Id], plural_name).items
+        if elm.id != Id
+    ]
+    if hasattr(parent_children, "total"):
         parent_children.total = parent_children.total - 1
     if Id not in db[element_type]:
-        raise HTTPException(status_code=404, detail=f'{element_type} with id {Id} not found')
+        raise HTTPException(
+            status_code=404, detail=f"{element_type} with id {Id} not found"
+        )
     await delete_r(db, is_parent_of, element_type, Id)
     return {"message": "Deleted"}
 
 
 def define_get_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any], parents_url: str, element_type: str
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    parents_url: str,
+    element_type: str,
 ):
     """
     Define the GET method for the element
@@ -426,16 +500,27 @@ def define_get_method(
     :param parents_url: The url of the parent
     :param element_type: The type of the element
     """
-    print('GET ' + parents_url + '/{Id}') if print_paths else None
+    print("GET " + parents_url + "/{Id}") if print_paths else None
 
-    @fast_api_app.get(parents_url + '/{Id}')
+    @fast_api_app.get(parents_url + "/{Id}")
     async def get(Id: str):
-        return clean_element(types, element_type, db[element_type][Id])
+        try:
+            return clean_element(types, element_type, db[element_type][Id])
+        except KeyError:
+            raise HTTPException(
+                status_code=404,
+                detail=f'{element_type.replace("Exposed","").lower()} '
+                f"with id {Id} not found",
+            )
 
 
 def define_list_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any],
-        is_child_of: Dict[str, str], parents_url: str, element_type: str
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    parents_url: str,
+    element_type: str,
 ):
     """
     Define the GET method for the list of elements
@@ -446,7 +531,7 @@ def define_list_method(
     :param parents_url: The url of the parent
     :param element_type: The type of the element
     """
-    print('GET ' + get_plural(parents_url)) if print_paths else None
+    print("GET " + get_plural(parents_url)) if print_paths else None
 
     @fast_api_app.get(get_plural(parents_url))
     async def list_elms(parent0Id: Optional[str] = None):
@@ -458,8 +543,13 @@ def define_list_method(
 
 
 def define_create_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, str],
-        parents_url: str, element_type: str, uppercase_type_name: str,
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    parents_url: str,
+    element_type: str,
+    uppercase_type_name: str,
 ):
     """
     Define the POST method for the element if the input class exists
@@ -471,19 +561,26 @@ def define_create_method(
     :param element_type: The type of the element
     :param uppercase_type_name: The name of the type of the element with the first letter in uppercase
     """
-    create_input_name = 'Create' + uppercase_type_name + 'Input'
+    create_input_name = "Create" + uppercase_type_name + "Input"
     if create_input_name in types:
         input_class = types[create_input_name]
-        print('POST ' + parents_url) if print_paths else None
+        print("POST " + parents_url) if print_paths else None
 
         @fast_api_app.post(parents_url)
         async def _create(parent0Id: Optional[str], params: input_class):
-            return await create_element(types, db, is_child_of, parent0Id, element_type, params, input_class)
+            return await create_element(
+                types, db, is_child_of, parent0Id, element_type, params, input_class
+            )
 
 
 def define_batch_create_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, str],
-        parents_url: str, element_type: str, uppercase_type_name: str,
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    parents_url: str,
+    element_type: str,
+    uppercase_type_name: str,
 ):
     """
     Define the POST method for the batch creation of elements if the input class exists
@@ -495,24 +592,39 @@ def define_batch_create_method(
     :param element_type: The type of the element
     :param uppercase_type_name: The name of the type of the element with the first letter in uppercase
     """
-    batch_create_input_name = 'BatchCreate' + uppercase_type_name + 'Input'
+    batch_create_input_name = "BatchCreate" + uppercase_type_name + "Input"
     if batch_create_input_name in types:
-        print('POST ' + parents_url + '/batch') if print_paths else None
+        print("POST " + parents_url + "/batch") if print_paths else None
 
-        @fast_api_app.post(parents_url + '/batch')
+        @fast_api_app.post(parents_url + "/batch")
         async def batch_create(parent0Id: Optional[str], request: Request):
             items = await request.json()
             if not isinstance(items, list):
-                raise HTTPException(status_code=400, detail=f'Expected a list of {batch_create_input_name}')
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Expected a list of {batch_create_input_name}",
+                )
             # TODO: Get a more generic name for the input class
             for item in items:
-                await create_element(types, db, is_child_of, parent0Id, element_type, item, types['CreateDataInput'])
-            return {'result': 'ok'}
+                await create_element(
+                    types,
+                    db,
+                    is_child_of,
+                    parent0Id,
+                    element_type,
+                    item,
+                    types["CreateDataInput"],
+                )
+            return {"result": "ok"}
 
 
 def define_update_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any],
-        parents_url: str, element_type: str, uppercase_type_name: str
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    parents_url: str,
+    element_type: str,
+    uppercase_type_name: str,
 ):
     """
     Define the PATCH method for the element if the input class exists
@@ -523,10 +635,10 @@ def define_update_method(
     :param element_type: The type of the element
     :param uppercase_type_name: The name of the type of the element with the first letter in uppercase
     """
-    update_input_name = 'Update' + uppercase_type_name + 'Input'
+    update_input_name = "Update" + uppercase_type_name + "Input"
     if update_input_name in types:
         input_class = types[update_input_name]
-        print('PATCH ' + parents_url + '/{Id}') if print_paths else None
+        print("PATCH " + parents_url + "/{Id}") if print_paths else None
 
         @fast_api_app.patch(parents_url + "/{Id}")
         async def update(Id: str, params: input_class):
@@ -534,8 +646,14 @@ def define_update_method(
 
 
 def define_delete_method(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any], is_child_of: Dict[str, Any],
-        is_parent_of: Dict[str, Any], parents_url: str, element_type: str, uppercase_type_name: str
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, Any],
+    is_parent_of: Dict[str, Any],
+    parents_url: str,
+    element_type: str,
+    uppercase_type_name: str,
 ):
     """
     Define the DELETE method for the element if the input class exists
@@ -548,18 +666,24 @@ def define_delete_method(
     :param element_type: The type of the element
     :param uppercase_type_name: The name of the type of the element with the first letter in uppercase
     """
-    delete_input_name = 'Delete' + uppercase_type_name + 'Input'
+    delete_input_name = "Delete" + uppercase_type_name + "Input"
     if delete_input_name in types:
-        print('DELETE ' + parents_url + '/{Id}') if print_paths else None
+        print("DELETE " + parents_url + "/{Id}") if print_paths else None
 
         @fast_api_app.delete(parents_url + "/{Id}")
         async def delete(parent0Id: str, Id: str):
-            return await delete_element(db, is_child_of, is_parent_of, parent0Id, element_type, Id)
+            return await delete_element(
+                db, is_child_of, is_parent_of, parent0Id, element_type, Id
+            )
 
 
 def generate_crud_methods(
-        fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any],
-        is_child_of: Dict[str, str], is_parent_of: Dict[str, List[str]], element_type: str
+    fast_api_app: FastAPI,
+    types: Dict[str, Any],
+    db: Dict[str, Any],
+    is_child_of: Dict[str, str],
+    is_parent_of: Dict[str, List[str]],
+    element_type: str,
 ):
     """
     Generate the CRUD methods for the element
@@ -570,14 +694,20 @@ def generate_crud_methods(
     :param is_parent_of: a dictionary of the children of the exposed types
     :param element_type: The type of the element
     """
-    base_url = '/external/v1/'
+    base_url = "/external/v1/"
 
     aux_type = element_type
-    parents_url = ''
+    parents_url = ""
     parent_index = 0
     while aux_type in is_child_of:
         parent_type = is_child_of[aux_type]
-        parents_url = get_resource_name(parent_type) + '/{parent' + str(parent_index) + 'Id}/' + parents_url
+        parents_url = (
+            get_resource_name(parent_type)
+            + "/{parent"
+            + str(parent_index)
+            + "Id}/"
+            + parents_url
+        )
         aux_type = parent_type
         parent_index += 1
 
@@ -587,14 +717,42 @@ def generate_crud_methods(
 
     define_get_method(fast_api_app, types, db, parents_url, element_type)
     define_list_method(fast_api_app, types, db, is_child_of, parents_url, element_type)
-    define_create_method(fast_api_app, types, db, is_child_of, parents_url, element_type, uppercased_type_name)
-    define_batch_create_method(fast_api_app, types, db, is_child_of, parents_url, element_type, uppercased_type_name)
-    define_update_method(fast_api_app, types, db, parents_url, element_type, uppercased_type_name)
-    define_delete_method(fast_api_app, types, db, is_child_of, is_parent_of,
-                         parents_url, element_type, uppercased_type_name)
+    define_create_method(
+        fast_api_app,
+        types,
+        db,
+        is_child_of,
+        parents_url,
+        element_type,
+        uppercased_type_name,
+    )
+    define_batch_create_method(
+        fast_api_app,
+        types,
+        db,
+        is_child_of,
+        parents_url,
+        element_type,
+        uppercased_type_name,
+    )
+    define_update_method(
+        fast_api_app, types, db, parents_url, element_type, uppercased_type_name
+    )
+    define_delete_method(
+        fast_api_app,
+        types,
+        db,
+        is_child_of,
+        is_parent_of,
+        parents_url,
+        element_type,
+        uppercased_type_name,
+    )
 
 
-def define_webhook_methods(fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any]):
+def define_webhook_methods(
+    fast_api_app: FastAPI, types: Dict[str, Any], db: Dict[str, Any]
+):
     """
     Define the methods for the webhooks, these cant be created with the generate_crud_methods function
     because the pattern is different
@@ -602,65 +760,79 @@ def define_webhook_methods(fast_api_app: FastAPI, types: Dict[str, Any], db: Dic
     :param types: a dictionary of all the types
     :param db: the database
     """
-    CreateWebhookInput = types['CreateActivityWebHookInput']
+    CreateWebhookInput = types["CreateActivityWebHookInput"]
 
-    @fast_api_app.post("/external/v1/universe/{parent3Id}/business/{parent2Id}/app/{parent1Id}/"
-                       "activity/{parent0Id}/webhook")
+    @fast_api_app.post(
+        "/external/v1/universe/{parent3Id}/business/{parent2Id}/app/{parent1Id}/"
+        "activity/{parent0Id}/webhook"
+    )
     async def create(parent0Id: str, params: CreateWebhookInput):
-        webhook_class = types['ActivityWebHookExposed']
+        webhook_class = types["ActivityWebHookExposed"]
         params = asdict(params)
-        params.update({
-            'id': str(uuid.uuid4()),
-            'activity': db['ActivityExposed'][parent0Id],
-            'createdAt': now_time_format(),
-            'updatedAt': now_time_format(),
-            'activityId': parent0Id,
-        })
-        db['ActivityExposed'][parent0Id].webhook = webhook_class(**params)
-        return clean_element(types, 'ActivityWebHookExposed', db['ActivityExposed'][parent0Id].webhook)
+        params.update(
+            {
+                "id": str(uuid.uuid4()),
+                "activity": db["ActivityExposed"][parent0Id],
+                "createdAt": now_time_format(),
+                "updatedAt": now_time_format(),
+                "activityId": parent0Id,
+            }
+        )
+        db["ActivityExposed"][parent0Id].webhook = webhook_class(**params)
+        return clean_element(
+            types, "ActivityWebHookExposed", db["ActivityExposed"][parent0Id].webhook
+        )
 
-    @fast_api_app.post("/external/v1/universe/{parent4Id}/business/{parent3Id}/app/{parent2Id}/activity/{parent1Id}/"
-                       "run/{parent0Id}/triggerWebhook")
-    async def call_webhook(parent4Id: str, parent3Id: str, parent2Id: str, parent1Id: str, parent0Id: str):
-        if db['ActivityExposed'][parent1Id].webhook is None:
-            raise HTTPException(status_code=404, detail=f'Webhook not found')
+    @fast_api_app.post(
+        "/external/v1/universe/{parent4Id}/business/{parent3Id}/app/{parent2Id}/activity/{parent1Id}/"
+        "run/{parent0Id}/triggerWebhook"
+    )
+    async def call_webhook(
+        parent4Id: str, parent3Id: str, parent2Id: str, parent1Id: str, parent0Id: str
+    ):
+        if db["ActivityExposed"][parent1Id].webhook is None:
+            raise HTTPException(status_code=404, detail="Webhook not found")
 
-        webhook = db['ActivityExposed'][parent1Id].webhook
+        webhook = db["ActivityExposed"][parent1Id].webhook
         headers = webhook.headers
         if headers is None:
             headers = {}
         else:
             headers = json.loads(headers)
         body = {
-            'runId': parent0Id,
-            'activityId': parent1Id,
-            'appId': parent2Id,
-            'businessId': parent3Id,
-            'universeId': parent4Id,
+            "runId": parent0Id,
+            "activityId": parent1Id,
+            "appId": parent2Id,
+            "businessId": parent3Id,
+            "universeId": parent4Id,
         }
         url = webhook.url
         method = webhook.method
 
-        db['RunExposed'][parent0Id].isWebhookCalled = True
+        db["RunExposed"][parent0Id].isWebhookCalled = True
 
-        if db['RunExposed'][parent0Id].logs is None:
-            db['RunExposed'][parent0Id].logs = []
+        if db["RunExposed"][parent0Id].logs is None:
+            db["RunExposed"][parent0Id].logs = []
 
-        db['RunExposed'][parent0Id].logs.items.append(types['LogExposed'](
-            id=str(uuid.uuid4()),
-            dateTime=now_time_format(),
-            message='Process started',
-            runId=parent0Id,
-            run=db['RunExposed'][parent0Id],
-            severity='INFO',
-        ))
+        db["RunExposed"][parent0Id].logs.items.append(
+            types["LogExposed"](
+                id=str(uuid.uuid4()),
+                dateTime=now_time_format(),
+                message="Process started",
+                runId=parent0Id,
+                run=db["RunExposed"][parent0Id],
+                severity="INFO",
+            )
+        )
 
         # async call to webhook with aiohttp
         async with aiohttp.ClientSession() as session:
-            async with session.request(method, url, headers=headers, json=json.dumps(body)) as response:
+            async with session.request(
+                method, url, headers=headers, json=json.dumps(body)
+            ) as response:
                 await response.text()
 
-        return {'STATUS': 'OK'}
+        return {"STATUS": "OK"}
 
 
 def create_api() -> FastAPI:
@@ -672,42 +844,66 @@ def create_api() -> FastAPI:
 
     # Add the fields that cannot be added in the class definition
     for type_name, type_class in types.items():
-        if hasattr(type_class, 'add_fields'):
+        if hasattr(type_class, "add_fields"):
             types[type_name] = type_class.add_fields()
 
-    active_universe_plan = types['ActiveUniversePlan'](
-        id='local', planType=types['PlanType'](id='local', limits=None, price=None, type=None)
+    active_universe_plan = types["ActiveUniversePlan"](
+        id="local",
+        planType=types["PlanType"](id="local", limits=None, price=None, type=None),
     )
     db = {
-        'UserExposed': {
-            'userPlaygroundId': types['UserExposed'](id='userPlaygroundId')
+        "UserExposed": {
+            "userPlaygroundId": types["UserExposed"](id="userPlaygroundId")
         },
-        'UniverseFilteredExposed': {
-            'local': types['UniverseFilteredExposed'](id='local', name='local', activeUniversePlanId='local',
-                                                      activeUniversePlan=active_universe_plan)
+        "UniverseFilteredExposed": {
+            "local": types["UniverseFilteredExposed"](
+                id="local",
+                name="local",
+                activeUniversePlanId="local",
+                activeUniversePlan=active_universe_plan,
+            )
         },
-        'UniverseExposed': {
-            'local': types['UniverseExposed'](id='local', name='local', activeUniversePlanId='local',
-                                              activeUniversePlan=active_universe_plan)
+        "UniverseExposed": {
+            "local": types["UniverseExposed"](
+                id="local",
+                name="local",
+                activeUniversePlanId="local",
+                activeUniversePlan=active_universe_plan,
+            )
         },
-        'BusinessExposed': {
-            'local': types['BusinessExposed'](id='local', name='local', type='local', createdAt='2021-01-01'),
+        "BusinessExposed": {
+            "local": types["BusinessExposed"](
+                id="local", name="local", type="local", createdAt="2021-01-01"
+            ),
         },
     }
-    db['UniverseExposed']['local'].business = types['BusinessExposedList'](items=[db['BusinessExposed']['local']])
-    db['UniverseFilteredExposed']['local'].business = types['BusinessExposedList'](
-        items=[db['BusinessExposed']['local']])
-    db['UniverseExposed']['local'].modules = types['ModuleExposedList'](items=[])
-    db['UniverseFilteredExposed']['local'].modules = types['ModuleExposedList'](items=[])
-    db['BusinessExposed']['local'].apps = types['AppExposedList'](items=[], total=0)
-    db['BusinessExposed']['local'].dashboards = types['DashboardExposedList'](items=[], total=0)
-    db['BusinessExposed']['local'].rolePermissions = types['RolePermissionExposedList'](items=[])
-    db['BusinessExposed']['local'].modules = types['ModuleExposedList'](items=[])
-    db['BusinessExposed']['local'].universe = db['UniverseFilteredExposed']['local']
-    db['AccountExposed'] = {
-        'local': types['AccountExposed'](id='local', business=db['BusinessExposed']['local'])
+    db["UniverseExposed"]["local"].business = types["BusinessExposedList"](
+        items=[db["BusinessExposed"]["local"]]
+    )
+    db["UniverseFilteredExposed"]["local"].business = types["BusinessExposedList"](
+        items=[db["BusinessExposed"]["local"]]
+    )
+    db["UniverseExposed"]["local"].modules = types["ModuleExposedList"](items=[])
+    db["UniverseFilteredExposed"]["local"].modules = types["ModuleExposedList"](
+        items=[]
+    )
+    db["BusinessExposed"]["local"].apps = types["AppExposedList"](items=[], total=0)
+    db["BusinessExposed"]["local"].dashboards = types["DashboardExposedList"](
+        items=[], total=0
+    )
+    db["BusinessExposed"]["local"].rolePermissions = types["RolePermissionExposedList"](
+        items=[]
+    )
+    db["BusinessExposed"]["local"].modules = types["ModuleExposedList"](items=[])
+    db["BusinessExposed"]["local"].universe = db["UniverseFilteredExposed"]["local"]
+    db["AccountExposed"] = {
+        "local": types["AccountExposed"](
+            id="local", business=db["BusinessExposed"]["local"]
+        )
     }
-    db['UserExposed']['userPlaygroundId'].accounts = types['AccountExposedList'](items=[db['AccountExposed']['local']])
+    db["UserExposed"]["userPlaygroundId"].accounts = types["AccountExposedList"](
+        items=[db["AccountExposed"]["local"]]
+    )
 
     fast_api_app = FastAPI()
 
@@ -718,7 +914,9 @@ def create_api() -> FastAPI:
     # Generate the CRUD methods for each type and define the webhook methods
     for _type in types:
         if _type in is_child_of:
-            generate_crud_methods(fast_api_app, types, db, is_child_of, is_parent_of, _type)
+            generate_crud_methods(
+                fast_api_app, types, db, is_child_of, is_parent_of, _type
+            )
 
     define_webhook_methods(fast_api_app, types, db)
     define_event_method(fast_api_app)

@@ -54,14 +54,14 @@ class BoardsLayerHeader:
         target: Optional[str] = None,
     ) -> dict:
         """
-    Create a new role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param resource: resource of the role
-    :param role_name: name of the role
-    :param permission: permission of the role
-    :param target: target of the role
-    """
+        Create a new role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param resource: resource of the role
+        :param role_name: name of the role
+        :param permission: permission of the role
+        :param target: target of the role
+        """
         pass
 
     def delete_board(
@@ -84,12 +84,12 @@ class BoardsLayerHeader:
         role_name: Optional[str] = None,
     ):
         """
-    Delete the role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param role_id: id of the role
-    :param role_name: name of the role
-    """
+        Delete the role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param role_id: id of the role
+        :param role_name: name of the role
+        """
         pass
 
     def force_delete_board(
@@ -138,11 +138,11 @@ class BoardsLayerHeader:
         role_name: Optional[str] = None,
     ) -> list:
         """
-    Get the role at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    :param role_name: name of the role
-    """
+        Get the role at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        :param role_name: name of the role
+        """
         pass
 
     def get_roles(
@@ -151,10 +151,10 @@ class BoardsLayerHeader:
         name: Optional[str] = None,
     ) -> list:
         """
-    Get the roles at the resource level
-    :param name: name of the resource
-    :param uuid: uuid of the resource
-    """
+        Get the roles at the resource level
+        :param name: name of the resource
+        :param uuid: uuid of the resource
+        """
         pass
 
     def group_menu_paths(

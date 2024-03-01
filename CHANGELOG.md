@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.1.2 (2024-01-03)
+
+- Solved cache issues with modals and tabs
+- Solved execution in async context with threads
+- Reformatted the code with black
+- Better organization of the tests
+
 ## 2.1.1 (2024-20-02)
 
 ### Fixed

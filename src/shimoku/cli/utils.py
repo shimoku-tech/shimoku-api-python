@@ -1,12 +1,22 @@
 import os
+
 import json
-from typing import Optional
+from typing import Optional, Iterable
 from rich.console import Console
 from rich.table import Table
+import threading
 from rich import print
-import prompt_toolkit
+from prompt_toolkit.completion import Completer, Completion, WordCompleter
+from prompt_toolkit.buffer import CompletionState
+from prompt_toolkit.keys import Keys
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit import prompt
+
+from shimoku.execution_logger import log_error
 
 import logging
+
+logger = logging.getLogger(__name__)
 
 home_directory = os.path.expanduser("~")
 SHIMOKU_PATH = os.path.join(home_directory, ".shimoku")
@@ -283,18 +293,135 @@ def display_list(
     print()
 
 
-def choose_from_menu(options: list[str], title: str = "Choose an option: ") -> str:
+def choose_from_menu(
+    options: list[str],
+    title: str = "Choose an option: ",
+) -> Optional[str]:
     """
     Function to choose from a list of options
     :param options: List of options to choose from
     :param title: Title of the menu
     """
-    completer = prompt_toolkit.completion.WordCompleter(options)
-    selected = prompt_toolkit.prompt(title, completer=completer)
-    while selected not in options:
-        print("Invalid option, use the TAB key to see the available options")
-        selected = prompt_toolkit.prompt(title, completer=completer)
-    return selected
+    result = [None]
+
+    def selector():
+        try:
+            completer = WordCompleter(options)
+            selected = prompt(title, completer=completer)
+            while selected not in options:
+                print("Invalid option, use the TAB key to see the available options")
+                selected = prompt(title, completer=completer)
+            result[0] = selected
+        except KeyboardInterrupt:
+            pass
+
+    thread = threading.Thread(target=selector)
+    thread.start()
+    thread.join()
+    if not result[0]:
+        log_error(logger, "No option chosen", FileNotFoundError)
+
+    return result[0]
+
+
+class PathCompleter(Completer):
+    """Class to complete paths"""
+
+    def get_completions(self, document, complete_event) -> Iterable[Completion]:
+        text = document.text_before_cursor.strip()
+        current_path = [".", *text.split(os.sep)]
+        str_current_path = str(os.path.join(*current_path))
+        offset = 0
+        last_val = ""
+        while not os.path.exists(str_current_path):
+            last_val = current_path.pop()
+            offset += len(last_val)
+            if len(current_path) == 0:
+                log_error(logger, "Invalid path", FileNotFoundError)
+            str_current_path = str(os.path.join(*current_path))
+        if os.path.isdir(str_current_path):
+            for arg in os.listdir(str_current_path):
+                if not arg.startswith(last_val):
+                    continue
+                yield Completion(
+                    f"{arg}{os.sep}"
+                    if os.path.isdir(os.path.join(str_current_path, arg))
+                    else arg,
+                    -offset,
+                )
+
+
+def tab_main_navigation_key_binding(add_space: bool = False):
+    key_bindings = KeyBindings()
+
+    @key_bindings.add(Keys.Tab)
+    def _(event):
+        """
+        Custom Tab key handler: Insert the current completion, trigger completions,
+        or auto-complete if only one completion is available.
+        """
+        buffer = event.app.current_buffer
+        current_text = buffer.document.text_before_cursor.rstrip()
+        buffer.delete_before_cursor(
+            count=max(len(current_text) - len(current_text.rstrip()), 0)
+        )
+
+        completion_state: CompletionState = buffer.complete_state
+
+        if completion_state:
+            completions = completion_state.completions
+            if completion_state.current_completion:
+                # If there's an active completion, apply it and add a space
+                buffer.apply_completion(completion_state.current_completion)
+                if add_space:
+                    buffer.insert_text(" ")
+            elif len(completions) == 1:
+                # If there's only one completion, apply it automatically
+                buffer.apply_completion(completions[0])
+                if add_space:
+                    buffer.insert_text(" ")
+            else:
+                # Otherwise, move to the next completion
+                buffer.complete_next()
+        else:
+            # If the buffer is empty, start the completion process
+            buffer.start_completion()
+
+    return key_bindings
+
+
+def chose_from_available_paths() -> Optional[str]:
+    """Function to choose from the available paths
+    :return: Chosen path
+    """
+    result = [None]
+
+    def selector():
+        try:
+            completer = PathCompleter()
+            selected = prompt(
+                "Choose a sub-path: ",
+                completer=completer,
+                key_bindings=tab_main_navigation_key_binding(),
+            )
+            while not os.path.exists(selected):
+                print("Invalid path, use the TAB key to see the available options")
+                selected = prompt(
+                    "Choose a sub-path: ",
+                    completer=completer,
+                    key_bindings=tab_main_navigation_key_binding(),
+                )
+            result[0] = selected
+        except KeyboardInterrupt:
+            pass
+
+    thread = threading.Thread(target=selector)
+    thread.start()
+    thread.join()
+    if not result[0]:
+        log_error(logger, "No sub-path chosen", FileNotFoundError)
+
+    return result[0]
 
 
 def input_list() -> list[str]:

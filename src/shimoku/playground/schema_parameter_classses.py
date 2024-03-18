@@ -4,6 +4,20 @@ import strawberry
 
 
 @strawberry.type
+class CreateUniverseApiKeyInput(BaseModel):
+    description: str
+    id: Union[str, None] = None
+    universeId: Union[str, None] = None
+    userType: Union[str, None] = None
+
+
+@strawberry.type
+class DeleteUniverseApiKeyInput(BaseModel):
+    id: Union[str, None] = None
+    universeId: Union[str, None] = None
+
+
+@strawberry.type
 class UpdateBusinessInput(BaseModel):
     id: Union[str, None] = None
     name: Union[str, None] = None
@@ -164,6 +178,49 @@ class UpdateActivityInput(BaseModel):
 
 @strawberry.type
 class DeleteActivityInput(BaseModel):
+    id: Union[str, None] = None
+
+
+@strawberry.type
+class CreateActionInput(BaseModel):
+    id: Union[str, None] = None
+    name: str
+    description: Union[str, None] = None
+    actionTemplateId: Union[str, None] = None
+    universeApiKeyId: Union[str, None] = None
+
+
+@strawberry.type
+class UpdateActionInput(BaseModel):
+    id: Union[str, None] = None
+    name: Union[str, None] = None
+    description: Union[str, None] = None
+    universeApiKeyId: Union[str, None] = None
+
+
+@strawberry.type
+class DeleteActionInput(BaseModel):
+    id: Union[str, None] = None
+
+
+@strawberry.type
+class CreateActionScriptInput(BaseModel):
+    order: int
+    codeFragment: str
+    id: Union[str, None] = None
+    actionId: Union[str, None] = None
+
+
+@strawberry.type
+class UpdateActionScriptInput(BaseModel):
+    id: Union[str, None] = None
+    order: Union[int, None] = None
+    codeFragment: Union[str, None] = None
+    actionId: Union[str, None] = None
+
+
+@strawberry.type
+class DeleteActionScriptInput(BaseModel):
     id: Union[str, None] = None
 
 

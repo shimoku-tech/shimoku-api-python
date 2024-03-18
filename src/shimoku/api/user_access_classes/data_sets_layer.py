@@ -5,7 +5,7 @@ from typing import Optional, Union
 
 from shimoku.api.utils import validate_data_is_pandarable
 from shimoku.api.resources.app import App
-from shimoku.api.utils import convert_input_data_to_db_items
+from shimoku.api.resources.data_set import convert_input_data_to_db_items
 from shimoku.exceptions import DataError
 
 import logging

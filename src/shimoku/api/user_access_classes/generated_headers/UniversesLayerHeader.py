@@ -33,6 +33,26 @@ class UniversesLayerHeader:
         """
         pass
 
+    def get_universe_action_templates(
+        self,
+        uuid: str,
+    ) -> list:
+        """
+        Get the universe action templates as a list of dictionaries.
+        :param uuid: uuid of the universe
+        """
+        pass
+
+    def get_universe_actions(
+        self,
+        uuid: Optional[str] = None,
+    ) -> list:
+        """
+        Get the universe actions_execution as a list of dictionaries.
+        :param uuid: uuid of the universe
+        """
+        pass
+
     def get_universe_activity_templates(
         self,
         uuid: str,

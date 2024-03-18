@@ -9,7 +9,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-IN_BROWSER_PYODIDE = "_pyodide_core" in sys.modules
+IN_BROWSER = "_pyodide_core" in sys.modules
 ACTIONS_TEST = False
 
 

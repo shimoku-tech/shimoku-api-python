@@ -6,7 +6,10 @@ from copy import deepcopy
 
 from pandas import DataFrame
 from math import ceil
-from shimoku.async_execution_pool import AutoAsyncExecutionPool, add_general_async_group
+from shimoku.async_execution_pool import (
+    AutoAsyncExecutionPool,
+    add_to_general_async_group,
+)
 
 from typing import Optional, Union
 
@@ -19,6 +22,7 @@ from shimoku.api.resources.data_set import (
     DataSet,
     Mapping,
     convert_input_data_to_db_items,
+    convert_data_and_get_series_name,
 )
 from shimoku.api.resources.reports.filter_data_set import FilterDataSet
 from shimoku.api.resources.reports.tabs_group import TabsGroup
@@ -91,7 +95,6 @@ from shimoku.plt.utils import (
     retrieve_data_from_options,
     validate_input_form_data,
     create_normalized_name,
-    convert_data_and_get_series_name,
 )
 
 import logging
@@ -947,7 +950,7 @@ class PlotLayer(ClassWithLogging):
             logger, f"Field type {series_name} is not supported", NotImplementedError
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def filter(
         self,
         order: int,
@@ -1012,7 +1015,7 @@ class PlotLayer(ClassWithLogging):
             properties=properties,
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def iframe(
         self,
         url: str,
@@ -1058,7 +1061,7 @@ class PlotLayer(ClassWithLogging):
             sizeRows=rows_size,
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def html(
         self,
         html: str,
@@ -1077,7 +1080,7 @@ class PlotLayer(ClassWithLogging):
         """
         await self._html(html, order, cols_size, rows_size, padding)
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def single_indicator(
         self,
         data: dict,
@@ -1265,7 +1268,7 @@ class PlotLayer(ClassWithLogging):
             ),
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def button(
         self,
         label: str,
@@ -1287,7 +1290,7 @@ class PlotLayer(ClassWithLogging):
             on_click_events=on_click_events,
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def modal_button(
         self,
         label: str,
@@ -1327,7 +1330,7 @@ class PlotLayer(ClassWithLogging):
             ],
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def activity_button(
         self,
         label: str,
@@ -1369,7 +1372,7 @@ class PlotLayer(ClassWithLogging):
             ],
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def table(
         self,
         order: int,
@@ -1545,7 +1548,7 @@ class PlotLayer(ClassWithLogging):
             ),
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def input_form(
         self,
         options: dict,
@@ -1738,7 +1741,7 @@ class PlotLayer(ClassWithLogging):
             )
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def annotated_chart(
         self,
         data: Union[list[DataFrame], list[list[dict]]],
@@ -2178,7 +2181,7 @@ class PlotLayer(ClassWithLogging):
             **report_params,
         )
 
-    @add_general_async_group
+    @add_to_general_async_group
     async def free_echarts(
         self,
         data: Optional[Union[str, DataFrame, list[dict]]] = None,
@@ -2242,43 +2245,45 @@ class PlotLayer(ClassWithLogging):
         )
 
     # ECharts
-    line = add_general_async_group(line_chart)
-    bar = add_general_async_group(bar_chart)
-    stacked_bar = add_general_async_group(stacked_bar_chart)
-    area = add_general_async_group(area_chart)
-    stacked_area = add_general_async_group(stacked_area_chart)
-    scatter = add_general_async_group(scatter_chart)
-    horizontal_bar = add_general_async_group(horizontal_bar_chart)
-    stacked_horizontal_bar = add_general_async_group(stacked_horizontal_bar_chart)
-    zero_centered_bar = add_general_async_group(zero_centered_bar_chart)
-    funnel = add_general_async_group(funnel_chart)
-    tree = add_general_async_group(tree_chart)
-    radar = add_general_async_group(radar_chart)
-    pie = add_general_async_group(pie_chart)
-    doughnut = add_general_async_group(doughnut_chart)
-    rose = add_general_async_group(rose_chart)
-    sunburst = add_general_async_group(sunburst_chart)
-    treemap = add_general_async_group(treemap_chart)
-    sankey = add_general_async_group(sankey_chart)
-    heatmap = add_general_async_group(heatmap_chart)
-    predictive_line = add_general_async_group(predictive_line_chart)
-    speed_gauge = add_general_async_group(speed_gauge_chart)
-    shimoku_gauge = add_general_async_group(shimoku_gauge_chart)
-    shimoku_gauges_group = add_general_async_group(shimoku_gauges_group)
-    gauge_indicator = add_general_async_group(gauge_indicator)
-    top_bottom_area = add_general_async_group(top_bottom_area_charts)
-    top_bottom_line = add_general_async_group(top_bottom_line_charts)
-    line_with_confidence_area = add_general_async_group(line_with_confidence_area_chart)
-    scatter_with_effect = add_general_async_group(scatter_with_effect_chart)
-    waterfall = add_general_async_group(waterfall_chart)
-    line_and_bar_charts = add_general_async_group(line_and_bar_charts)
-    segmented_line = add_general_async_group(segmented_line_chart)
-    marked_line = add_general_async_group(marked_line_chart)
-    segmented_area = add_general_async_group(segmented_area_chart)
+    line = add_to_general_async_group(line_chart)
+    bar = add_to_general_async_group(bar_chart)
+    stacked_bar = add_to_general_async_group(stacked_bar_chart)
+    area = add_to_general_async_group(area_chart)
+    stacked_area = add_to_general_async_group(stacked_area_chart)
+    scatter = add_to_general_async_group(scatter_chart)
+    horizontal_bar = add_to_general_async_group(horizontal_bar_chart)
+    stacked_horizontal_bar = add_to_general_async_group(stacked_horizontal_bar_chart)
+    zero_centered_bar = add_to_general_async_group(zero_centered_bar_chart)
+    funnel = add_to_general_async_group(funnel_chart)
+    tree = add_to_general_async_group(tree_chart)
+    radar = add_to_general_async_group(radar_chart)
+    pie = add_to_general_async_group(pie_chart)
+    doughnut = add_to_general_async_group(doughnut_chart)
+    rose = add_to_general_async_group(rose_chart)
+    sunburst = add_to_general_async_group(sunburst_chart)
+    treemap = add_to_general_async_group(treemap_chart)
+    sankey = add_to_general_async_group(sankey_chart)
+    heatmap = add_to_general_async_group(heatmap_chart)
+    predictive_line = add_to_general_async_group(predictive_line_chart)
+    speed_gauge = add_to_general_async_group(speed_gauge_chart)
+    shimoku_gauge = add_to_general_async_group(shimoku_gauge_chart)
+    shimoku_gauges_group = add_to_general_async_group(shimoku_gauges_group)
+    gauge_indicator = add_to_general_async_group(gauge_indicator)
+    top_bottom_area = add_to_general_async_group(top_bottom_area_charts)
+    top_bottom_line = add_to_general_async_group(top_bottom_line_charts)
+    line_with_confidence_area = add_to_general_async_group(
+        line_with_confidence_area_chart
+    )
+    scatter_with_effect = add_to_general_async_group(scatter_with_effect_chart)
+    waterfall = add_to_general_async_group(waterfall_chart)
+    line_and_bar_charts = add_to_general_async_group(line_and_bar_charts)
+    segmented_line = add_to_general_async_group(segmented_line_chart)
+    marked_line = add_to_general_async_group(marked_line_chart)
+    segmented_area = add_to_general_async_group(segmented_area_chart)
 
     # Bentobox charts defined in the bentobox_charts.py file
-    infographics_text_bubble = add_general_async_group(infographics_text_bubble)
-    chart_and_modal_button = add_general_async_group(chart_and_modal_button)
-    chart_and_indicators = add_general_async_group(chart_and_indicators)
-    indicators_with_header = add_general_async_group(indicators_with_header)
-    line_with_summary = add_general_async_group(line_with_summary)
+    infographics_text_bubble = add_to_general_async_group(infographics_text_bubble)
+    chart_and_modal_button = add_to_general_async_group(chart_and_modal_button)
+    chart_and_indicators = add_to_general_async_group(chart_and_indicators)
+    indicators_with_header = add_to_general_async_group(indicators_with_header)
+    line_with_summary = add_to_general_async_group(line_with_summary)

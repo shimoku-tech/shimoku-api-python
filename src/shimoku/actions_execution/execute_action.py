@@ -1,9 +1,10 @@
 import uuid
 import ast
 from typing import Dict, Optional
-from shimoku.utils import IN_BROWSER_PYODIDE
+from shimoku.utils import IN_BROWSER
 from shimoku.exceptions import ActionError
 from shimoku.execution_logger import log_error
+import warnings
 
 import logging
 
@@ -233,9 +234,9 @@ class ActionsChecker(ast.NodeVisitor):
                 aux_node.value.id == self.SHIMOKU_CLIENT_NAME
                 and aux_node.attr in self.shimoku_client_attrs
             ):
-                print(
-                    f"Client method call '{node.func.attr}' used at line {node.lineno} without await."
-                )
+                # print(
+                #     f"Client method call '{node.func.attr}' used at line {node.lineno} without await."
+                # )
                 self.current_scope.lines_need_async.add((node.lineno, node.col_offset))
                 self.current_scope.needs_async = True
 
@@ -290,9 +291,9 @@ class AwaitInserter(ast.NodeTransformer):
         function_scope = self.current_scope.get_function(func_name)
         if function_scope is not None and function_scope.needs_async:
             self.current_scope.needs_async = True
-            print(
-                f"Function call '{func_name}' used at line {node.lineno} without await."
-            )
+            # print(
+            #     f"Function call '{func_name}' used at line {node.lineno} without await."
+            # )
             return ast.copy_location(ast.Await(value=node), node)
 
         return node
@@ -323,7 +324,13 @@ class AwaitInserter(ast.NodeTransformer):
         return node
 
 
-def execute_action(code: str, print_code: bool = False):
+def print_code_with_line_numbers(code: str):
+    code_lines = code.split("\n")
+    for i, line in enumerate(code_lines):
+        print(f"{i:3} | {line}")
+
+
+def analyze_action_code(code: str, print_code: bool = False) -> ast.Module:
     code = code.replace("\r\n", "\n").replace("\\\n", "").replace("\\\r", "")
     code_lines = code.split("\n")
     main_uuid = str(uuid.uuid4()).replace("-", "_")
@@ -334,17 +341,30 @@ def execute_action(code: str, print_code: bool = False):
         f"async def main_{main_uuid}():",
         *[f"    {line}" for line in code_lines],
         "    shimoku_client = Client(",
+        "        access_token=js_access_token,",
+        "        universe_id=js_universe_id,",
+        "        environment=js_environment,",
         "        async_execution=True,",
         '        verbosity="INFO",',
         "    )",
+        "    shimoku_client.set_workspace(js_workspace_id)",
         "    action(shimoku_client)",
         "",
     ]
-    if IN_BROWSER_PYODIDE:
+    if IN_BROWSER:
         script_code_lines.append(
             f"asyncio.get_event_loop().create_task(main_{main_uuid}())",
         )
     else:
+        script_code_lines.insert(4, "")
+        script_code_lines.insert(4, "    js_access_token = None")
+        script_code_lines.insert(4, "    js_universe_id = 'local'")
+        script_code_lines.insert(4, "    js_environment = 'production'")
+        script_code_lines.insert(4, "    js_workspace_id = 'local'")
+
+        script_code_lines.insert(
+            -3, "    shimoku_client._async_pool.ACTIONS_TEST = True"
+        )
         script_code_lines.append(
             f"asyncio.run(main_{main_uuid}())",
         )
@@ -352,28 +372,35 @@ def execute_action(code: str, print_code: bool = False):
     if print_code:
         for i, line in enumerate(script_code_lines):
             print(f"{i:3} | {line}")
+    try:
+        script_ast = ast.parse("\n".join(script_code_lines))
+        analyzer = ActionsChecker()
+        analyzer.visit(script_ast)
+        if not analyzer.exists_action_function:
+            log_error(logger, "Action function is not defined.", ActionError)
+        if not analyzer.shimoku_imported:
+            log_error(logger, "Shimoku's Client is not imported.", ActionError)
+        modifier = AwaitInserter(analyzer.current_scope)
+        modifier.visit(script_ast)
+    except Exception as e:
+        print_code_with_line_numbers("\n".join(script_code_lines))
+        log_error(logger, f"Error while analyzing the code: {e}", ActionError)
+        raise e
+    return script_ast
 
-    script_ast = ast.parse("\n".join(script_code_lines))
 
-    analyzer = ActionsChecker()
-    analyzer.visit(script_ast)
-    if not analyzer.exists_action_function:
-        log_error(logger, "Action function is not defined.", ActionError)
-    if not analyzer.shimoku_imported:
-        log_error(logger, "Shimoku's Client is not imported.", ActionError)
-    modifier = AwaitInserter(analyzer.current_scope)
-    modifier.visit(script_ast)
-    # dump = ast.dump(script_ast, indent=4).split("\n")
-    # for i, line in enumerate(dump):
-    #     print(f'{i:3} | {line}')
+def execute_action_code(code: str, print_code: bool = False):
+    script_ast = analyze_action_code(code, print_code)
+    warnings.filterwarnings("ignore", category=RuntimeWarning)
     exec(compile(script_ast, filename="shimoku_action", mode="exec"))
+    warnings.resetwarnings()
 
 
 def main():
     # with open('../../../tests/mockable_tests/test_plot_api.py', 'r') as f:
     with open("../../../tests/personal_test.py", "r") as f:
         code_lines = f.readlines()
-    execute_action("\n".join(code_lines))
+    execute_action_code("\n".join(code_lines))
 
 
 if __name__ == "__main__":

@@ -6,13 +6,13 @@ from typing import Optional, Dict, Any, List, TypeVar, Type, Set, Tuple, Union, 
 
 from abc import ABC
 
-from shimoku.utils import IN_BROWSER_PYODIDE
+from shimoku.utils import IN_BROWSER
 from shimoku.api.client import ApiClient
 from shimoku.exceptions import ResourceIdMissing, CacheError
 from shimoku.execution_logger import log_error, ClassWithLogging
 from dataclasses import is_dataclass, asdict
 
-if not IN_BROWSER_PYODIDE:
+if not IN_BROWSER:
     from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
@@ -481,7 +481,7 @@ class BaseResource(ClassWithLogging):
         if not disable:
             logger.info("Uploading data")
 
-        if not IN_BROWSER_PYODIDE:
+        if not IN_BROWSER:
             progress_bar = tqdm(total=len(children_params), unit=unit, disable=disable)
         else:
             progress_bar = None

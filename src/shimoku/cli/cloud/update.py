@@ -2,7 +2,9 @@ from typing import Optional
 from shimoku.cli import CLIParser, CLIFuncParam
 from shimoku.cli.cloud.cascade_get_resources import ResourceGetter, InitOptions
 from shimoku.cli.utils import choose_from_menu
-from shimoku.execution_logger import configure_logging
+
+from shimoku.exceptions import ActionError
+from shimoku.execution_logger import configure_logging, log_error
 
 import logging
 
@@ -54,7 +56,7 @@ def add_update_parser(parser: Optional[CLIParser] = None):
         ),
     ]
 
-    module_functions = [workspace, menu_path, menu_order, board, boards_order]
+    module_functions = [action, workspace, menu_path, menu_order, board, boards_order]
 
     for func in module_functions:
         update_parser.decor_add_command(common_args=common_args)(func)
@@ -64,6 +66,33 @@ def add_update_parser(parser: Optional[CLIParser] = None):
 
 if __name__ == "__main__":
     add_update_parser().parse_args()
+
+
+async def action(
+    action: str = CLIFuncParam(prompt=True),
+    new_name: str = CLIFuncParam(mandatory=False),
+    new_description: str = CLIFuncParam(mandatory=False),
+    **kwargs,
+):
+    """Update the properties of an action
+    :param action: Name or id of the action
+    :param new_name: New name for the action
+    :param new_description: New description for the action
+    """
+    resource_getter = ResourceGetter(InitOptions(action=action, **kwargs))
+    actions_layer = await resource_getter.get_actions_layer()
+    action = await resource_getter.get_action()
+    if not action:
+        log_error(
+            logger,
+            f"Action {action} not found",
+            ActionError,
+        )
+    await actions_layer.update_action(
+        uuid=action["id"],
+        new_name=new_name,
+        new_description=new_description,
+    )
 
 
 async def workspace(

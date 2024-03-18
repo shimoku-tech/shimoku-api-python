@@ -6,10 +6,8 @@ from typing import Optional, Union
 from enum import Enum
 
 import numpy as np
-import pandas as pd
 from pandas import DataFrame
 
-from shimoku.api.utils import convert_input_data_to_db_items
 from shimoku.execution_logger import log_error
 
 logger = logging.getLogger(__name__)
@@ -117,23 +115,6 @@ def deep_update(source, overrides) -> list:
         else:
             source[key] = overrides[key]
     return source
-
-
-def convert_data_and_get_series_name(
-    data: pd.DataFrame, field: str
-) -> tuple[pd.DataFrame, str]:
-    """Convert data to a format that can be used by the API and get the series name of a field.
-    :param data: data to convert
-    :param field: field to get the series name
-    :return: converted data and the converted series name
-    """
-    converted_data = pd.DataFrame(convert_input_data_to_db_items(data))
-
-    converted_data_columns = converted_data.columns.to_list()
-    data_columns = data.columns.to_list()
-    series_name = converted_data_columns[data_columns.index(field)]
-
-    return converted_data, series_name
 
 
 def get_uuids_from_dict(_dict: dict) -> list[str]:

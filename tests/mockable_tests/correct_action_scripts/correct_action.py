@@ -32,7 +32,7 @@ def deep_deep_use_s(shimoku_client: Client):
     shimoku_client.set_workspace()
     shimoku_client.set_menu_path("Pyodide test")
     shimoku_client.plt.gauge_indicator(
-        order=2,
+        order=1,
         value=len(
             shimoku_client.menu_paths.get_menu_path_components(name="test-free-echarts")
         ),

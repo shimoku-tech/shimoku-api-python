@@ -1,7 +1,12 @@
 from typing import Optional
+import threading
+
 from shimoku.cli import CLIParser, CLIFuncParam
 from shimoku.cli.cloud.cascade_get_resources import InitOptions, ResourceGetter
 from shimoku.cli.utils import choose_from_menu
+
+from shimoku.actions_execution.execute_action import execute_action_code
+
 from shimoku.ai.ai_layer import get_activity_template, ActivityTemplate, AILayer
 import logging
 
@@ -49,7 +54,7 @@ def add_execute_parser(parser: Optional[CLIParser] = None):
         ),
     ]
 
-    module_functions = [ai_function]
+    module_functions = [action, ai_function]
 
     for func in module_functions:
         execute_parser.decor_add_command(common_args=common_args)(func)
@@ -136,6 +141,22 @@ async def ai_function(
         universe_api_key=universe_api_key,
         **(await get_params(ai_layer, activity_template)),
     )
+
+
+async def action(
+    action: str = CLIFuncParam(prompt=True),
+    **kwargs,
+):
+    """Execute an action
+    :param action: The id or name of the action
+    """
+    resource_getter = ResourceGetter(InitOptions(action=action, **kwargs))
+    actions_layer = await resource_getter.get_actions_layer()
+    action = await resource_getter.get_action()
+    action_code = await actions_layer.get_action_code(action["id"])
+    thread = threading.Thread(target=execute_action_code, args=(action_code,))
+    thread.start()
+    thread.join()
 
 
 if __name__ == "__main__":

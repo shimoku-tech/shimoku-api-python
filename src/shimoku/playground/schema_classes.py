@@ -1004,6 +1004,23 @@ class BusinessExposedList(graphene.ObjectType):
     items = graphene.List(lambda: BusinessExposed)
 
 
+class UniverseApiKeyExposed(graphene.ObjectType):
+    @staticmethod
+    def rest_name():
+        return "apiKey"
+
+    id = graphene.String()
+    universeId = graphene.String()
+    universe = graphene.Field(lambda: UniverseExposed)
+    userType = graphene.String()
+    enabled = graphene.Boolean()
+    description = graphene.String()
+
+
+class UniverseApiKeyExposedList(graphene.ObjectType):
+    items = graphene.List(lambda: UniverseApiKeyExposed)
+
+
 class UniverseExposed(graphene.ObjectType):
     id = graphene.String()
     name = graphene.String()
@@ -1012,6 +1029,8 @@ class UniverseExposed(graphene.ObjectType):
     activeUniversePlanId = graphene.String()
     activeUniversePlan = graphene.Field(lambda: ActiveUniversePlan)
     modules = graphene.Field(lambda: ModuleExposedList)
+    actions = graphene.Field(lambda: ActionExposedList)
+    universeApiKeys = graphene.Field(lambda: UniverseApiKeyExposedList)
 
 
 class UniverseFilteredExposed(graphene.ObjectType):
@@ -1022,6 +1041,41 @@ class UniverseFilteredExposed(graphene.ObjectType):
     activeUniversePlanId = graphene.String()
     activeUniversePlan = graphene.Field(lambda: ActiveUniversePlan)
     modules = graphene.Field(lambda: ModuleExposedList)
+    actions = graphene.Field(lambda: ActionExposedList)
+    universeApiKeys = graphene.Field(lambda: UniverseApiKeyExposedList)
+
+
+class ActionScriptExposed(graphene.ObjectType):
+    @staticmethod
+    def rest_name():
+        return "script"
+
+    id = graphene.String()
+    actionId = graphene.String()
+    action = graphene.Field(lambda: ActionExposed)
+    order = graphene.Int()
+    codeFragment = graphene.String()
+
+
+class ActionScriptExposedList(graphene.ObjectType):
+    @staticmethod
+    def rest_name():
+        return "scripts"
+
+    items = graphene.List(lambda: ActionScriptExposed)
+
+
+class ActionExposed(graphene.ObjectType):
+    id = graphene.String()
+    name = graphene.String()
+    description = graphene.String()
+    universeApiKeyId = graphene.String()
+    actionScripts = graphene.Field(lambda: ActionScriptExposedList)
+    pythonLibraries = graphene.List(graphene.String)
+
+
+class ActionExposedList(graphene.ObjectType):
+    items = graphene.List(lambda: ActionExposed)
 
 
 class ActiveUniversePlan(graphene.ObjectType):

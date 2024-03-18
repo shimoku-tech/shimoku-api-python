@@ -1,4 +1,5 @@
 from typing import Optional
+from shimoku.actions_execution.execute_action import print_code_with_line_numbers
 from shimoku.cli import CLIParser, CLIFuncParam
 from shimoku.cli.cloud.cascade_get_resources import InitOptions, ResourceGetter
 from shimoku.cli.utils import display_dict, save_as_file
@@ -47,6 +48,7 @@ def add_get_parser(parser: Optional[CLIParser] = None):
     ]
 
     module_functions = [
+        action_code,
         workspace,
         board,
         menu_path,
@@ -61,6 +63,28 @@ def add_get_parser(parser: Optional[CLIParser] = None):
         get_parser.decor_add_command(common_args=common_args)(func)
 
     return get_parser
+
+
+async def action_code(
+    action: str = CLIFuncParam(prompt=True),
+    save_to_path: str = CLIFuncParam(default=None, mandatory=False),
+    **kwargs,
+):
+    """
+    Get the code of an action
+    :param action: Action name or id to get
+    :param save_to_path: Path to save the code to, leave empty to print it
+    """
+    resource_getter = ResourceGetter(InitOptions(action=action, **kwargs))
+    action_obj = await resource_getter.get_action()
+    code = await action_obj.get_code()
+    if save_to_path:
+        with open(save_to_path, "w") as action_file:
+            action_file.write(code)
+        print(f"Code of the action ({action_obj['name']}) saved to {save_to_path}.")
+    else:
+        print(f"Code of the action ({action_obj['name']}):")
+        print_code_with_line_numbers(code)
 
 
 async def workspace(

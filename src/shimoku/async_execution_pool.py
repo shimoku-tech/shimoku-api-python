@@ -1,9 +1,9 @@
 import asyncio
-from abc import ABC
+import uuid
 from typing import Optional, Callable, Dict, Union, Coroutine, Any, Type
 import logging
 from threading import Thread
-from shimoku.utils import IN_BROWSER_PYODIDE
+from shimoku.utils import IN_BROWSER
 from shimoku.api.client import ApiClient
 import inspect
 
@@ -12,37 +12,28 @@ from copy import copy
 logger = logging.getLogger(__name__)
 
 
-class AsyncGroup(ABC):
-    """
-    Class to define the async groups. It is used to avoid conflicts between tasks.
-    """
-
-    def __init__(self):
-        self.conflicts: set[AsyncGroup] = set()
-
-    def add_conflict(self, group: "AsyncGroup"):
-        self.conflicts.add(group)
-
-    def is_conflicting(self, group: "AsyncGroup") -> bool:
-        return group in self.conflicts or any(
-            i_group.is_conflicting(group) for i_group in self.conflicts
-        )
-
-
-general_group = AsyncGroup()
-
-
-def add_general_async_group(func: Callable):
+def add_to_general_async_group(func: Callable):
     """
     This function adds the function to the general async group.
     """
-    func.async_group = general_group
+    func.async_group = "general"
+    return func
+
+
+def add_to_individual_async_group(func: Callable):
+    """
+    This function creates an Async group for just one function,
+    so that any number of the same function can be executed
+    at the same time.
+    """
+    func.async_group = f"individual_{uuid.uuid4()}_{func.__name__}"
     return func
 
 
 class AutoAsyncExecutionPool:
     """
-    This class stores the arguments needed to execute the tasks in the task pool and the methods to execute them.
+    This class stores the arguments needed to execute
+    the tasks in the task pool and the methods to execute them.
     It is used to avoid the use of async/await in the user's code.
     """
 
@@ -61,7 +52,7 @@ class AutoAsyncExecutionPool:
         self.sequential = True
         self.universe = None
         self.in_async = False
-        self._current_groups: list[AsyncGroup] = []
+        self._current_groups: list[Optional[str]] = []
 
     def clear(self):
         self.ending_tasks = {}
@@ -91,7 +82,7 @@ class AutoAsyncExecutionPool:
         func: Callable,
         args: Optional[tuple] = None,
         kwargs: Optional[dict] = None,
-        async_group: Optional[AsyncGroup] = None,
+        async_group: Optional[str] = None,
         name: Optional[str] = None,
     ) -> Union[Any, Coroutine]:
         """
@@ -114,12 +105,13 @@ class AutoAsyncExecutionPool:
                 return_result.append(task_result)
             return task_result
 
-        conflict = not async_group or any(
-            group.is_conflicting(async_group) for group in self._current_groups
+        needs_result = not async_group
+        conflict = needs_result or (
+            self._current_groups and async_group not in self._current_groups
         )
 
         if self.sequential or conflict:
-            if IN_BROWSER_PYODIDE or self.ACTIONS_TEST:
+            if IN_BROWSER or self.ACTIONS_TEST:
                 # If in pyodide return the coroutine
                 return separate_final_execute()
             # Try to retrieve the event loop, if it is not possible, create a new one
@@ -134,7 +126,7 @@ class AutoAsyncExecutionPool:
                 )
                 thread.start()
                 thread.join()
-                return return_result[0]
+                return return_result[0] if return_result else None
             except RuntimeError:
                 # If the function is called from the main synchronous thread, it will raise a RuntimeError
                 return asyncio.run(separate_final_execute())
@@ -144,7 +136,7 @@ class AutoAsyncExecutionPool:
         self._current_groups.append(async_group)
         logger.info(f"{func.__name__ if not name else name} added to the task pool")
 
-        if IN_BROWSER_PYODIDE or self.ACTIONS_TEST:
+        if IN_BROWSER or self.ACTIONS_TEST:
             # If in pyodide return the coroutine
             return asyncio.sleep(0)
 
@@ -179,7 +171,7 @@ def decorate_class_to_auto_async(cls: type, async_pool: AutoAsyncExecutionPool) 
                     else None,
                 )
             result = func(self, *args, **kwargs)
-            if IN_BROWSER_PYODIDE or async_pool.ACTIONS_TEST:
+            if IN_BROWSER or async_pool.ACTIONS_TEST:
                 # If in pyodide return a wrapper coroutine
                 async def result():
                     return result

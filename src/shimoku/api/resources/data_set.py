@@ -181,6 +181,23 @@ def convert_input_data_to_db_items(
         log_error(logger, f"Unknown data type {type(data)}", DataError)
 
 
+def convert_data_and_get_series_name(
+    data: pd.DataFrame, field: str
+) -> tuple[pd.DataFrame, str]:
+    """Convert data to a format that can be used by the API and get the series name of a field.
+    :param data: data to convert
+    :param field: field to get the series name
+    :return: converted data and the converted series name
+    """
+    converted_data = pd.DataFrame(convert_input_data_to_db_items(data))
+
+    converted_data_columns = converted_data.columns.to_list()
+    data_columns = data.columns.to_list()
+    series_name = converted_data_columns[data_columns.index(field)]
+
+    return converted_data, series_name
+
+
 class DataSet(Resource):
     """
     DataSet resource class

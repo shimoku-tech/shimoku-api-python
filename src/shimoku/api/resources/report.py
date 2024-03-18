@@ -268,7 +268,7 @@ class Report(Resource):
 
     async def delete_report_data_sets(self, log: bool = False):
         """Delete the datasets and links that are not in use anymore.
-        :param log: if True, log the actions"""
+        :param log: if True, log the actions_execution"""
         report_data_sets = await self.get_report_data_sets()
         await asyncio.gather(
             *[

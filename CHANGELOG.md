@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.0 (2024-18-03)
+
+- Actions can be created and executed from the SDK
+
 ## 2.1.2 (2024-01-03)
 
 - Solved cache issues with modals and tabs

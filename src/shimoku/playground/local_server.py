@@ -99,6 +99,7 @@ def list_query_field(
         parent_id_param: graphene.ID(required=True),
         "limit": graphene.Int(),
         "from": graphene.Int(name="from"),
+        "nextToken": graphene.String(name="nextToken"),
     }
     list_resolver_extra = None
     if hasattr(types[element_type], "list_resolver_extra"):
@@ -120,10 +121,19 @@ def list_query_field(
         results.items = copy(results.items)
         if list_resolver_extra is not None:
             results.items = list_resolver_extra(items=results.items, **kwargs)
-        if "from" in kwargs:
-            results.items = results.items[kwargs["from"] :]
+        total = len(results.items)
+        offset = 0
+        if kwargs.get("nextToken") is not None:
+            next_token_index = int(kwargs["nextToken"])
+            results.items = results.items[next_token_index:]
+            offset = next_token_index
+        elif "from" in kwargs:
+            results.items = results.items[kwargs["from"]:]
+            offset = kwargs["from"]
         if "limit" in kwargs:
-            results.items = results.items[: kwargs["limit"]]
+            results.items = results.items[:kwargs["limit"]]
+            if offset+kwargs["limit"] < total:
+                results.nextToken = str(offset+kwargs["limit"])
         return results
 
     return graphene.Field(

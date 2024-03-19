@@ -104,6 +104,22 @@ from shimoku.execution_logger import log_error, ClassWithLogging
 logger = logging.getLogger(__name__)
 
 
+def get_component_hash(
+    order: int,
+    current_path: Optional[str] = None,
+    current_tab: Optional[tuple[TabsGroup, str]] = None,
+    current_modal: Optional[Modal] = None,
+) -> str:
+    r_hash = f"{order}"
+    if current_tab and current_tab[0] and current_tab[1]:
+        r_hash = f'{current_tab[0]["properties"]["hash"]}_{current_tab[1]}_{order}'
+    elif current_modal:
+        r_hash = f'{current_modal["properties"]["hash"]}_{order}'
+    elif current_path:
+        r_hash = f"{current_path}_{order}"
+    return r_hash
+
+
 class PlotLayer(ClassWithLogging):
     """
     This class is a high level abstraction of the API, it is used to create components and data sets easily.
@@ -131,16 +147,26 @@ class PlotLayer(ClassWithLogging):
         self._shared_data: dict[str, any] = {}
         self._execution_path_orders: list[str] = []
         self._async_pool = async_pool
+        self._last_event_type_per_report: dict[str, EventType] = {}
 
-    async def _create_event(
-        self, event_type: EventType, content: dict, resource_id: Optional[str] = None
-    ):
-        """Create an event.
-        :param event_type: the type of the event
-        :param content: the content of the event
+    async def send_events_for_components(self, orders: list[int]):
+        """Send events for the components in each order
+        :param orders: the orders of the components
         """
-        if self._app.api_client.playground:
-            await self._business.create_event(event_type, content, resource_id)
+        for order in orders:
+            r_hash = self._get_component_hash(order)
+            report = await self._app.get_report(r_hash=r_hash)
+            if not report:
+                log_error(logger, f"No chart found with order {order}", RuntimeError)
+            event_type = self._last_event_type_per_report.pop(report["id"], None)
+            if event_type:
+                await self._business.create_event(event_type, {}, report["id"])
+            else:
+                logger.info(f"No event type found for report {r_hash}")
+
+    def clear_events_for_components(self):
+        """Clear the events for the components"""
+        self._last_event_type_per_report = {}
 
     def clear_context(self):
         if self._bentobox_data:
@@ -159,7 +185,7 @@ class PlotLayer(ClassWithLogging):
         Check if there are charts with the same order.
         :param order: the order of the chart
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         free_context: dict = async_pool.free_context
         if "list_for_conflicts" not in free_context:
             free_context["list_for_conflicts"] = []
@@ -276,13 +302,15 @@ class PlotLayer(ClassWithLogging):
             log_error(logger, f"No modal found with name {name}", ModalError)
         await self._app.delete_report(r_hash=r_hash)
 
-    def set_bentobox(self, cols_size: int, rows_size: int):
+    def set_bentobox(self, cols_size: int, rows_size: int, order: Optional[int] = None):
         """Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
-        :param rows_size: the number of rows in the bentobox"""
+        :param rows_size: the number of rows in the bentobox
+        :order: the order of the bentobox in the dashboard
+        """
         self._bentobox_data: dict = {
-            "bentoboxId": None,
-            "bentoboxOrder": None,
+            "bentoboxId": None if order is None else "_" + str(order),
+            "bentoboxOrder": order,
             "bentoboxSizeColumns": cols_size,
             "bentoboxSizeRows": rows_size,
         }
@@ -312,6 +340,8 @@ class PlotLayer(ClassWithLogging):
             report for report in reports if report.report_type in ["TABS", "MODAL"]
         ]
         await asyncio.gather(*[container.update() for container in containers])
+        for container in containers:
+            self._last_event_type_per_report[container["id"]] = EventType.REPORT_UPDATED
         logger.info("Updated tab groups and modals")
 
     async def set_tabs_index(
@@ -369,8 +399,10 @@ class PlotLayer(ClassWithLogging):
             logger.info(
                 f'Created tabs group {tabs_index[0]} with id {tabs_group["id"]}'
             )
+            self._last_event_type_per_report[tabs_group["id"]] = EventType.REPORT_CREATED
         elif order:
             await self._app.update_report(r_hash=r_hash, order=order, **params)
+            self._last_event_type_per_report[tabs_group["id"]] = EventType.REPORT_UPDATED
 
         if parent_tabs_index:
             p_hash = self._get_hash_for_container(parent_tabs_index[0])
@@ -398,6 +430,7 @@ class PlotLayer(ClassWithLogging):
                 logger.info(
                     f"Included tabs group {tabs_index[0]} in tabs group {parent_tabs_index[0]}"
                 )
+                self._last_event_type_per_report[parent_tabs_group["id"]] = EventType.REPORT_UPDATED
 
         elif self._current_modal and not self._current_modal.has_report(tabs_group):
             (await self._get_current_modal()).add_report(tabs_group)
@@ -556,15 +589,13 @@ class PlotLayer(ClassWithLogging):
             )
         return self._current_tabs_group
 
-    def _get_chart_hash(self, order: int) -> str:
-        r_hash = f"{order}"
-        if self._current_tabs_group:
-            r_hash = f'{self._current_tabs_group["properties"]["hash"]}_{self._current_tab}_{order}'
-        elif self._current_modal:
-            r_hash = f'{self._current_modal["properties"]["hash"]}_{order}'
-        elif self._current_path:
-            r_hash = f"{self._current_path}_{order}"
-        return r_hash
+    def _get_component_hash(self, order: int) -> str:
+        return get_component_hash(
+            order,
+            current_path=self._current_path,
+            current_tab=(self._current_tabs_group, self._current_tab),
+            current_modal=self._current_modal
+        )
 
     async def _get_chart_report(
         self, order: int, chart_class: type[Report], create_if_not_exists: bool = True
@@ -574,7 +605,7 @@ class PlotLayer(ClassWithLogging):
         :param chart_class: the chart class
         :param create_if_not_exists: whether to create the chart if it doesn't exist
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         report = await self._app.get_report(r_hash=r_hash)
 
         if not report:
@@ -592,7 +623,7 @@ class PlotLayer(ClassWithLogging):
         """Get the component by order.
         :param order: the order of the component
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         report = await self._app.get_report(r_hash=r_hash)
         if not report:
             return None
@@ -901,7 +932,8 @@ class PlotLayer(ClassWithLogging):
                 "update_containers"
             ] = self._update_containers()
 
-        await self._create_event(event_type, {}, chart["id"])
+        if event_type:
+            self._last_event_type_per_report[chart["id"]] = event_type
 
         return chart
 
@@ -1499,8 +1531,8 @@ class PlotLayer(ClassWithLogging):
         columns_options: Optional[dict] = None,
         categorical_columns: Optional[list[str]] = None,
         label_columns: Optional[dict] = None,
-        web_link_column: Optional[str] = None,
-        open_link_in_new_tab: bool = False,
+        web_link_columns: Optional[dict[str, str]] = None,
+        open_links_in_new_tab: bool = False,
         title: Optional[str] = None,
         padding: Optional[str] = None,
         rows_size: Optional[int] = None,
@@ -1543,6 +1575,8 @@ class PlotLayer(ClassWithLogging):
             columns_options = {}
         if not categorical_columns:
             categorical_columns = []
+        if not web_link_columns:
+            web_link_columns = {}
         if not label_columns:
             label_columns = {}
         else:
@@ -1565,7 +1599,11 @@ class PlotLayer(ClassWithLogging):
         _, data_set, _ = data_mappings_to_tuples[columns[0]]
         columns_dicts = []
         rows_dict = {"mapping": {}}
+
         for i, name in enumerate(columns):
+            rows_dict["mapping"][name] = data_mappings_to_tuples[name][0]
+            if name in web_link_columns.values() and name not in web_link_columns:
+                continue
             column_options = {"field": name, "headerName": name, "order": i}
 
             if buttons_column_definition and name == buttons_column_definition.column_name:
@@ -1593,20 +1631,13 @@ class PlotLayer(ClassWithLogging):
                     df, name, label_options, variant
                 )
 
-            if name == web_link_column:
+            if name in web_link_columns:
                 column_options["link"] = {
-                    "url": "webLink",
-                    "openNewTab": open_link_in_new_tab,
+                    "url": web_link_columns[name],
+                    "openNewTab": open_links_in_new_tab,
                 }
 
             columns_dicts.append(column_options)
-            rows_dict["mapping"][name] = data_mappings_to_tuples[name][0]
-
-        if web_link_column:
-            rows_dict["mapping"]["web"] = data_mappings_to_tuples[web_link_column][0]
-            rows_dict["mapping"]["webLink"] = data_mappings_to_tuples[web_link_column][
-                0
-            ]
 
         _, report = await self._get_chart_report(order, Table)
 
@@ -1811,7 +1842,7 @@ class PlotLayer(ClassWithLogging):
         if auto_send:
             report_data_set_properties["variant"] = "autoSend"
 
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
 
         next_id = f"{r_hash}_0" if dynamic_sequential_show else None
 

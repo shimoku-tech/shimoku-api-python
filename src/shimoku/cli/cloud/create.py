@@ -290,7 +290,7 @@ async def invitation(
     business = await ResourceGetter(
         InitOptions(workspace_id=workspace_id, **kwargs)
     ).get_business()
-    await business.invite_user(email=email)
+    await business.invite_user(email=email, roles=[])
 
 
 async def role(

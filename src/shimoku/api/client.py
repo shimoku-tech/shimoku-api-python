@@ -251,17 +251,33 @@ class ApiClient(ClassWithLogging):
         if self.server:
             url = url.replace("server", self.server)
 
-        # perform request and return response
-        async with self.semaphore:
-            return await self.request(
-                method,
-                url,
-                query_params,
-                headers=header_params,
-                body=body,
-                limit=limit,
-                elastic_supported=elastic_supported,
-            )
+        if not self.semaphore:
+            self.semaphore = asyncio.Semaphore(self.semaphore_limit)
+
+        try:
+            # perform request and return response
+            async with self.semaphore:
+                return await self.request(
+                    method,
+                    url,
+                    query_params,
+                    headers=header_params,
+                    body=body,
+                    limit=limit,
+                    elastic_supported=elastic_supported,
+                )
+        except asyncio.CancelledError:
+            self.semaphore = asyncio.Semaphore(self.semaphore_limit)
+            async with self.semaphore:
+                return await self.request(
+                    method,
+                    url,
+                    query_params,
+                    headers=header_params,
+                    body=body,
+                    limit=limit,
+                    elastic_supported=elastic_supported,
+                )
 
     def set_http_info(self, **kwargs):  # noqa: E501
         """

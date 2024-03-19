@@ -15,7 +15,7 @@ from shimoku.api.resources.dashboard import Dashboard
 from shimoku.api.resources.app import App
 
 from shimoku.utils import EventType
-from shimoku.exceptions import WorkspaceError, MenuPathError, BoardError
+from shimoku.exceptions import WorkspaceError, MenuPathError, BoardError, RoleError
 
 if TYPE_CHECKING:
     from shimoku.api.resources.universe import Universe
@@ -72,16 +72,14 @@ class Business(Resource):
     async def create_event(
         self, event_type: EventType, content: dict, resource_id: Optional[str] = None
     ):
-        """Creates an event but dont store it in the cache
+        """Creates an event but do not store it in the cache
         :param event_type: The type of the event
         :param content: The content of the event
         :param resource_id: The id of the resource that triggered the event
         """
-        if event_type != EventType.BUSINESS_CONTENTS_UPDATED:
-            return
-
         event = Event(parent=self)
         event.set_params(type=event_type.value, content=content, resourceId=resource_id)
+        logger.info(f"Event {event_type.value} created")
         await event
 
     # Dashboard methods
@@ -121,7 +119,6 @@ class Business(Resource):
         await self._base_resource.update_child(
             Dashboard, uuid=dashboard["id"], **params
         )
-        await self.create_event(EventType.DASHBOARD_UPDATED, params, dashboard["id"])
 
     async def get_dashboard(
         self,
@@ -143,7 +140,6 @@ class Business(Resource):
                 Dashboard, alias=name, order=how_many_dashboards + 1
             )
             logger.info(f'Created board {dashboard["name"]} with id {dashboard["id"]}')
-            await self.create_event(EventType.DASHBOARD_CREATED, {}, dashboard["id"])
 
         return dashboard
 
@@ -155,7 +151,6 @@ class Business(Resource):
     ) -> bool:
         dashboard = await self.get_dashboard(uuid, name, create_if_not_exists=False)
         result = await self._base_resource.delete_child(Dashboard, uuid, name)
-        await self.create_event(EventType.DASHBOARD_DELETED, {}, dashboard["id"])
         return result
 
     # App methods
@@ -180,7 +175,6 @@ class Business(Resource):
             )
 
             logger.info(f'Created menu path {app["name"]} with id {app["id"]}')
-            await self.create_event(EventType.APP_CREATED, {}, app["id"])
 
         return app
 
@@ -192,7 +186,6 @@ class Business(Resource):
     ) -> bool:
         app = await self.get_app(uuid, name, create_if_not_exists=False)
         result = await self._base_resource.delete_child(App, uuid, name)
-        await self.create_event(EventType.APP_DELETED, {}, app["id"])
         if self.api_client.playground:
             dashboards = await self.get_dashboards()
             for dashboard in dashboards:
@@ -211,12 +204,13 @@ class Business(Resource):
             logger.warning(f"App {name} not found, cannot update it")
             return
         await self._base_resource.update_child(App, uuid=uuid, alias=name, **params)
-        await self.create_event(EventType.APP_UPDATED, params, app["id"])
 
     # Account methods
-    async def invite_user(self, email: str) -> BusinessInvitation:
+    async def invite_user(
+        self, email: str, roles: list[str], send_email: bool
+    ) -> BusinessInvitation:
         invitation = await self._base_resource.create_child(
-            BusinessInvitation, email=email
+            BusinessInvitation, email=email, roles=roles, sendEmail=send_email
         )
         logger.info(f"Invitation sent to ({email})")
         return invitation

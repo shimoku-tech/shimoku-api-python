@@ -206,6 +206,12 @@ class PlotLayerHeader:
         """None"""
         pass
 
+    def clear_events_for_components(
+        self,
+    ):
+        """Clear the events for the components"""
+        pass
+
     def clear_menu_path(
         self,
     ):
@@ -874,14 +880,26 @@ class PlotLayerHeader:
         """Create a chart with bars and lines."""
         pass
 
+    def send_events_for_components(
+        self,
+        orders: list,
+    ):
+        """Send events for the components in each order
+        :param orders: the orders of the components
+        """
+        pass
+
     def set_bentobox(
         self,
         cols_size: int,
         rows_size: int,
+        order: Optional[int] = None,
     ):
         """Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
-        :param rows_size: the number of rows in the bentobox"""
+        :param rows_size: the number of rows in the bentobox
+        :order: the order of the bentobox in the dashboard
+        """
         pass
 
     def set_modal(
@@ -1087,8 +1105,8 @@ class PlotLayerHeader:
         columns_options: Optional[dict] = None,
         categorical_columns: Optional[list[str]] = None,
         label_columns: Optional[dict] = None,
-        web_link_column: Optional[str] = None,
-        open_link_in_new_tab: bool = False,
+        web_link_columns: Optional[dict[str, str]] = None,
+        open_links_in_new_tab: bool = False,
         title: Optional[str] = None,
         padding: Optional[str] = None,
         rows_size: Optional[int] = None,

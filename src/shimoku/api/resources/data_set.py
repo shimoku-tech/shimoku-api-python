@@ -331,6 +331,80 @@ class DataSet(Resource):
                 ]
             )
 
+    async def delete_data_point(self, uuid: str):
+        """Delete a data point"""
+        self.clear()
+        await self._base_resource.delete_child(self.DataPoint, uuid=uuid)
+
+    async def _update_data_point(self, uuid: str, data: dict):
+        """Update a data point"""
+        data_point = await self._base_resource.get_child(self.DataPoint, uuid=uuid)
+        data_point_as_dict = data_point.cascade_to_dict()
+        data_point.set_params(**{
+            k: data[k] for k in data_point_as_dict
+            if k in data and
+            data[k] != data_point_as_dict[k]
+        })
+        await data_point.update()
+
+    async def update_data_point(self, uuid: str, data: dict):
+        """Update a data point"""
+        self.clear()
+        await self._update_data_point(uuid, data)
+
+    async def linear_update_data_points(self, data_points: list[dict]):
+        """Update data points linearly, this function only is more efficient when
+        the data points to update can be considered constant, otherwise deleting and creating
+        can be more efficient
+
+        data has to follow the schema of the dataset! and it has to have an orderField1
+
+        :param data_points: data points to update
+        """
+        self.clear()
+
+        if 'orderField1' not in data_points[0]:
+            log_error(logger, "The data points must have an orderField1", DataError)
+
+        current_data_points = await self._base_resource.get_children(self.DataPoint)
+        current_data_points = [dp.cascade_to_dict() for dp in current_data_points]
+
+        try:
+            current_data_points = sorted(current_data_points, key=lambda x: x["orderField1"])
+        except TypeError:
+            log_error(
+                logger,
+                "The orderField1 has to be sortable and all the values have to be the same type",
+                DataError
+            )
+        tasks = []
+
+        if len(data_points) < len(current_data_points):
+            current_data_points, current_data_points_to_delete = (
+                current_data_points[:len(data_points)],
+                current_data_points[len(data_points):]
+            )
+            for del_dp in current_data_points_to_delete:
+                tasks.append(self.delete_data_point(del_dp["id"]))
+
+        elif len(data_points) > len(current_data_points):
+            data_points, data_points_to_create = (
+                data_points[:len(current_data_points)],
+                data_points[len(current_data_points):]
+            )
+            tasks.append(
+                self.create_data_points(
+                    data_points=pd.DataFrame(data_points_to_create),
+                    sort={"field": "orderField1"}
+                )
+            )
+
+        for updated_dp, dp in zip(data_points, current_data_points):
+            if any([updated_dp[k] != dp[k] for k in updated_dp]):
+                tasks.append(self._update_data_point(dp["id"], updated_dp))
+
+        await asyncio.gather(*tasks)
+
     async def get_data_points(self, limit: Optional[int] = None):
         """Get data points"""
         self.clear()

@@ -32,7 +32,7 @@ class BoardsLayer(ClassWithLogging):
         business: Business,
     ):
         self._business = business
-        self._get_for_roles = self._business.get_app if business else None
+        self._get_for_roles = self._business.get_dashboard if business else None
 
     async def _get_dashboard_with_warning(
         self, uuid: Optional[str] = None, name: Optional[str] = None

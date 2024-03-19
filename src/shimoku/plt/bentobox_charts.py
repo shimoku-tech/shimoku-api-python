@@ -125,7 +125,7 @@ def infographics_text_bubble(
         chart_parameters["rows_size"] + vertical_padding
     )
 
-    r_hash = create_normalized_name(self._get_chart_hash(order))
+    r_hash = create_normalized_name(self._get_component_hash(order))
 
     html = (
         "<head>"

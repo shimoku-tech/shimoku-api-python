@@ -58,7 +58,7 @@ class Report(Resource):
             """Delete the report dataset"""
             return await self._base_resource.delete()
 
-        async def update(self):
+        async def update(self) -> bool:
             """Update the report dataset"""
             return await self._base_resource.update()
 
@@ -184,7 +184,7 @@ class Report(Resource):
         """Delete the report"""
         return await self._base_resource.delete()
 
-    async def update(self):
+    async def update(self) -> bool:
         """Update the report"""
         return await self._base_resource.update()
 

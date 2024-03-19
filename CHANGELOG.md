@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.2.1 (2024-19-03)
+
+### Fixed
+
+- Next token is implement in the local server
+
 ## 2.2.0 (2024-18-03)
 
 - Actions can be created and executed from the SDK

@@ -87,6 +87,20 @@ class DataSetsLayer(ClassWithLogging):
 
         await self._app.append_data_to_data_set(df, uuid=uuid, name=name)
 
+    async def delete_data_point_from_data_set(
+        self,
+        data_point_id: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ):
+        """Delete a data point from a dataset in the app
+        :param data_point_id: id of the data point
+        :param name: name of the dataset
+        :param uuid: uuid of the dataset
+        """
+        data_set = await self._app.get_data_set(uuid=uuid, name=name)
+        await data_set.delete_data_point(data_point_id)
+
     async def get_data_from_data_set(
         self,
         uuid: Optional[str] = None,

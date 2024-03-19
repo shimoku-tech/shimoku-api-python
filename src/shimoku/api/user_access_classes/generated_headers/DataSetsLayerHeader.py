@@ -11,7 +11,7 @@ class DataSetsLayerHeader:
 
     def append_to_data_set(
         self,
-        data: Union[list[dict], DataFrame],
+        data: Union[list[dict],  DataFrame],
         uuid: Optional[str] = None,
         name: Optional[str] = None,
     ) -> str:
@@ -21,6 +21,19 @@ class DataSetsLayerHeader:
         :param uuid: uuid of the dataset
         :param data: data to be stored in the dataset
         :return: dataset id
+        """
+        pass
+
+    def delete_data_point_from_data_set(
+        self,
+        data_point_id: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ):
+        """Delete a data point from a dataset in the app
+        :param data_point_id: id of the data point
+        :param name: name of the dataset
+        :param uuid: uuid of the dataset
         """
         pass
 
@@ -52,7 +65,7 @@ class DataSetsLayerHeader:
 
     def replace_data_from_data_set(
         self,
-        data: Union[list[dict], DataFrame],
+        data: Union[list[dict],  DataFrame],
         uuid: Optional[str] = None,
         name: Optional[str] = None,
     ):

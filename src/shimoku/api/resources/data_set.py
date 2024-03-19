@@ -331,6 +331,12 @@ class DataSet(Resource):
                 ]
             )
 
+    async def delete_data_point(self, uuid: str):
+        """Delete a data point"""
+        self.clear()
+        data_point = await self._base_resource.get_child(self.DataPoint, uuid=uuid)
+        await data_point.delete()
+
     async def get_data_points(self, limit: Optional[int] = None):
         """Get data points"""
         self.clear()

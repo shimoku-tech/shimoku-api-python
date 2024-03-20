@@ -275,13 +275,15 @@ class PlotLayer(ClassWithLogging):
             log_error(logger, f"No modal found with name {name}", ModalError)
         await self._app.delete_report(r_hash=r_hash)
 
-    def set_bentobox(self, cols_size: int, rows_size: int):
+    def set_bentobox(self, cols_size: int, rows_size: int, order: Optional[int] = None):
         """Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
-        :param rows_size: the number of rows in the bentobox"""
+        :param rows_size: the number of rows in the bentobox
+        :order: the order of the bentobox in the dashboard
+        """
         self._bentobox_data: dict = {
-            "bentoboxId": None,
-            "bentoboxOrder": None,
+            "bentoboxId": None if order is None else "_" + str(order),
+            "bentoboxOrder": order,
             "bentoboxSizeColumns": cols_size,
             "bentoboxSizeRows": rows_size,
         }

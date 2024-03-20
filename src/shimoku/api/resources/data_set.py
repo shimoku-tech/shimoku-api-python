@@ -337,6 +337,18 @@ class DataSet(Resource):
         data_point = await self._base_resource.get_child(self.DataPoint, uuid=uuid)
         await data_point.delete()
 
+    async def update_data_point(self, uuid: str, data: dict):
+        """Update a data point"""
+        self.clear()
+        data_point = await self._base_resource.get_child(self.DataPoint, uuid=uuid)
+        data_point_as_dict = data_point.cascade_to_dict()
+        data_point.set_params(**{
+            k: data[k] for k in data_point_as_dict
+            if k in data and
+            data[k] != data_point_as_dict[k]
+        })
+        await data_point.update()
+
     async def get_data_points(self, limit: Optional[int] = None):
         """Get data points"""
         self.clear()

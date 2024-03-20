@@ -834,10 +834,13 @@ class PlotLayerHeader:
         self,
         cols_size: int,
         rows_size: int,
+        order: Optional[int] = None,
     ):
         """Start using a bentobox, the id and the order will be set when the bentobox is used for the first time
         :param cols_size: the number of columns in the bentobox
-        :param rows_size: the number of rows in the bentobox"""
+        :param rows_size: the number of rows in the bentobox
+        :order: the order of the bentobox in the dashboard
+        """
         pass
 
     def set_modal(

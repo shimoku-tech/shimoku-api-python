@@ -434,12 +434,10 @@ class BaseResource(ClassWithLogging):
         endpoint = f"{self.base_url}{self.resource_type}/{self.id}"
 
         params = {k: v for k, v in self.params.items() if k in self.changed_params}
-
         for field in self.params_to_serialize:
             if field in params:
+                assert isinstance(params[field], (dict, list))
                 params[field] = json.dumps(params[field])
-
-            assert isinstance(self.params[field], (dict, list))
 
         for field, value in params.items():
             if is_dataclass(value):
@@ -668,7 +666,7 @@ class Resource(ClassWithLogging, ABC):
         await_children: Optional[bool] = False,
     ):
         """Initializes a resource."""
-
+        self._initializing = True
         if db_resource:
             uuid = db_resource["id"]
         else:
@@ -706,6 +704,7 @@ class Resource(ClassWithLogging, ABC):
                 if field in self.params_to_serialize and value is not None:
                     value = json.loads(value)
                 self[field] = value
+        self._initializing = False
 
     def __await__(self):
         """Allows the resource to be awaited."""
@@ -814,7 +813,8 @@ class Resource(ClassWithLogging, ABC):
                     ValueError,
                 )
         self._base_resource.params[key] = value if value is not None else class_type()
-        self._base_resource.changed_params.add(key)
+        if not self._initializing:
+            self._base_resource.changed_params.add(key)
 
     def __contains__(self, item):
         """Returns whether the resource contains a parameter with the given name."""

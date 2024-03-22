@@ -1,38 +1,33 @@
-from shimoku.utils import IN_BROWSER
-
+from typing import Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-def snackbar_error(message: str):
-    """
-    Show a snackbar with an error message.
-    Only works in the browser.
-    """
-    if IN_BROWSER:
-        js_snackbar(message, "error")
-    else:
-        logger.info(f"Snackbar error: {message}")
+class FrontEndConnectionAPI:
+    def __init__(self, js_snackbar: Optional[callable] = None):
+        self.js_snackbar = js_snackbar
+
+    def snackbar_error(self, message: str):
+        """
+        Show a snackbar with an error message.
+        Only works in the browser.
+        """
+        self.js_snackbar(message, "error")
+
+    def snackbar_info(self, message: str):
+        """
+        Show a snackbar with an info message.
+        Only works in the browser.
+        """
+        self.js_snackbar(message, "info")
+
+    def snackbar_success(self, message: str):
+        """
+        Show a snackbar with a success message.
+        Only works in the browser.
+        """
+        self.js_snackbar(message, "success")
 
 
-def snackbar_info(message: str):
-    """
-    Show a snackbar with an info message.
-    Only works in the browser.
-    """
-    if IN_BROWSER:
-        js_snackbar(message, "info")
-    else:
-        logger.info(f"Snackbar info: {message}")
-
-
-def snackbar_success(message: str):
-    """
-    Show a snackbar with a success message.
-    Only works in the browser.
-    """
-    if IN_BROWSER:
-        js_snackbar(message, "success")
-    else:
-        logger.info(f"Snackbar success: {message}")
+global_front_end_connection = FrontEndConnectionAPI()

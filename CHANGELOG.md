@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.2.2 (2024-22-03)
+
+### Fixed
+
+- Fixed communication with the front end in the actions execution
+
 ## 2.2.1 (2024-19-03)
 
 ### Fixed

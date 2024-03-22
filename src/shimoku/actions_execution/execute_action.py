@@ -330,13 +330,19 @@ def print_code_with_line_numbers(code: str):
         print(f"{i:3} | {line}")
 
 
-def analyze_action_code(code: str, print_code: bool = False) -> ast.Module:
+def analyze_action_code(
+    code: str,
+    print_code: bool = False,
+) -> ast.Module:
     code = code.replace("\r\n", "\n").replace("\\\n", "").replace("\\\r", "")
     code_lines = code.split("\n")
     main_uuid = str(uuid.uuid4()).replace("-", "_")
 
     script_code_lines = [
         "import asyncio",
+        "from shimoku.actions_execution.front_connection import global_front_end_connection",
+        "",
+        "global_front_end_connection.js_snackbar = js_snackbar",
         "",
         f"async def main_{main_uuid}():",
         *[f"    {line}" for line in code_lines],
@@ -345,7 +351,8 @@ def analyze_action_code(code: str, print_code: bool = False) -> ast.Module:
         "        universe_id=js_universe_id,",
         "        environment=js_environment,",
         "        async_execution=True,",
-        '        verbosity="INFO",',
+        "        verbosity='INFO',",
+        "        retry_attempts=1"
         "    )",
         "    shimoku_client.set_workspace(js_workspace_id)",
         "    action(shimoku_client)",
@@ -356,12 +363,6 @@ def analyze_action_code(code: str, print_code: bool = False) -> ast.Module:
             f"asyncio.get_event_loop().create_task(main_{main_uuid}())",
         )
     else:
-        script_code_lines.insert(4, "")
-        script_code_lines.insert(4, "    js_access_token = None")
-        script_code_lines.insert(4, "    js_universe_id = 'local'")
-        script_code_lines.insert(4, "    js_environment = 'production'")
-        script_code_lines.insert(4, "    js_workspace_id = 'local'")
-
         script_code_lines.insert(
             -3, "    shimoku_client._async_pool.ACTIONS_TEST = True"
         )
@@ -389,10 +390,25 @@ def analyze_action_code(code: str, print_code: bool = False) -> ast.Module:
     return script_ast
 
 
-def execute_action_code(code: str, print_code: bool = False):
+def execute_action_code(
+    code: str,
+    print_code: bool = False,
+    js_access_token: str = None,
+    js_universe_id: str = "local",
+    js_environment: str = "production",
+    js_workspace_id: str = "local",
+    js_snackbar: Optional[callable] = None
+):
+    context = {
+        'js_access_token': js_access_token,
+        'js_universe_id': js_universe_id,
+        'js_environment': js_environment,
+        'js_workspace_id': js_workspace_id,
+        'js_snackbar': js_snackbar,
+    }
     script_ast = analyze_action_code(code, print_code)
     warnings.filterwarnings("ignore", category=RuntimeWarning)
-    exec(compile(script_ast, filename="shimoku_action", mode="exec"))
+    exec(compile(script_ast, filename="shimoku_action", mode="exec"), context)
     warnings.resetwarnings()
 
 

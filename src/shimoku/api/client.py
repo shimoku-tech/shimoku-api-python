@@ -15,7 +15,7 @@ from pkg_resources import get_distribution
 
 
 import logging
-from shimoku.execution_logger import ClassWithLogging
+from shimoku.execution_logger import ClassWithLogging, log_error
 
 logger = logging.getLogger(__name__)
 
@@ -389,8 +389,7 @@ class ApiClient(ClassWithLogging):
                 if isinstance(response, str)
                 else response
             )
-        logger.error(response)
-        raise APIError(response)
+        log_error(logger, response, APIError)
 
     _request = get_request_function()
 

@@ -159,7 +159,47 @@ def generate_schema(fast_api_app, types, db, is_child_of):
             query_fields[name] = list_query_field(types, db, parent_type, type_name)
 
     Query = type("Query", (graphene.ObjectType,), query_fields)
-    schema = graphene.Schema(query=Query, subscription=Subscription)
+
+    # TODO: Implement mutations
+    ##################-TEMPORAL!-#####################
+    ####-just so frontend doesnt display an error-####
+    ###########-fix when mutations needed-############
+    from graphene import Mutation, InputObjectType
+
+    class UpdateUserInputExposed(InputObjectType):
+        id = graphene.ID(required=True)
+        name = graphene.String()
+        email = graphene.String()
+        companyName = graphene.String()
+        companyRole = graphene.String()
+        createdAt = graphene.String()
+        phoneNumber = graphene.String()
+        birthDate = graphene.String()
+        accountInUseId = graphene.String()
+        shopifyMasterAccountId = graphene.String()
+        cognitoId = graphene.String()
+        updateApiToken = graphene.Boolean()
+        kindOfUser = graphene.String()
+        newsletterAccepted = graphene.String()
+
+    class UpdateUser(Mutation):
+        class Arguments:
+            input = UpdateUserInputExposed(required=True)
+
+        id = graphene.String()
+        ok = graphene.Boolean()
+
+        def mutate(self, info, input):
+            return UpdateUser(ok=True, id=input.id)
+
+    class MyMutations(graphene.ObjectType):
+        updateUser = UpdateUser.Field()
+
+    ##################################################
+    ##################################################
+    ##################################################
+
+    schema = graphene.Schema(query=Query, subscription=Subscription, mutation=MyMutations)
 
     # Integrate with FastAPI (assuming you have a way to do this)
     graphql_app = GraphQLApp(schema, on_get=make_graphiql_handler())

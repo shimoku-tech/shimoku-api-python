@@ -179,7 +179,6 @@ class ApiClient(ClassWithLogging):
 
         self.default_headers = {
             "Content-Type": "application/json",
-            "User-Agent": "Swagger-Codegen/0.0/python",
         }
         self.set_config(config)
         self.call_counter = 0
@@ -407,13 +406,14 @@ class ApiClient(ClassWithLogging):
         headers = headers or {}
         if to_tazawa:
             headers.update({"Authorization": "Bearer " + self.access_token})
-            headers.update(
-                {
-                    SHIMOKU_VERSION_KEY: get_distribution("shimoku").version
-                    if not IN_BROWSER
-                    else "2.0.0"
-                }
-            )
+            # TODO see how to handle from the browser
+            # headers.update(
+            #     {
+            #         SHIMOKU_VERSION_KEY: get_distribution("shimoku").version
+            #         if not IN_BROWSER
+            #         else "2.0.0"
+            #     }
+            # )
 
         if method not in ["GET", "HEAD", "OPTIONS", "DELETE", "POST", "PUT", "PATCH"]:
             raise ValueError(

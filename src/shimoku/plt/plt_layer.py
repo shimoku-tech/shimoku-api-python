@@ -1373,6 +1373,44 @@ class PlotLayer(ClassWithLogging):
         )
 
     @add_to_general_async_group
+    async def action_button(
+        self,
+        label: str,
+        order: int,
+        action_id: str,
+        rows_size: Optional[int] = 1,
+        cols_size: int = 2,
+        align: Optional[str] = "stretch",
+        padding: Optional[str] = None,
+    ):
+        """
+        Create a button in the dashboard that executes an action.
+        :param label: the label of the button
+        :param order: the order of the button
+        :param action_id: the id of the action
+        :param rows_size: the size of the rows in the button
+        :param cols_size: the size of the columns in the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        """
+        await self._button(
+            label=label,
+            order=order,
+            padding=padding,
+            rows_size=rows_size,
+            cols_size=cols_size,
+            align=align,
+            on_click_events=[
+                dict(
+                    action="runAction",
+                    params=dict(
+                        actionId=action_id,
+                    ),
+                )
+            ],
+        )
+
+    @add_to_general_async_group
     async def table(
         self,
         order: int,
@@ -1559,6 +1597,7 @@ class PlotLayer(ClassWithLogging):
         modal: Optional[str] = None,
         activity_id: Optional[str] = None,
         activity_name: Optional[str] = None,
+        action_id: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
         """Creates an input form.
@@ -1570,6 +1609,7 @@ class PlotLayer(ClassWithLogging):
         :param modal: the modal to open after submitting the form
         :param activity_id: the activity id to run after submitting the form
         :param activity_name: the activity name to run after submitting the form
+        :param action_id: the action id to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
         """
         validate_input_form_data(self, options)
@@ -1593,6 +1633,16 @@ class PlotLayer(ClassWithLogging):
                     "action": "runActivity",
                     "params": {
                         "activityId": activity_id,
+                    },
+                }
+            )
+
+        if action_id:
+            on_submit_events.append(
+                {
+                    "action": "runAction",
+                    "params": {
+                        "actionId": action_id,
                     },
                 }
             )

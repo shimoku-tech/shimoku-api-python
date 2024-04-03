@@ -398,12 +398,12 @@ class TestCodeGen(unittest.TestCase):
         self.shimoku_client.set_menu_path("Pull-menu-path")
         create_bar_chart(self.shimoku_client)
         self.shimoku_client.pop_out_of_board()
+        self.shimoku_client.disable_caching()
         tpa_boards, tpa_menu_paths, tpa_components, tpa_data = get_workspace_contents(
             self.shimoku_client
         )
 
         local_shimoku_client = Client(verbosity="INFO")
-        local_shimoku_client.disable_caching()
         local_shimoku_client.set_workspace()
         clear_workspace(local_shimoku_client)
         subprocess.run(
@@ -425,6 +425,7 @@ class TestCodeGen(unittest.TestCase):
                 self.shimoku_client.environment,
             ]
         )
+        local_shimoku_client.disable_caching()
         (
             local_boards,
             local_menu_paths,
@@ -442,6 +443,6 @@ class TestCodeGen(unittest.TestCase):
             "data": (get_diff_percentage(tpa_data, local_data)),
         }
         print(json.dumps(results, indent=4))
-        print(local_menu_paths)
         print(tpa_menu_paths)
+        print(local_menu_paths)
         assert all([value == 0 for value in results.values()])

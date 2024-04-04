@@ -138,6 +138,8 @@ def add_list_parser(parser: Optional[CLIParser] = None):
         ai_execution_logs,
         ai_output_files,
         roles,
+        invitations,
+        workspace_users,
     ]
 
     for func in module_functions:
@@ -878,6 +880,42 @@ async def ai_output_files(
     list_filtering_and_display(
         files_dict,
         table_title=f"Output files from {ai_function or model_name}",
+        **kwargs,
+    )
+
+
+async def invitations(
+    workspace_id: Optional[str],
+    **kwargs,
+):
+    """List the invitations in the workspace
+    :param workspace_id: UUID of the workspace to use
+    """
+    resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
+    business_layer = await resource_getter.get_businesses_layer()
+    business = await resource_getter.get_business()
+    list_filtering_and_display(
+        await business_layer.get_pending_invitations(business["id"]),
+        table_title=f"Invitations from Workspace {str(business)}",
+        fields=resource_getter.get_invitation_fields_to_show(),
+        **kwargs,
+    )
+
+
+async def workspace_users(
+    workspace_id: Optional[str],
+    **kwargs,
+):
+    """List the accounts in the workspace
+    :param workspace_id: UUID of the workspace to use
+    """
+    resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
+    business_layer = await resource_getter.get_businesses_layer()
+    business = await resource_getter.get_business()
+    list_filtering_and_display(
+        await business_layer.get_all_workspace_users(business["id"]),
+        table_title=f"Users with access to Workspace {str(business)}",
+        fields=resource_getter.get_user_fields_to_show(),
         **kwargs,
     )
 

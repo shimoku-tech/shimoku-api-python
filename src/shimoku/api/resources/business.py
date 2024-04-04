@@ -2,6 +2,7 @@ from uuid import uuid1
 from typing import Optional, TYPE_CHECKING
 
 from shimoku.api.base_resource import Resource
+from shimoku.api.resources.business_user import BusinessUser, BusinessInvitation
 from shimoku.api.resources.role import (
     Role,
     create_role,
@@ -47,7 +48,7 @@ class Business(Resource):
             parent=parent,
             uuid=uuid,
             db_resource=db_resource,
-            children=[Dashboard, App, Role, Event],
+            children=[Dashboard, App, Role, Event, BusinessUser, BusinessInvitation],
             check_params_before_creation=["name"],
             params_to_serialize=["theme"],
             params=params,
@@ -211,6 +212,26 @@ class Business(Resource):
             return
         await self._base_resource.update_child(App, uuid=uuid, alias=name, **params)
         await self.create_event(EventType.APP_UPDATED, params, app["id"])
+
+    # Account methods
+    async def invite_user(self, email: str) -> BusinessInvitation:
+        invitation = await self._base_resource.create_child(
+            BusinessInvitation, email=email
+        )
+        logger.info(f"Invitation sent to ({email})")
+        return invitation
+
+    async def get_pending_invitations(self):
+        return await self._base_resource.get_children(BusinessInvitation)
+
+    async def delete_pending_invitation(self, email: str):
+        return await self._base_resource.delete_child(BusinessInvitation, alias=email)
+
+    async def get_users(self):
+        return await self._base_resource.get_children(BusinessUser)
+
+    async def delete_user(self, email: str):
+        return await self._base_resource.delete_child(BusinessUser, alias=email)
 
     # Role methods
     get_role = get_role

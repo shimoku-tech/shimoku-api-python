@@ -11,11 +11,13 @@ from shimoku.exceptions import (
     ActivityTemplateError,
     ActivityError,
     RoleError,
+    WorkspaceUserError,
 )
 from shimoku.execution_logger import log_error
 from shimoku.api.client import ApiClient
 from shimoku.api.resources.universe import Universe
 from shimoku.api.resources.business import Business
+from shimoku.api.resources.business_user import BusinessUser
 from shimoku.api.resources.dashboard import Dashboard
 from shimoku.api.resources.activity_template import ActivityTemplate
 from shimoku.api.resources.app import App
@@ -192,6 +194,14 @@ class ResourceGetter:
         if show_theme:
             fields.append("theme")
         return fields
+
+    @staticmethod
+    def get_invitation_fields_to_show() -> list[str]:
+        return ["email"]
+
+    @staticmethod
+    def get_user_fields_to_show() -> list[str]:
+        return ["email", "name"]
 
     async def get_dashboards_layer(self) -> BoardsLayer:
         business: Business = await self.get_business()

@@ -93,6 +93,20 @@ class WorkspacesLayerHeader:
         """
         pass
 
+    def delete_pending_invitation(
+        self,
+        email: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Delete a pending invitation of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param email: Email of the user
+        :return: True if the invitation was deleted
+        """
+        pass
+
     def delete_role(
         self,
         uuid: Optional[str] = None,
@@ -118,6 +132,30 @@ class WorkspacesLayerHeader:
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         :return: True if the workspace was deleted
+        """
+        pass
+
+    def get_all_workspace_users(
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> list:
+        """Get the users of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: list of users
+        """
+        pass
+
+    def get_pending_invitations(
+        self,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> list:
+        """Get the pending invitations of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: list of invitations
         """
         pass
 
@@ -192,6 +230,34 @@ class WorkspacesLayerHeader:
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
         :return: list of apps
+        """
+        pass
+
+    def invite_user(
+        self,
+        email: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> Optional[dict]:
+        """Invite a user to the workspace
+        :param email: Email of the user
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: Invitation data
+        """
+        pass
+
+    def remove_user_from_workspace(
+        self,
+        email: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Remove a user from a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param email: Email of the user
+        :return: True if the user was removed
         """
         pass
 

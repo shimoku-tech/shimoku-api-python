@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.3 (2024-05-04)
+
+-  Fixed CORS error with the API from the execution of the Actions
+
 ## 2.2.2 (2024-22-03)
 
 ### Fixed

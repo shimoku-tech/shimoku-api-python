@@ -9,6 +9,28 @@ class PlotLayerHeader:
     This class is a high level abstraction of the API, it is used to create components and data sets easily.
     """
 
+    def action_button(
+        self,
+        label: str,
+        order: int,
+        action_id: str,
+        rows_size: Optional[int] = 1,
+        cols_size: int = 2,
+        align: Optional[str] = "stretch",
+        padding: Optional[str] = None,
+    ):
+        """
+        Create a button in the dashboard that executes an action.
+        :param label: the label of the button
+        :param order: the order of the button
+        :param action_id: the id of the action
+        :param rows_size: the size of the rows in the button
+        :param cols_size: the size of the columns in the button
+        :param align: the alignment of the button
+        :param padding: the padding of the button
+        """
+        pass
+
     def activity_button(
         self,
         label: str,
@@ -504,6 +526,7 @@ class PlotLayerHeader:
         modal: Optional[str] = None,
         activity_id: Optional[str] = None,
         activity_name: Optional[str] = None,
+        action_id: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
         """Creates an input form.
@@ -515,6 +538,7 @@ class PlotLayerHeader:
         :param modal: the modal to open after submitting the form
         :param activity_id: the activity id to run after submitting the form
         :param activity_name: the activity name to run after submitting the form
+        :param action_id: the action id to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
         """
         pass

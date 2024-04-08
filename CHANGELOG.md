@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.3.0 (2024-08-04)
+
+- User accounts handling through the SDK
+
 ## 2.2.3 (2024-05-04)
 
 -  Fixed CORS error with the API from the execution of the Actions

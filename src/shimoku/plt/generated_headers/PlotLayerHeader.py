@@ -325,6 +325,7 @@ class PlotLayerHeader:
         modal: Optional[str] = None,
         activity_id: Optional[str] = None,
         activity_name: Optional[str] = None,
+        action_id: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
         """Easier way to create an input form.
@@ -340,6 +341,7 @@ class PlotLayerHeader:
         :param modal: the modal to open after submitting the form
         :param activity_id: the activity id to run after submitting the form
         :param activity_name: the activity name to run after submitting the form
+        :param action_id: the action id to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
         """
         pass

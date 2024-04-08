@@ -1712,6 +1712,7 @@ class PlotLayer(ClassWithLogging):
         modal: Optional[str] = None,
         activity_id: Optional[str] = None,
         activity_name: Optional[str] = None,
+        action_id: Optional[str] = None,
         on_submit_events: Optional[list[dict]] = None,
     ):
         """Easier way to create an input form.
@@ -1727,6 +1728,7 @@ class PlotLayer(ClassWithLogging):
         :param modal: the modal to open after submitting the form
         :param activity_id: the activity id to run after submitting the form
         :param activity_name: the activity name to run after submitting the form
+        :param action_id: the action id to run after submitting the form
         :param on_submit_events: the events to run after submitting the form
         """
         report_data_set_properties = {"fields": []}
@@ -1763,6 +1765,7 @@ class PlotLayer(ClassWithLogging):
             activity_id=activity_id,
             activity_name=activity_name,
             on_submit_events=on_submit_events,
+            action_id=action_id,
         )
 
     async def _get_input_form_data(self, input_form: InputForm) -> dict:

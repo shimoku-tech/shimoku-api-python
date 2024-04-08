@@ -44,7 +44,7 @@ def get_request_function():
                 timeout=self.timeout,
                 params=query_params,
             )
-            if method == "GET":
+            if not body:
                 del params["body"]
             res = await pyfetch(url, **params)
             if (

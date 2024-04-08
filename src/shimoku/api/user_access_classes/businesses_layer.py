@@ -322,6 +322,94 @@ class WorkspacesLayer(ClassWithLogging):
 
         await asyncio.gather(*tasks)
 
+    # Accounts management
+    async def invite_user(
+        self, email: str, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> Optional[dict]:
+        """Invite a user to the workspace
+        :param email: Email of the user
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: Invitation data
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return None
+        return (await business.invite_user(email)).cascade_to_dict()
+
+    async def get_pending_invitations(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> list[dict]:
+        """Get the pending invitations of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: list of invitations
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return []
+        return [
+            invitation.cascade_to_dict()
+            for invitation in await business.get_pending_invitations()
+        ]
+
+    async def delete_pending_invitation(
+        self,
+        email: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Delete a pending invitation of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param email: Email of the user
+        :return: True if the invitation was deleted
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return False
+
+        if await business.delete_pending_invitation(email=email):
+            logger.info(f"Successfully deleted pending invitation ({email})")
+            return True
+        else:
+            logger.warning(f"Failed to delete pending invitation ({email})")
+            return False
+
+    async def get_all_workspace_users(
+        self, uuid: Optional[str] = None, name: Optional[str] = None
+    ) -> list[dict]:
+        """Get the users of a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :return: list of users
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return []
+        return [user.cascade_to_dict() for user in await business.get_users()]
+
+    async def remove_user_from_workspace(
+        self,
+        email: str,
+        uuid: Optional[str] = None,
+        name: Optional[str] = None,
+    ) -> bool:
+        """Remove a user from a workspace
+        :param name: Name of the workspace
+        :param uuid: UUID of the workspace
+        :param email: Email of the user
+        :return: True if the user was removed
+        """
+        business = await self._get_business_with_warning(uuid=uuid, name=name)
+        if not business:
+            return False
+
+        if await business.delete_user(email=email):
+            logger.info(f"Successfully removed user ({email} from workspace")
+        else:
+            logger.warning(f"Failed to remove user ({email}) from workspace")
+
     # Role management
     get_role = user_get_role
     get_roles = user_get_roles

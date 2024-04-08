@@ -61,6 +61,7 @@ def add_create_parser(parser: Optional[CLIParser] = None):
         file,
         ai_input_file,
         role,
+        invitation,
     ]
 
     for func in module_functions:
@@ -275,6 +276,21 @@ async def ai_input_file(
     )
     ai_layer = await resource_getter.get_ai_layer()
     await ai_layer.create_input_files(input_files={name: file_content})
+
+
+async def invitation(
+    workspace_id: Optional[str],
+    email: str = CLIFuncParam(prompt=True),
+    **kwargs,
+):
+    """Invite a user to the workspace
+    :param workspace_id: UUID of the workspace to use
+    :param email: Email of the user to invite
+    """
+    business = await ResourceGetter(
+        InitOptions(workspace_id=workspace_id, **kwargs)
+    ).get_business()
+    await business.invite_user(email=email)
 
 
 async def role(

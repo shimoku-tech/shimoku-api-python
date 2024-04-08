@@ -68,6 +68,8 @@ def add_delete_parser(parser: Optional[CLIParser] = None):
         ai_input_file,
         ai_model,
         role,
+        invitation,
+        workspace_user,
     ]
 
     for func in module_functions:
@@ -530,6 +532,36 @@ async def role(
         resource_id = (await resource_getter.get_business())["id"]
 
     await layer.delete_role(uuid=resource_id, role_name=role_obj["role"])
+
+
+async def invitation(
+    workspace_id: Optional[str],
+    email: str = CLIFuncParam(prompt=True),
+    **kwargs,
+):
+    """Delete an invitation
+    :param workspace_id: UUID of the workspace to use
+    :param email: Email of the invitation to delete
+    """
+    resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
+    businesses_layer = await resource_getter.get_businesses_layer()
+    business = await resource_getter.get_business()
+    await businesses_layer.delete_pending_invitation(email=email, uuid=business["id"])
+
+
+async def workspace_user(
+    workspace_id: Optional[str],
+    email: str = CLIFuncParam(prompt=True),
+    **kwargs,
+):
+    """Delete a workspace user
+    :param workspace_id: UUID of the workspace to use
+    :param email: Email of the user to delete
+    """
+    resource_getter = ResourceGetter(InitOptions(workspace_id=workspace_id, **kwargs))
+    businesses_layer = await resource_getter.get_businesses_layer()
+    business = await resource_getter.get_business()
+    await businesses_layer.remove_user_from_workspace(email=email, uuid=business["id"])
 
 
 if __name__ == "__main__":

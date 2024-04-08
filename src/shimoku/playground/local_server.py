@@ -128,12 +128,12 @@ def list_query_field(
             results.items = results.items[next_token_index:]
             offset = next_token_index
         elif "from" in kwargs:
-            results.items = results.items[kwargs["from"]:]
+            results.items = results.items[kwargs["from"] :]
             offset = kwargs["from"]
         if "limit" in kwargs:
-            results.items = results.items[:kwargs["limit"]]
-            if offset+kwargs["limit"] < total:
-                results.nextToken = str(offset+kwargs["limit"])
+            results.items = results.items[: kwargs["limit"]]
+            if offset + kwargs["limit"] < total:
+                results.nextToken = str(offset + kwargs["limit"])
         return results
 
     return graphene.Field(
@@ -199,7 +199,9 @@ def generate_schema(fast_api_app, types, db, is_child_of):
     ##################################################
     ##################################################
 
-    schema = graphene.Schema(query=Query, subscription=Subscription, mutation=MyMutations)
+    schema = graphene.Schema(
+        query=Query, subscription=Subscription, mutation=MyMutations
+    )
 
     # Integrate with FastAPI (assuming you have a way to do this)
     graphql_app = GraphQLApp(schema, on_get=make_graphiql_handler())

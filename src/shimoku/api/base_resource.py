@@ -82,6 +82,16 @@ class ResourceCache(ClassWithLogging):
                 logger.warning("Resource's json should have an 'items' field")
                 return []
 
+            # If the resources have no 'id' field, they have to have only one field and it has to be a dict
+            # Then the resources are mapped to that field
+            if resources and resources[0].get("id") is None:
+                resources_keys = [
+                    k for k in list(resources[0].keys()) if not k.startswith("_")
+                ]
+                assert len(resources_keys) == 1
+                assert isinstance(resources[0][resources_keys[0]], dict)
+                resources = [resource[resources_keys[0]] for resource in resources]
+
             # Sort resources by id to ensure consistent ordering for alias collision resolution
             resources = sorted(resources, key=lambda x: x.get("id"))
 
@@ -275,8 +285,10 @@ class BaseResource(ClassWithLogging):
         params_to_serialize: Optional[List[str]] = None,
         await_children: Optional[bool] = False,
         wrapper_class_instance: Optional[IsResource] = None,
+        url_post_name: Optional[str] = None,
     ):
         self.alias_field = alias_field
+        self.post_name = url_post_name
         self.resource_type = resource_type
 
         self.id = uuid
@@ -375,7 +387,10 @@ class BaseResource(ClassWithLogging):
 
     async def create(self) -> str:
         """Creates the resource in the API with the current params."""
-        endpoint = f"{self.base_url}{self.resource_type}"
+        if self.post_name:
+            endpoint = f"{self.base_url}{self.post_name}"
+        else:
+            endpoint = f"{self.base_url}{self.resource_type}"
 
         self.changed_params = set()
 
@@ -633,8 +648,11 @@ class BaseResource(ClassWithLogging):
 
 class Resource(ClassWithLogging, ABC):
     alias_field: Optional[AliasField] = None
+
     resource_type: Optional[str] = None
     plural: Optional[str] = None
+    url_post_name: Optional[str] = None
+
     elastic_supported: bool = False
 
     def __init__(
@@ -666,6 +684,7 @@ class Resource(ClassWithLogging, ABC):
             params_to_serialize=params_to_serialize,
             await_children=await_children,
             wrapper_class_instance=self,
+            url_post_name=self.url_post_name,
         )
 
         self._base_resource.children = (

@@ -352,7 +352,7 @@ def analyze_action_code(
         "        environment=js_environment,",
         "        async_execution=True,",
         "        verbosity='INFO',",
-        "        retry_attempts=1"
+        "        retry_attempts=1",
         "    )",
         "    shimoku_client.set_workspace(js_workspace_id)",
         "    action(shimoku_client)",
@@ -397,14 +397,14 @@ def execute_action_code(
     js_universe_id: str = "local",
     js_environment: str = "production",
     js_workspace_id: str = "local",
-    js_snackbar: Optional[callable] = None
+    js_snackbar: Optional[callable] = None,
 ):
     context = {
-        'js_access_token': js_access_token,
-        'js_universe_id': js_universe_id,
-        'js_environment': js_environment,
-        'js_workspace_id': js_workspace_id,
-        'js_snackbar': js_snackbar,
+        "js_access_token": js_access_token,
+        "js_universe_id": js_universe_id,
+        "js_environment": js_environment,
+        "js_workspace_id": js_workspace_id,
+        "js_snackbar": js_snackbar,
     }
     script_ast = analyze_action_code(code, print_code)
     warnings.filterwarnings("ignore", category=RuntimeWarning)

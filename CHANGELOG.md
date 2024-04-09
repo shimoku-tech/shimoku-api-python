@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.3.1 (2024-09-04)
+
+- Fixed CORS error when deleting resources with Actions
+
 ## 2.3.0 (2024-08-04)
 
 - User accounts handling through the SDK

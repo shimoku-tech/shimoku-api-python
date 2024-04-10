@@ -104,6 +104,22 @@ from shimoku.execution_logger import log_error, ClassWithLogging
 logger = logging.getLogger(__name__)
 
 
+def get_component_hash(
+    order: int,
+    current_path: Optional[str] = None,
+    current_tab: Optional[tuple[TabsGroup, str]] = None,
+    current_modal: Optional[Modal] = None,
+) -> str:
+    r_hash = f"{order}"
+    if current_tab and current_tab[0] and current_tab[1]:
+        r_hash = f'{current_tab[0]["properties"]["hash"]}_{current_tab[1]}_{order}'
+    elif current_modal:
+        r_hash = f'{current_modal["properties"]["hash"]}_{order}'
+    elif current_path:
+        r_hash = f"{current_path}_{order}"
+    return r_hash
+
+
 class PlotLayer(ClassWithLogging):
     """
     This class is a high level abstraction of the API, it is used to create components and data sets easily.
@@ -159,7 +175,7 @@ class PlotLayer(ClassWithLogging):
         Check if there are charts with the same order.
         :param order: the order of the chart
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         free_context: dict = async_pool.free_context
         if "list_for_conflicts" not in free_context:
             free_context["list_for_conflicts"] = []
@@ -558,15 +574,13 @@ class PlotLayer(ClassWithLogging):
             )
         return self._current_tabs_group
 
-    def _get_chart_hash(self, order: int) -> str:
-        r_hash = f"{order}"
-        if self._current_tabs_group:
-            r_hash = f'{self._current_tabs_group["properties"]["hash"]}_{self._current_tab}_{order}'
-        elif self._current_modal:
-            r_hash = f'{self._current_modal["properties"]["hash"]}_{order}'
-        elif self._current_path:
-            r_hash = f"{self._current_path}_{order}"
-        return r_hash
+    def _get_component_hash(self, order: int) -> str:
+        return get_component_hash(
+            order,
+            current_path=self._current_path,
+            current_tab=(self._current_tabs_group, self._current_tab),
+            current_modal=self._current_modal
+        )
 
     async def _get_chart_report(
         self, order: int, chart_class: type[Report], create_if_not_exists: bool = True
@@ -576,7 +590,7 @@ class PlotLayer(ClassWithLogging):
         :param chart_class: the chart class
         :param create_if_not_exists: whether to create the chart if it doesn't exist
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         report = await self._app.get_report(r_hash=r_hash)
 
         if not report:
@@ -594,7 +608,7 @@ class PlotLayer(ClassWithLogging):
         """Get the component by order.
         :param order: the order of the component
         """
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
         report = await self._app.get_report(r_hash=r_hash)
         if not report:
             return None
@@ -1813,7 +1827,7 @@ class PlotLayer(ClassWithLogging):
         if auto_send:
             report_data_set_properties["variant"] = "autoSend"
 
-        r_hash = self._get_chart_hash(order)
+        r_hash = self._get_component_hash(order)
 
         next_id = f"{r_hash}_0" if dynamic_sequential_show else None
 

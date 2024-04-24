@@ -324,18 +324,22 @@ class WorkspacesLayer(ClassWithLogging):
 
     # Accounts management
     async def invite_user(
-        self, email: str, uuid: Optional[str] = None, name: Optional[str] = None
+        self, email: str, uuid: Optional[str] = None, name: Optional[str] = None,
+        roles: Optional[list[str]] = None
     ) -> Optional[dict]:
         """Invite a user to the workspace
         :param email: Email of the user
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
+        :param roles: Roles of the user
         :return: Invitation data
         """
+        if not roles:
+            roles = []
         business = await self._get_business_with_warning(uuid=uuid, name=name)
         if not business:
             return None
-        return (await business.invite_user(email)).cascade_to_dict()
+        return (await business.invite_user(email, roles)).cascade_to_dict()
 
     async def get_pending_invitations(
         self, uuid: Optional[str] = None, name: Optional[str] = None

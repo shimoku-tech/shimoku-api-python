@@ -15,7 +15,7 @@ from shimoku.api.resources.dashboard import Dashboard
 from shimoku.api.resources.app import App
 
 from shimoku.utils import EventType
-from shimoku.exceptions import WorkspaceError, MenuPathError, BoardError
+from shimoku.exceptions import WorkspaceError, MenuPathError, BoardError, RoleError
 
 if TYPE_CHECKING:
     from shimoku.api.resources.universe import Universe
@@ -79,7 +79,6 @@ class Business(Resource):
         """
         if event_type != EventType.BUSINESS_CONTENTS_UPDATED:
             return
-
         event = Event(parent=self)
         event.set_params(type=event_type.value, content=content, resourceId=resource_id)
         await event
@@ -214,9 +213,9 @@ class Business(Resource):
         await self.create_event(EventType.APP_UPDATED, params, app["id"])
 
     # Account methods
-    async def invite_user(self, email: str) -> BusinessInvitation:
+    async def invite_user(self, email: str, roles: list[str]) -> BusinessInvitation:
         invitation = await self._base_resource.create_child(
-            BusinessInvitation, email=email
+            BusinessInvitation, email=email, roles=roles
         )
         logger.info(f"Invitation sent to ({email})")
         return invitation

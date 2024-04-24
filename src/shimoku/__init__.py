@@ -122,7 +122,6 @@ class Client:
             server_port=local_port,
             retry_attempts=retry_attempts,
         )
-
         self._universe_object = Universe(self._api_client, uuid=universe_id)
         self._business_object: Optional[Business] = None
         self._app_object: Optional[App] = None
@@ -424,10 +423,9 @@ class Client:
         """Run the tasks in the execution pool."""
 
         async def a_run(_self):
-            if self._api_client.playground:
-                self._async_pool.ending_tasks[
-                    "Business_contents_updated"
-                ] = self._create_business_contents_updated_event()
+            self._async_pool.ending_tasks[
+                "Business_contents_updated"
+            ] = self._create_business_contents_updated_event()
 
         return self._async_pool.auto_async_func_call(
             name="run",

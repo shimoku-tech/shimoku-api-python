@@ -26,7 +26,7 @@ class BusinessInvitation(Resource):
     ):
         params = dict(
             email="",
-            # roles=[],
+            roles=[],
         )
 
         super().__init__(

@@ -22,6 +22,7 @@ class Event(Resource):
             type="NO_EVENT",
             resourceId=None,
             content={},
+            authResourceType="BUSINESS",
         )
 
         super().__init__(

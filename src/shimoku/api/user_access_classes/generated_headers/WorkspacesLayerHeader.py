@@ -240,11 +240,13 @@ class WorkspacesLayerHeader:
         email: str,
         uuid: Optional[str] = None,
         name: Optional[str] = None,
+        roles: Optional[list[str]] = None,
     ) -> Optional[dict]:
         """Invite a user to the workspace
         :param email: Email of the user
         :param name: Name of the workspace
         :param uuid: UUID of the workspace
+        :param roles: Roles of the user
         :return: Invitation data
         """
         pass

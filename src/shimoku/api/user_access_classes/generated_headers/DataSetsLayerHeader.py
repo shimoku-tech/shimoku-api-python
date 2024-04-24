@@ -114,6 +114,7 @@ class DataSetsLayerHeader:
         This makes this function more efficient for small changes than replace_data_from_data_set.
         But if the changes are linear in proportion to the size of the dataset, this function can be
         slower than replace_data_from_data_set.
+
         :param data: data to be stored in the dataset
         :param name: name of the dataset
         :param uuid: uuid of the dataset

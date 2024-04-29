@@ -1515,8 +1515,8 @@ class PlotLayer(ClassWithLogging):
         columns_options: Optional[dict] = None,
         categorical_columns: Optional[list[str]] = None,
         label_columns: Optional[dict] = None,
-        web_link_column: Optional[str] = None,
-        open_link_in_new_tab: bool = False,
+        web_link_columns: Optional[dict[str, str]] = None,
+        open_links_in_new_tab: bool = False,
         title: Optional[str] = None,
         padding: Optional[str] = None,
         rows_size: Optional[int] = None,
@@ -1559,6 +1559,8 @@ class PlotLayer(ClassWithLogging):
             columns_options = {}
         if not categorical_columns:
             categorical_columns = []
+        if not web_link_columns:
+            web_link_columns = {}
         if not label_columns:
             label_columns = {}
         else:
@@ -1581,7 +1583,11 @@ class PlotLayer(ClassWithLogging):
         _, data_set, _ = data_mappings_to_tuples[columns[0]]
         columns_dicts = []
         rows_dict = {"mapping": {}}
+
         for i, name in enumerate(columns):
+            rows_dict["mapping"][name] = data_mappings_to_tuples[name][0]
+            if name in web_link_columns.values() and name not in web_link_columns:
+                continue
             column_options = {"field": name, "headerName": name, "order": i}
 
             if buttons_column_definition and name == buttons_column_definition.column_name:
@@ -1609,20 +1615,13 @@ class PlotLayer(ClassWithLogging):
                     df, name, label_options, variant
                 )
 
-            if name == web_link_column:
+            if name in web_link_columns:
                 column_options["link"] = {
-                    "url": "webLink",
-                    "openNewTab": open_link_in_new_tab,
+                    "url": web_link_columns[name],
+                    "openNewTab": open_links_in_new_tab,
                 }
 
             columns_dicts.append(column_options)
-            rows_dict["mapping"][name] = data_mappings_to_tuples[name][0]
-
-        if web_link_column:
-            rows_dict["mapping"]["web"] = data_mappings_to_tuples[web_link_column][0]
-            rows_dict["mapping"]["webLink"] = data_mappings_to_tuples[web_link_column][
-                0
-            ]
 
         _, report = await self._get_chart_report(order, Table)
 

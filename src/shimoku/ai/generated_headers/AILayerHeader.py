@@ -2,6 +2,8 @@
 # If the user access files are modified, this file has to be regenerated with the script.
 from typing import Optional, Union
 from pandas import DataFrame
+from dataclasses import dataclass
+import shimoku
 
 
 class AIFunctionMethodsHeader:

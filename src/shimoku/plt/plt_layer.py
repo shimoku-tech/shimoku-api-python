@@ -2,6 +2,7 @@ import pandas as pd
 import asyncio
 import numpy as np
 
+from dataclasses import dataclass
 from copy import deepcopy
 
 from pandas import DataFrame
@@ -1410,11 +1411,81 @@ class PlotLayer(ClassWithLogging):
             ],
         )
 
+    @dataclass
+    class TableButtonColumnDefinition:
+        column_name: str
+        label: str
+        modals_column: Optional[str] = None
+        activities_column: Optional[str] = None
+        actions_column: Optional[str] = None
+
+    async def _add_buttons_to_table_data(
+        self,
+        data: Union[str, pd.DataFrame, list[dict]],
+        buttons_column_definition: TableButtonColumnDefinition,
+    ) -> pd.DataFrame:
+        if not isinstance(data, (pd.DataFrame, list)):
+            log_error(
+                logger,
+                "To create a table with buttons, the data must not "
+                "be a shared data entry. The reason is that the data must be modified to include "
+                "the buttons.",
+                DataError,
+            )
+        modals_column = buttons_column_definition.modals_column
+        activities_column = buttons_column_definition.activities_column
+        actions_column = buttons_column_definition.actions_column
+
+        data = DataFrame(data)
+        buttons_columns = [col for col in [modals_column, activities_column, actions_column] if col]
+        buttons_data = data[buttons_columns]
+        data = data[[col for col in data.columns if col not in buttons_columns]]
+        modal_ids = []
+        if modals_column:
+            # Cant use apply because of the async
+            for i, row in buttons_data.iterrows():
+                modal_ids.append((await self._get_modal(row[modals_column]))["id"])
+            buttons_data["modalId"] = modal_ids
+
+        data[buttons_column_definition.column_name] = buttons_data.apply(
+            lambda x: {
+                "reportType": "BUTTON",
+                "reportProperties": {
+                    "text": buttons_column_definition.label,
+                    "events": {
+                        "onClick": [
+                            {
+                                "action": "openModal",
+                                "params": {
+                                    "modalId": x["modalId"]
+                                }
+                            } if modals_column else {},
+                            {
+                                "action": "runActivity",
+                                "params": {
+                                    "activityId": x[activities_column]
+                                }
+                            } if activities_column else {},
+                            {
+                                "action": "runAction",
+                                "params": {
+                                    "actionId": x[actions_column]
+                                }
+                            } if actions_column else {}
+                        ]
+                    }
+                }
+            },
+            axis=1
+        )
+
+        return data
+
     @add_to_general_async_group
     async def table(
         self,
         order: int,
-        data: Union[str, pd.DataFrame, list[dict], dict],
+        data: Union[str, pd.DataFrame, list[dict]],
         columns: Optional[list[str]] = None,
         columns_button: bool = True,
         filters: bool = True,
@@ -1422,6 +1493,7 @@ class PlotLayer(ClassWithLogging):
         search: bool = True,
         page_size: int = 10,
         page_size_options: Optional[list[int]] = None,
+        buttons_column_definition: Optional[TableButtonColumnDefinition] = None,
         initial_sort_column: Optional[str] = None,
         sort_descending: bool = False,
         columns_options: Optional[dict] = None,
@@ -1444,12 +1516,12 @@ class PlotLayer(ClassWithLogging):
         :param search: whether to show the search bar
         :param page_size: the number of rows per page
         :param page_size_options: the options for the number of rows per page
+        :param buttons_column_definition: the definition of the buttons column
         :param initial_sort_column: the initial sorting column
         :param sort_descending: whether to sort descending by the initial sorting column
         :param columns_options: the options for the columns
         :param categorical_columns: the categorical columns
         :param label_columns: the label columns
-        :param report_params: additional report parameters as key-value pairs
         :param web_link_column: the column to use as web link
         :param open_link_in_new_tab: whether to open the web link in a new tab
         :param title: the title of the table
@@ -1457,7 +1529,8 @@ class PlotLayer(ClassWithLogging):
         :param rows_size: the rows size of the table
         :param cols_size: the columns size of the table
         """
-
+        if buttons_column_definition:
+            data = await self._add_buttons_to_table_data(data, buttons_column_definition)
         data_mappings_to_tuples = await self._choose_data(order, data, Table)
         if isinstance(data, str):
             data = self._shared_data[data]
@@ -1495,6 +1568,10 @@ class PlotLayer(ClassWithLogging):
         for i, name in enumerate(columns):
             column_options = {"field": name, "headerName": name, "order": i}
 
+            if buttons_column_definition and name == buttons_column_definition.column_name:
+                column_options["type"] = "button"
+
+            print(name, column_options)
             if name in columns_options:
                 column_options.update(columns_options[name])
 

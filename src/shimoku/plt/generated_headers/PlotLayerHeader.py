@@ -2,12 +2,30 @@
 # If the user access files are modified, this file has to be regenerated with the script.
 from typing import Optional, Union
 from pandas import DataFrame
+from dataclasses import dataclass
+import shimoku
 
 
 class PlotLayerHeader:
     """
     This class is a high level abstraction of the API, it is used to create components and data sets easily.
     """
+
+    @dataclass
+    class TableButtonColumnDefinition:
+        """
+        column_name: str
+        label: str
+        modals_column: Optional[str] = None
+        activities_column: Optional[str] = None
+        actions_column: Optional[str] = None
+        """
+
+        column_name: str
+        label: str
+        modals_column: Optional[str] = None
+        activities_column: Optional[str] = None
+        actions_column: Optional[str] = None
 
     def action_button(
         self,
@@ -1053,7 +1071,7 @@ class PlotLayerHeader:
     def table(
         self,
         order: int,
-        data: Union[str, DataFrame, list[dict], dict],
+        data: Union[str, DataFrame, list[dict]],
         columns: Optional[list[str]] = None,
         columns_button: bool = True,
         filters: bool = True,
@@ -1061,6 +1079,9 @@ class PlotLayerHeader:
         search: bool = True,
         page_size: int = 10,
         page_size_options: Optional[list[int]] = None,
+        buttons_column_definition: Optional[
+            shimoku.plt.plt_layer.PlotLayer.TableButtonColumnDefinition
+        ] = None,
         initial_sort_column: Optional[str] = None,
         sort_descending: bool = False,
         columns_options: Optional[dict] = None,
@@ -1083,12 +1104,12 @@ class PlotLayerHeader:
         :param search: whether to show the search bar
         :param page_size: the number of rows per page
         :param page_size_options: the options for the number of rows per page
+        :param buttons_column_definition: the definition of the buttons column
         :param initial_sort_column: the initial sorting column
         :param sort_descending: whether to sort descending by the initial sorting column
         :param columns_options: the options for the columns
         :param categorical_columns: the categorical columns
         :param label_columns: the label columns
-        :param report_params: additional report parameters as key-value pairs
         :param web_link_column: the column to use as web link
         :param open_link_in_new_tab: whether to open the web link in a new tab
         :param title: the title of the table

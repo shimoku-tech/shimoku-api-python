@@ -184,7 +184,11 @@ def decorate_class_to_auto_async(cls: type, async_pool: AutoAsyncExecutionPool) 
     new_class = type(cls.__name__, (cls,), {})
     for attr_name in dir(cls):
         attr = getattr(cls, attr_name)
-        if callable(attr) and not attr_name.startswith("_"):
+        if (
+            callable(attr) and
+            not attr_name.startswith("_") and
+            not hasattr(attr, "__dataclass_fields__")
+        ):
             setattr(new_class, attr_name, decorate_to_auto_async(attr))
 
     return new_class

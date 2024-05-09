@@ -15,4 +15,9 @@ def table(shimoku_client: Client):
         sort_descending=True,
         columns_options={"y": {"hideColumn": True}},
         categorical_columns=["filtA", "filtB"],
+        buttons_column_definition=shimoku_client.plt.TableButtonColumnDefinition(
+            column_name="Buttons",
+            label="Press me to open a modal",
+            modals_column="modal",
+        ),
     )

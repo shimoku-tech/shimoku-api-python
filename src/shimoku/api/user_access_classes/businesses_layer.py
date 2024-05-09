@@ -272,7 +272,7 @@ class WorkspacesLayer(ClassWithLogging):
                 if report["path"] is not None
                 and create_normalized_name(report["path"]) not in sub_paths
             ],
-            key=lambda x: x["pathOrder"],
+            key=lambda x: x["pathOrder"] if x["pathOrder"] is not None else 0,
         )
         for report in non_referenced_reports:
             sub_path = report["path"]

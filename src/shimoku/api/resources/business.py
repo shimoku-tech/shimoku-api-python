@@ -213,9 +213,11 @@ class Business(Resource):
         await self.create_event(EventType.APP_UPDATED, params, app["id"])
 
     # Account methods
-    async def invite_user(self, email: str, roles: list[str]) -> BusinessInvitation:
+    async def invite_user(
+        self, email: str, roles: list[str], send_email: bool
+    ) -> BusinessInvitation:
         invitation = await self._base_resource.create_child(
-            BusinessInvitation, email=email, roles=roles
+            BusinessInvitation, email=email, roles=roles, sendEmail=send_email
         )
         logger.info(f"Invitation sent to ({email})")
         return invitation

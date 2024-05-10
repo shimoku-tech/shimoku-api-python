@@ -1571,7 +1571,6 @@ class PlotLayer(ClassWithLogging):
             if buttons_column_definition and name == buttons_column_definition.column_name:
                 column_options["type"] = "button"
 
-            print(name, column_options)
             if name in columns_options:
                 column_options.update(columns_options[name])
 

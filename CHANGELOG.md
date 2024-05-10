@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.4.0 (2024-10-05)
+
+-  Added buttons to table rows
+
 ## 2.3.1 (2024-09-04)
 
 - Fixed CORS error when deleting resources with Actions

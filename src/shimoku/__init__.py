@@ -417,6 +417,7 @@ class Client:
         await self._business_object.create_event(
             EventType.BUSINESS_CONTENTS_UPDATED, {}, self._business_object["id"]
         )
+        self.plt.clear_events_for_components()
         logger.info("Business contents updated event created")
 
     def run(self) -> None:

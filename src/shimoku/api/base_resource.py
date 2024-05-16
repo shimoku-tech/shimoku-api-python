@@ -429,11 +429,13 @@ class BaseResource(ClassWithLogging):
 
         return obj["id"]
 
-    async def update(self):
+    async def update(self) -> bool:
         """Updates the resource in the API with the current params."""
         endpoint = f"{self.base_url}{self.resource_type}/{self.id}"
 
         params = {k: v for k, v in self.params.items() if k in self.changed_params}
+        self.changed_params = set()
+
         for field in self.params_to_serialize:
             if field in params:
                 assert isinstance(params[field], (dict, list))
@@ -447,10 +449,9 @@ class BaseResource(ClassWithLogging):
             await self.api_client.query_element(
                 method="PATCH", endpoint=endpoint, **{"body_params": params}
             )
-        else:
-            logger.debug(f"No params to update for {self.resource_type} {str(self)}")
-
-        self.changed_params = set()
+            return True
+        logger.debug(f"No params to update for {self.resource_type} {str(self)}")
+        return False
 
     async def delete(self):
         """Deletes the resource from the API."""

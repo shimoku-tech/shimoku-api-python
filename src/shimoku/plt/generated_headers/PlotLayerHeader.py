@@ -206,6 +206,12 @@ class PlotLayerHeader:
         """None"""
         pass
 
+    def clear_events_for_components(
+        self,
+    ):
+        """Clear the events for the components"""
+        pass
+
     def clear_menu_path(
         self,
     ):
@@ -872,6 +878,15 @@ class PlotLayerHeader:
         variant: Optional[str] = None,
     ):
         """Create a chart with bars and lines."""
+        pass
+
+    def send_events_for_components(
+        self,
+        orders: list,
+    ):
+        """Send events for the components in each order
+        :param orders: the orders of the components
+        """
         pass
 
     def set_bentobox(

@@ -147,16 +147,26 @@ class PlotLayer(ClassWithLogging):
         self._shared_data: dict[str, any] = {}
         self._execution_path_orders: list[str] = []
         self._async_pool = async_pool
+        self._last_event_type_per_report: dict[str, EventType] = {}
 
-    async def _create_event(
-        self, event_type: EventType, content: dict, resource_id: Optional[str] = None
-    ):
-        """Create an event.
-        :param event_type: the type of the event
-        :param content: the content of the event
+    async def send_events_for_components(self, orders: list[int]):
+        """Send events for the components in each order
+        :param orders: the orders of the components
         """
-        if self._app.api_client.playground:
-            await self._business.create_event(event_type, content, resource_id)
+        for order in orders:
+            r_hash = self._get_component_hash(order)
+            report = await self._app.get_report(r_hash=r_hash)
+            if not report:
+                log_error(logger, f"No chart found with order {order}", RuntimeError)
+            event_type = self._last_event_type_per_report.pop(report["id"], None)
+            if event_type:
+                await self._business.create_event(event_type, {}, report["id"])
+            else:
+                logger.info(f"No event type found for report {r_hash}")
+
+    def clear_events_for_components(self):
+        """Clear the events for the components"""
+        self._last_event_type_per_report = {}
 
     def clear_context(self):
         if self._bentobox_data:
@@ -330,6 +340,8 @@ class PlotLayer(ClassWithLogging):
             report for report in reports if report.report_type in ["TABS", "MODAL"]
         ]
         await asyncio.gather(*[container.update() for container in containers])
+        for container in containers:
+            self._last_event_type_per_report[container["id"]] = EventType.REPORT_UPDATED
         logger.info("Updated tab groups and modals")
 
     async def set_tabs_index(
@@ -387,8 +399,10 @@ class PlotLayer(ClassWithLogging):
             logger.info(
                 f'Created tabs group {tabs_index[0]} with id {tabs_group["id"]}'
             )
+            self._last_event_type_per_report[tabs_group["id"]] = EventType.REPORT_CREATED
         elif order:
             await self._app.update_report(r_hash=r_hash, order=order, **params)
+            self._last_event_type_per_report[tabs_group["id"]] = EventType.REPORT_UPDATED
 
         if parent_tabs_index:
             p_hash = self._get_hash_for_container(parent_tabs_index[0])
@@ -416,6 +430,7 @@ class PlotLayer(ClassWithLogging):
                 logger.info(
                     f"Included tabs group {tabs_index[0]} in tabs group {parent_tabs_index[0]}"
                 )
+                self._last_event_type_per_report[parent_tabs_group["id"]] = EventType.REPORT_UPDATED
 
         elif self._current_modal and not self._current_modal.has_report(tabs_group):
             (await self._get_current_modal()).add_report(tabs_group)
@@ -917,7 +932,8 @@ class PlotLayer(ClassWithLogging):
                 "update_containers"
             ] = self._update_containers()
 
-        await self._create_event(event_type, {}, chart["id"])
+        if event_type:
+            self._last_event_type_per_report[chart["id"]] = event_type
 
         return chart
 

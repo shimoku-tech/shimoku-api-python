@@ -17,7 +17,7 @@ from shimoku.api.resources.report import Report
 from shimoku.api.resources.file import File
 from shimoku.api.resources.data_set import DataSet, Mapping
 
-from shimoku.utils import create_normalized_name, EventType
+from shimoku.utils import create_normalized_name
 from shimoku.exceptions import MenuPathError, UniverseApiKeyError, ActivityTemplateError
 
 if TYPE_CHECKING:
@@ -277,9 +277,6 @@ class App(Resource):
         if not report:
             return
         await self._base_resource.delete_child(Report, uuid, r_hash)
-        await self._base_resource.parent.create_event(
-            EventType.REPORT_DELETED, {}, report["id"]
-        )
 
     # DataSet methods
     async def get_data_set(

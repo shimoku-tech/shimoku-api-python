@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## 2.5.0 (2024-22-07)
+
+- Dashboard roles fix
+
+- Can invite without email
+
+- Table links work correctly
+
+- Users can be invited with roles
+
+- Can get component hash externally
+
+- Fine grained data set methods
+
 ## 2.4.0 (2024-10-05)
 
 -  Added buttons to table rows

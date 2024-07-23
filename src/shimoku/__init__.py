@@ -434,6 +434,30 @@ class Client:
             func=a_run,
         )
 
+    def request(
+        self,
+        method: str,
+        url: str,
+        query_params: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        body: Optional[dict] = None,
+    ) -> any:
+        async def a_request(_self) -> any:
+            return await self._api_client.request(
+                method=method,
+                url=url,
+                query_params=query_params,
+                headers=headers,
+                body=body,
+                to_tazawa=False,
+            )
+
+        return self._async_pool.auto_async_func_call(
+            name="request",
+            func_self=self,
+            func=a_request,
+        )
+
     def activate_async_execution(self):
         """Activate async execution of the tasks."""
         self._async_pool.sequential = False

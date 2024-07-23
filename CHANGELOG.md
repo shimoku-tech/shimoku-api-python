@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.6.0 (2024-23-07)
+
+- This version adds a request function to the main client, 
+this enables the actions to use requests easily with a 
+generic function
+
 ## 2.5.0 (2024-22-07)
 
 - Dashboard roles fix

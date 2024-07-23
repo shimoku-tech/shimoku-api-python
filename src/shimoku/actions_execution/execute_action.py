@@ -55,6 +55,7 @@ class ActionsChecker(ast.NodeVisitor):
         "set_board",
         "set_menu_path",
         "run",
+        "request",
     ]
 
     SHIMOKU_CLIENT_NAME = "shimoku_client"
@@ -256,7 +257,7 @@ class ActionsChecker(ast.NodeVisitor):
             if self.is_shimoku_client(arg) and not parameter_types[i] == "Client":
                 log_error(
                     logger,
-                    f"The value asigned to the parameter '{arg.id}' is the Client, "
+                    f"The value assigned to the parameter '{arg.id}' is the Client, "
                     f"but the function '{node.func.id}' expects a '{parameter_types[i]}' instance.",
                     ActionError,
                 )
@@ -267,7 +268,7 @@ class ActionsChecker(ast.NodeVisitor):
             ):
                 log_error(
                     logger,
-                    f"The value asigned to the parameter '{keyword.arg}' is the Client, "
+                    f"The value assigned to the parameter '{keyword.arg}' is the Client, "
                     f"but the function '{node.func.id}' expects a '{parameters[keyword.arg]}' instance.",
                     ActionError,
                 )

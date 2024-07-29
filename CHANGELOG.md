@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.6.1 (2024-29-07)
+
+- More permissive and updated pandas version install
+
 ## 2.6.0 (2024-23-07)
 
 - This version adds a request function to the main client, 

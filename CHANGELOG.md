@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.6.2 (2024-29-07)
+
+- Fixed more permissive and updated pandas version install error
+
+
 ## 2.6.1 (2024-29-07)
 
 - More permissive and updated pandas version install

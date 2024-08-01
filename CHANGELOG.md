@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.6.4 (2024-08-01)
+
+- Fixed actions when using files for previous versions of pyodide
+
 ## 2.6.3 (2024-08-01)
 
 - Fixed actions when using files

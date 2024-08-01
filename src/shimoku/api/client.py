@@ -47,10 +47,8 @@ def get_request_function():
             if not body:
                 del params["body"]
             res = await pyfetch(url, **params)
-            if (
-                hasattr(res, "headers")
-                and "content-type" in res.headers
-                and "application/json" in res.headers.get("content-type")
+            if (res.js_response.headers.has("content-type")
+                and "application/json" in res.js_response.headers.get("content-type")
             ):
                 data = await res.json()
             else:

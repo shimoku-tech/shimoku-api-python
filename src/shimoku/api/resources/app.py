@@ -422,22 +422,21 @@ class App(Resource):
         if overwrite and await self._base_resource.get_child(
             File, alias=name, create_if_not_exists=False
         ):
-            logger.info(f"Overwriting file {name}")
+            logger.info(f"Overwriting file ({name})")
             await self.delete_file(name=name)
 
-        name = await self._base_resource.create_child(
+        file = await self._base_resource.create_child(
             File, alias=name, contentType="text/csv", tags=tags, metadata=metadata
         )
-        logger.info(f"Uploading file {str(name)}")
+        logger.info(f"Uploading file ({name})")
         await self.api_client.request(
             "PUT",
-            name["url"],
+            file["url"],
             body=file_object,
             headers={"content-type": "text/csv"},
             to_tazawa=False,
         )
-
-        return name
+        return file
 
     async def delete_file(self, uuid: Optional[str] = None, name: Optional[str] = None):
         """Deletes a file.

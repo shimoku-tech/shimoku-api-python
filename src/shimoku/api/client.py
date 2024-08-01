@@ -49,11 +49,12 @@ def get_request_function():
             res = await pyfetch(url, **params)
             if (
                 hasattr(res, "headers")
+                and "content-type" in res.headers
                 and "application/json" in res.headers.get("content-type")
-            ) or ((hasattr(res, "json")) and not hasattr(res, "read")):
+            ):
                 data = await res.json()
             else:
-                data = await res.read()
+                data = await res.bytes()
             if not res.ok:
                 self.raise_api_exception(data)
             return data

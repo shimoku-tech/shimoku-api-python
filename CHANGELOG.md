@@ -1,21 +1,24 @@
 # CHANGELOG
 
-## 2.6.2 (2024-29-07)
+## 2.6.3 (2024-08-01)
+
+- Fixed actions when using files
+
+## 2.6.2 (2024-07-29)
 
 - Fixed more permissive and updated pandas version install error
 
-
-## 2.6.1 (2024-29-07)
+## 2.6.1 (2024-07-29)
 
 - More permissive and updated pandas version install
 
-## 2.6.0 (2024-23-07)
+## 2.6.0 (2024-07-23)
 
 - This version adds a request function to the main client, 
 this enables the actions to use requests easily with a 
 generic function
 
-## 2.5.0 (2024-22-07)
+## 2.5.0 (2024-07-22)
 
 - Dashboard roles fix
 
@@ -29,76 +32,76 @@ generic function
 
 - Fine grained data set methods
 
-## 2.4.0 (2024-10-05)
+## 2.4.0 (2024-05-10)
 
 -  Added buttons to table rows
 
-## 2.3.1 (2024-09-04)
+## 2.3.1 (2024-04-09)
 
 - Fixed CORS error when deleting resources with Actions
 
-## 2.3.0 (2024-08-04)
+## 2.3.0 (2024-04-08)
 
 - User accounts handling through the SDK
 
-## 2.2.3 (2024-05-04)
+## 2.2.3 (2024-04-05)
 
 -  Fixed CORS error with the API from the execution of the Actions
 
-## 2.2.2 (2024-22-03)
+## 2.2.2 (2024-03-22)
 
 ### Fixed
 
 - Fixed communication with the front end in the actions execution
 
-## 2.2.1 (2024-19-03)
+## 2.2.1 (2024-03-19)
 
 ### Fixed
 
 - Next token is implement in the local server
 
-## 2.2.0 (2024-18-03)
+## 2.2.0 (2024-03-18)
 
 - Actions can be created and executed from the SDK
 
-## 2.1.2 (2024-01-03)
+## 2.1.2 (2024-03-01)
 
 - Solved cache issues with modals and tabs
 - Solved execution in async context with threads
 - Reformatted the code with black
 - Better organization of the tests
 
-## 2.1.1 (2024-20-02)
+## 2.1.1 (2024-02-20)
 
 ### Fixed
 
 - Added the list accounts method to the local server
 - Added the theme to the boards schema
 
-## 2.1.0 (2024-20-02)
+## 2.1.0 (2024-02-20)
 
 ### Improvements
 
 - Boards can have themes now, the user can set the theme of the board when creating it, or update it later.
 - When creating a board, if no theme is provided the workspace theme will be used.
 
-## 2.0.4 (2024-20-02)
+## 2.0.4 (2024-02-20)
 
 ### Fixed
 
 - Fixed the github action for shimoku-browser package, that didnt set the correct version.
 
-## 2.0.3 (2024-20-02)
+## 2.0.3 (2024-02-20)
 
 ### Fixed
 
 - Fixed the github action for shimoku-browser package, that didnt set the correct version.
 
-## 2.0.2 (2024-19-02)
+## 2.0.2 (2024-02-19)
 
 Updated the github actions for the new package names.
 
-## 2.0.0 (2024-15-02)
+## 2.0.0 (2024-02-15)
 
 ### Improvements
 
@@ -117,39 +120,39 @@ commands provided in the persist module from the CLI.
 
 · A CLI has been added to ensure full access to the functionalities of the SDK.
 
-## 1.6.1 (2024-06-02)
+## 1.6.1 (2024-02-06)
 
 ### Fixed
 
 - Roles are created correctly when creating a workspace
 
-## 1.6 (2024-17-01)
+## 1.6 (2024-01-17)
 
 ### Added
 
 - Added code generation, commit and pull functions to the SDK.
 
-## 1.5 (2024-16-01)
+## 1.5 (2024-01-16)
 
 ### Added
 
 - Shimoku AI module.
 
-## 1.4.2 (2023-14-12)
+## 1.4.2 (2023-12-14)
 
 ### Fixed
 
 - Remove vloop depencency.
 - Remove warnings for pydantic
 
-## 1.4.1 (2023-20-11)
+## 1.4.1 (2023-11-20)
 
 ### Fixed
 
 - Updating a board to make it public works now.
 - Added parameters to the table function to use a column of links.
 
-## 1.4 (2023-15-11)
+## 1.4 (2023-11-15)
 
 ### Added
 
